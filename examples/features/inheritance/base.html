@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{% block title %}Default Title{% endblock %}</title>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <h1>{% block header %}Welcome to Miya Engine{% endblock %}</h1>
+        <nav>
+            {% block navigation %}
+            <a href="/">Home</a> | <a href="/about">About</a>
+            {% endblock %}
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}
+        <p>This is the default content from the base template.</p>
+        {% endblock %}
+    </main>
+
+    <aside>
+        {% block sidebar %}
+        <h3>Sidebar</h3>
+        <p>Default sidebar content</p>
+        {% endblock %}
+    </aside>
+
+    <footer>
+        {% block footer %}
+        <p>&copy; 2024 Miya Engine. All rights reserved.</p>
+        {% endblock %}
+    </footer>
+</body>
+</html>

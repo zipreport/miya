@@ -1,0 +1,109 @@
+{# Base Layout Template - Demonstrates inheritance, blocks, and basic structure #}
+<!DOCTYPE html>
+<html lang="{{ language|default('en') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    {#- Title block with default value -#}
+    <title>{% block title %}{{ site_name|default('Miya Demo') }}{% endblock %}</title>
+
+    {#- Meta tags block -#}
+    {% block meta %}
+    <meta name="description" content="{% block description %}A demonstration of Miya template engine{% endblock %}">
+    <meta name="author" content="{{ author|default('Miya Team') }}">
+    {% endblock %}
+
+    {#- CSS block with default styles -#}
+    {% block styles %}
+    <style>
+        body {
+            font-family: {{ font_family|default('Arial, sans-serif') }};
+            margin: 0;
+            padding: 0;
+            background-color: {{ bg_color|default('#f5f5f5') }};
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        {% block custom_styles %}{% endblock %}
+    </style>
+    {% endblock %}
+</head>
+<body>
+    {#- Header block -#}
+    {% block header %}
+    <header>
+        <div class="container">
+            <h1>{{ site_name|default('Miya')|upper }}</h1>
+            {% block header_content %}
+            <p>A high-performance Jinja2-compatible template engine in Go</p>
+            {% endblock %}
+        </div>
+    </header>
+    {% endblock %}
+
+    {#- Navigation block -#}
+    {% block navigation %}
+    {% if navigation_items is defined %}
+    <nav>
+        <ul>
+        {% for item in navigation_items -%}
+            <li><a href="{{ item.url }}">{{ item.title }}</a></li>
+        {%- endfor %}
+        </ul>
+    </nav>
+    {% endif %}
+    {% endblock %}
+
+    {#- Main content area -#}
+    <main class="container">
+        {#- Breadcrumbs block -#}
+        {% block breadcrumbs %}{% endblock %}
+
+        {#- Messages/alerts block -#}
+        {% block messages %}
+        {% if messages is defined %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.type|default('info') }}">
+                {{ message.text|escape }}
+            </div>
+            {% endfor %}
+        {% endif %}
+        {% endblock %}
+
+        {#- Main content block - must be overridden -#}
+        {% block content %}
+        <p>Default content - please override the content block</p>
+        {% endblock %}
+    </main>
+
+    {#- Sidebar block -#}
+    {% block sidebar %}{% endblock %}
+
+    {#- Footer block -#}
+    {% block footer %}
+    <footer style="background: #333; color: white; padding: 2rem; margin-top: 2rem; text-align: center;">
+        <div class="container">
+            <p>&copy; {{ copyright_year|default(2024) }} {{ company_name|default('Miya Project') }}</p>
+            {% block footer_content %}{% endblock %}
+        </div>
+    </footer>
+    {% endblock %}
+
+    {#- Scripts block -#}
+    {% block scripts %}
+    <script>
+        console.log('{{ site_name|default("Miya")|escape }} loaded');
+    </script>
+    {% endblock %}
+</body>
+</html>

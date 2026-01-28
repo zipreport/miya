@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Default Title{% endblock %}</title>
+    <meta name="description" content="{% block description %}Default description{% endblock %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}default{% endblock %}">
+    <header>
+        <nav class="navbar">
+            {% block navigation %}
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/contact">Contact</a></li>
+            </ul>
+            {% endblock %}
+        </nav>
+    </header>
+    
+    <main>
+        {% block content %}
+        <p>Default content</p>
+        {% endblock %}
+    </main>
+    
+    <footer>
+        {% block footer %}
+        <p>&copy; 2025 Miya Demo. Generated at {{ current_time }}</p>
+        {% endblock %}
+    </footer>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

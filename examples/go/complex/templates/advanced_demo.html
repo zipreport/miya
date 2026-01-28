@@ -1,0 +1,176 @@
+<div class="advanced-demo">
+    <h2>Advanced Features Demo</h2>
+    
+    <!-- Whitespace Control -->
+    <section class="whitespace-demo">
+        <h3>Whitespace Control</h3>
+        <div class="whitespace-example">
+            <h4>Without whitespace control:</h4>
+            <pre class="code-block">
+{%- raw %}
+{% for item in items %}
+    <li>{{ item }}</li>
+{% endfor %}
+{% endraw -%}
+            </pre>
+            <p>Result:</p>
+            <pre class="result-block">
+{% for item in ["A", "B", "C"] %}
+    <li>{{ item }}</li>
+{% endfor %}
+            </pre>
+            
+            <h4>With whitespace control:</h4>
+            <pre class="code-block">
+{%- raw %}
+{%- for item in items -%}
+    <li>{{- item -}}</li>
+{%- endfor -%}
+{% endraw -%}
+            </pre>
+            <p>Result:</p>
+            <pre class="result-block">
+{%- for item in ["A", "B", "C"] -%}
+<li>{{- item -}}</li>
+{%- endfor -%}
+            </pre>
+        </div>
+    </section>
+    
+    <!-- Set Statement Variations -->
+    <section class="set-demo">
+        <h3>Set Statement Variations</h3>
+        
+        <!-- Simple assignment -->
+        {% set simple_var = "Hello World" %}
+        <p>Simple assignment: {{ simple_var }}</p>
+        
+        <!-- Multiple assignment -->
+        {% set name = users[0].Name %}
+        {% set email = users[0].Email %}
+        <p>Multiple assignment: {{ name }} - {{ email }}</p>
+        
+        <!-- Block assignment -->
+        {% set complex_html %}
+            <div class="generated-content">
+                <h4>Generated at {{ current_time }}</h4>
+                <p>This content was generated using a set block.</p>
+                <ul>
+                {% for user in users %}
+                    <li>{{ user.Name }} ({{ user.Role }})</li>
+                {% endfor %}
+                </ul>
+            </div>
+        {% endset %}
+        
+        <div class="set-result">
+            {{ complex_html }}
+        </div>
+    </section>
+    
+    <!-- Conditional Expressions -->
+    <section class="conditional-expr-demo">
+        <h3>Conditional Expressions</h3>
+        
+        {% for user in users %}
+        <div class="user-card">
+            <h4>{{ user.Name }}</h4>
+            <p class="status">
+                Status: 
+                <span class="badge badge-{{ 'success' if user.Active else 'danger' }}">
+                    {{ 'Active' if user.Active else 'Inactive' }}
+                </span>
+            </p>
+            <p class="role">Role: {{ user.Role|title }}</p>
+            <p class="permission">
+                Access Level: {{ 'Full' if user.Role == 'admin' else 'Limited' if user.Role == 'moderator' else 'Basic' }}
+            </p>
+            <p class="age-group">
+                Age Group: {{ 'Senior' if user.Age >= 60 else 'Adult' if user.Age >= 18 else 'Minor' }}
+            </p>
+        </div>
+        {% endfor %}
+    </section>
+    
+    <!-- Filter Blocks -->
+    <section class="filter-blocks-demo">
+        <h3>Filter Blocks</h3>
+        
+        {% filter upper %}
+        This entire block will be converted to uppercase.
+        Including {{ users[0].Name }}'s name and any other content.
+        Numbers like {{ 12345 }} are also affected.
+        {% endfilter %}
+        
+        <div class="nested-filter-example">
+        {% filter trim|title %}
+            
+            this text has leading/trailing whitespace and should be trimmed and title-cased.
+            
+        {% endfilter %}
+        </div>
+    </section>
+    
+    <!-- Raw Blocks -->
+    <section class="raw-demo">
+        <h3>Raw Blocks</h3>
+        <p>Use raw blocks to display template syntax without processing:</p>
+        
+        <pre class="code-example">
+{% raw %}
+<!-- This shows actual Jinja2 syntax -->
+{% for user in users %}
+    <p>Hello {{ user.name }}!</p>
+    {% if user.active %}
+        <span class="active">Active User</span>
+    {% endif %}
+{% endfor %}
+{% endraw %}
+        </pre>
+    </section>
+    
+    <!-- Slicing and Advanced Access -->
+    <section class="slicing-demo">
+        <h3>Slicing and Advanced Access</h3>
+        
+        {% set sample_list = range(10)|list %}
+        <div class="slicing-examples">
+            <div class="example">
+                <label>Full list:</label>
+                <code>{{ sample_list|join(", ") }}</code>
+            </div>
+            <div class="example">
+                <label>List length:</label>
+                <code>{{ sample_list|length }}</code>
+            </div>
+            <div class="example">
+                <label>First item:</label>
+                <code>{{ sample_list|first }}</code>
+            </div>
+            <div class="example">
+                <label>Last item:</label>
+                <code>{{ sample_list|last }}</code>
+            </div>
+            <div class="example">
+                <label>Reversed:</label>
+                <code>{{ sample_list|reverse|join(", ") }}</code>
+            </div>
+        </div>
+        
+        <h4>Advanced Attribute Access</h4>
+        <div class="attribute-examples">
+            {% for user in users %}
+            <div class="user-access-demo">
+                <h5>{{ user.Name }} attribute access:</h5>
+                <ul>
+                    <li>Direct: {{ user.Name }}</li>
+                    <li>Attr filter: {{ user|attr('Name') }}</li>
+                    <li>Email field: {{ user.Email|default('No email') }}</li>
+                    <li>Role field: {{ user.Role|title }}</li>
+                    <li>Age field: {{ user.Age }} years old</li>
+                </ul>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</div>

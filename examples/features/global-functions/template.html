@@ -1,0 +1,23 @@
+<h1>Test 1: Range</h1>
+{{ range(5)|list }}
+
+<h1>Test 2: Dict</h1>
+{% set d = dict(a=1, b=2) %}{{ d.a }}
+
+<h1>Test 3: Cycler</h1>
+{% set c = cycler("a", "b") %}{{ c.next() }}
+
+<h1>Test 4: Joiner</h1>
+{% set j = joiner(",") %}{% for i in [1,2,3] %}{{ j() }}{{ i }}{% endfor %}
+
+<h1>Test 5: Namespace</h1>
+{% set ns = namespace(x=0) %}{{ ns.x }}
+
+<h1>Test 6: Lipsum</h1>
+{{ lipsum(n=1) }}
+
+<h1>Test 7: Zip</h1>
+{% for a, b in zip([1,2], ["x","y"]) %}{{ a }}:{{ b }} {% endfor %}
+
+<h1>Test 8: Enumerate</h1>
+{% for i, v in enumerate(["a","b"]) %}{{ i }}:{{ v }} {% endfor %}

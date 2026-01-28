@@ -1,0 +1,7 @@
+<div class="user-info" style="background: #e7f3ff; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+    <strong>{{ user.name }}</strong>
+    <span style="color: #666;">({{ user.email }})</span>
+    {% if user.role == "admin" %}
+    <span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 3px; font-size: 12px;">Admin</span>
+    {% endif %}
+</div>

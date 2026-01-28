@@ -1,0 +1,24 @@
+<div class="stats-grid">
+    <div class="stat-item">
+        <h4>User ID</h4>
+        <p class="stat-value">{{ user.ID|string|pad_left(8, "0") }}</p>
+    </div>
+    <div class="stat-item">
+        <h4>Email</h4>
+        <p class="stat-value">
+            {% if user.Email is defined and user.Email %}
+                <a href="mailto:{{ user.Email }}">{{ user.Email|truncate(30) }}</a>
+            {% else %}
+                <span class="text-muted">No email provided</span>
+            {% endif %}
+        </p>
+    </div>
+    <div class="stat-item">
+        <h4>Account Age</h4>
+        <p class="stat-value">{{ user.Created|age }} days old</p>
+    </div>
+    <div class="stat-item">
+        <h4>Tag Count</h4>
+        <p class="stat-value">{{ user.Tags|length }} tags</p>
+    </div>
+</div>

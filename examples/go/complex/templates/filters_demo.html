@@ -1,0 +1,146 @@
+<div class="filters-demo">
+    <h2>Filters and Tests Showcase</h2>
+    
+    <!-- String Filters -->
+    <section class="string-filters">
+        <h3>String Manipulation Filters</h3>
+        {% set sample_text = "  Hello, Jinja2 Template Engine!  " %}
+        
+        <div class="filter-examples">
+            <div class="example">
+                <label>Original:</label>
+                <code>"{{ sample_text }}"</code>
+            </div>
+            <div class="example">
+                <label>upper:</label>
+                <code>{{ sample_text|upper }}</code>
+            </div>
+            <div class="example">
+                <label>lower:</label>
+                <code>{{ sample_text|lower }}</code>
+            </div>
+            <div class="example">
+                <label>title:</label>
+                <code>{{ sample_text|title }}</code>
+            </div>
+            <div class="example">
+                <label>trim + capitalize:</label>
+                <code>{{ sample_text|trim|capitalize }}</code>
+            </div>
+            <div class="example">
+                <label>replace:</label>
+                <code>{{ sample_text|replace("Jinja2", "Miya") }}</code>
+            </div>
+            <div class="example">
+                <label>truncate:</label>
+                <code>{{ sample_text|truncate(20) }}</code>
+            </div>
+            <div class="example">
+                <label>wordwrap:</label>
+                <pre>{{ sample_text|wordwrap(10) }}</pre>
+            </div>
+            <div class="example">
+                <label>center:</label>
+                <code>"{{ sample_text|trim|center(50, "-") }}"</code>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Collection Filters -->
+    <section class="collection-filters">
+        <h3>Collection Processing Filters</h3>
+        {% set numbers = [1, 5, 2, 8, 3, 7, 4, 6] %}
+        {% set user_ages = users|map("Age")|list %}
+        
+        <div class="filter-examples">
+            <div class="example">
+                <label>Original numbers:</label>
+                <code>{{ numbers|join(", ") }}</code>
+            </div>
+            <div class="example">
+                <label>sort:</label>
+                <code>{{ numbers|sort|join(", ") }}</code>
+            </div>
+            <div class="example">
+                <label>reverse:</label>
+                <code>{{ numbers|reverse|join(", ") }}</code>
+            </div>
+            <div class="example">
+                <label>unique (after duplicating):</label>
+                <code>{{ (numbers + numbers)|unique|sort|join(", ") }}</code>
+            </div>
+            <div class="example">
+                <label>slice(3):</label>
+                <code>{{ numbers[:3]|join(", ") }}</code>
+            </div>
+            <div class="example">
+                <label>batch(3):</label>
+                {% for batch in numbers|batch(3) %}
+                    <div>Batch {{ loop.index }}: {{ batch|join(", ") }}</div>
+                {% endfor %}
+            </div>
+            <div class="example">
+                <label>User ages (min, max, sum):</label>
+                <code>Min: {{ user_ages|min }}, Max: {{ user_ages|max }}, Sum: {{ user_ages|sum }}, Avg: {{ (user_ages|sum / user_ages|length)|round(1) }}</code>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Test Expressions -->
+    <section class="test-expressions">
+        <h3>Test Expressions</h3>
+        
+        {% for user in users %}
+        <div class="user-tests">
+            <h4>Tests for {{ user.Name }}:</h4>
+            <ul class="test-results">
+                <li>Name is defined: {{ user.Name is defined }}</li>
+                <li>Email is defined: {{ user.Email is defined }}</li>
+                <li>Age is number: {{ user.Age is number }}</li>
+                <li>Age is even: {{ user.Age is even }}</li>
+                <li>Age is odd: {{ user.Age is odd }}</li>
+                <li>Role is equalto 'admin': {{ user.Role is equalto("admin") }}</li>
+                <li>Active is boolean: {{ user.Active is boolean }}</li>
+                <li>Tags is sequence: {{ user.Tags is sequence }}</li>
+                <li>Tags is iterable: {{ user.Tags is iterable }}</li>
+                <li>Name starts with 'A': {{ user.Name is startswith("A") }}</li>
+                <li>Email contains '@': {{ user.Email is defined and user.Email is contains("@") }}</li>
+                <li>Metadata is mapping: {{ user.Metadata is mapping }}</li>
+            </ul>
+        </div>
+        {% endfor %}
+    </section>
+    
+    <!-- Numeric Filters -->
+    <section class="numeric-filters">
+        <h3>Numeric Processing</h3>
+        {% set price = 123.456789 %}
+        
+        <div class="filter-examples">
+            <div class="example">
+                <label>Original price:</label>
+                <code>${{ price }}</code>
+            </div>
+            <div class="example">
+                <label>round(2):</label>
+                <code>${{ price|round(2) }}</code>
+            </div>
+            <div class="example">
+                <label>ceil:</label>
+                <code>${{ price|ceil }}</code>
+            </div>
+            <div class="example">
+                <label>floor:</label>
+                <code>${{ price|floor }}</code>
+            </div>
+            <div class="example">
+                <label>abs (of negative):</label>
+                <code>{{ (-42)|abs }}</code>
+            </div>
+            <div class="example">
+                <label>pow(2):</label>
+                <code>{{ 5|pow(2) }}</code>
+            </div>
+        </div>
+    </section>
+</div>

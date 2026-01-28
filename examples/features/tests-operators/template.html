@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tests &amp; Operators</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        .example { background: white; padding: 10px; margin: 5px 0; border-left: 3px solid #17a2b8; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #17a2b8; color: white; }
+        .true { color: green; font-weight: bold; }
+        .false { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Tests &amp; Operators Showcase</h1>
+
+    <!-- OPERATORS SECTION -->
+    <div class="section">
+        <h2>PART 1: OPERATORS</h2>
+
+        <!-- Arithmetic Operators -->
+        <h3>1. Arithmetic Operators</h3>
+
+        <div class="example">
+            <strong>Addition (+):</strong> 5 + 3 = {{ 5 + 3 }}
+        </div>
+
+        <div class="example">
+            <strong>Subtraction (-):</strong> 10 - 4 = {{ 10 - 4 }}
+        </div>
+
+        <div class="example">
+            <strong>Multiplication (*):</strong> 6 * 7 = {{ 6 * 7 }}
+        </div>
+
+        <div class="example">
+            <strong>Division (/):</strong> 15 / 3 = {{ 15 / 3 }}
+        </div>
+
+        <div class="example">
+            <strong>Floor Division (//):</strong> 17 // 5 = {{ 17 // 5 }}
+        </div>
+
+        <div class="example">
+            <strong>Modulo (%):</strong> 17 % 5 = {{ 17 % 5 }}
+        </div>
+
+        <div class="example">
+            <strong>Power (**):</strong> 2 ** 8 = {{ 2 ** 8 }}
+        </div>
+
+        <div class="example">
+            <strong>String Concatenation (~):</strong> "Hello" ~ " " ~ "World" = {{ "Hello" ~ " " ~ "World" }}
+        </div>
+
+        <!-- Comparison Operators -->
+        <h3>2. Comparison Operators</h3>
+
+        <div class="example">
+            <strong>Equal (==):</strong> 5 == 5 = <span class="{{ 'true' if 5 == 5 else 'false' }}">{{ 5 == 5 }}</span>
+        </div>
+
+        <div class="example">
+            <strong>Not Equal (!=):</strong> 5 != 3 = <span class="{{ 'true' if 5 != 3 else 'false' }}">{{ 5 != 3 }}</span>
+        </div>
+
+        <div class="example">
+            <strong>Less Than (&lt;):</strong> 3 &lt; 5 = <span class="{{ 'true' if 3 < 5 else 'false' }}">{{ 3 < 5 }}</span>
+        </div>
+
+        <div class="example">
+            <strong>Less or Equal (&lt;=):</strong> 5 &lt;= 5 = <span class="{{ 'true' if 5 <= 5 else 'false' }}">{{ 5 <= 5 }}</span>
+        </div>
+
+        <div class="example">
+            <strong>Greater Than (&gt;):</strong> 7 &gt; 3 = <span class="{{ 'true' if 7 > 3 else 'false' }}">{{ 7 > 3 }}</span>
+        </div>
+
+        <div class="example">
+            <strong>Greater or Equal (&gt;=):</strong> 5 &gt;= 5 = <span class="{{ 'true' if 5 >= 5 else 'false' }}">{{ 5 >= 5 }}</span>
+        </div>
+
+        <!-- Logical Operators -->
+        <h3>3. Logical Operators</h3>
+
+        <div class="example">
+            <strong>AND:</strong> true and true = <span class="{{ 'true' if (true and true) else 'false' }}">{{ true and true }}</span>
+        </div>
+
+        <div class="example">
+            <strong>AND (false case):</strong> true and false = <span class="{{ 'true' if (true and false) else 'false' }}">{{ true and false }}</span>
+        </div>
+
+        <div class="example">
+            <strong>OR:</strong> true or false = <span class="{{ 'true' if (true or false) else 'false' }}">{{ true or false }}</span>
+        </div>
+
+        <div class="example">
+            <strong>OR (false case):</strong> false or false = <span class="{{ 'true' if (false or false) else 'false' }}">{{ false or false }}</span>
+        </div>
+
+        <div class="example">
+            <strong>NOT:</strong> not false = <span class="{{ 'true' if (not false) else 'false' }}">{{ not false }}</span>
+        </div>
+
+        <div class="example">
+            <strong>Complex:</strong> (true and false) or (not false) = <span class="{{ 'true' if ((true and false) or (not false)) else 'false' }}">{{ (true and false) or (not false) }}</span>
+        </div>
+
+        <!-- Membership Operators -->
+        <h3>4. Membership Operators</h3>
+
+        <div class="example">
+            <strong>In (list):</strong> 3 in [1, 2, 3, 4] = <span class="{{ 'true' if 3 in numbers else 'false' }}">{{ 3 in numbers }}</span>
+        </div>
+
+        <div class="example">
+            <strong>In (string):</strong> "world" in "hello world" = <span class="{{ 'true' if "world" in "hello world" else 'false' }}">{{ "world" in "hello world" }}</span>
+        </div>
+
+        <div class="example">
+            <strong>Not In:</strong> 10 not in [1, 2, 3] = <span class="{{ 'true' if 10 not in [1, 2, 3] else 'false' }}">{{ 10 not in [1, 2, 3] }}</span>
+        </div>
+    </div>
+
+    <!-- TESTS SECTION -->
+    <div class="section">
+        <h2>PART 2: TEST EXPRESSIONS</h2>
+
+        <!-- Type Tests -->
+        <h3>1. Type Tests</h3>
+
+        <div class="example">
+            <strong>is defined:</strong> user is defined = <span class="{{ 'true' if user is defined else 'false' }}">{{ user is defined }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is undefined:</strong> nonexistent is undefined = <span class="{{ 'true' if nonexistent is undefined else 'false' }}">{{ nonexistent is undefined }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is none:</strong> null_value is none = <span class="{{ 'true' if null_value is none else 'false' }}">{{ null_value is none }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is boolean:</strong> true is boolean = <span class="{{ 'true' if true is boolean else 'false' }}">{{ true is boolean }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is string:</strong> "text" is string = <span class="{{ 'true' if text is string else 'false' }}">{{ text is string }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is number:</strong> 42 is number = <span class="{{ 'true' if number is number else 'false' }}">{{ number is number }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is integer:</strong> 42 is integer = <span class="{{ 'true' if integer_val is integer else 'false' }}">{{ integer_val is integer }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is float:</strong> 3.14 is float = <span class="{{ 'true' if float_val is float else 'false' }}">{{ float_val is float }}</span>
+        </div>
+
+        <!-- Container Tests -->
+        <h3>2. Container Tests</h3>
+
+        <div class="example">
+            <strong>is sequence:</strong> [1,2,3] is sequence = <span class="{{ 'true' if numbers is sequence else 'false' }}">{{ numbers is sequence }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is mapping:</strong> {a: 1} is mapping = <span class="{{ 'true' if user is mapping else 'false' }}">{{ user is mapping }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is iterable:</strong> [1,2,3] is iterable = <span class="{{ 'true' if numbers is iterable else 'false' }}">{{ numbers is iterable }}</span>
+        </div>
+
+        <!-- Numeric Tests -->
+        <h3>3. Numeric Tests</h3>
+
+        <div class="example">
+            <strong>is even:</strong> 4 is even = <span class="{{ 'true' if 4 is even else 'false' }}">{{ 4 is even }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is odd:</strong> 5 is odd = <span class="{{ 'true' if 5 is odd else 'false' }}">{{ 5 is odd }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is divisibleby:</strong> 15 is divisibleby(3) = <span class="{{ 'true' if 15 is divisibleby(3) else 'false' }}">{{ 15 is divisibleby(3) }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is divisibleby (false):</strong> 17 is divisibleby(3) = <span class="{{ 'true' if 17 is divisibleby(3) else 'false' }}">{{ 17 is divisibleby(3) }}</span>
+        </div>
+
+        <!-- String Tests -->
+        <h3>4. String Tests</h3>
+
+        <div class="example">
+            <strong>is lower:</strong> "hello" is lower = <span class="{{ 'true' if "hello" is lower else 'false' }}">{{ "hello" is lower }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is upper:</strong> "HELLO" is upper = <span class="{{ 'true' if "HELLO" is upper else 'false' }}">{{ "HELLO" is upper }}</span>
+        </div>
+
+        <div class="example">
+            <strong>starts with:</strong> "Hello" starts with "He" = <span class="{{ 'true' if "Hello" is startswith("He") else 'false' }}">{{ "Hello" is startswith("He") }}</span>
+        </div>
+
+        <div class="example">
+            <strong>ends with:</strong> "World" ends with "ld" = <span class="{{ 'true' if "World" is endswith("ld") else 'false' }}">{{ "World" is endswith("ld") }}</span>
+        </div>
+
+        <!-- Comparison Tests -->
+        <h3>5. Comparison Tests</h3>
+
+        <div class="example">
+            <strong>is equalto:</strong> 5 is equalto(5) = <span class="{{ 'true' if 5 is equalto(5) else 'false' }}">{{ 5 is equalto(5) }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is sameas:</strong> true is sameas(true) = <span class="{{ 'true' if true is sameas(true) else 'false' }}">{{ true is sameas(true) }}</span>
+        </div>
+
+        <div class="example">
+            <strong>in operator:</strong> 3 in [1,2,3] = <span class="{{ 'true' if 3 in numbers else 'false' }}">{{ 3 in numbers }}</span>
+        </div>
+
+        <!-- Negated Tests -->
+        <h3>6. Negated Tests</h3>
+
+        <div class="example">
+            <strong>is not defined:</strong> nonexistent is not defined = <span class="{{ 'true' if nonexistent is not defined else 'false' }}">{{ nonexistent is not defined }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is not none:</strong> "text" is not none = <span class="{{ 'true' if "text" is not none else 'false' }}">{{ "text" is not none }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is not even:</strong> 5 is not even = <span class="{{ 'true' if 5 is not even else 'false' }}">{{ 5 is not even }}</span>
+        </div>
+
+        <div class="example">
+            <strong>is not empty:</strong> [1,2,3] is not empty = <span class="{{ 'true' if numbers is not empty else 'false' }}">{{ numbers is not empty }}</span>
+        </div>
+    </div>
+
+    <!-- Practical Examples -->
+    <div class="section">
+        <h2>PART 3: PRACTICAL EXAMPLES</h2>
+
+        <h3>Complex Expressions:</h3>
+
+        <div class="example">
+            <strong>Combined operators:</strong>
+            {% if user.age >= 18 and user.active and user.role == "admin" %}
+            Full admin access granted
+            {% else %}
+            Access restricted
+            {% endif %}
+        </div>
+
+        <div class="example">
+            <strong>Arithmetic with filters:</strong>
+            Total: ${{ (price * quantity * (1 - discount))|round(2) }}
+        </div>
+
+        <div class="example">
+            <strong>Tests in loops:</strong>
+            <ul>
+            {% for num in numbers %}
+                {% if num is even and num > 5 %}
+                <li>{{ num }} is a large even number</li>
+                {% endif %}
+            {% endfor %}
+            </ul>
+        </div>
+
+        <div class="example">
+            <strong>Ternary with operators:</strong>
+            Status: {{ "Premium" if total > 1000 else "Standard" if total > 100 else "Basic" }}
+        </div>
+
+        <div class="example">
+            <strong>Complex boolean logic:</strong>
+            {% if (user.active and user.verified) or user.role == "admin" %}
+            Account is valid
+            {% else %}
+            Please verify your account
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Reference Table -->
+    <div class="section">
+        <h2>PART 4: COMPLETE REFERENCE</h2>
+
+        <h3>Operators Summary:</h3>
+        <table>
+            <tr>
+                <th>Category</th>
+                <th>Operators</th>
+                <th>Example</th>
+            </tr>
+            <tr>
+                <td>Arithmetic</td>
+                <td>+, -, *, /, //, %, **, ~</td>
+                <td>{{ "{{ 5 + 3 }}" }}</td>
+            </tr>
+            <tr>
+                <td>Comparison</td>
+                <td>==, !=, &lt;, &lt;=, &gt;, &gt;=</td>
+                <td>{{ "{{ 5 > 3 }}" }}</td>
+            </tr>
+            <tr>
+                <td>Logical</td>
+                <td>and, or, not</td>
+                <td>{{ "{{ true and false }}" }}</td>
+            </tr>
+            <tr>
+                <td>Membership</td>
+                <td>in, not in</td>
+                <td>{{ "{{ 3 in [1,2,3] }}" }}</td>
+            </tr>
+        </table>
+
+        <h3>Tests Summary:</h3>
+        <table>
+            <tr>
+                <th>Category</th>
+                <th>Tests</th>
+                <th>Count</th>
+            </tr>
+            <tr>
+                <td>Type</td>
+                <td>defined, undefined, none, boolean, string, number, integer, float</td>
+                <td>8</td>
+            </tr>
+            <tr>
+                <td>Container</td>
+                <td>sequence, mapping, iterable, callable</td>
+                <td>4</td>
+            </tr>
+            <tr>
+                <td>Numeric</td>
+                <td>even, odd, divisibleby</td>
+                <td>3</td>
+            </tr>
+            <tr>
+                <td>String</td>
+                <td>lower, upper, startswith, endswith, match, alpha, alnum</td>
+                <td>7</td>
+            </tr>
+            <tr>
+                <td>Comparison</td>
+                <td>equalto, sameas, in, contains</td>
+                <td>4</td>
+            </tr>
+            <tr>
+                <td><strong>TOTAL</strong></td>
+                <td colspan="2"><strong>26+ Tests</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <footer>
+        <p>All operators and tests are 100% Jinja2 compatible</p>
+        <p>Generated with Miya Engine</p>
+    </footer>
+</body>
+</html>

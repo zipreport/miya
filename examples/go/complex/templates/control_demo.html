@@ -1,0 +1,115 @@
+<div class="control-demo">
+    <h2>Control Structures Demo</h2>
+    
+    <!-- Advanced For Loop Features -->
+    <section class="loop-demo">
+        <h3>Advanced For Loop Features</h3>
+        
+        <h4>User List with Loop Variables</h4>
+        <ul class="user-list">
+        {% for user in users %}
+            <li class="user-item user-{{ loop.index }}" data-position="{{ loop.index0 }}">
+                <strong>{{ user.Name }}</strong>
+                <span class="meta">
+                    ({{ loop.index }}/{{ loop.length }})
+                    {% if loop.first %}[FIRST]{% endif %}
+                    {% if loop.last %}[LAST]{% endif %}
+                    {% if loop.index is even %}[EVEN]{% endif %}
+                    {% if loop.index is odd %}[ODD]{% endif %}
+                    [REV: {{ loop.revindex }}]
+                </span>
+                <div class="user-details">
+                    Email: {{ user.Email|default("No email", true) }}
+                    | Age: {{ user.Age }}
+                    | Role: {{ user.Role|upper }}
+                </div>
+            </li>
+        {% else %}
+            <li class="no-users">No users found</li>
+        {% endfor %}
+        </ul>
+        
+        <h4>Conditional Iteration</h4>
+        <div class="active-users">
+            <strong>Active Users Only:</strong>
+            {% for user in users if user.Active %}
+                <span class="active-user">{{ user.Name }}</span>
+                {%- if not loop.last %}, {% endif -%}
+            {% else %}
+                <em>No active users</em>
+            {% endfor %}
+        </div>
+        
+        <h4>Multiple Variable Unpacking</h4>
+        <div class="metadata-display">
+        {% for key, value in users[0].Metadata if users %}
+            <div class="metadata-row">
+                <span class="key">{{ key|title }}:</span>
+                <span class="value">{{ value }}</span>
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+    
+    <!-- Advanced If Conditions -->
+    <section class="conditional-demo">
+        <h3>Advanced Conditional Logic</h3>
+        
+        {% set user_count = users|length %}
+        {% set active_count = users|selectattr("Active")|list|length %}
+        {% set admin_count = users|selectattr("Role", "equalto", "admin")|list|length %}
+        
+        <div class="stats-summary">
+            <p>Total Users: {{ user_count }}</p>
+            <p>Active Users: {{ active_count }}</p>
+            <p>Administrators: {{ admin_count }}</p>
+            
+            {% if user_count > 0 %}
+                {% if active_count == user_count %}
+                    <div class="alert alert-success">All users are active! 🎉</div>
+                {% elif active_count > user_count // 2 %}
+                    <div class="alert alert-info">Most users are active ({{ (active_count / user_count * 100)|round }}%)</div>
+                {% elif active_count > 0 %}
+                    <div class="alert alert-warning">Some users are inactive</div>
+                {% else %}
+                    <div class="alert alert-danger">No active users found!</div>
+                {% endif %}
+                
+                {% if admin_count > 0 %}
+                    <div class="admin-info">
+                        {% if admin_count == 1 %}
+                            There is {{ admin_count }} administrator
+                        {% else %}
+                            There are {{ admin_count }} administrators
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="alert alert-warning">No users in the system</div>
+            {% endif %}
+        </div>
+    </section>
+    
+    <!-- With Statement Demo -->
+    <section class="with-demo">
+        <h3>With Statement Scoping</h3>
+        
+        {% with recent_users = users|selectattr("Active")|sort(attribute="Created", reverse=true)|list %}
+            {% if recent_users %}
+                <h4>Recent Active Users ({{ recent_users|length }})</h4>
+                <ul>
+                {% for user in recent_users %}
+                    <li>{{ user.Name }} - {{ user.Created|relative_date }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        
+        {% with percentage = (active_count / user_count * 100)|round if user_count > 0 else 0 %}
+            <div class="computed-stats">
+                <h4>Computed Statistics</h4>
+                <p>Activity Rate: {{ percentage }}% ({{ active_count }}/{{ user_count }})</p>
+            </div>
+        {% endwith %}
+    </section>
+</div>

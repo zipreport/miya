@@ -1,0 +1,118 @@
+{# Macro Library File #}
+
+{# Basic macro with parameters #}
+{% macro render_input(name, type="text", value="", placeholder="") %}
+<div class="form-group">
+    <input type="{{ type }}"
+           name="{{ name }}"
+           value="{{ value }}"
+           {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+           class="form-control">
+</div>
+{% endmacro %}
+
+{# Macro with default parameters #}
+{% macro render_button(text, type="button", class="btn-primary", disabled=False) %}
+<button type="{{ type }}"
+        class="btn {{ class }}"
+        {% if disabled %}disabled{% endif %}>
+    {{ text }}
+</button>
+{% endmacro %}
+
+{# Complex macro with logic #}
+{% macro render_field(field_name, label=None, type="text", required=False, help_text=None) %}
+<div class="form-field">
+    {% if label %}
+    <label for="{{ field_name }}">
+        {{ label }}
+        {% if required %}<span class="required">*</span>{% endif %}
+    </label>
+    {% endif %}
+
+    <input type="{{ type }}"
+           id="{{ field_name }}"
+           name="{{ field_name }}"
+           {% if required %}required{% endif %}
+           class="form-control">
+
+    {% if help_text %}
+    <small class="help-text">{{ help_text }}</small>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{# Macro with call block support - NOT SUPPORTED IN MIYA #}
+{# {% macro render_card(title, card_class="") %}
+<div class="card {{ card_class }}">
+    <div class="card-header">
+        <h3>{{ title }}</h3>
+    </div>
+    <div class="card-body">
+        {{ caller() }}
+    </div>
+</div>
+{% endmacro %} #}
+
+{# Simple card macro without caller() #}
+{% macro render_simple_card(title, content, card_class="") %}
+<div class="card {{ card_class }}">
+    <div class="card-header">
+        <h3>{{ title }}</h3>
+    </div>
+    <div class="card-body">
+        {{ content }}
+    </div>
+</div>
+{% endmacro %}
+
+{# Macro for rendering lists #}
+{% macro render_list(items, ordered=False, class="") %}
+{% if ordered %}
+<ol class="{{ class }}">
+{% else %}
+<ul class="{{ class }}">
+{% endif %}
+    {% for item in items %}
+    <li>{{ item }}</li>
+    {% endfor %}
+{% if ordered %}
+</ol>
+{% else %}
+</ul>
+{% endif %}
+{% endmacro %}
+
+{# Macro for table rows #}
+{% macro render_table_row(columns, header=False) %}
+<tr>
+    {% for col in columns %}
+    {% if header %}
+    <th>{{ col }}</th>
+    {% else %}
+    <td>{{ col }}</td>
+    {% endif %}
+    {% endfor %}
+</tr>
+{% endmacro %}
+
+{# Macro with filters #}
+{% macro render_badge(text, type="info") %}
+<span class="badge badge-{{ type }}">{{ text|upper }}</span>
+{% endmacro %}
+
+{# Nested macro calls - NOT SUPPORTED IN MIYA #}
+{# {% macro render_form(action, method="POST") %}
+<form action="{{ action }}" method="{{ method }}">
+    {{ caller() }}
+    {{ render_button("Submit", type="submit") }}
+</form>
+{% endmacro %} #}
+
+{# Simple form macro without caller() #}
+{% macro render_simple_form(action, method="POST") %}
+<form action="{{ action }}" method="{{ method }}">
+    <p>Form action: {{ action }}, method: {{ method }}</p>
+    {{ render_button("Submit", type="submit") }}
+</form>
+{% endmacro %}

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>List &amp; Dict Comprehensions</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        .example { background: white; padding: 10px; margin: 10px 0; border-left: 3px solid #007bff; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+        .output { color: #28a745; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>List &amp; Dictionary Comprehensions</h1>
+
+    <!-- Example 1: Basic List Comprehensions -->
+    <div class="section">
+        <h2>1. Basic List Comprehensions</h2>
+
+        <div class="example">
+            <h3>Transform Values:</h3>
+            <p class="output">{{ [x * 2 for x in numbers] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>Extract Property:</h3>
+            <p class="output">{{ [user.name for user in users] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>String Operations:</h3>
+            <p class="output">{{ [name|upper for name in names] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>Arithmetic:</h3>
+            <p class="output">{{ [price * 1.1 for price in prices] }}</p>
+        </div>
+    </div>
+
+    <!-- Example 2: List Comprehensions with Filters -->
+    <div class="section">
+        <h2>2. List Comprehensions (Note: Use template filters for conditional filtering)</h2>
+
+        <div class="example">
+            <h3>All Numbers (use filters for even/odd):</h3>
+            <p class="output">{{ [x for x in numbers] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>All User Names (use selectattr for filtering):</h3>
+            <p class="output">{{ [user.name for user in users] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>All Prices:</h3>
+            <p class="output">{{ [price for price in prices] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>All User Details:</h3>
+            <p class="output">{{ [user.name for user in users] }}</p>
+        </div>
+    </div>
+
+    <!-- Example 3: List Comprehensions with Filters -->
+    <div class="section">
+        <h2>3. List Comprehensions with Template Filters</h2>
+
+        <div class="example">
+            <h3>Title Case Names:</h3>
+            <p class="output">{{ [name|title for name in names] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>Format Prices:</h3>
+            <p class="output">{{ ["$" ~ (price|round(2)) for price in prices] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>Slugified Titles:</h3>
+            <p class="output">{{ [title|slugify for title in titles] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>Combined Transformations:</h3>
+            <p class="output">{{ [name|trim|upper for name in names] }}</p>
+        </div>
+    </div>
+
+    <!-- Example 4: Dictionary Comprehensions -->
+    <div class="section">
+        <h2>4. Dictionary Comprehensions</h2>
+        <p><strong>Note:</strong> Miya Engine supports simple dict comprehensions like <code>{expr: expr for item in list}</code>.
+        Dict unpacking with <code>.items()</code> or tuple unpacking is NOT supported.</p>
+
+        <div class="example">
+            <h3>Create ID to Name Mapping:</h3>
+            <p class="output">{{ {user.id: user.name for user in users} }}</p>
+        </div>
+
+        <div class="example">
+            <h3>Create Email to Role Mapping:</h3>
+            <p class="output">{{ {user.email: user.role for user in users} }}</p>
+        </div>
+
+        <div class="example">
+            <h3>Product SKU to Name Mapping:</h3>
+            <p class="output">{{ {product.sku: product.name for product in products} }}</p>
+        </div>
+
+        <div class="example">
+            <h3>User ID to Age Mapping:</h3>
+            <p class="output">{{ {user.id: user.age for user in users} }}</p>
+        </div>
+    </div>
+
+    <!-- Example 5: Dictionary Comprehensions with Filtering -->
+    <div class="section">
+        <h2>5. Dictionary Comprehensions with Filtering</h2>
+        <p><strong>Note:</strong> Dict comprehensions don't support inline <code>if</code> clauses in Miya.
+        Use filters like <code>selectattr</code> to filter the input list first.</p>
+
+        <div class="example">
+            <h3>All Users Mapping:</h3>
+            <p class="output">{{ {user.id: user.name for user in users} }}</p>
+        </div>
+
+        <div class="example">
+            <h3>User ID to Name (all users):</h3>
+            <p class="output">{{ {user.id: user.name for user in users} }}</p>
+        </div>
+
+        <div class="example">
+            <h3>User Email to Age Mapping:</h3>
+            <p class="output">{{ {user.email: user.age for user in users} }}</p>
+        </div>
+    </div>
+
+    <!-- Example 6: Working with Nested Data -->
+    <div class="section">
+        <h2>6. Working with Nested Data</h2>
+        <p><strong>Note:</strong> Nested comprehensions (multiple <code>for</code> clauses) are NOT supported in Miya.
+        Use nested loops or flatten data before using comprehensions.</p>
+
+        <div class="example">
+            <h3>Extract from Nested Structure:</h3>
+            <p>Use template loops instead:</p>
+            {% for category in categories %}
+            <p>{{ category.name }}: {{ [item.name for item in category.items]|join(", ") }}</p>
+            {% endfor %}
+        </div>
+
+        <div class="example">
+            <h3>Simple List Comprehension:</h3>
+            <p class="output">{{ [category.name for category in categories] }}</p>
+        </div>
+    </div>
+
+    <!-- Example 7: Practical Examples -->
+    <div class="section">
+        <h2>7. Practical Use Cases</h2>
+
+        <div class="example">
+            <h3>Shopping Cart Items:</h3>
+            <p class="output">{{ [item.price * item.qty for item in cart] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>User Display Names:</h3>
+            <p class="output">{{ [user.name ~ " (" ~ user.role ~ ")" for user in users] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>Email List:</h3>
+            <p class="output">{{ [user.email for user in users] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>Price Ranges:</h3>
+            <p class="output">{{ ["$" ~ price ~ " - $" ~ (price * 1.2)|round(2) for price in prices] }}</p>
+        </div>
+
+        <div class="example">
+            <h3>Product Lookup:</h3>
+            <p class="output">{{ {product.sku: product.name for product in products} }}</p>
+        </div>
+    </div>
+
+    <!-- Example 8: Comprehensions in Context -->
+    <div class="section">
+        <h2>8. Comprehensions in Templates</h2>
+
+        <div class="example">
+            <h3>In Conditionals:</h3>
+            {% set all_user_names = [user.name for user in users] %}
+            {% if all_user_names|length > 2 %}
+            <p class="output">There are {{ all_user_names|length }} users</p>
+            {% endif %}
+        </div>
+
+        <div class="example">
+            <h3>In Loops:</h3>
+            <ul>
+            {% for user in users %}
+                <li class="output">{{ user.name|upper }}</li>
+            {% endfor %}
+            </ul>
+        </div>
+
+        <div class="example">
+            <h3>In Variables (use comprehension):</h3>
+            {% set all_user_ids = [user.id for user in users] %}
+            <p class="output">All User IDs: {{ all_user_ids }}</p>
+        </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="section">
+        <h2>9. Features Summary</h2>
+        <table border="1" cellpadding="10" style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <th>Feature</th>
+                <th>Syntax</th>
+                <th>Status</th>
+            </tr>
+            <tr>
+                <td>List Comprehension</td>
+                <td><code>[expression for item in iterable]</code></td>
+                <td>✅ Supported</td>
+            </tr>
+            <tr>
+                <td>List with Filter</td>
+                <td><code>[expression for item in iterable if condition]</code></td>
+                <td>❌ Not Supported - Use selectattr/select filters</td>
+            </tr>
+            <tr>
+                <td>Dict Comprehension (Simple)</td>
+                <td><code>{expr: expr for item in list}</code></td>
+                <td>✅ Supported</td>
+            </tr>
+            <tr>
+                <td>Dict with .items() Unpacking</td>
+                <td><code>{k: v for k, v in dict.items()}</code></td>
+                <td>❌ Not Supported</td>
+            </tr>
+            <tr>
+                <td>Dict with Filter</td>
+                <td><code>{key: value for item in iterable if condition}</code></td>
+                <td>❌ Not Supported - Use selectattr/select filters</td>
+            </tr>
+            <tr>
+                <td>Nested Comprehensions</td>
+                <td><code>[item for list in lists for item in list]</code></td>
+                <td>❌ Not Supported - Use nested loops instead</td>
+            </tr>
+            <tr>
+                <td>Template Filters</td>
+                <td><code>[item|filter for item in items]</code></td>
+                <td>✅ Supported</td>
+            </tr>
+            <tr>
+                <td>Complex Conditions</td>
+                <td><code>[item for item in items if cond1 and cond2]</code></td>
+                <td>❌ Not Supported - Use selectattr/select filters</td>
+            </tr>
+        </table>
+    </div>
+
+    <footer>
+        <p>Generated with Miya Engine</p>
+    </footer>
+</body>
+</html>

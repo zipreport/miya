@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Control Structures Demo</title>
+    <style>
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .example { background: #f5f5f5; padding: 10px; margin: 10px 0; }
+        .status-active { color: green; }
+        .status-inactive { color: red; }
+        .status-pending { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Control Structures Examples</h1>
+
+    <!-- Example 1: If/Elif/Else Statements -->
+    <div class="section">
+        <h2>1. Conditional Statements (if/elif/else)</h2>
+
+        {% if user.role == "admin" %}
+        <p class="status-active">✓ Admin access granted</p>
+        <p>Welcome, Administrator {{ user.name }}!</p>
+        {% elif user.role == "moderator" %}
+        <p class="status-pending">⚠ Moderator access granted</p>
+        <p>Welcome, Moderator {{ user.name }}!</p>
+        {% elif user.role == "user" %}
+        <p>Welcome, {{ user.name }}!</p>
+        {% else %}
+        <p class="status-inactive">✗ Access restricted - Unknown role</p>
+        {% endif %}
+
+        <h3>User Status Check:</h3>
+        {% if user.active %}
+        <p class="status-active">Account is ACTIVE</p>
+        {% else %}
+        <p class="status-inactive">Account is INACTIVE</p>
+        {% endif %}
+
+        <h3>Nested Conditions:</h3>
+        {% if user.active %}
+            {% if user.verified %}
+            <p>✓ Fully verified and active account</p>
+            {% else %}
+            <p>⚠ Active but needs email verification</p>
+            {% endif %}
+        {% else %}
+        <p>✗ Account needs activation</p>
+        {% endif %}
+    </div>
+
+    <!-- Example 2: For Loops -->
+    <div class="section">
+        <h2>2. For Loops</h2>
+
+        <h3>Basic Iteration:</h3>
+        <ul>
+        {% for product in products %}
+            <li>{{ product.name }} - ${{ product.price }}</li>
+        {% endfor %}
+        </ul>
+
+        <h3>Loop Variables:</h3>
+        <table border="1" cellpadding="5">
+            <tr>
+                <th>Index</th>
+                <th>Index0</th>
+                <th>First</th>
+                <th>Last</th>
+                <th>Product</th>
+                <th>RevIndex</th>
+            </tr>
+        {% for product in products %}
+            <tr style="background: {{ 'lightblue' if loop.first else 'lightyellow' if loop.last else 'white' }}">
+                <td>{{ loop.index }}</td>
+                <td>{{ loop.index0 }}</td>
+                <td>{{ loop.first }}</td>
+                <td>{{ loop.last }}</td>
+                <td>{{ product.name }}</td>
+                <td>{{ loop.revindex }}</td>
+            </tr>
+        {% endfor %}
+        </table>
+
+        <h3>Conditional Iteration:</h3>
+        <p>Products over $50:</p>
+        <ul>
+        {% for product in products if product.price > 50 %}
+            <li>{{ product.name }} - ${{ product.price }} ({{ loop.index }} of {{ loop.length }})</li>
+        {% endfor %}
+        </ul>
+
+        <h3>List Iteration (Note: dict.items() unpacking not supported):</h3>
+        <p>Products in stock:</p>
+        <dl>
+        {% for product in products %}
+            <dt><strong>{{ product.name }}</strong></dt>
+            <dd>Price: ${{ product.price }}, Stock: {{ product.stock }}</dd>
+        {% endfor %}
+        </dl>
+
+        <h3>Loop with Else (empty handling):</h3>
+        <ul>
+        {% for item in empty_list %}
+            <li>{{ item }}</li>
+        {% else %}
+            <li><em>No items to display</em></li>
+        {% endfor %}
+        </ul>
+    </div>
+
+    <!-- Example 3: Inline Conditionals (Ternary) -->
+    <div class="section">
+        <h2>3. Inline Conditionals (Ternary)</h2>
+
+        <p>Stock Status: <strong>{{ 'In Stock' if stock > 0 else 'Out of Stock' }}</strong></p>
+        <p>Price Display: ${{ price if price > 0 else 'N/A' }}</p>
+        <p>Discount Badge: {{ 'SALE!' if discount > 0 else '' }}</p>
+
+        <h3>Chained Ternary:</h3>
+        <p>Customer Tier:
+            <strong>{{ 'Premium' if total_spent > 1000 else 'Gold' if total_spent > 500 else 'Silver' if total_spent > 100 else 'Bronze' }}</strong>
+        </p>
+    </div>
+
+    <!-- Example 4: Set Statements -->
+    <div class="section">
+        <h2>4. Variable Assignment (set)</h2>
+
+        {% set greeting = "Hello, " ~ user.name ~ "!" %}
+        {% set total_price = 0 %}
+        {% for product in products %}
+            {% set total_price = total_price + product.price %}
+        {% endfor %}
+
+        <p>{{ greeting }}</p>
+        <p>Total Cart Value: ${{ total_price }}</p>
+
+        <h3>Variable Assignment:</h3>
+        {% set first_product = products[0] %}
+        {% set second_product = products[1] %}
+        <p>First: {{ first_product.name }}, Second: {{ second_product.name }}</p>
+
+        <h3>Block Assignment:</h3>
+        {% set formatted_html %}
+        <div class="alert">
+            <strong>Important!</strong> You have {{ products|length }} items in cart.
+        </div>
+        {% endset %}
+        {{ formatted_html }}
+    </div>
+
+    <!-- Example 5: With Statements (Scoping) -->
+    <div class="section">
+        <h2>5. With Statements (Variable Scoping)</h2>
+
+        {% with total = products|length %}
+        <p>You have {{ total }} products in your catalog.</p>
+        <p>{{ 'Large catalog' if total > 5 else 'Small catalog' }}</p>
+        {% endwith %}
+
+        <h3>Multiple Variables:</h3>
+        {% with min_price = 10, max_price = 100, currency = 'USD' %}
+        <p>Price Range: {{ currency }} {{ min_price }} - {{ currency }} {{ max_price }}</p>
+        {% endwith %}
+
+        <h3>Nested With:</h3>
+        {% with category = "Electronics" %}
+            {% with count = products|length %}
+            <p>{{ category }} category has {{ count }} items</p>
+            {% endwith %}
+        {% endwith %}
+    </div>
+
+    <!-- Example 6: Complex Control Flow -->
+    <div class="section">
+        <h2>6. Complex Control Flow</h2>
+
+        <h3>Nested Loops:</h3>
+        {% for category in categories %}
+        <div class="example">
+            <h4>{{ category.name }}</h4>
+            <ul>
+            {% for item in category.items %}
+                <li>{{ item }} (Category {{ loop.parent.loop.index }})</li>
+            {% endfor %}
+            </ul>
+        </div>
+        {% endfor %}
+
+        <h3>Combined Conditions and Loops:</h3>
+        {% for product in products %}
+            {% if loop.first %}
+            <p><strong>Featured Product:</strong></p>
+            {% endif %}
+
+            {% if product.price > 50 %}
+            <div class="example">
+                <p>{{ product.name }} - ${{ product.price }}</p>
+                {% if product.stock < 10 %}
+                <p style="color: red;">⚠ Low Stock: {{ product.stock }} remaining</p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            {% if loop.last %}
+            <p><em>End of product list</em></p>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <footer>
+        <p>Total Products: {{ products|length }}</p>
+        <p>Generated with Miya Engine</p>
+    </footer>
+</body>
+</html>

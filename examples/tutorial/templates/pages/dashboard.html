@@ -1,0 +1,22 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Dashboard - {{ site_name }}{% endblock %}
+
+{% block nav %}
+{{ super() }}
+<a href="/dashboard">Dashboard</a>
+<a href="/settings">Settings</a>
+{% endblock %}
+
+{% block content %}
+<h2>Dashboard</h2>
+
+{# Include the user info partial #}
+{% include "includes/user_info.html" %}
+
+{# Include the stats widget #}
+{% include "includes/stats.html" %}
+
+{# Include the orders table #}
+{% include "includes/orders_table.html" %}
+{% endblock %}

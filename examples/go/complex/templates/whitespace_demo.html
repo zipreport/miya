@@ -1,0 +1,24 @@
+{# Demonstrating different whitespace control techniques #}
+<div class="products">
+{%- for product in products -%}
+    <div class="product product-{{ loop.index }}">
+        <h3>{{- product.Name -}}</h3>
+        <div class="details">
+            <span class="price">${{- product.Price -}}</span>
+            <span class="category">{{- product.Category -}}</span>
+            {%- if product.InStock -%}
+            <span class="status in-stock">✓ In Stock</span>
+            {%- else -%}
+            <span class="status out-of-stock">✗ Out of Stock</span>
+            {%- endif -%}
+        </div>
+        {%- if product.Features -%}
+        <ul class="features">
+            {%- for feature in product.Features -%}
+            <li>{{ feature }}</li>
+            {%- endfor -%}
+        </ul>
+        {%- endif -%}
+    </div>
+{%- endfor -%}
+</div>

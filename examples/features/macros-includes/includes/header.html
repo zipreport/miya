@@ -1,0 +1,12 @@
+<header class="site-header">
+    <div class="logo">
+        <h1>{{ site_name|default("Miya Engine") }}</h1>
+    </div>
+    <nav>
+        <ul>
+            {% for link in nav_links %}
+            <li><a href="{{ link.url }}">{{ link.title }}</a></li>
+            {% endfor %}
+        </ul>
+    </nav>
+</header>

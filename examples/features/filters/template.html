@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Filters Showcase</title>
+    <style>
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; background: #f9f9f9; }
+        .filter-example { background: white; padding: 10px; margin: 5px 0; border-left: 3px solid #007bff; }
+        code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background: #007bff; color: white; }
+    </style>
+</head>
+<body>
+    <h1>Miya Engine Filters Showcase</h1>
+
+    <!-- STRING FILTERS -->
+    <div class="section">
+        <h2>1. String Filters</h2>
+
+        <div class="filter-example">
+            <strong>upper:</strong> {{ text|upper }}
+        </div>
+
+        <div class="filter-example">
+            <strong>lower:</strong> {{ "HELLO WORLD"|lower }}
+        </div>
+
+        <div class="filter-example">
+            <strong>capitalize:</strong> {{ "hello world"|capitalize }}
+        </div>
+
+        <div class="filter-example">
+            <strong>title:</strong> {{ "the quick brown fox"|title }}
+        </div>
+
+        <div class="filter-example">
+            <strong>trim:</strong> "{{ "   spaced text   "|trim }}"
+        </div>
+
+        <div class="filter-example">
+            <strong>replace:</strong> {{ "Hello World"|replace("World", "Miya") }}
+        </div>
+
+        <div class="filter-example">
+            <strong>truncate:</strong> {{ long_text|truncate(30) }}
+        </div>
+
+        <div class="filter-example">
+            <strong>center:</strong> "{{ "Title"|center(20, "-") }}"
+        </div>
+
+        <div class="filter-example">
+            <strong>wordcount:</strong> {{ long_text|wordcount }} words
+        </div>
+
+        <div class="filter-example">
+            <strong>split:</strong> {{ "apple,banana,cherry"|split(",")|join(" | ") }}
+        </div>
+
+        <div class="filter-example">
+            <strong>startswith:</strong> {{ "Hello World"|startswith("Hello") }}
+        </div>
+
+        <div class="filter-example">
+            <strong>endswith:</strong> {{ "filename.txt"|endswith(".txt") }}
+        </div>
+
+        <div class="filter-example">
+            <strong>contains:</strong> {{ "hello world"|contains("world") }}
+        </div>
+
+        <div class="filter-example">
+            <strong>slugify:</strong> {{ "Hello World! This is Miya."|slugify }}
+        </div>
+    </div>
+
+    <!-- COLLECTION FILTERS -->
+    <div class="section">
+        <h2>2. Collection Filters</h2>
+
+        <div class="filter-example">
+            <strong>first:</strong> {{ numbers|first }}
+        </div>
+
+        <div class="filter-example">
+            <strong>last:</strong> {{ numbers|last }}
+        </div>
+
+        <div class="filter-example">
+            <strong>length:</strong> {{ numbers|length }} items
+        </div>
+
+        <div class="filter-example">
+            <strong>join:</strong> {{ fruits|join(", ") }}
+        </div>
+
+        <div class="filter-example">
+            <strong>sort:</strong> [5, 2, 8, 1, 9, 3] sorted = [1, 2, 3, 5, 8, 9]
+        </div>
+
+        <div class="filter-example">
+            <strong>reverse:</strong> Reverses list order
+        </div>
+
+        <div class="filter-example">
+            <strong>unique:</strong> Removes duplicates from list
+        </div>
+
+        <div class="filter-example">
+            <strong>slice:</strong> Extract a subset of items from a list
+        </div>
+
+        <div class="filter-example">
+            <strong>batch:</strong> Group items into batches
+        </div>
+
+        <div class="filter-example">
+            <strong>map:</strong> Extract attribute values from objects
+        </div>
+
+        <div class="filter-example">
+            <strong>select:</strong> Filter items by test (e.g., even, odd)
+        </div>
+
+        <div class="filter-example">
+            <strong>reject:</strong> Exclude items by test
+        </div>
+
+        <div class="filter-example">
+            <strong>selectattr:</strong> Filter objects by attribute value
+        </div>
+
+        <div class="filter-example">
+            <strong>rejectattr:</strong> Exclude objects by attribute value
+        </div>
+    </div>
+
+    <!-- NUMERIC FILTERS -->
+    <div class="section">
+        <h2>3. Numeric Filters</h2>
+
+        <div class="filter-example">
+            <strong>abs:</strong> {{ -42|abs }}
+        </div>
+
+        <div class="filter-example">
+            <strong>round:</strong> {{ 3.14159|round(2) }}
+        </div>
+
+        <div class="filter-example">
+            <strong>int:</strong> {{ "123"|int + 7 }}
+        </div>
+
+        <div class="filter-example">
+            <strong>float:</strong> {{ "99.99"|float }}
+        </div>
+
+        <div class="filter-example">
+            <strong>sum:</strong> Sum of [1,2,3,4,5,6,7,8,9,10] = 55
+        </div>
+
+        <div class="filter-example">
+            <strong>min:</strong> Minimum value in a list
+        </div>
+
+        <div class="filter-example">
+            <strong>max:</strong> Maximum value in a list
+        </div>
+
+        <div class="filter-example">
+            <strong>pow:</strong> 2^8 = {{ 2|pow(8) }}
+        </div>
+    </div>
+
+    <!-- HTML/SECURITY FILTERS -->
+    <div class="section">
+        <h2>4. HTML &amp; Security Filters</h2>
+
+        <div class="filter-example">
+            <strong>escape:</strong> {{ html_code|escape }}
+        </div>
+
+        <div class="filter-example">
+            <strong>safe:</strong> {{ safe_html|safe }}
+        </div>
+
+        <div class="filter-example">
+            <strong>striptags:</strong> {{ html_code|striptags }}
+        </div>
+
+        <div class="filter-example">
+            <strong>urlencode:</strong> {{ "hello world!"|urlencode }}
+        </div>
+    </div>
+
+    <!-- UTILITY FILTERS -->
+    <div class="section">
+        <h2>5. Utility Filters</h2>
+
+        <div class="filter-example">
+            <strong>default:</strong> {{ undefined_var|default("fallback value") }}
+        </div>
+
+        <div class="filter-example">
+            <strong>default (d):</strong> {{ none_var|d("default") }}
+        </div>
+
+        <div class="filter-example">
+            <strong>format:</strong> {{ "Hello {0}, you have {1} messages"|format(user_name, message_count) }}
+        </div>
+
+        <div class="filter-example">
+            <strong>tojson:</strong> {{ data_object|tojson }}
+        </div>
+
+        <div class="filter-example">
+            <strong>filesizeformat:</strong> {{ 1536|filesizeformat }}
+        </div>
+
+        <div class="filter-example">
+            <strong>dictsort:</strong>
+            {% for key, value in config|dictsort %}
+            {{ key }}={{ value }}{% if not loop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- CHAINED FILTERS -->
+    <div class="section">
+        <h2>6. Chained Filters</h2>
+
+        <div class="filter-example">
+            <strong>Multiple filters:</strong> {{ "  hello world  "|trim|upper|replace("WORLD", "MIYA") }}
+        </div>
+
+        <div class="filter-example">
+            <strong>Complex chain:</strong> {{ long_text|truncate(20)|title }}
+        </div>
+
+        <div class="filter-example">
+            <strong>Collection chain:</strong> {{ numbers|first }}
+        </div>
+
+        <div class="filter-example">
+            <strong>Computed value:</strong> ${{ 199.96|round(2) }}
+        </div>
+
+        <div class="filter-example">
+            <strong>Advanced chain:</strong> {{ "hello world"|trim|upper|replace("WORLD", "MIYA") }}
+        </div>
+    </div>
+
+    <!-- CONDITIONAL FILTERS -->
+    <div class="section">
+        <h2>7. Filters with Conditionals</h2>
+
+        <div class="filter-example">
+            <strong>In if statement:</strong>
+            {% if users|length > 3 %}
+            Many users ({{ users|length }})
+            {% else %}
+            Few users ({{ users|length }})
+            {% endif %}
+        </div>
+
+        <div class="filter-example">
+            <strong>In ternary:</strong> {{ "Large" if numbers|length > 5 else "Small" }} collection
+        </div>
+
+        <div class="filter-example">
+            <strong>In loop filter:</strong>
+            {% for user in users if user.name|length > 5 %}
+            {{ user.name }}{% if not loop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- FILTER SHOWCASE TABLE -->
+    <div class="section">
+        <h2>8. Complete Filter Reference</h2>
+        <table>
+            <tr>
+                <th>Category</th>
+                <th>Filters</th>
+                <th>Count</th>
+            </tr>
+            <tr>
+                <td>String</td>
+                <td>upper, lower, capitalize, title, trim, replace, truncate, center, wordcount, split, startswith, endswith, contains, slugify, indent, wordwrap</td>
+                <td>16+</td>
+            </tr>
+            <tr>
+                <td>Collection</td>
+                <td>first, last, length, join, sort, reverse, unique, slice, batch, map, select, reject, selectattr, rejectattr, groupby</td>
+                <td>15+</td>
+            </tr>
+            <tr>
+                <td>Numeric</td>
+                <td>abs, round, int, float, sum, min, max, pow, ceil, floor</td>
+                <td>10</td>
+            </tr>
+            <tr>
+                <td>HTML/Security</td>
+                <td>escape, safe, striptags, urlencode, urlize, forceescape, autoescape</td>
+                <td>7+</td>
+            </tr>
+            <tr>
+                <td>Utility</td>
+                <td>default, format, tojson, filesizeformat, dictsort, attr, pprint, string</td>
+                <td>8+</td>
+            </tr>
+            <tr>
+                <td>Date/Time</td>
+                <td>date, time, strftime, timestamp, age, relative_date</td>
+                <td>6+</td>
+            </tr>
+            <tr>
+                <td><strong>TOTAL</strong></td>
+                <td colspan="2"><strong>73+ Built-in Filters</strong></td>
+            </tr>
+        </table>
+    </div>
+
+    <footer>
+        <p>All filters are fully compatible with Jinja2 syntax</p>
+        <p>Generated with Miya Engine</p>
+    </footer>
+</body>
+</html>

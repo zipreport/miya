@@ -1,0 +1,6 @@
+{% from "utilities.html" import form_field %}
+<form class="test-form">
+{{ form_field("username", "text", "", "Username", true, "Enter your username") }}
+{{ form_field("email", "email", "", "Email Address", true, "your@email.com") }}
+{{ form_field("age", "number", "", "Age", false, "25") }}
+</form>

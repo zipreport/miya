@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}About - {{ super() }}{% endblock %}
+
+{% block content %}
+<h2>About This Example</h2>
+
+<p>This web server example demonstrates the integration of Miya Engine template engine with a web application.</p>
+
+<h3>Technical Details:</h3>
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Component</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td>Template Engine</td>
+        <td>Miya Engine (Jinja2-compatible)</td>
+    </tr>
+    <tr>
+        <td>Server</td>
+        <td>Go net/http</td>
+    </tr>
+    <tr>
+        <td>Template Loading</td>
+        <td>FileSystemLoader</td>
+    </tr>
+    <tr>
+        <td>Auto-escaping</td>
+        <td>Enabled (XSS protection)</td>
+    </tr>
+</table>
+
+<h3>Template Features Used:</h3>
+<ul>
+    <li><strong>Inheritance:</strong> All pages extend base.html</li>
+    <li><strong>Blocks:</strong> title, content, footer</li>
+    <li><strong>Filters:</strong> length, format, title, selectattr, rejectattr, map, sum</li>
+    <li><strong>Tests:</strong> Conditional checks with if/else</li>
+    <li><strong>Loops:</strong> Iterating over products and categories</li>
+    <li><strong>Variables:</strong> Dynamic content from Go structs</li>
+</ul>
+
+<h3>Server Information:</h3>
+<ul>
+    <li>Current Time: {{ current_time.Format("Jan 02, 2006 3:04:05 PM MST") }}</li>
+    <li>Go Version: {{ runtime_version }}</li>
+</ul>
+{% endblock %}

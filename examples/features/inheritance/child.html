@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Miya Engine{% endblock %}
+
+{% block extra_head %}
+<style>
+    body { font-family: Arial, sans-serif; }
+    .highlight { color: #007bff; }
+</style>
+{% endblock %}
+
+{% block header %}
+{{ super() }} - Extended Edition
+{% endblock %}
+
+{% block navigation %}
+{{ super() }} | <a href="/features">Features</a> | <a href="/docs">Docs</a>
+{% endblock %}
+
+{% block content %}
+<h2>{{ page_title }}</h2>
+<p>{{ description }}</p>
+
+<h3>Key Features Demonstrated:</h3>
+<ul>
+    {% for feature in features %}
+    <li class="highlight">{{ feature }}</li>
+    {% endfor %}
+</ul>
+
+<h3>Statistics:</h3>
+<ul>
+    <li>Total Features: {{ features|length }}</li>
+    <li>Template Level: {{ level }}</li>
+    <li>Multi-level Inheritance: {{ multilevel|default("Yes") }}</li>
+</ul>
+{% endblock %}
+
+{% block sidebar %}
+<h3>Quick Links</h3>
+<ul>
+    {% for link in quick_links %}
+    <li><a href="{{ link.url }}">{{ link.title }}</a></li>
+    {% endfor %}
+</ul>
+
+<h3>Original Sidebar</h3>
+{{ super() }}
+{% endblock %}
+
+{% block footer %}
+<p>Generated at: {{ timestamp }}</p>
+{{ super() }}
+{% endblock %}

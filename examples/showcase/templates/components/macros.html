@@ -1,0 +1,191 @@
+{# Macro Library - Demonstrates macro features, parameters, defaults, and reusability #}
+
+{#- Simple macro with no parameters -#}
+{% macro current_time() -%}
+    <span class="timestamp">Generated at runtime</span>
+{%- endmacro %}
+
+{#- Macro with required parameters -#}
+{% macro button(text, url) -%}
+    <a href="{{ url }}" class="btn">{{ text }}</a>
+{%- endmacro %}
+
+{#- Macro with default parameters -#}
+{% macro card(title, content, theme='light', width='300px') -%}
+    <div class="card card-{{ theme }}" style="width: {{ width }}">
+        <div class="card-header">
+            <h3>{{ title|title }}</h3>
+        </div>
+        <div class="card-body">
+            {{ content }}
+        </div>
+    </div>
+{%- endmacro %}
+
+{#- Macro with complex logic -#}
+{% macro user_badge(user, show_email=false, show_status=true) -%}
+    <div class="user-badge">
+        <img src="{{ user.avatar|default('/static/default-avatar.png') }}" alt="{{ user.name }}">
+        <div class="user-info">
+            <strong>{{ user.name|title }}</strong>
+            {% if show_email and user.email is defined -%}
+                <br><small>{{ user.email|lower }}</small>
+            {%- endif %}
+            {% if show_status -%}
+                <br><span class="status status-{{ user.status|default('offline') }}">
+                    {{ user.status|default('offline')|upper }}
+                </span>
+            {%- endif %}
+        </div>
+    </div>
+{%- endmacro %}
+
+{#- Macro using filters and tests -#}
+{% macro format_number(value, decimals=2, prefix='', suffix='') -%}
+    {% if value is number -%}
+        {{ prefix }}{{ value|round(decimals) }}{{ suffix }}
+    {%- else -%}
+        {{ value }}
+    {%- endif %}
+{%- endmacro %}
+
+{#- Macro with loop inside -#}
+{% macro render_list(items, ordered=false, class='') -%}
+    {% if ordered -%}
+        <ol class="{{ class }}">
+    {%- else -%}
+        <ul class="{{ class }}">
+    {%- endif %}
+    {% for item in items -%}
+        <li>
+            {% if item is mapping -%}
+                {{ item.text|default(item|string) }}
+            {%- else -%}
+                {{ item }}
+            {%- endif %}
+        </li>
+    {%- endfor %}
+    {% if ordered -%}
+        </ol>
+    {%- else -%}
+        </ul>
+    {%- endif %}
+{%- endmacro %}
+
+{#- Macro for creating tables -#}
+{% macro data_table(headers, rows, striped=true) -%}
+    <table class="table{% if striped %} table-striped{% endif %}">
+        <thead>
+            <tr>
+            {% for header in headers -%}
+                <th>{{ header|title }}</th>
+            {%- endfor %}
+            </tr>
+        </thead>
+        <tbody>
+        {% for row in rows -%}
+            <tr{% if loop.index is even %} class="even"{% endif %}>
+            {% for cell in row -%}
+                <td>{{ cell }}</td>
+            {%- endfor %}
+            </tr>
+        {%- endfor %}
+        </tbody>
+    </table>
+{%- endmacro %}
+
+{#- Macro with conditional rendering -#}
+{% macro alert(message, type='info', dismissible=true, icon=none) -%}
+    <div class="alert alert-{{ type }}{% if dismissible %} alert-dismissible{% endif %}">
+        {% if icon is defined and icon is not none -%}
+            <span class="icon">{{ icon }}</span>
+        {%- endif %}
+        <span class="message">{{ message }}</span>
+        {% if dismissible -%}
+            <button class="close" aria-label="Close">&times;</button>
+        {%- endif %}
+    </div>
+{%- endmacro %}
+
+{#- Macro using filter blocks -#}
+{% macro code_block(code, language='python') -%}
+    <div class="code-block">
+        <div class="code-header">{{ language|upper }}</div>
+        <pre><code class="language-{{ language }}">
+{%- filter trim -%}
+{{ code }}
+{%- endfilter -%}
+        </code></pre>
+    </div>
+{%- endmacro %}
+
+{#- Recursive macro for nested structures -#}
+{% macro render_menu(items, level=1) -%}
+    <ul class="menu level-{{ level }}">
+    {% for item in items -%}
+        <li>
+            <a href="{{ item.url|default('#') }}">{{ item.title }}</a>
+            {% if item.children is defined and item.children -%}
+                {{ render_menu(item.children, level + 1) }}
+            {%- endif %}
+        </li>
+    {%- endfor %}
+    </ul>
+{%- endmacro %}
+
+{#- Macro demonstrating variable unpacking -#}
+{% macro coordinate_display(point) -%}
+    {% set x, y = point -%}
+    <span class="coordinate">X: {{ x }}, Y: {{ y }}</span>
+{%- endmacro %}
+
+{#- Macro using namespace -#}
+{% macro counter(items) -%}
+    {% set ns = namespace(count=0, total=0) -%}
+    {% for item in items -%}
+        {% set ns.count = ns.count + 1 -%}
+        {% if item is number -%}
+            {% set ns.total = ns.total + item -%}
+        {% endif %}
+    {%- endfor %}
+    <div class="counter">
+        Items: {{ ns.count }}, Total: {{ ns.total }}
+    </div>
+{%- endmacro %}
+
+{#- Macro with advanced filter chaining -#}
+{% macro pretty_text(text, max_length=50) -%}
+    {{ text|trim|title|truncate(max_length)|safe }}
+{%- endmacro %}
+
+{#- Macro for form inputs -#}
+{% macro input(name, type='text', value='', placeholder='', required=false, class='form-control') -%}
+    <input
+        type="{{ type }}"
+        name="{{ name }}"
+        id="{{ name }}"
+        class="{{ class }}"
+        {% if value -%}value="{{ value|escape }}"{% endif %}
+        {% if placeholder -%}placeholder="{{ placeholder|escape }}"{% endif %}
+        {% if required -%}required{% endif %}
+    >
+{%- endmacro %}
+
+{#- Macro using tests -#}
+{% macro status_indicator(value) -%}
+    <div class="status">
+    {% if value is string -%}
+        Text: {{ value }}
+    {%- elif value is number -%}
+        {% if value is even -%}
+            Even number: {{ value }}
+        {%- elif value is odd -%}
+            Odd number: {{ value }}
+        {%- endif %}
+    {%- elif value is iterable -%}
+        List with {{ value|length }} items
+    {%- else -%}
+        Unknown type
+    {%- endif %}
+    </div>
+{%- endmacro %}

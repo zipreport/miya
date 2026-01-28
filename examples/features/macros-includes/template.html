@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Macros &amp; Includes Demo</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; }
+        .form-group { margin: 10px 0; }
+        .form-control { padding: 8px; width: 100%; max-width: 300px; }
+        .btn { padding: 10px 20px; cursor: pointer; border: none; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .form-field { margin: 15px 0; }
+        .required { color: red; }
+        .help-text { color: #666; font-size: 0.9em; }
+        .card { border: 1px solid #ddd; margin: 10px 0; }
+        .card-header { background: #f8f9fa; padding: 10px; font-weight: bold; }
+        .card-body { padding: 15px; }
+        .badge { padding: 5px 10px; border-radius: 3px; }
+        .badge-info { background: #17a2b8; color: white; }
+        .badge-success { background: #28a745; color: white; }
+        .badge-warning { background: #ffc107; color: black; }
+        .site-header { background: #333; color: white; padding: 20px; }
+        .site-header nav ul { list-style: none; padding: 0; }
+        .site-header nav li { display: inline; margin-right: 15px; }
+        .site-header nav a { color: white; text-decoration: none; }
+        .site-footer { background: #333; color: white; padding: 20px; margin-top: 20px; }
+        .site-footer a { color: #17a2b8; }
+    </style>
+</head>
+<body>
+
+{# Import macros from external file #}
+{% import "macros.html" as forms %}
+
+{# Alternative: import specific macros #}
+{% from "macros.html" import render_badge, render_list %}
+
+{# Include header #}
+{% include "includes/header.html" %}
+
+<h1>Macros &amp; Includes Examples</h1>
+
+<!-- Example 1: Basic Macro Usage -->
+<div class="section">
+    <h2>1. Basic Macro Usage</h2>
+
+    <h3>Simple Input Fields:</h3>
+    {{ forms.render_input("username", placeholder="Enter username") }}
+    {{ forms.render_input("email", type="email", placeholder="Enter email") }}
+    {{ forms.render_input("password", type="password") }}
+</div>
+
+<!-- Example 2: Macros with Default Parameters -->
+<div class="section">
+    <h2>2. Macros with Default Parameters</h2>
+
+    {{ forms.render_button("Click Me") }}
+    {{ forms.render_button("Save", type="submit", class="btn-success") }}
+    {{ forms.render_button("Disabled", disabled=True) }}
+    {{ forms.render_button("Cancel", class="btn-secondary") }}
+</div>
+
+<!-- Example 3: Complex Macros with Logic -->
+<div class="section">
+    <h2>3. Complex Macros</h2>
+
+    {{ forms.render_field("full_name", label="Full Name", required=True) }}
+    {{ forms.render_field("age", label="Age", type="number", help_text="Must be 18 or older") }}
+    {{ forms.render_field("bio", label="Biography", help_text="Tell us about yourself") }}
+</div>
+
+<!-- Example 4: Macros with Content -->
+<div class="section">
+    <h2>4. Macros with Content</h2>
+    <p><strong>Note:</strong> Miya Engine does not currently support <code>caller()</code> in macros.
+    Call blocks are not available.</p>
+
+    <h3>Using Macros:</h3>
+    {{ forms.render_input("email", type="email", placeholder="user@example.com") }}
+    {{ forms.render_button("Sign In", type="submit") }}
+</div>
+
+<!-- Example 5: Macros for Lists -->
+<div class="section">
+    <h2>5. Macros for Rendering Lists</h2>
+
+    <h3>Unordered List:</h3>
+    {{ forms.render_list(features) }}
+
+    <h3>Ordered List:</h3>
+    {{ forms.render_list(steps, ordered=True) }}
+
+    <h3>Styled List:</h3>
+    {{ render_list(tags, class="tag-list") }}
+</div>
+
+<!-- Example 6: Macros in Loops -->
+<div class="section">
+    <h2>6. Macros in Loops</h2>
+
+    <h3>Product Table:</h3>
+    <table border="1" cellpadding="8">
+        {{ forms.render_table_row(["Name", "Price", "Stock", "Status"], header=True) }}
+        {% for product in products %}
+        {{ forms.render_table_row([product.name, "$" ~ product.price, product.stock, product.status]) }}
+        {% endfor %}
+    </table>
+</div>
+
+<!-- Example 7: Imported Macros (from statement) -->
+<div class="section">
+    <h2>7. Direct Macro Imports</h2>
+
+    <p>
+        Status Badges:
+        {{ render_badge("New", type="info") }}
+        {{ render_badge("Active", type="success") }}
+        {{ render_badge("Warning", type="warning") }}
+    </p>
+</div>
+
+<!-- Example 8: Nested Macro Calls -->
+<div class="section">
+    <h2>8. Nested Macro Calls</h2>
+    <p>Macros can call other macros. Here's a form built with multiple macro calls:</p>
+
+    {{ forms.render_field("title", label="Title", required=True) }}
+    {{ forms.render_field("description", label="Description") }}
+    {{ forms.render_button("Submit", type="submit") }}
+</div>
+
+<!-- Example 9: Include with Context -->
+<div class="section">
+    <h2>9. Template Includes</h2>
+    <p>This page uses included templates:</p>
+    <ul>
+        <li>Site header - includes/header.html</li>
+        <li>Site footer - includes/footer.html</li>
+    </ul>
+    <p>Both includes have access to the current context automatically.</p>
+</div>
+
+<!-- Example 10: Import vs From -->
+<div class="section">
+    <h2>10. Import Methods Comparison</h2>
+
+    <h3>Method 1: Import (namespace)</h3>
+    <p>Import macro file with namespace alias for organized access</p>
+
+    <h3>Method 2: From (selective)</h3>
+    <p>Import specific macros directly into current namespace</p>
+</div>
+
+{# Include footer #}
+{% include "includes/footer.html" %}
+
+</body>
+</html>

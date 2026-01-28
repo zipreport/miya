@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Home - {{ super() }}{% endblock %}
+
+{% block content %}
+<h2>Welcome to Miya Engine Web Server Example!</h2>
+
+<p>This example demonstrates using Jinja2 templates with a Go web server.</p>
+
+<h3>Features Demonstrated:</h3>
+<ul>
+    <li>Template inheritance (base.html)</li>
+    <li>Dynamic content rendering</li>
+    <li>Loops and conditionals</li>
+    <li>Filters and tests</li>
+    <li>Auto-escaping for security</li>
+</ul>
+
+{% if user %}
+<h3>User Information:</h3>
+<p>Welcome back, <strong>{{ user.name|title }}</strong>!</p>
+<p>Email: {{ user.email }}</p>
+<p>Member since: {{ user.joined }}</p>
+{% else %}
+<p><em>Please log in to see personalized content.</em></p>
+{% endif %}
+
+<h3>Latest Products:</h3>
+<div class="products">
+{% for product in products[:3] %}
+    <div class="product">
+        <h4>{{ product.Name }}</h4>
+        <p>{{ product.Description }}</p>
+        <p class="price">${{ "%.2f"|format(product.Price) }}</p>
+    </div>
+{% else %}
+    <p>No products available.</p>
+{% endfor %}
+</div>
+
+<p><a href="/products">View all products →</a></p>
+{% endblock %}

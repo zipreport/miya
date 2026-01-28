@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}User Dashboard - {{ user.Name|title }}{% endblock %}
+
+{% block description %}Dashboard for {{ user.Name }} showing comprehensive jinja2 features{% endblock %}
+
+{% block body_class %}dashboard user-{{ user.Role|lower }}{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="/css/dashboard.css">
+{% endblock %}
+
+{% block content %}
+    <div class="dashboard-container">
+        <div class="user-header">
+            <h1>Welcome, {{ user.Name|title }}!</h1>
+            <div class="user-info">
+                <span class="role badge badge-{{ user.Role|lower }}">{{ user.Role|upper }}</span>
+                <span class="status badge {% if user.Active %}badge-success{% else %}badge-danger{% endif %}">
+                    {{ "Active" if user.Active else "Inactive" }}
+                </span>
+                <span class="age">Age: {{ user.Age }}</span>
+                <span class="member-since">Member since: {{ user.Created|date("%Y-%m-%d") }}</span>
+            </div>
+        </div>
+        
+        <!-- Include user stats partial -->
+        {% include "user_stats.html" %}
+        
+        <!-- Use macros from utility library -->
+        {% from "utilities.html" import render_card, render_list, render_table %}
+        
+        <!-- User tags section using advanced filters -->
+        {% if user.Tags %}
+        <div class="tags-section">
+            <h3>User Tags</h3>
+            <div class="tags">
+                {%- for tag in user.Tags|sort|unique -%}
+                    <span class="tag tag-{{ loop.index0 % 3 }}">{{ tag|title }}</span>
+                {%- endfor -%}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Metadata section using advanced iteration -->
+        {% if user.Metadata %}
+        {{ render_card("User Metadata", user.Metadata|dictsort|list) }}
+        {% endif %}
+        
+        {{ super() }}
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="/js/dashboard.js"></script>
+{% endblock %}

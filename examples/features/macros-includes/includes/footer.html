@@ -1,0 +1,8 @@
+<footer class="site-footer">
+    <p>&copy; {{ year|default(2024) }} {{ company|default("Miya Engine") }}</p>
+    <p>
+        {% for link in footer_links %}
+        <a href="{{ link.url }}">{{ link.title }}</a>{% if not loop.last %} | {% endif %}
+        {% endfor %}
+    </p>
+</footer>

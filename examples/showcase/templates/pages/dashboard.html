@@ -1,0 +1,124 @@
+{#- Dashboard Example - Practical use case -#}
+{% extends "layouts/base.html" %}
+{% from "components/macros.html" import card, alert, data_table, format_number %}
+
+{% block title %}Dashboard - {{ super() }}{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/">Home</a></li>
+        <li class="breadcrumb-item active">Dashboard</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>Welcome back, {{ current_user.name|title }}!</h1>
+
+    {#- Stats Cards -#}
+    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin: 20px 0;">
+        {% for stat in stats %}
+        <div class="stat-card" style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <h3 style="color: #666; font-size: 0.9em; margin: 0;">{{ stat.label }}</h3>
+            <p style="font-size: 2em; font-weight: bold; margin: 10px 0; color: {{ stat.color|default('#333') }};">
+                {{ format_number(stat.value, 0, stat.prefix|default(''), stat.suffix|default('')) }}
+            </p>
+            {% if stat.change is defined %}
+                <small style="color: {{ 'green' if stat.change > 0 else 'red' }};">
+                    {{ '+' if stat.change > 0 else '' }}{{ stat.change }}%
+                </small>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    {#- Recent Activity -#}
+    <section style="margin: 30px 0;">
+        <h2>Recent Activity</h2>
+        {% if activities %}
+            <div class="activity-feed">
+            {% for activity in activities[:10] %}
+                <div class="activity-item" style="padding: 15px; border-left: 3px solid #667eea; margin-bottom: 10px; background: white;">
+                    <strong>{{ activity.user|title }}</strong>
+                    {{ activity.action }}
+                    <em>{{ activity.target }}</em>
+                    <small style="color: #999; float: right;">{{ activity.time }}</small>
+                </div>
+            {% endfor %}
+            </div>
+        {% else %}
+            {{ alert("No recent activity", "info") }}
+        {% endif %}
+    </section>
+
+    {#- Data Table Example -#}
+    <section style="margin: 30px 0;">
+        <h2>Top Products</h2>
+        {% if products %}
+            {% set headers = ['Product', 'Sales', 'Revenue', 'Growth'] %}
+            {% set rows = [] %}
+            {% for product in products[:5] %}
+                {% do rows.append([
+                    product.name,
+                    product.sales,
+                    '$' ~ product.revenue,
+                    (product.growth ~ '%') if product.growth else 'N/A'
+                ]) %}
+            {% endfor %}
+            {{ data_table(headers, rows, striped=true) }}
+        {% else %}
+            <p>No product data available</p>
+        {% endif %}
+    </section>
+
+    {#- Chart Placeholder using Loop -#}
+    <section style="margin: 30px 0;">
+        <h2>Sales Trend (Last 7 Days)</h2>
+        <div class="chart" style="display: flex; align-items: flex-end; height: 200px; gap: 5px;">
+            {% for day in sales_trend %}
+                <div class="bar" style="
+                    flex: 1;
+                    background: linear-gradient(to top, #667eea, #764ba2);
+                    height: {{ (day.value / sales_trend|map(attribute='value')|max * 100)|round }}%;
+                    position: relative;
+                ">
+                    <span style="position: absolute; bottom: -25px; width: 100%; text-align: center; font-size: 0.8em;">
+                        {{ day.label }}
+                    </span>
+                </div>
+            {% endfor %}
+        </div>
+    </section>
+
+    {#- User List with Conditional Rendering -#}
+    <section style="margin: 30px 0;">
+        <h2>Team Members ({{ team_members|length }})</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+        {% for member in team_members %}
+            <div class="member-card" style="background: white; padding: 15px; border-radius: 8px;">
+                <h4 style="margin: 0 0 10px 0;">{{ member.name|title }}</h4>
+                <p style="color: #666; margin: 5px 0;">{{ member.role|title }}</p>
+                <p style="font-size: 0.9em; margin: 5px 0;">
+                    <span class="status-dot" style="
+                        display: inline-block;
+                        width: 8px;
+                        height: 8px;
+                        border-radius: 50%;
+                        background: {{ 'green' if member.status == 'online' else 'gray' }};
+                        margin-right: 5px;
+                    "></span>
+                    {{ member.status|capitalize }}
+                </p>
+                {% if member.tasks is defined %}
+                    <p style="font-size: 0.85em; color: #999;">
+                        {{ member.tasks.completed }}/{{ member.tasks.total }} tasks completed
+                    </p>
+                {% endif %}
+            </div>
+        {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

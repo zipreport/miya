@@ -1,0 +1,20 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Home - {{ site_name }}{% endblock %}
+
+{% block content %}
+<h2>Welcome, {{ user.name }}!</h2>
+<p>Email: {{ user.email }}</p>
+
+<h3>Features</h3>
+<ul>
+{% for feature in features %}
+    <li>{{ feature }}</li>
+{% endfor %}
+</ul>
+{% endblock %}
+
+{% block footer %}
+{{ super() }}
+<p>Logged in as: {{ user.name }}</p>
+{% endblock %}

@@ -1,0 +1,29 @@
+<h3>Recent Orders</h3>
+<table style="width: 100%; border-collapse: collapse;">
+    <thead>
+        <tr style="background: #333; color: white;">
+            <th style="padding: 10px; text-align: left;">Order ID</th>
+            <th style="padding: 10px; text-align: left;">Customer</th>
+            <th style="padding: 10px; text-align: right;">Total</th>
+            <th style="padding: 10px; text-align: center;">Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in recent_orders %}
+        <tr style="background: {{ '#f9f9f9' if loop.index is odd else '#ffffff' }};">
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;">#{{ order.id }}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd;">{{ order.customer }}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: right;">${{ order.total|round(2) }}</td>
+            <td style="padding: 10px; border-bottom: 1px solid #ddd; text-align: center;">
+                {% if order.status == "delivered" %}
+                <span style="color: #28a745;">Delivered</span>
+                {% elif order.status == "shipped" %}
+                <span style="color: #007bff;">Shipped</span>
+                {% else %}
+                <span style="color: #ffc107;">Pending</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

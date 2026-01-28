@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Products - {{ super() }}{% endblock %}
+
+{% block content %}
+<h2>Our Products</h2>
+
+<p>Browse our selection of {{ products|length }} products:</p>
+
+{% set categories = products|groupby("Category") %}
+
+{% for category, items in categories %}
+<h3>{{ category }}</h3>
+<div class="category-products">
+    {% for product in items %}
+    <div class="product">
+        <h4>{{ product.Name }} (#{{ product.ID }})</h4>
+        <p>{{ product.Description }}</p>
+        <p class="price">${{ "%.2f"|format(product.Price) }}</p>
+        {% if product.InStock %}
+            <p style="color: green;">✓ In Stock</p>
+        {% else %}
+            <p class="out-of-stock">✗ Out of Stock</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endfor %}
+
+<h3>Statistics:</h3>
+<ul>
+    <li>Total products: {{ products|length }}</li>
+    <li>In stock: {{ products|selectattr("InStock")|list|length }}</li>
+    <li>Out of stock: {{ products|rejectattr("InStock")|list|length }}</li>
+    <li>Average price: ${{ "%.2f"|format(products|map(attribute="Price")|sum / products|length) }}</li>
+</ul>
+{% endblock %}

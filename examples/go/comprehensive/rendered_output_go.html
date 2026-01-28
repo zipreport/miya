@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Jinja2 Features Demonstration</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .code { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+        .warning { color: orange; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Complete Jinja2 Features Demonstration</h1>
+    <p>Generated on: January 25, 2026</p>
+
+    <!-- Variable Expressions and Filters -->
+    <div class="section">
+        <h2>1. Variable Expressions and Filters</h2>
+        <p><strong>Basic Variable:</strong> john doe</p>
+        <p><strong>Upper Case:</strong> JOHN DOE</p>
+        <p><strong>Title Case:</strong> John Doe</p>
+        <p><strong>Length:</strong> 8 characters</p>
+        <p><strong>Truncate:</strong> This is a comprehensive showcase of all Jinja2...</p>
+        <p><strong>Default Value:</strong> No value provided</p>
+        <p><strong>Safe HTML:</strong> <strong>This is bold HTML content</strong></p>
+        <p><strong>Escape HTML:</strong> &amp;lt;strong&amp;gt;This is bold HTML content&amp;lt;/strong&amp;gt;</p>
+        <p><strong>Number Format:</strong> 30.00</p>
+        <p><strong>Join List:</strong> python, jinja2, templates, web, html</p>
+        <p><strong>First/Last:</strong> First tag: python, Last tag: html</p>
+    </div>
+
+    <!-- Control Structures - If/Else -->
+    <div class="section">
+        <h2>2. Conditional Statements (if/elif/else)</h2>
+        
+            <p class="warning">Welcome, Premium User john doe!</p>
+        
+
+        
+            
+                <p>✅ Adult user (25 years old)</p>
+            
+        
+
+        <p>Status:<span class="success">Active</span></p>
+    </div>
+
+    <!-- Loops -->
+    <div class="section">
+        <h2>3. Loops (for)</h2>
+        
+        <h3>Simple List Loop</h3>
+        <ul>
+        
+            <li>1. python</li>
+        
+            <li>2. jinja2</li>
+        
+            <li>3. templates</li>
+        
+            <li>4. web</li>
+        
+            <li>5. html</li>
+        
+        </ul>
+
+        <h3>Dictionary Loop with Key-Value Unpacking</h3>
+        <ul>
+        
+            <li><strong>theme:</strong> dark</li>
+        
+            <li><strong>language:</strong> english</li>
+        
+            <li><strong>notifications:</strong> true</li>
+        
+        </ul>
+
+        <h3>Loop with Conditions</h3>
+        <ul>
+        
+            
+                <li>Laptop - $999.99 (In Stock)</li>
+            
+        
+            
+                <li>Mouse - $25.5 (In Stock)</li>
+            
+        
+            
+        
+            
+                <li>Monitor - $299.99 (In Stock)</li>
+            
+        
+        </ul>
+
+        <h3>Loop Variables</h3>
+        <table>
+            <tr><th>Index</th><th>Index0</th><th>First</th><th>Last</th><th>Length</th><th>Item</th></tr>
+        
+            <tr>
+                <td>1</td>
+                <td>0</td>
+                <td>true</td>
+                <td>false</td>
+                <td>5</td>
+                <td>python</td>
+            </tr>
+        
+            <tr>
+                <td>2</td>
+                <td>1</td>
+                <td>false</td>
+                <td>false</td>
+                <td>5</td>
+                <td>jinja2</td>
+            </tr>
+        
+            <tr>
+                <td>3</td>
+                <td>2</td>
+                <td>false</td>
+                <td>false</td>
+                <td>5</td>
+                <td>templates</td>
+            </tr>
+        
+            <tr>
+                <td>4</td>
+                <td>3</td>
+                <td>false</td>
+                <td>false</td>
+                <td>5</td>
+                <td>web</td>
+            </tr>
+        
+            <tr>
+                <td>5</td>
+                <td>4</td>
+                <td>false</td>
+                <td>true</td>
+                <td>5</td>
+                <td>html</td>
+            </tr>
+        
+        </table>
+
+        <h3>Empty Loop</h3>
+        <ul>
+        
+            <li><em>No items found</em></li>
+        
+        </ul>
+
+        <h3>Nested Loops</h3>
+        
+            <h4>Electronics</h4>
+            <ul>
+            
+                <li>1.0 Laptop</li>
+            
+                <li>2.1 Phone</li>
+            
+                <li>3.2 Tablet</li>
+            
+            </ul>
+        
+            <h4>Books</h4>
+            <ul>
+            
+                <li>1.0 Python Guide</li>
+            
+                <li>2.1 Web Development</li>
+            
+                <li>3.2 Design Patterns</li>
+            
+            </ul>
+        
+    </div>
+
+    <!-- Template Inheritance & Blocks -->
+    <div class="section">
+        <h2>4. Template Inheritance & Blocks</h2>
+        
+            <div class="code">
+                This is the default header block content.<br>
+                Child templates can override this using {%blockheader%}
+            </div>
+        
+
+        
+            <p>This is the main content block. Child templates typically override this.</p>
+        
+
+        
+            <div class="code">
+                <strong>Sidebar Block:</strong><br>This sidebar content can be overridden by child templates.
+            </div>
+        
+    </div>
+
+    <!-- Macros -->
+    <div class="section">
+        <h2>5. Macros (Reusable Functions)</h2>
+        
+        
+
+        
+
+        <h3>Macro Examples:</h3>
+        
+            &lt;div class=&#34;form-field&#34;&gt;
+                &lt;label for=&#34;username&#34;&gt;Username:&lt;/label&gt;
+                &lt;input type=&#34;text&#34; id=&#34;username&#34; name=&#34;username&#34; value=&#34;john doe&#34;&gt;
+            &lt;/div&gt;
+        
+        
+            &lt;div class=&#34;form-field&#34;&gt;
+                &lt;label for=&#34;email&#34;&gt;Email:&lt;/label&gt;
+                &lt;input type=&#34;email&#34; id=&#34;email&#34; name=&#34;email&#34; value=&#34;john.doe@example.com&#34;&gt;
+            &lt;/div&gt;
+        
+        
+            &lt;div class=&#34;form-field&#34;&gt;
+                &lt;label for=&#34;age&#34;&gt;Age:&lt;/label&gt;
+                &lt;input type=&#34;number&#34; id=&#34;age&#34; name=&#34;age&#34; value=&#34;25&#34;&gt;
+            &lt;/div&gt;
+        
+        
+        
+            &lt;div class=&#34;alert alert-info&#34;&gt;This is an info message&lt;/div&gt;
+        
+        
+            &lt;div class=&#34;alert alert-warning&#34;&gt;This is a warning!&lt;/div&gt;
+        
+        
+            &lt;div class=&#34;alert alert-success&#34;&gt;Success!&lt;/div&gt;
+        
+    </div>
+
+    <!-- Variable Assignments -->
+    <div class="section">
+        <h2>6. Variable Assignments</h2>
+        
+        
+        
+        
+        <p><strong>Full Name:</strong> John Doe</p>
+        <p><strong>User Level:</strong> Premium</p>
+        <p><strong>Total Products:</strong> 4</p>
+    </div>
+
+    <!-- Raw Content -->
+    <div class="section">
+        <h2>7. Raw Content (Escaped Template Syntax)</h2>
+        <div class="code">
+            
+            This shows raw Jinja2 syntax: {{variable_name}}
+            {%foriteminitems%}
+                <li>{{item}}</li>
+            {%endfor%}
+            
+        </div>
+    </div>
+
+    <!-- Comments -->
+    <div class="section">
+        <h2>8. Comments</h2><p>Comments are useful for documentation and debugging.</p>
+        
+    </div>
+
+    <!-- Tests -->
+    <div class="section">
+        <h2>9. Tests (Boolean Checks)</h2>
+        <ul>
+            <li><strong>Defined:</strong> user.name is defined</li>
+            <li><strong>None:</strong> Value is none</li>
+            <li><strong>Number:</strong> Age is a number</li>
+            <li><strong>String:</strong> Name is a string</li>
+            <li><strong>Even/Odd:</strong> Age 25 is odd</li>
+            <li><strong>Divisible by:</strong> Age is divisible by 5</li>
+            <li><strong>In sequence:</strong> 'jinja2' is in tags</li>
+        </ul>
+    </div>
+
+    <!-- Whitespace Control -->
+    <div class="section">
+        <h2>10. Whitespace Control</h2>
+        <div class="code">
+            Regular spacing:
+            
+                0
+            
+                1
+            
+                2
+            
+            
+            <br><br>
+            
+            Stripped spacing:012</div>
+    </div>
+
+    <!-- Complex Expressions -->
+    <div class="section">
+        <h2>11. Complex Expressions and Operations</h2>
+        <ul>
+            <li><strong>Math:</strong> 35 (age + 10)</li>
+            <li><strong>String concat:</strong> john doe (ID: 12345)</li>
+            <li><strong>Comparison:</strong> Adult</li>
+            <li><strong>List slicing:</strong> First 3 tags: python, jinja2, templates</li>
+            <li><strong>Dict access:</strong> Theme: dark</li>
+        </ul>
+    </div>
+
+    <!-- Built-in Filters Showcase -->
+    <div class="section">
+        <h2>12. Built-in Filters Showcase (70+ Available!)</h2>
+        
+        <h3>String Filters</h3>
+        <ul>
+            <li><strong>capitalize:</strong> Hello world</li>
+            <li><strong>center:</strong> "   test   "</li>
+            <li><strong>replace:</strong> Hello Jinja2</li>
+            <li><strong>reverse:</strong> olleh</li>
+            <li><strong>truncate:</strong> This is a comprehensive showcase of all Jinja2...</li>
+            <li><strong>wordwrap:</strong> This is a very
+long sentence
+that should be
+wrapped</li>
+            <li><strong>indent:</strong> Line 1
+    Line 2</li>
+            <li><strong>slugify:</strong> hello-world-test</li>
+            <li><strong>wordcount:</strong> 21 words</li>
+            <li><strong>startswith:</strong> true</li>
+            <li><strong>endswith:</strong> true</li>
+            <li><strong>contains:</strong> true</li>
+            <li><strong>split:</strong> a | b | c | d</li>
+            <li><strong>regex_replace:</strong> hello-world</li>
+        </ul>
+
+        <h3>Math Filters</h3>
+        <ul>
+            <li><strong>abs:</strong> -42</li>
+            <li><strong>round:</strong> 3.14</li>
+            <li><strong>ceil:</strong> 4</li>
+            <li><strong>floor:</strong> 3</li>
+            <li><strong>pow:</strong> 8</li>
+            <li><strong>min:</strong> 1</li>
+            <li><strong>max:</strong> 9</li>
+            <li><strong>sum:</strong> 15</li>
+        </ul>
+
+        <h3>Collection Filters</h3>
+        <ul>
+            <li><strong>first:</strong> python</li>
+            <li><strong>last:</strong> html</li>
+            <li><strong>length:</strong> 5</li>
+            <li><strong>join:</strong> python, jinja2, templates, web, html</li>
+            <li><strong>sort:</strong> html, jinja2, python, templates, web</li>
+            <li><strong>reverse:</strong> html, web, templates, jinja2, python</li>
+            <li><strong>unique:</strong> 1, 2, 3</li>
+            <li><strong>slice:</strong> python, jinja2, templates</li>
+            <li><strong>batch:</strong> [[1 2] [3 4] [5 6]]</li>
+            <li><strong>random:</strong> python</li>
+        </ul>
+
+        <h3>Dict Filters</h3>
+        <ul>
+            <li><strong>items:</strong> [[language english] [notifications true] [theme dark]]</li>
+            <li><strong>keys:</strong> [language notifications theme]</li>
+            <li><strong>values:</strong> [english true dark]</li>
+            <li><strong>dictsort:</strong> [[language english] [notifications true] [theme dark]]</li>
+        </ul>
+
+        <h3>Type Conversion</h3>
+        <ul>
+            <li><strong>float:</strong> 3.14</li>
+            <li><strong>int:</strong> 42</li>
+            <li><strong>string:</strong> 123</li>
+            <li><strong>list:</strong> h-e-l-l-o</li>
+        </ul>
+
+        <h3>HTML & URL Filters</h3>
+        <ul>
+            <li><strong>escape:</strong> &amp;lt;script&amp;gt;alert(&amp;#34;xss&amp;#34;)&amp;lt;/script&amp;gt;</li>
+            <li><strong>safe:</strong> <strong>Bold text</strong></li>
+            <li><strong>striptags:</strong> Hello world</li>
+            <li><strong>urlencode:</strong> hello+world</li>
+            <li><strong>urlize:</strong> Visit <a href="https://example.com">https://example.com</a> for info</li>
+        </ul>
+
+        <h3>Date/Time Filters</h3>
+        <ul>
+            <li><strong>date:</strong> 2026-01-25</li>
+            <li><strong>time:</strong> 20:33:40</li>
+            <li><strong>datetime:</strong> 2026-01-25 20:33</li>
+            <li><strong>strftime:</strong> Sunday, January 25, 2026</li>
+            <li><strong>weekday:</strong> Sunday</li>
+            <li><strong>month_name:</strong> January</li>
+        </ul>
+
+        <h3>Utility Filters</h3>
+        <ul>
+            <li><strong>default:</strong> No value provided</li>
+            <li><strong>filesizeformat:</strong> 1.0 MB</li>
+            <li><strong>format:</strong> Hello john doe, age 25</li>
+            <li><strong>tojson:</strong> {&#34;language&#34;:&#34;english&#34;,&#34;notifications&#34;:true,&#34;theme&#34;:&#34;dark&#34;}</li>
+            <li><strong>pprint:</strong> {language: english, notifications: true, theme: dark}</li>
+            <li><strong>custom_exclaim:</strong> Custom filter test!</li>
+        </ul>
+    </div>
+
+    <!-- Auto-escaping -->
+    <div class="section">
+        <h2>13. Auto-escaping</h2>
+        <p><strong>Auto-escaped:</strong> &lt;script&gt;alert(&#34;xss&#34;)&lt;/script&gt;</p>
+        <p><strong>Manually escaped:</strong> &amp;lt;script&amp;gt;alert(&amp;#34;xss&amp;#34;)&amp;lt;/script&amp;gt;</p>
+        <p><strong>Safe (not escaped):</strong> <strong>Bold text</strong></p>
+        
+        
+            <p><strong>Auto-escape disabled:</strong> <em>Italic text</em></p>
+        
+    </div>
+
+    <!-- Namespace -->
+    <div class="section">
+        <h2>14. Namespace (Variable Scoping)</h2>
+        
+        <ul>
+        
+            
+            <li>Item 1: python</li>
+        
+            
+            <li>Item 2: jinja2</li>
+        
+            
+            <li>Item 3: templates</li>
+        
+            
+            <li>Item 4: web</li>
+        
+            
+            <li>Item 5: html</li>
+        
+        </ul>
+        <p>Total items processed: 5</p>
+    </div>
+
+    <!-- Call Blocks -->
+    <div class="section">
+        <h2>15. Call Blocks</h2>
+        
+
+        <div class="dialog">
+                <h3>Important Notice</h3>
+                <div class="dialog-content">
+                    
+            &lt;p&gt;This is the content inside the dialog.&lt;/p&gt;
+            &lt;p&gt;It can contain &lt;strong&gt;HTML&lt;/strong&gt; and variables.&lt;/p&gt;
+        
+                </div>
+            </div>
+    </div>
+
+    <!-- With Statement -->
+    <div class="section">
+        <h2>16. With Statement (Context Variables)</h2>
+        
+            <p>Hello, john doe! Welcome to our site.</p>
+            
+                <p>You are classified as: adult</p>
+            
+        
+    </div>
+
+    <!-- Complex Data Structure Example -->
+    <div class="section">
+        <h2>17. Complex Data Structure Example</h2>
+        <h3>User Profile</h3>
+        <table>
+            <tr><th>Field</th><th>Value</th></tr>
+            <tr><td>Name</td><td>john doe</td></tr>
+            <tr><td>Email</td><td>john.doe@example.com</td></tr>
+            <tr><td>Age</td><td>25</td></tr>
+            <tr><td>Status</td><td>active</td></tr>
+            <tr><td>Premium</td><td>✅</td></tr>
+            <tr><td>Admin</td><td>❌</td></tr>
+        </table>
+
+        <h3>Products</h3>
+        <table>
+            <tr><th>Name</th><th>Price</th><th>Stock</th><th>Category</th></tr>
+            
+            <tr>
+                <td>Laptop</td>
+                <td>$999.99</td>
+                <td>✅</td>
+                <td>Electronics</td>
+            </tr>
+            
+            <tr>
+                <td>Mouse</td>
+                <td>$25.5</td>
+                <td>✅</td>
+                <td>Accessories</td>
+            </tr>
+            
+            <tr>
+                <td>Keyboard</td>
+                <td>$75</td>
+                <td>❌</td>
+                <td>Accessories</td>
+            </tr>
+            
+            <tr>
+                <td>Monitor</td>
+                <td>$299.99</td>
+                <td>✅</td>
+                <td>Electronics</td>
+            </tr>
+            
+        </table>
+    </div>
+
+    <!-- Filter Blocks (FULLY IMPLEMENTED!) -->
+    <div class="section">
+        <h2>18. Filter Blocks (Advanced Text Processing)</h2>
+        <p><strong>Filter blocks apply one or more filters to entire blocks of content, including template logic!</strong></p>
+        
+        <h3>Basic Filter Block</h3>
+        <div class="code">
+            HELLO JOHN DOE! WELCOME TO OUR APPLICATION.
+        </div>
+        
+        <h3>Chained Filters</h3>
+        <div class="code">
+            DLROW OLLEH
+        </div>
+        
+        <h3>Filters with Arguments</h3>
+        <div class="code">
+            This is a comprehensive...
+        </div>
+        
+        <h3>Complex Content with Loops</h3>
+        <div class="code">
+            
+                USER PREFERENCES:
+                
+                - THEME: DARK
+                
+                - LANGUAGE: ENGLISH
+                
+                - NOTIFICATIONS: TRUE
+                
+            
+        </div>
+        
+        <h3>Nested Filter Blocks</h3>
+        <div class="code">
+            
+                OUTER CONTENT: ACTIVE
+                
+                    INNER CONTENT: JOHN.DOE@EXAMPLE.COM
+                
+                BACK TO OUTER LEVEL
+            
+        </div>
+        
+        <h3>Conditional Content Filtering</h3>
+        <div class="code">
+            
+                
+                    PREMIUM USER: JOHN DOE
+                    EMAIL: JOHN.DOE@EXAMPLE.COM
+                
+            
+        </div>
+        
+        <h3>Current Alternative - Chained Filter Operations</h3>
+        <ul>
+            <li><strong>Multi-step processing:</strong> TSET DLR0W 0LLEH</li>
+            <li><strong>String cleaning:</strong> Messy data</li>
+            <li><strong>Advanced formatting:</strong> ______JOHN_DOE______</li>
+        </ul>
+        
+        <h3>Complex String Transformations</h3>
+        <ul>
+            <li><strong>Email processing:</strong> john [dot] doe [at] example [dot] com</li>
+            <li><strong>Path normalization:</strong> _PATH_TO_FILE.TXT</li>
+            <li><strong>Data encoding:</strong> hello+world</li>
+        </ul>
+        
+        <h3>String Analysis</h3>
+        <ul>
+            <li><strong>Character breakdown:</strong> h | e | l | l | o</li>
+            <li><strong>Word statistics:</strong> 21 words, 157 chars</li>
+        </ul>
+    </div>
+
+    <!-- Do Statement -->
+    <div class="section">
+        <h2>19. Do Statement (Side Effects)</h2>
+        <p>The 'do' statement allows executing expressions for side effects without producing template output.</p>
+        
+        <h3>Basic Expression Evaluation</h3>
+        <div class="code">
+            Original tags: python, jinja2, templates, web, html<br>
+            Tags still: python, jinja2, templates, web, html
+        </div>
+        
+        <h3>Complex Expressions</h3>
+        <div class="code">
+            </div>
+        
+        <h3>Integration with Control Flow</h3>
+        <div class="code">
+            
+                Item 1
+            
+                Item 2
+            
+                Item 3
+            
+        </div>
+        
+        <h3>Whitespace Control</h3>
+        <div class="code">
+            StartEnd</div>
+        
+        <h3>Validation and Testing</h3>
+        <div class="code">
+            Complex result: 749.98
+        </div>
+    </div>
+
+    <footer style="margin-top: 50px; padding-top: 20px; border-top: 1px solid #ddd;">
+        <p><small>Generated with Miya Engine template engine | Features demonstrated: 19+</small></p>
+        <p><small>Comparison with Python Jinja2: Compatible</small></p>
+    </footer>
+</body>
+</html>

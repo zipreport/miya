@@ -1,0 +1,99 @@
+{% macro render_card(title, content) %}
+<div class="card">
+    <div class="card-header">
+        <h3>{{ title }}</h3>
+    </div>
+    <div class="card-body">
+        {% if content is sequence %}
+            <ul>
+            {% for item in content %}
+                <li>
+                    {% if item is sequence and item|length == 2 %}
+                        <strong>{{ item[0] }}:</strong> {{ item[1] }}
+                    {% else %}
+                        {{ item }}
+                    {% endif %}
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <p>{{ content }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endmacro %}
+
+{% macro render_list(items, title=None, ordered=False) %}
+<div class="list-container">
+    {% if title %}
+        <h4>{{ title }}</h4>
+    {% endif %}
+    {% if ordered %}
+        <ol>
+    {% else %}
+        <ul>
+    {% endif %}
+    {% for item in items %}
+        <li class="{% if loop.first %}first{% endif %} {% if loop.last %}last{% endif %}">
+            {{ item }}
+            {% if loop.index != loop.length %}
+                <span class="separator">|</span>
+            {% endif %}
+        </li>
+    {% endfor %}
+    {% if ordered %}
+        </ol>
+    {% else %}
+        </ul>
+    {% endif %}
+</div>
+{% endmacro %}
+
+{% macro render_table(data, headers=None) %}
+<div class="table-container">
+    <table class="data-table">
+        {% if headers %}
+        <thead>
+            <tr>
+                {% for header in headers %}
+                <th>{{ header|title }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        {% endif %}
+        <tbody>
+            {% for row in data %}
+            <tr class="{% if loop.index is even %}even{% else %}odd{% endif %}">
+                {% if row is sequence %}
+                    {% for cell in row %}
+                    <td>{{ cell }}</td>
+                    {% endfor %}
+                {% else %}
+                    <td>{{ row }}</td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endmacro %}
+
+{% macro form_field(name, type="text", value="", label=None, required=False, placeholder="") %}
+<div class="form-group">
+    {% if label %}
+        <label for="{{ name }}" class="form-label">
+            {{ label }}
+            {% if required %}<span class="required">*</span>{% endif %}
+        </label>
+    {% endif %}
+    <input 
+        type="{{ type }}" 
+        id="{{ name }}" 
+        name="{{ name }}" 
+        value="{{ value }}"
+        {% if placeholder %}placeholder="{{ placeholder }}"{% endif %}
+        {% if required %}required{% endif %}
+        class="form-control"
+    >
+</div>
+{% endmacro %}
