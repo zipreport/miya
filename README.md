@@ -1,5 +1,11 @@
 # Miya Engine
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/zipreport/miya.svg)](https://pkg.go.dev/github.com/zipreport/miya)
+[![Go Report Card](https://goreportcard.com/badge/github.com/zipreport/miya)](https://goreportcard.com/report/github.com/zipreport/miya)
+[![Test](https://github.com/zipreport/miya/actions/workflows/test.yml/badge.svg)](https://github.com/zipreport/miya/actions/workflows/test.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)
+
 A high-performance Jinja2-compatible template engine implementation in Go.
 
 ## Features
