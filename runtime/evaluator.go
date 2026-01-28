@@ -210,6 +210,10 @@ func (e *DefaultEvaluator) SetUndefinedBehavior(behavior UndefinedBehavior) {
 // SetImportSystem sets the import system for handling template imports
 func (e *DefaultEvaluator) SetImportSystem(importSystem *ImportSystem) {
 	e.importSystem = importSystem
+	// Update the import system's evaluator reference so macro calls use this evaluator
+	if importSystem != nil {
+		importSystem.SetEvaluator(e)
+	}
 }
 
 func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{}, error) {

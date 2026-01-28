@@ -242,7 +242,7 @@ func TestApplyBinaryOp(t *testing.T) {
 		{"subtract", "-", 5, 3, float64(2), false},
 		{"multiply", "*", 4, 3, float64(12), false},
 		{"divide", "/", 10, 2, float64(5), false},
-		{"modulo", "%", 10, 3, nil, false},          // Returns int, check separately
+		{"modulo", "%", 10, 3, nil, false}, // Returns int, check separately
 		{"power", "**", 2, 3, float64(8), false},
 		{"floor divide", "//", 10, 3, nil, false}, // Returns int, check separately
 		{"string concat", "~", "hello", "world", "helloworld", false},

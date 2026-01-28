@@ -248,7 +248,7 @@ func TestEscapeJSDetails(t *testing.T) {
 	escaper := NewAutoEscaper(nil)
 
 	tests := []struct {
-		input       string
+		input            string
 		shouldNotContain string
 	}{
 		{"line1\nline2", "\n"},

@@ -2,7 +2,7 @@
 // ====================
 // Learn the basics of creating an environment and rendering templates.
 //
-// Run: go run step1_hello_world.go
+// Run: go run ./examples/tutorial/step1_hello_world
 
 package main
 

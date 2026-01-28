@@ -2,7 +2,7 @@
 // =====================
 // Learn conditional rendering and iteration.
 //
-// Run: go run step3_control_flow.go
+// Run: go run ./examples/tutorial/step3_control_flow
 
 package main
 

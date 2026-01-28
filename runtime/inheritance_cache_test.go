@@ -401,10 +401,10 @@ func TestCacheStats(t *testing.T) {
 	// Create some hits and misses
 	cache.StoreHierarchy("hit_template.html", createTestHierarchy("hit_template.html"))
 
-	cache.GetHierarchy("hit_template.html")      // hit
-	cache.GetHierarchy("hit_template.html")      // hit
-	cache.GetHierarchy("miss_template.html")     // miss
-	cache.GetHierarchy("another_miss.html")      // miss
+	cache.GetHierarchy("hit_template.html")  // hit
+	cache.GetHierarchy("hit_template.html")  // hit
+	cache.GetHierarchy("miss_template.html") // miss
+	cache.GetHierarchy("another_miss.html")  // miss
 
 	stats := cache.GetStats()
 
@@ -745,10 +745,10 @@ func BenchmarkResolvedCacheGet(b *testing.B) {
 func BenchmarkContextHasher(b *testing.B) {
 	hasher := NewContextHasher()
 	ctx := newMockContext(map[string]interface{}{
-		"name":    "test",
-		"count":   42,
-		"active":  true,
-		"items":   []string{"a", "b", "c"},
+		"name":   "test",
+		"count":  42,
+		"active": true,
+		"items":  []string{"a", "b", "c"},
 		"nested": map[string]interface{}{
 			"key": "value",
 		},

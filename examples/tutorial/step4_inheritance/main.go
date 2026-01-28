@@ -2,7 +2,7 @@
 // =============================
 // Learn how to create reusable layouts with blocks.
 //
-// Run: go run step4_inheritance.go
+// Run: go run ./examples/tutorial/step4_inheritance
 
 package main
 

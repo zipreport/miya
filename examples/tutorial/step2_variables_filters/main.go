@@ -2,7 +2,7 @@
 // ============================
 // Learn how to pass complex data and transform output with filters.
 //
-// Run: go run step2_variables_filters.go
+// Run: go run ./examples/tutorial/step2_variables_filters
 
 package main
 

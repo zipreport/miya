@@ -2,7 +2,7 @@
 // =====================================
 // Learn how to organize and load templates from the filesystem.
 //
-// Run: go run step6_filesystem.go
+// Run: go run ./examples/tutorial/step6_filesystem
 //
 // This step requires the templates/ directory with its template files.
 
@@ -47,12 +47,12 @@ func main() {
 	fmt.Println()
 
 	// Get the directory where this Go file is located
-	// Templates are in the "templates" subdirectory
-	templateDir := "templates"
+	// Templates are in the "templates" subdirectory relative to the tutorial root
+	templateDir := filepath.Join("examples", "tutorial", "templates")
 
 	// Check if templates directory exists
 	if _, err := os.Stat(templateDir); os.IsNotExist(err) {
-		log.Fatal("Templates directory not found. Make sure to run from examples/tutorial/")
+		log.Fatal("Templates directory not found. Make sure to run from the project root directory.")
 	}
 
 	// 1. Create a FileSystemLoader

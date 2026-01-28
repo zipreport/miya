@@ -8,13 +8,13 @@ This directory contains examples demonstrating the features and capabilities of 
 examples/
 ├── README.md              # This file
 ├── tutorial/              # Step-by-step beginner tutorial (START HERE)
-│   ├── step1_hello_world.go
-│   ├── step2_variables_filters.go
-│   ├── step3_control_flow.go
-│   ├── step4_inheritance.go
-│   ├── step5_macros.go
-│   ├── step6_filesystem.go
-│   └── templates/         # Template files for step 6
+│   ├── step1_hello_world/    # Basic template rendering
+│   ├── step2_variables_filters/ # Variables and filters
+│   ├── step3_control_flow/   # Conditionals and loops
+│   ├── step4_inheritance/    # Template inheritance
+│   ├── step5_macros/         # Macros and components
+│   ├── step6_filesystem/     # Loading templates from disk
+│   └── templates/            # Template files for step 6
 ├── features/              # Feature-specific examples (learning)
 │   ├── inheritance/       # Template inheritance
 │   ├── control-structures/ # If/for/set/with
@@ -39,28 +39,32 @@ examples/
 
 ### New to Miya? Start with the Tutorial
 
-The `tutorial/` directory contains a 6-step guide that teaches you Miya from scratch:
+The `tutorial/` directory contains a 6-step guide that teaches you Miya from scratch. Each step is in its own directory and can be run from the project root:
 
 ```bash
-cd examples/tutorial
-
 # Step 1: Basic template rendering
-go run step1_hello_world.go
+go run ./examples/tutorial/step1_hello_world
 
 # Step 2: Variables and filters
-go run step2_variables_filters.go
+go run ./examples/tutorial/step2_variables_filters
 
 # Step 3: Conditionals and loops
-go run step3_control_flow.go
+go run ./examples/tutorial/step3_control_flow
 
 # Step 4: Template inheritance
-go run step4_inheritance.go
+go run ./examples/tutorial/step4_inheritance
 
 # Step 5: Macros and components
-go run step5_macros.go
+go run ./examples/tutorial/step5_macros
 
 # Step 6: Loading templates from disk
-go run step6_filesystem.go
+go run ./examples/tutorial/step6_filesystem
+```
+
+Or run all steps at once using the Makefile:
+
+```bash
+make run-tutorial
 ```
 
 Each step builds on the previous one and includes detailed comments explaining the concepts.

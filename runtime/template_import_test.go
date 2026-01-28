@@ -285,3 +285,109 @@ func TestImportSystem(t *testing.T) {
 		}
 	})
 }
+
+// TestImportSystemNilEvaluatorRegression tests that ImportSystem works correctly
+// even when initially created with a nil evaluator. This is a regression test for
+// a bug where macros called from imported namespaces would panic because the
+// ImportSystem's evaluator reference was nil.
+//
+// The fix ensures that when SetImportSystem is called on an evaluator, it also
+// updates the ImportSystem's evaluator reference via SetEvaluator().
+func TestImportSystemNilEvaluatorRegression(t *testing.T) {
+	t.Run("SetImportSystem updates ImportSystem evaluator", func(t *testing.T) {
+		// Create ImportSystem with nil evaluator (simulating the original bug scenario)
+		is := NewImportSystem(nil, nil)
+
+		// Verify evaluator is initially nil
+		if is.evaluator != nil {
+			t.Error("expected evaluator to be nil initially")
+		}
+
+		// Create an evaluator and set the import system on it
+		e := NewEvaluator()
+		e.SetImportSystem(is)
+
+		// Verify that SetImportSystem also updated the ImportSystem's evaluator
+		if is.evaluator == nil {
+			t.Fatal("SetImportSystem should have updated ImportSystem's evaluator reference")
+		}
+		if is.evaluator != e {
+			t.Error("ImportSystem's evaluator should reference the same evaluator")
+		}
+	})
+
+	t.Run("Macro call works after SetImportSystem with initially nil evaluator", func(t *testing.T) {
+		// Create ImportSystem with nil evaluator (the original bug scenario)
+		is := NewImportSystem(nil, nil)
+
+		// Create a macro with a simple body
+		body := []parser.Node{
+			&parser.TextNode{Content: "Hello, "},
+			&parser.VariableNode{
+				Expression: &parser.IdentifierNode{Name: "name"},
+			},
+			&parser.TextNode{Content: "!"},
+		}
+
+		macro := &TemplateMacro{
+			Name:       "greet",
+			Parameters: []string{"name"},
+			Defaults:   make(map[string]interface{}),
+			Body:       body,
+			Context:    &simpleContext{variables: make(map[string]interface{})},
+		}
+
+		ns := &TemplateNamespace{
+			TemplateName: "macros.html",
+			Macros:       map[string]*TemplateMacro{"greet": macro},
+			Variables:    make(map[string]interface{}),
+			Context:      &simpleContext{variables: make(map[string]interface{})},
+		}
+
+		// Create evaluator and set import system (this should fix the nil evaluator)
+		e := NewEvaluator()
+		e.SetImportSystem(is)
+
+		// Get the imported namespace (this uses is.evaluator internally)
+		importedNS := is.GetImportedNamespace(ns)
+
+		// Get the macro function from the namespace
+		macroFunc, ok := importedNS.Get("greet")
+		if !ok {
+			t.Fatal("expected to find greet macro")
+		}
+
+		// Cast to callable function
+		fn, ok := macroFunc.(func(...interface{}) (interface{}, error))
+		if !ok {
+			t.Fatalf("expected macro to be callable, got %T", macroFunc)
+		}
+
+		// This would panic with nil pointer dereference before the fix
+		// because importedNS.evaluator would be nil
+		result, err := fn("World")
+		if err != nil {
+			t.Fatalf("macro call failed: %v", err)
+		}
+
+		// Verify the macro produced output
+		resultStr, ok := result.(string)
+		if !ok {
+			t.Fatalf("expected string result, got %T", result)
+		}
+		if !strings.Contains(resultStr, "Hello") || !strings.Contains(resultStr, "World") {
+			t.Errorf("unexpected macro output: %s", resultStr)
+		}
+	})
+
+	t.Run("SetEvaluator directly updates evaluator reference", func(t *testing.T) {
+		is := NewImportSystem(nil, nil)
+
+		e := NewEvaluator()
+		is.SetEvaluator(e)
+
+		if is.evaluator != e {
+			t.Error("SetEvaluator should update the evaluator reference")
+		}
+	})
+}

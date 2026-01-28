@@ -83,12 +83,12 @@ clean:
 # Run examples (tutorial)
 run-tutorial:
 	@echo "Running tutorial examples..."
-	@cd examples/tutorial && go run step1_hello_world.go
-	@cd examples/tutorial && go run step2_variables_filters.go
-	@cd examples/tutorial && go run step3_control_flow.go
-	@cd examples/tutorial && go run step4_inheritance.go
-	@cd examples/tutorial && go run step5_macros.go
-	@cd examples/tutorial && go run step6_filesystem.go
+	go run ./examples/tutorial/step1_hello_world
+	go run ./examples/tutorial/step2_variables_filters
+	go run ./examples/tutorial/step3_control_flow
+	go run ./examples/tutorial/step4_inheritance
+	go run ./examples/tutorial/step5_macros
+	go run ./examples/tutorial/step6_filesystem
 
 # Run showcase demo
 run-showcase:

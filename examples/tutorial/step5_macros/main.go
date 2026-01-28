@@ -2,7 +2,7 @@
 // ============================
 // Learn how to create reusable template components with macros.
 //
-// Run: go run step5_macros.go
+// Run: go run ./examples/tutorial/step5_macros
 
 package main
 

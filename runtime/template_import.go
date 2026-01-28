@@ -165,6 +165,11 @@ func NewImportSystem(loader TemplateLoader, evaluator *DefaultEvaluator) *Import
 	}
 }
 
+// SetEvaluator updates the evaluator reference used for macro calls
+func (is *ImportSystem) SetEvaluator(evaluator *DefaultEvaluator) {
+	is.evaluator = evaluator
+}
+
 // LoadTemplateNamespace loads a template and creates its namespace
 func (is *ImportSystem) LoadTemplateNamespace(templateName string, baseCtx Context) (*TemplateNamespace, error) {
 	// Check cache first

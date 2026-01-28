@@ -22,23 +22,22 @@ This tutorial consists of 6 progressive steps:
 
 ## Running the Examples
 
-Each step is self-contained. Run any step with:
+Each step is self-contained in its own directory. Run any step from the project root:
 
 ```bash
-cd examples/tutorial
-go run step1_hello_world.go
-go run step2_variables_filters.go
-go run step3_control_flow.go
-go run step4_inheritance.go
-go run step5_macros.go
-go run step6_filesystem.go
+go run ./examples/tutorial/step1_hello_world
+go run ./examples/tutorial/step2_variables_filters
+go run ./examples/tutorial/step3_control_flow
+go run ./examples/tutorial/step4_inheritance
+go run ./examples/tutorial/step5_macros
+go run ./examples/tutorial/step6_filesystem
 ```
 
 ---
 
 ## Step 1: Hello World
 
-**File:** `step1_hello_world.go`
+**Directory:** `step1_hello_world/`
 
 Learn the basics of creating an environment and rendering a simple template.
 
@@ -57,7 +56,7 @@ Hello, Alice!
 
 ## Step 2: Variables & Filters
 
-**File:** `step2_variables_filters.go`
+**Directory:** `step2_variables_filters/`
 
 Learn how to pass complex data and transform it with filters.
 
@@ -79,7 +78,7 @@ Status: Active (default applied)
 
 ## Step 3: Control Flow
 
-**File:** `step3_control_flow.go`
+**Directory:** `step3_control_flow/`
 
 Learn conditional rendering and iteration.
 
@@ -100,7 +99,7 @@ Total: 3 items
 
 ## Step 4: Template Inheritance
 
-**File:** `step4_inheritance.go`
+**Directory:** `step4_inheritance/`
 
 Learn how to create reusable layouts with blocks.
 
@@ -127,7 +126,7 @@ Learn how to create reusable layouts with blocks.
 
 ## Step 5: Macros & Components
 
-**File:** `step5_macros.go`
+**Directory:** `step5_macros/`
 
 Learn how to create reusable template components.
 
@@ -148,7 +147,7 @@ Learn how to create reusable template components.
 
 ## Step 6: Filesystem Loading
 
-**File:** `step6_filesystem.go`
+**Directory:** `step6_filesystem/`
 
 Learn how to load templates from the filesystem for real-world applications.
 
