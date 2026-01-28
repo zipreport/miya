@@ -168,7 +168,7 @@ template = env.get_template('base.html')
 
 **Miya Engine:**
 ```go
-env := jinja2.NewEnvironment()
+env := miya.NewEnvironment()
 // File system loading supported but different API
 template, err := env.FromString(templateContent)
 ```
@@ -221,7 +221,7 @@ template, err := env.FromString(templateContent)
 
 ### 3. Custom Filter Implementation
 ```go
-func addMissingFilters(env *jinja2.Environment) {
+func addMissingFilters(env *miya.Environment) {
     // Implement required Python filters
     env.AddFilter("truncate", truncateFilter)
     env.AddFilter("wordcount", wordcountFilter)

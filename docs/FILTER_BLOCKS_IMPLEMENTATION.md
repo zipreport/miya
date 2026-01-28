@@ -127,9 +127,9 @@ INNER CONTENT
    - Nested filter blocks
    - Error conditions
 
-### Live Examples from Comprehensive Demo
+### Working Examples
 
-The implementation is proven working in the comprehensive example:
+The implementation supports the following patterns:
 
 ```jinja2
 <!-- Basic Filter Block -->

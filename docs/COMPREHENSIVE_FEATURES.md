@@ -492,11 +492,11 @@ Numbers like {{ 12345 }} are also affected.
 
 ### **Environment Options**
 ```go
-env := jinja2.NewEnvironment(
-    jinja2.WithAutoEscape(true),        // HTML auto-escaping
-    jinja2.WithStrictUndefined(true),   // Strict undefined handling
-    jinja2.WithTrimBlocks(true),        // Trim block newlines
-    jinja2.WithLstripBlocks(true),      // Left-strip block whitespace
+env := miya.NewEnvironment(
+    miya.WithAutoEscape(true),        // HTML auto-escaping
+    miya.WithStrictUndefined(true),   // Strict undefined handling
+    miya.WithTrimBlocks(true),        // Trim block newlines
+    miya.WithLstripBlocks(true),      // Left-strip block whitespace
 )
 ```
 
@@ -517,7 +517,7 @@ stringLoader := loader.NewStringLoader(directParser)
 
 ### **Context Management**
 ```go
-ctx := jinja2.NewContext()
+ctx := miya.NewContext()
 ctx.Set("user", userData)
 ctx.Set("products", productList)
 ctx.Set("current_time", time.Now())
@@ -667,11 +667,10 @@ ctx.Set("current_time", time.Now())
 
 ##  Related Documentation
 
-- **[Implementation Demo](../examples/go/complex/)** - Live demonstration of all features
+- **[Example Code](../examples/go/complex/)** - Complete feature examples
 - **[Template Files](../examples/go/complex/templates/)** - Example template organization
 - **[Not Supported Features](../examples/go/complex/not_supported.md)** - Limitations and workarounds
 - **[Performance Benchmarks](../examples/go/comprehensive/)** - Performance analysis
-- **[Migration Guide](MIGRATION_GUIDE.md)** - Upgrading from other template engines
 
 ---
 

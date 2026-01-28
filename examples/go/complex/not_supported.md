@@ -147,8 +147,8 @@ This document lists Jinja2 features that are **not currently supported** in the 
 ### **For Advanced Context Features:**
 ```go
 // Handle in Go code before template rendering
-env := jinja2.NewEnvironment()
-ctx := jinja2.NewContext()
+env := miya.NewEnvironment()
+ctx := miya.NewContext()
 ctx.SetVariable("global_func", func() string { return "value" })
 ctx.SetVariable("debug_mode", true)
 ```

@@ -636,11 +636,11 @@ Including {{ variable }} content
 
 ### **Environment Options**
 ```go
-env := jinja2.NewEnvironment(
-    jinja2.WithAutoEscape(true),        // HTML auto-escaping
-    jinja2.WithStrictUndefined(true),   // Strict undefined handling  
-    jinja2.WithTrimBlocks(true),        // Trim block newlines
-    jinja2.WithLstripBlocks(true),      // Left-strip block whitespace
+env := miya.NewEnvironment(
+    miya.WithAutoEscape(true),        // HTML auto-escaping
+    miya.WithStrictUndefined(true),   // Strict undefined handling
+    miya.WithTrimBlocks(true),        // Trim block newlines
+    miya.WithLstripBlocks(true),      // Left-strip block whitespace
 )
 ```
 
@@ -655,7 +655,7 @@ stringLoader := loader.NewStringLoader(directParser)
 
 ### **Context Management**
 ```go
-ctx := jinja2.NewContext()
+ctx := miya.NewContext()
 ctx.Set("user", userData)
 ctx.Set("products", productList)
 ```

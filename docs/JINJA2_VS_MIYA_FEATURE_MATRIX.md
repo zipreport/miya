@@ -37,7 +37,7 @@ including implementation differences and compatibility notes.
 ##  Documentation Links
 
 - **[COMPREHENSIVE_FEATURES.md](COMPREHENSIVE_FEATURES.md)** - Complete feature reference with examples
-- **[Live Demo](../examples/go/complex/)** - Working demonstration of all features
+- **[Example Code](../examples/go/complex/)** - Working examples of all features
 - **[Template Examples](../examples/go/complex/templates/)** - Professional template organization
 
 ---
