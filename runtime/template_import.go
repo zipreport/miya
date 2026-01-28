@@ -152,26 +152,20 @@ type TemplateLoader interface {
 // ImportSystem handles template imports and namespace management
 type ImportSystem struct {
 	loader     TemplateLoader
-	evaluator  *DefaultEvaluator
 	namespaces map[string]*TemplateNamespace // Cache for loaded namespaces
 }
 
 // NewImportSystem creates a new import system
 func NewImportSystem(loader TemplateLoader, evaluator *DefaultEvaluator) *ImportSystem {
+	// Note: evaluator parameter kept for API compatibility but no longer stored
 	return &ImportSystem{
 		loader:     loader,
-		evaluator:  evaluator,
 		namespaces: make(map[string]*TemplateNamespace),
 	}
 }
 
-// SetEvaluator updates the evaluator reference used for macro calls
-func (is *ImportSystem) SetEvaluator(evaluator *DefaultEvaluator) {
-	is.evaluator = evaluator
-}
-
 // LoadTemplateNamespace loads a template and creates its namespace
-func (is *ImportSystem) LoadTemplateNamespace(templateName string, baseCtx Context) (*TemplateNamespace, error) {
+func (is *ImportSystem) LoadTemplateNamespace(templateName string, baseCtx Context, evaluator *DefaultEvaluator) (*TemplateNamespace, error) {
 	// Check cache first
 	if ns, exists := is.namespaces[templateName]; exists {
 		return ns, nil
@@ -208,7 +202,7 @@ func (is *ImportSystem) LoadTemplateNamespace(templateName string, baseCtx Conte
 	}
 
 	// Extract macros and variables from AST
-	err = is.extractNamespaceContent(ast, namespace)
+	err = is.extractNamespaceContent(ast, namespace, evaluator)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract namespace from template %q: %w", templateName, err)
 	}
@@ -220,11 +214,11 @@ func (is *ImportSystem) LoadTemplateNamespace(templateName string, baseCtx Conte
 }
 
 // extractNamespaceContent walks the AST and extracts macros and global variables
-func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *TemplateNamespace) error {
+func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *TemplateNamespace, evaluator *DefaultEvaluator) error {
 	switch n := node.(type) {
 	case *parser.TemplateNode:
 		for _, child := range n.Children {
-			err := is.extractNamespaceContent(child, namespace)
+			err := is.extractNamespaceContent(child, namespace, evaluator)
 			if err != nil {
 				return err
 			}
@@ -254,7 +248,7 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 		if len(n.Targets) == 1 {
 			if identNode, ok := n.Targets[0].(*parser.IdentifierNode); ok {
 				// Evaluate the value in the namespace context
-				value, err := is.evaluator.EvalNode(n.Value, namespace.Context)
+				value, err := evaluator.EvalNode(n.Value, namespace.Context)
 				if err != nil {
 					// If evaluation fails, store a placeholder
 					namespace.Variables[identNode.Name] = fmt.Sprintf("[Variable %s from %s]", identNode.Name, namespace.TemplateName)
@@ -267,21 +261,21 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 	case *parser.IfNode:
 		// Recursively process if blocks
 		for _, child := range n.Body {
-			err := is.extractNamespaceContent(child, namespace)
+			err := is.extractNamespaceContent(child, namespace, evaluator)
 			if err != nil {
 				return err
 			}
 		}
 		for _, elif := range n.ElseIfs {
 			for _, child := range elif.Body {
-				err := is.extractNamespaceContent(child, namespace)
+				err := is.extractNamespaceContent(child, namespace, evaluator)
 				if err != nil {
 					return err
 				}
 			}
 		}
 		for _, child := range n.Else {
-			err := is.extractNamespaceContent(child, namespace)
+			err := is.extractNamespaceContent(child, namespace, evaluator)
 			if err != nil {
 				return err
 			}
@@ -290,13 +284,13 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 	case *parser.ForNode:
 		// Recursively process for loop bodies
 		for _, child := range n.Body {
-			err := is.extractNamespaceContent(child, namespace)
+			err := is.extractNamespaceContent(child, namespace, evaluator)
 			if err != nil {
 				return err
 			}
 		}
 		for _, child := range n.Else {
-			err := is.extractNamespaceContent(child, namespace)
+			err := is.extractNamespaceContent(child, namespace, evaluator)
 			if err != nil {
 				return err
 			}
@@ -305,7 +299,7 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 	case *parser.BlockNode:
 		// Recursively process block contents
 		for _, child := range n.Body {
-			err := is.extractNamespaceContent(child, namespace)
+			err := is.extractNamespaceContent(child, namespace, evaluator)
 			if err != nil {
 				return err
 			}
@@ -316,28 +310,28 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 }
 
 // GetImportedNamespace returns an ImportedNamespace wrapper for the namespace
-func (is *ImportSystem) GetImportedNamespace(namespace *TemplateNamespace) *ImportedNamespace {
+func (is *ImportSystem) GetImportedNamespace(namespace *TemplateNamespace, evaluator *DefaultEvaluator) *ImportedNamespace {
 	// Set the evaluator in the namespace
-	namespace.evaluator = is.evaluator
+	namespace.evaluator = evaluator
 
 	return &ImportedNamespace{
 		namespace: namespace,
-		evaluator: is.evaluator,
+		evaluator: evaluator,
 	}
 }
 
 // GetNamespaceMap returns a map representation of the namespace for template use
-func (is *ImportSystem) GetNamespaceMap(namespace *TemplateNamespace) map[string]interface{} {
+func (is *ImportSystem) GetNamespaceMap(namespace *TemplateNamespace, evaluator *DefaultEvaluator) map[string]interface{} {
 	result := make(map[string]interface{})
 
 	// Add macros as callable functions
 	for name, macro := range namespace.Macros {
-		macroFunc := func(m *TemplateMacro) func(...interface{}) (interface{}, error) {
+		macroFunc := func(m *TemplateMacro, eval *DefaultEvaluator) func(...interface{}) (interface{}, error) {
 			return func(args ...interface{}) (interface{}, error) {
 				// For now, call with empty kwargs - full implementation would parse kwargs from args
-				return m.Call(is.evaluator, namespace.Context, args, make(map[string]interface{}))
+				return m.Call(eval, namespace.Context, args, make(map[string]interface{}))
 			}
-		}(macro)
+		}(macro, evaluator)
 		result[name] = macroFunc
 	}
 

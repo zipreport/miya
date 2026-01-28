@@ -210,10 +210,6 @@ func (e *DefaultEvaluator) SetUndefinedBehavior(behavior UndefinedBehavior) {
 // SetImportSystem sets the import system for handling template imports
 func (e *DefaultEvaluator) SetImportSystem(importSystem *ImportSystem) {
 	e.importSystem = importSystem
-	// Update the import system's evaluator reference so macro calls use this evaluator
-	if importSystem != nil {
-		importSystem.SetEvaluator(e)
-	}
 }
 
 func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{}, error) {
@@ -3035,13 +3031,13 @@ func (e *DefaultEvaluator) EvalImportNode(node *parser.ImportNode, ctx Context) 
 
 	// Use the new import system if available
 	if e.importSystem != nil {
-		namespace, err := e.importSystem.LoadTemplateNamespace(templateName, ctx)
+		namespace, err := e.importSystem.LoadTemplateNamespace(templateName, ctx, e)
 		if err != nil {
 			return nil, fmt.Errorf("error loading template %q: %w", templateName, err)
 		}
 
 		// Create an ImportedNamespace wrapper
-		importedNS := e.importSystem.GetImportedNamespace(namespace)
+		importedNS := e.importSystem.GetImportedNamespace(namespace, e)
 		ctx.SetVariable(node.Alias, importedNS)
 	} else {
 		// Fallback to the old placeholder system
@@ -3073,11 +3069,11 @@ func (e *DefaultEvaluator) EvalFromNode(node *parser.FromNode, ctx Context) (int
 
 	// Use the new import system if available
 	if e.importSystem != nil {
-		namespace, err := e.importSystem.LoadTemplateNamespace(templateName, ctx)
+		namespace, err := e.importSystem.LoadTemplateNamespace(templateName, ctx, e)
 		if err != nil {
 			return nil, fmt.Errorf("error loading template %q: %w", templateName, err)
 		}
-		namespaceMap = e.importSystem.GetNamespaceMap(namespace)
+		namespaceMap = e.importSystem.GetNamespaceMap(namespace, e)
 	} else {
 		// Fallback to the old placeholder system
 		templateNamespace, err := e.loadTemplateNamespace(templateName, ctx)

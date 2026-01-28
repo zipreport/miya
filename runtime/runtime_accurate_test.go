@@ -1992,9 +1992,6 @@ func TestTemplateImportSystem(t *testing.T) {
 		if importSys.loader != loader {
 			t.Error("Expected loader to be set")
 		}
-		if importSys.evaluator != evaluator {
-			t.Error("Expected evaluator to be set")
-		}
 		if importSys.namespaces == nil {
 			t.Error("Expected namespaces map to be initialized")
 		}
@@ -2004,7 +2001,7 @@ func TestTemplateImportSystem(t *testing.T) {
 		importSys := NewImportSystem(loader, evaluator)
 
 		// Try to load non-existent template
-		ns, err := importSys.LoadTemplateNamespace("missing.html", ctx)
+		ns, err := importSys.LoadTemplateNamespace("missing.html", ctx, evaluator)
 
 		if err != nil {
 			t.Fatalf("Unexpected error for missing template: %v", err)
@@ -2027,7 +2024,7 @@ func TestTemplateImportSystem(t *testing.T) {
 		}
 
 		// Check that it's cached
-		ns2, err := importSys.LoadTemplateNamespace("missing.html", ctx)
+		ns2, err := importSys.LoadTemplateNamespace("missing.html", ctx, evaluator)
 		if err != nil {
 			t.Fatalf("Unexpected error on cached lookup: %v", err)
 		}
@@ -2047,7 +2044,7 @@ func TestTemplateImportSystem(t *testing.T) {
 		`
 		loader.AddTemplate("macros.html", templateSource)
 
-		ns, err := importSys.LoadTemplateNamespace("macros.html", ctx)
+		ns, err := importSys.LoadTemplateNamespace("macros.html", ctx, evaluator)
 
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
@@ -2099,7 +2096,7 @@ func TestTemplateImportSystem(t *testing.T) {
 
 		importSys := NewImportSystem(errorLoader, evaluator)
 
-		_, err := importSys.LoadTemplateNamespace("error.html", ctx)
+		_, err := importSys.LoadTemplateNamespace("error.html", ctx, evaluator)
 
 		if err == nil {
 			t.Error("Expected error when loader fails")
@@ -2132,7 +2129,7 @@ func TestTemplateImportSystem(t *testing.T) {
 			Context: ctx,
 		}
 
-		nsMap := importSys.GetNamespaceMap(ns)
+		nsMap := importSys.GetNamespaceMap(ns, evaluator)
 
 		if len(nsMap) < 3 { // At least macro + variable + metadata
 			t.Errorf("Expected at least 3 entries in namespace map, got %d", len(nsMap))
