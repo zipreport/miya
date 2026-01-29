@@ -1,0 +1,4821 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A high-performance Jinja2-compatible template engine for Go">
+      
+      
+      
+        <link rel="canonical" href="https://zipreport.github.io/miya/JINJA2_VS_MIYA_FEATURE_MATRIX/">
+      
+      
+        <link rel="prev" href="../COMPREHENSIVE_FEATURES/">
+      
+      
+        <link rel="next" href="../TEMPLATE_INHERITANCE/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Jinja2 Compatibility - Miya Engine</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#jinja2-vs-miya-miya-engine-feature-matrix" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Miya Engine" class="md-header__button md-logo" aria-label="Miya Engine" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Miya Engine
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Jinja2 Compatibility
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/zipreport/miya" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    zipreport/miya
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Miya Engine" class="md-nav__button md-logo" aria-label="Miya Engine" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Miya Engine
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/zipreport/miya" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    zipreport/miya
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../COMPREHENSIVE_FEATURES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comprehensive Features
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Jinja2 Compatibility
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Jinja2 Compatibility
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-compatibility-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Compatibility Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation Links
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-template-syntax-delimiters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Template Syntax &amp; Delimiters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-control-structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Control Structures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Control Structures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-conditional-statements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Conditional Statements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-loops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Loops
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-template-inheritance-composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Template Inheritance &amp; Composition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-import-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Import System
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-macros-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Macros &amp; Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-variable-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Variable Assignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-context-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Context Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-special-blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Special Blocks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Special Blocks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#81-filter-blocks-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.1 Filter Blocks Implementation Details
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#82-do-statements-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.2 Do Statements Implementation Details
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-expressions-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Expressions &amp; Literals
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Expressions &amp; Literals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#91-basic-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.1 Basic Literals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#92-complex-expressions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2 Complex Expressions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Operators
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Operators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#101-arithmetic-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.1 Arithmetic Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#102-comparison-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.2 Comparison Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#103-logical-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.3 Logical Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#104-membership-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4 Membership &amp; Identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-built-in-filters-73-implemented-98-compatible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Built-in Filters (73 Implemented, 98% Compatible)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. Built-in Filters (73 Implemented, 98% Compatible)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#111-string-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.1 String Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#112-math-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.2 Math Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#113-collection-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.3 Collection Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#114-html-url-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4 HTML &amp; URL Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#115-datetime-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.5 Date/Time Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#116-utility-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.6 Utility Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-built-in-tests-30-available" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Built-in Tests (30+ Available)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. Built-in Tests (30+ Available)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#121-type-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.1 Type Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#122-numeric-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.2 Numeric Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-string-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.3 String Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#124-logical-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.4 Logical Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#125-comparison-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.5 Comparison Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-global-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Global Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-advanced-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Advanced Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. Advanced Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#141-extensions-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.1 Extensions System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#142-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.2 Error Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#143-performance-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.3 Performance Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#144-loader-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.4 Loader System
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-implementation-differences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Implementation Differences
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. Implementation Differences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#151-type-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15.1 Type System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#152-performance-characteristics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15.2 Performance Characteristics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#153-ecosystem-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15.3 Ecosystem Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-migration-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16. Migration Guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="16. Migration Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#161-python-to-go-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.1 Python to Go Migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#162-best-practices-for-go-miya" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.2 Best Practices for Go Miya
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-compatibility-matrix-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17. Compatibility Matrix Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#18-recent-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18. Recent Updates
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core Features
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Core Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TEMPLATE_INHERITANCE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template Inheritance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTROL_STRUCTURES_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Structures
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FILTERS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Filters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TESTS_AND_OPERATORS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tests & Operators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Features
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Advanced Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ADVANCED_FEATURES_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MACROS_AND_INCLUDES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Macros & Includes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GLOBAL_FUNCTIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Global Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../FILTER_BLOCKS_IMPLEMENTATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Filter Blocks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../DO_STATEMENTS_IMPLEMENTATION/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Do Statements
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comprehensions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Comprehensions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../COMPREHENSIONS_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comprehensions_examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../comprehensions_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../LIST_DICT_COMPREHENSIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    List & Dict
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../MIYA_LIMITATIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#executive-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Executive Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#quick-compatibility-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Compatibility Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#documentation-links" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation Links
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-template-syntax-delimiters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Template Syntax &amp; Delimiters
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-control-structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Control Structures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Control Structures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-conditional-statements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Conditional Statements
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-loops" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Loops
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-template-inheritance-composition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Template Inheritance &amp; Composition
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-import-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Import System
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-macros-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Macros &amp; Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-variable-assignment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Variable Assignment
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-context-management" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Context Management
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-special-blocks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Special Blocks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Special Blocks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#81-filter-blocks-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.1 Filter Blocks Implementation Details
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#82-do-statements-implementation-details" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8.2 Do Statements Implementation Details
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-expressions-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Expressions &amp; Literals
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Expressions &amp; Literals">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#91-basic-literals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.1 Basic Literals
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#92-complex-expressions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9.2 Complex Expressions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Operators
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="10. Operators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#101-arithmetic-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.1 Arithmetic Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#102-comparison-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.2 Comparison Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#103-logical-operators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.3 Logical Operators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#104-membership-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10.4 Membership &amp; Identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-built-in-filters-73-implemented-98-compatible" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Built-in Filters (73 Implemented, 98% Compatible)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. Built-in Filters (73 Implemented, 98% Compatible)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#111-string-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.1 String Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#112-math-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.2 Math Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#113-collection-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.3 Collection Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#114-html-url-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.4 HTML &amp; URL Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#115-datetime-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.5 Date/Time Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#116-utility-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11.6 Utility Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-built-in-tests-30-available" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Built-in Tests (30+ Available)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="12. Built-in Tests (30+ Available)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#121-type-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.1 Type Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#122-numeric-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.2 Numeric Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#123-string-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.3 String Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#124-logical-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.4 Logical Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#125-comparison-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12.5 Comparison Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-global-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        13. Global Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-advanced-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14. Advanced Features
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="14. Advanced Features">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#141-extensions-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.1 Extensions System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#142-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.2 Error Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#143-performance-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.3 Performance Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#144-loader-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        14.4 Loader System
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-implementation-differences" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15. Implementation Differences
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="15. Implementation Differences">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#151-type-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15.1 Type System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#152-performance-characteristics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15.2 Performance Characteristics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#153-ecosystem-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        15.3 Ecosystem Integration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-migration-guide" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16. Migration Guide
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="16. Migration Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#161-python-to-go-migration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.1 Python to Go Migration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#162-best-practices-for-go-miya" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        16.2 Best Practices for Go Miya
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-compatibility-matrix-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        17. Compatibility Matrix Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#18-recent-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        18. Recent Updates
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="jinja2-vs-miya-miya-engine-feature-matrix">Jinja2 vs Miya (Miya Engine) Feature Matrix<a class="headerlink" href="#jinja2-vs-miya-miya-engine-feature-matrix" title="Permanent link">&para;</a></h1>
+<p>This document provides a comprehensive mapping of all template engine features between Python Jinja2 and Go Miya,
+including implementation differences and compatibility notes.</p>
+<h2 id="executive-summary">Executive Summary<a class="headerlink" href="#executive-summary" title="Permanent link">&para;</a></h2>
+<p>** Production Ready with 95.4% Jinja2 Compatibility**</p>
+<ul>
+<li><strong>131+ Features Implemented</strong> and fully functional</li>
+<li><strong>95.4% Feature Compatibility</strong> with Python Jinja2</li>
+<li><strong>Complete Template System</strong>: inheritance, macros, filters, tests</li>
+<li><strong>Enterprise Grade</strong>: caching, performance, thread safety</li>
+<li><strong>Comprehensive Demo</strong>: Working examples of all features</li>
+</ul>
+<h2 id="quick-compatibility-overview">Quick Compatibility Overview<a class="headerlink" href="#quick-compatibility-overview" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Features</th>
+<th>Compatibility</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Template Inheritance</strong></td>
+<td>4/4</td>
+<td>100%</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Control Structures</strong></td>
+<td>7/7</td>
+<td>100%</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Include/Import</strong></td>
+<td>3/3</td>
+<td>100%</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Macros</strong></td>
+<td>5/6</td>
+<td>90%</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Filters</strong></td>
+<td>73/75</td>
+<td>98%</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Tests</strong></td>
+<td>25/26</td>
+<td>95%</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Advanced Features</strong></td>
+<td>7/8</td>
+<td>85%</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Performance</strong></td>
+<td>8/8</td>
+<td>100%</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Overall: 131/136 features = 95.4% compatibility</strong></p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Jinja2</strong>: The original Python template engine</li>
+<li><strong>Miya</strong>: Go implementation (github.com/zipreport/miya)</li>
+<li><strong>Status Key</strong>:  Fully Compatible |  Partial/Different |  Not Implemented |  In Progress</li>
+</ul>
+<h2 id="documentation-links">Documentation Links<a class="headerlink" href="#documentation-links" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong><a href="../COMPREHENSIVE_FEATURES/">COMPREHENSIVE_FEATURES.md</a></strong> - Complete feature reference with examples</li>
+<li><strong><a href="https://github.com/zipreport/miya/tree/master/examples/go/complex/">Example Code</a></strong> - Working examples of all features</li>
+<li><strong><a href="https://github.com/zipreport/miya/tree/master/examples/go/complex/templates/">Template Examples</a></strong> - Professional template organization</li>
+</ul>
+<hr />
+<h2 id="1-template-syntax-delimiters">1. Template Syntax &amp; Delimiters<a class="headerlink" href="#1-template-syntax-delimiters" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Variable expressions</td>
+<td><code>{{ variable }}</code></td>
+<td><code>{{ variable }}</code></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>Statement blocks</td>
+<td><code>{% statement %}</code></td>
+<td><code>{% statement %}</code></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>Comments</td>
+<td><code>{# comment #}</code></td>
+<td><code>{# comment #}</code></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>Whitespace control</td>
+<td><code>{{- var -}}</code>, <code>{%- stmt -%}</code></td>
+<td><code>{{- var -}}</code>, <code>{%- stmt -%}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="2-control-structures">2. Control Structures<a class="headerlink" href="#2-control-structures" title="Permanent link">&para;</a></h2>
+<h3 id="21-conditional-statements">2.1 Conditional Statements<a class="headerlink" href="#21-conditional-statements" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>If statement</td>
+<td><code>{% if condition %}</code></td>
+<td><code>{% if condition %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Elif statement</td>
+<td><code>{% elif condition %}</code></td>
+<td><code>{% elif condition %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Else statement</td>
+<td><code>{% else %}</code></td>
+<td><code>{% else %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Inline conditionals</td>
+<td><code>{{ 'yes' if true else 'no' }}</code></td>
+<td><code>{{ 'yes' if true else 'no' }}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<h3 id="22-loops">2.2 Loops<a class="headerlink" href="#22-loops" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>For loops</td>
+<td><code>{% for item in items %}</code></td>
+<td><code>{% for item in items %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Variable unpacking</td>
+<td><code>{% for k, v in dict.items() %}</code></td>
+<td><code>{% for k, v in dict %}</code></td>
+<td></td>
+<td>Native dict iteration support</td>
+</tr>
+<tr>
+<td>Loop variables</td>
+<td><code>loop.index</code>, <code>loop.first</code>, etc.</td>
+<td><code>loop.index</code>, <code>loop.first</code>, etc.</td>
+<td></td>
+<td>All loop vars supported</td>
+</tr>
+<tr>
+<td>Empty clause</td>
+<td><code>{% else %}</code> in for loops</td>
+<td><code>{% else %}</code> in for loops</td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Loop control</td>
+<td><code>{% break %}</code>, <code>{% continue %}</code></td>
+<td><code>{% break %}</code>, <code>{% continue %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Recursive loops</td>
+<td><code>{% for item in items recursive %}</code></td>
+<td><code>{% for item in items recursive %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-template-inheritance-composition">3. Template Inheritance &amp; Composition<a class="headerlink" href="#3-template-inheritance-composition" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Template extension</td>
+<td><code>{% extends "base.html" %}</code></td>
+<td><code>{% extends "base.html" %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Block definition</td>
+<td><code>{% block name %}</code></td>
+<td><code>{% block name %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Block override</td>
+<td>Child template blocks</td>
+<td>Child template blocks</td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Super calls</td>
+<td><code>{{ super() }}</code></td>
+<td><code>{{ super() }}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Include templates</td>
+<td><code>{% include "template.html" %}</code></td>
+<td><code>{% include "template.html" %}</code></td>
+<td></td>
+<td>Requires proper loader setup</td>
+</tr>
+<tr>
+<td>Include with context</td>
+<td><code>{% include "t.html" with context %}</code></td>
+<td><code>{% include "t.html" with context %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="4-import-system">4. Import System<a class="headerlink" href="#4-import-system" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Import templates</td>
+<td><code>{% import "macros.html" as m %}</code></td>
+<td><code>{% import "macros.html" as m %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Selective import</td>
+<td><code>{% from "macros.html" import macro %}</code></td>
+<td><code>{% from "macros.html" import macro %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Import with context</td>
+<td><code>{% import "m.html" as m with context %}</code></td>
+<td><code>{% import "m.html" as m with context %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="5-macros-functions">5. Macros &amp; Functions<a class="headerlink" href="#5-macros-functions" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Macro definition</td>
+<td><code>{% macro name(args) %}</code></td>
+<td><code>{% macro name(args) %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Macro calls</td>
+<td><code>{{ macro_name(args) }}</code></td>
+<td><code>{{ macro_name(args) }}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Call blocks</td>
+<td><code>{% call macro() %}content{% endcall %}</code></td>
+<td><code>{% call macro() %}content{% endcall %}</code></td>
+<td></td>
+<td>Full support with <code>caller()</code></td>
+</tr>
+<tr>
+<td>Caller function</td>
+<td><code>{{ caller() }}</code> in macros</td>
+<td><code>{{ caller() }}</code> in macros</td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Varargs macros</td>
+<td><code>{% macro m(*args, **kwargs) %}</code></td>
+<td><code>{% macro m(*args, **kwargs) %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="6-variable-assignment">6. Variable Assignment<a class="headerlink" href="#6-variable-assignment" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Simple assignment</td>
+<td><code>{% set var = value %}</code></td>
+<td><code>{% set var = value %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Multiple assignment</td>
+<td><code>{% set a, b = values %}</code></td>
+<td><code>{% set a, b = values %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Block assignment</td>
+<td><code>{% set var %}content{% endset %}</code></td>
+<td><code>{% set var %}content{% endset %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Namespace scoping</td>
+<td><code>{% set ns = namespace() %}</code></td>
+<td><code>{% set ns = namespace() %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="7-context-management">7. Context Management<a class="headerlink" href="#7-context-management" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>With statements</td>
+<td><code>{% with var = value %}</code></td>
+<td><code>{% with var = value %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Multiple with vars</td>
+<td><code>{% with a=1, b=2 %}</code></td>
+<td><code>{% with a=1, b=2 %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Nested with</td>
+<td>Multiple levels</td>
+<td>Multiple levels</td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="8-special-blocks">8. Special Blocks<a class="headerlink" href="#8-special-blocks" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Raw blocks</td>
+<td><code>{% raw %}content{% endraw %}</code></td>
+<td><code>{% raw %}content{% endraw %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Comment blocks</td>
+<td><code>{# multiline comments #}</code></td>
+<td><code>{# multiline comments #}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Autoescape blocks</td>
+<td><code>{% autoescape false %}</code></td>
+<td><code>{% autoescape false %}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Filter blocks</td>
+<td><code>{% filter upper %}text{% endfilter %}</code></td>
+<td><code>{% filter upper %}text{% endfilter %}</code></td>
+<td></td>
+<td>FULLY IMPLEMENTED with chaining support</td>
+</tr>
+<tr>
+<td>Do statements</td>
+<td><code>{% do expression %}</code></td>
+<td><code>{% do expression %}</code></td>
+<td></td>
+<td>Fully implemented - executes expressions for side effects</td>
+</tr>
+</tbody>
+</table>
+<h3 id="81-filter-blocks-implementation-details">8.1 Filter Blocks Implementation Details<a class="headerlink" href="#81-filter-blocks-implementation-details" title="Permanent link">&para;</a></h3>
+<p><strong>Filter blocks</strong> in Go Miya provide the same functionality as Python Jinja2, with full compatibility and additional
+optimizations.</p>
+<p><strong>Basic Usage:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>{% filter upper %}
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  Hello World
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>{% endfilter %}
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>&lt;!-- Output: HELLO WORLD --&gt;
+</span></code></pre></div>
+<p><strong>Filter Chaining:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>{% filter upper|reverse %}
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  hello world
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>{% endfilter %}
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>&lt;!-- Output: DLROW OLLEH --&gt;
+</span></code></pre></div>
+<p><strong>Filters with Arguments:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>{% filter truncate(10) %}
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  This is a very long text that will be truncated
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>{% endfilter %}
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>&lt;!-- Output: This is... --&gt;
+</span></code></pre></div>
+<p><strong>Complex Content Support:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>{% filter upper %}
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  Hello {{ name }}!
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>  {% for item in items %}
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    - {{ item }}
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>  {% endfor %}
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>{% endfilter %}
+</span></code></pre></div>
+<p><strong>Nested Filter Blocks:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>{% filter upper %}
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>  Outer content
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  {% filter lower %}
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    INNER CONTENT
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>  {% endfilter %}
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>{% endfilter %}
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>&lt;!-- Applies filters from inner to outer --&gt;
+</span></code></pre></div>
+<p><strong>Implementation Features:</strong></p>
+<ul>
+<li>AST-based parsing with proper error handling</li>
+<li>Integration with existing filter registry system</li>
+<li>Support for all built-in and custom filters</li>
+<li>Filter chaining with proper left-to-right evaluation</li>
+<li>Complex template content (variables, loops, conditionals)</li>
+<li>Nested filter blocks with correct scope handling</li>
+<li>Performance optimized for high-throughput scenarios</li>
+</ul>
+<h3 id="82-do-statements-implementation-details">8.2 Do Statements Implementation Details<a class="headerlink" href="#82-do-statements-implementation-details" title="Permanent link">&para;</a></h3>
+<p><strong>Do statements</strong> in Go Miya provide identical functionality to Python Jinja2, allowing execution of expressions
+purely for side effects without producing template output.</p>
+<p><strong>Basic Usage:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>{% set items = [] %}
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>{% do items.append(&quot;hello&quot;) %}  {# Python-style method calls #}
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>{{ items[0] }}  &lt;!-- Output: hello --&gt;
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>{# Miya Engine equivalent using expressions #}
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>{% set value = 42 %}
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>{% do value * 2 + 10 %}  {# Executes expression, no output #}
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>Original value: {{ value }}  &lt;!-- Output: Original value: 42 --&gt;
+</span></code></pre></div>
+<p><strong>Expression Evaluation:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>{# Arithmetic expressions #}
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>{% do 5 + 3 * 2 %}
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>{# Filter applications #}
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>{% set text = &quot;hello&quot; %}
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>{% do text|upper %}
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>Filtered: {{ text|upper }}  &lt;!-- Output: Filtered: HELLO --&gt;
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>{# Complex expressions #}
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>{% do (variable + 10) * factor|default(1) %}
+</span></code></pre></div>
+<p><strong>Integration with Control Flow:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>{# In conditionals #}
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>{% if condition %}
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  {% do complex_expression %}
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>  Content here
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>{% endif %}
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>{# In loops #}
+</span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>{% for item in items %}
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>  {% do item * 2 + offset %}
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>  Item: {{ item }}
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>{% endfor %}
+</span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>{# With whitespace control #}
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>Start{%- do expression -%}End  &lt;!-- Output: StartEnd --&gt;
+</span></code></pre></div>
+<p><strong>Use Cases:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>{# Trigger calculations without output #}
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>{% set counter = 0 %}
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>{% for i in range(10) %}
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  {% do counter + i %}  {# Expression evaluated but no output #}
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>{% endfor %}
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>Counter remains: {{ counter }}
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>{# Apply filters for validation #}
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>{% set user_input = &quot;  UNSAFE DATA  &quot; %}
+</span><span id="__span-8-10"><a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>{% do user_input|trim|lower %}
+</span><span id="__span-8-11"><a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a>Clean input: {{ user_input|trim|lower }}
+</span><span id="__span-8-12"><a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>
+</span><span id="__span-8-13"><a id="__codelineno-8-13" name="__codelineno-8-13" href="#__codelineno-8-13"></a>{# Complex expression evaluation #}
+</span><span id="__span-8-14"><a id="__codelineno-8-14" name="__codelineno-8-14" href="#__codelineno-8-14"></a>{% do (price * quantity * tax_rate)|round(2) %}
+</span></code></pre></div>
+<p><strong>Implementation Features:</strong></p>
+<ul>
+<li>Full AST-based parsing with proper error handling</li>
+<li>Integration with all existing expression types</li>
+<li>Support for complex expressions (arithmetic, filters, function calls)</li>
+<li>Proper integration with control flow structures</li>
+<li>Whitespace control support (<code>{%- do ... -%}</code>)</li>
+<li>Complete error propagation and reporting</li>
+<li>Zero impact on template output (true side-effects only)</li>
+<li>Compatible with all Miya Engine expression features</li>
+</ul>
+<p><strong>Error Handling:</strong></p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>{# Undefined variable error propagation #}
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>{% do undefined_variable %}  &lt;!-- Error: undefined variable --&gt;
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>{# Invalid expression syntax #}
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>{% do 5 + %}  &lt;!-- Error: malformed expression --&gt;
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>
+</span><span id="__span-9-7"><a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a>{# Missing expression #}
+</span><span id="__span-9-8"><a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a>{% do %}  &lt;!-- Error: expected expression --&gt;
+</span></code></pre></div>
+<hr />
+<h2 id="9-expressions-literals">9. Expressions &amp; Literals<a class="headerlink" href="#9-expressions-literals" title="Permanent link">&para;</a></h2>
+<h3 id="91-basic-literals">9.1 Basic Literals<a class="headerlink" href="#91-basic-literals" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Strings</td>
+<td><code>"hello"</code>, <code>'hello'</code></td>
+<td><code>"hello"</code>, <code>'hello'</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Numbers</td>
+<td><code>42</code>, <code>3.14</code></td>
+<td><code>42</code>, <code>3.14</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Booleans</td>
+<td><code>true</code>, <code>false</code></td>
+<td><code>true</code>, <code>false</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>None/null</td>
+<td><code>none</code></td>
+<td><code>none</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Lists</td>
+<td><code>[1, 2, 3]</code></td>
+<td><code>[1, 2, 3]</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Dictionaries</td>
+<td><code>{key: value}</code></td>
+<td><code>{key: value}</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<h3 id="92-complex-expressions">9.2 Complex Expressions<a class="headerlink" href="#92-complex-expressions" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Attribute access</td>
+<td><code>object.attribute</code></td>
+<td><code>object.attribute</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Item access</td>
+<td><code>dict['key']</code></td>
+<td><code>dict['key']</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Method calls</td>
+<td><code>string.upper()</code></td>
+<td><code>string.upper()</code></td>
+<td></td>
+<td>Runtime error - methods not callable</td>
+</tr>
+<tr>
+<td>List slicing</td>
+<td><code>list[1:3]</code></td>
+<td><code>list[1:3]</code></td>
+<td></td>
+<td>Native slice syntax support</td>
+</tr>
+<tr>
+<td>List comprehensions</td>
+<td><code>[x for x in items]</code></td>
+<td><code>[x for x in items]</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Conditional expressions</td>
+<td><code>value if condition else other</code></td>
+<td><code>value if condition else other</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="10-operators">10. Operators<a class="headerlink" href="#10-operators" title="Permanent link">&para;</a></h2>
+<h3 id="101-arithmetic-operators">10.1 Arithmetic Operators<a class="headerlink" href="#101-arithmetic-operators" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Addition</td>
+<td><code>+</code></td>
+<td><code>+</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Subtraction</td>
+<td><code>-</code></td>
+<td><code>-</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Multiplication</td>
+<td><code>*</code></td>
+<td><code>*</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Division</td>
+<td><code>/</code></td>
+<td><code>/</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Floor division</td>
+<td><code>//</code></td>
+<td><code>//</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Modulo</td>
+<td><code>%</code></td>
+<td><code>%</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Power</td>
+<td><code>**</code></td>
+<td><code>**</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>String concatenation</td>
+<td><code>~</code></td>
+<td><code>~</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<h3 id="102-comparison-operators">10.2 Comparison Operators<a class="headerlink" href="#102-comparison-operators" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Equality</td>
+<td><code>==</code></td>
+<td><code>==</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Inequality</td>
+<td><code>!=</code></td>
+<td><code>!=</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Less than</td>
+<td><code>&lt;</code></td>
+<td><code>&lt;</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Less/equal</td>
+<td><code>&lt;=</code></td>
+<td><code>&lt;=</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Greater than</td>
+<td><code>&gt;</code></td>
+<td><code>&gt;</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Greater/equal</td>
+<td><code>&gt;=</code></td>
+<td><code>&gt;=</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<h3 id="103-logical-operators">10.3 Logical Operators<a class="headerlink" href="#103-logical-operators" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>And</td>
+<td><code>and</code></td>
+<td><code>and</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Or</td>
+<td><code>or</code></td>
+<td><code>or</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Not</td>
+<td><code>not</code></td>
+<td><code>not</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<h3 id="104-membership-identity">10.4 Membership &amp; Identity<a class="headerlink" href="#104-membership-identity" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>In operator</td>
+<td><code>item in sequence</code></td>
+<td><code>item in sequence</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Is operator</td>
+<td><code>value is test</code></td>
+<td><code>value is test</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+<tr>
+<td>Is not</td>
+<td><code>value is not test</code></td>
+<td><code>value is not test</code></td>
+<td></td>
+<td>Full support</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="11-built-in-filters-73-implemented-98-compatible">11. Built-in Filters (73 Implemented, 98% Compatible)<a class="headerlink" href="#11-built-in-filters-73-implemented-98-compatible" title="Permanent link">&para;</a></h2>
+<h3 id="111-string-filters">11.1 String Filters<a class="headerlink" href="#111-string-filters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>upper</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>lower</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>capitalize</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>title</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>trim/strip</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>replace</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>truncate</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>wordwrap</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>center</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>indent</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>slugify</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>split</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>startswith</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>endswith</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>contains</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>regex_replace</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>regex_search</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>wordcount</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="112-math-filters">11.2 Math Filters<a class="headerlink" href="#112-math-filters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>abs</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>round</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>int</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>float</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>sum</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>min</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>max</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>ceil</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>floor</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>pow</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="113-collection-filters">11.3 Collection Filters<a class="headerlink" href="#113-collection-filters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>first</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>last</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>length/count</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>join</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>sort</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>reverse</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>unique</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>list</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>slice</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>batch</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>random</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>select</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>reject</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>selectattr</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>rejectattr</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>map</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>groupby</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>items</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Dictionary items</td>
+</tr>
+<tr>
+<td>keys</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Dictionary keys</td>
+</tr>
+<tr>
+<td>values</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Dictionary values</td>
+</tr>
+</tbody>
+</table>
+<h3 id="114-html-url-filters">11.4 HTML &amp; URL Filters<a class="headerlink" href="#114-html-url-filters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>escape/e</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>safe</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>striptags</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>urlencode</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>urlize</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>urlizetruncate</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>xmlattr</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>forceescape</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+</tbody>
+</table>
+<h3 id="115-datetime-filters">11.5 Date/Time Filters<a class="headerlink" href="#115-datetime-filters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>strftime</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>date</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>time</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>datetime</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>weekday</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>month_name</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>age</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>relative_date</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="116-utility-filters">11.6 Utility Filters<a class="headerlink" href="#116-utility-filters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Filter</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>default/d</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>format</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>string</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>attr</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>filesizeformat</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>pprint</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>tojson</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>fromjson</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>dictsort</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="12-built-in-tests-30-available">12. Built-in Tests (30+ Available)<a class="headerlink" href="#12-built-in-tests-30-available" title="Permanent link">&para;</a></h2>
+<h3 id="121-type-tests">12.1 Type Tests<a class="headerlink" href="#121-type-tests" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>defined</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>undefined</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>none</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>boolean</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>string</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>number</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>integer</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>float</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>sequence</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>mapping</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>iterable</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>callable</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+</tbody>
+</table>
+<h3 id="122-numeric-tests">12.2 Numeric Tests<a class="headerlink" href="#122-numeric-tests" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>even</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>odd</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>divisibleby</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+</tbody>
+</table>
+<h3 id="123-string-tests">12.3 String Tests<a class="headerlink" href="#123-string-tests" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>lower</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>upper</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>startswith</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>endswith</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>match</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Regex matching</td>
+</tr>
+<tr>
+<td>alpha</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>alnum</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+<tr>
+<td>ascii</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific implementation</td>
+</tr>
+</tbody>
+</table>
+<h3 id="124-logical-tests">12.4 Logical Tests<a class="headerlink" href="#124-logical-tests" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>in</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>contains</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>sameas</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>escaped</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+</tbody>
+</table>
+<h3 id="125-comparison-tests">12.5 Comparison Tests<a class="headerlink" href="#125-comparison-tests" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>eq/equalto</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>ne</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>lt</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>le</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>gt</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+<tr>
+<td>ge</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="13-global-functions">13. Global Functions<a class="headerlink" href="#13-global-functions" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>range()</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Identical behavior</td>
+</tr>
+<tr>
+<td>lipsum()</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Lorem ipsum generator</td>
+</tr>
+<tr>
+<td>dict()</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Dictionary constructor</td>
+</tr>
+<tr>
+<td>cycler()</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Cycle through values</td>
+</tr>
+<tr>
+<td>joiner()</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Join values with separator</td>
+</tr>
+<tr>
+<td>namespace()</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Create namespace object</td>
+</tr>
+<tr>
+<td>url_for()</td>
+<td></td>
+<td></td>
+<td></td>
+<td>URL generation (framework dependent)</td>
+</tr>
+<tr>
+<td>zip()</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Zip multiple sequences</td>
+</tr>
+<tr>
+<td>enumerate()</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Enumerate with index</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="14-advanced-features">14. Advanced Features<a class="headerlink" href="#14-advanced-features" title="Permanent link">&para;</a></h2>
+<h3 id="141-extensions-system">14.1 Extensions System<a class="headerlink" href="#141-extensions-system" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Custom extensions</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Full extension API</td>
+</tr>
+<tr>
+<td>Extension dependencies</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Dependency resolution</td>
+</tr>
+<tr>
+<td>Custom tags</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Custom parser nodes</td>
+</tr>
+<tr>
+<td>Extension lifecycle</td>
+<td></td>
+<td></td>
+<td></td>
+<td>OnLoad, OnRender hooks</td>
+</tr>
+<tr>
+<td>Parser extension</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Custom syntax parsing</td>
+</tr>
+</tbody>
+</table>
+<h3 id="142-error-handling">14.2 Error Handling<a class="headerlink" href="#142-error-handling" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Template exceptions</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Detailed error messages</td>
+</tr>
+<tr>
+<td>Line number tracking</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Source location in errors</td>
+</tr>
+<tr>
+<td>Error suggestions</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific enhancement</td>
+</tr>
+<tr>
+<td>Debug mode</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Enhanced debugging</td>
+</tr>
+<tr>
+<td>Variable watching</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific enhancement</td>
+</tr>
+</tbody>
+</table>
+<h3 id="143-performance-features">14.3 Performance Features<a class="headerlink" href="#143-performance-features" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Template caching</td>
+<td></td>
+<td></td>
+<td></td>
+<td>LRU cache with TTL</td>
+</tr>
+<tr>
+<td>Compiled templates</td>
+<td></td>
+<td></td>
+<td></td>
+<td>AST caching</td>
+</tr>
+<tr>
+<td>Concurrent safety</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Thread-safe execution</td>
+</tr>
+<tr>
+<td>Memory optimization</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific optimizations</td>
+</tr>
+<tr>
+<td>Filter chain optimization</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go-specific optimization</td>
+</tr>
+</tbody>
+</table>
+<h3 id="144-loader-system">14.4 Loader System<a class="headerlink" href="#144-loader-system" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Status</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FileSystemLoader</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Load from filesystem</td>
+</tr>
+<tr>
+<td>StringLoader</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Load from strings</td>
+</tr>
+<tr>
+<td>EmbedLoader</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Go embed.FS support</td>
+</tr>
+<tr>
+<td>Template discovery</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Advanced template finding</td>
+</tr>
+<tr>
+<td>LRU caching loader</td>
+<td></td>
+<td></td>
+<td></td>
+<td>Performance optimization</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="15-implementation-differences">15. Implementation Differences<a class="headerlink" href="#15-implementation-differences" title="Permanent link">&para;</a></h2>
+<h3 id="151-type-system">15.1 Type System<a class="headerlink" href="#151-type-system" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dynamic typing</td>
+<td>Native Python</td>
+<td>Interface{} based</td>
+<td>Go uses static typing with interfaces</td>
+</tr>
+<tr>
+<td>Method calls</td>
+<td><code>string.upper()</code></td>
+<td>Not supported</td>
+<td>Go doesn't support runtime method dispatch</td>
+</tr>
+<tr>
+<td>Duck typing</td>
+<td>Full support</td>
+<td>Limited</td>
+<td>Go's type system limitations</td>
+</tr>
+<tr>
+<td>Reflection</td>
+<td>Runtime</td>
+<td>Compile-time</td>
+<td>Different reflection models</td>
+</tr>
+</tbody>
+</table>
+<h3 id="152-performance-characteristics">15.2 Performance Characteristics<a class="headerlink" href="#152-performance-characteristics" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Template compilation</td>
+<td>Runtime</td>
+<td>AST-based</td>
+<td>Go uses parsed AST trees</td>
+</tr>
+<tr>
+<td>Memory usage</td>
+<td>Higher</td>
+<td>Lower</td>
+<td>Go's efficient memory management</td>
+</tr>
+<tr>
+<td>Concurrency</td>
+<td>GIL limitations</td>
+<td>Native goroutines</td>
+<td>Go's superior concurrency</td>
+</tr>
+<tr>
+<td>Startup time</td>
+<td>Slower</td>
+<td>Faster</td>
+<td>Go's compilation advantages</td>
+</tr>
+</tbody>
+</table>
+<h3 id="153-ecosystem-integration">15.3 Ecosystem Integration<a class="headerlink" href="#153-ecosystem-integration" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Python Jinja2</th>
+<th>Go Miya</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Web frameworks</td>
+<td>Flask, Django</td>
+<td>Gin, Echo, etc.</td>
+<td>Different framework ecosystems</td>
+</tr>
+<tr>
+<td>Standard library</td>
+<td>Rich Python stdlib</td>
+<td>Go's focused stdlib</td>
+<td>Different library philosophies</td>
+</tr>
+<tr>
+<td>Package management</td>
+<td>pip/poetry</td>
+<td>go mod</td>
+<td>Different dependency systems</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="16-migration-guide">16. Migration Guide<a class="headerlink" href="#16-migration-guide" title="Permanent link">&para;</a></h2>
+<h3 id="161-python-to-go-migration">16.1 Python to Go Migration<a class="headerlink" href="#161-python-to-go-migration" title="Permanent link">&para;</a></h3>
+<p><strong>Fully Compatible:</strong></p>
+<ul>
+<li>All basic template syntax</li>
+<li>Control structures (if/for/with)</li>
+<li>Template inheritance</li>
+<li>Macros and includes</li>
+<li>Filter blocks (<code>{% filter %}</code>)</li>
+<li>Most filters and tests</li>
+<li>Variable assignments</li>
+</ul>
+<p><strong>Requires Adaptation:</strong></p>
+<ul>
+<li>Method calls: <code>obj.method()</code> → Use filters instead</li>
+<li>Some Python-specific filters → Use Go equivalents</li>
+<li>Custom extensions → Rewrite using Go extension API</li>
+<li>Date/time handling → Use Go time.Time objects</li>
+</ul>
+<p><strong>Not Available:</strong></p>
+<ul>
+<li>Some Python-specific global functions</li>
+</ul>
+<h3 id="162-best-practices-for-go-miya">16.2 Best Practices for Go Miya<a class="headerlink" href="#162-best-practices-for-go-miya" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Use Go types effectively</strong>: Pass Go structs, maps, and slices</li>
+<li><strong>Leverage concurrency</strong>: Templates are goroutine-safe</li>
+<li><strong>Cache templates</strong>: Use loader caching for performance</li>
+<li><strong>Error handling</strong>: Implement proper error checking</li>
+<li><strong>Extensions</strong>: Use Go's type system for custom functionality</li>
+</ol>
+<hr />
+<h2 id="17-compatibility-matrix-summary">17. Compatibility Matrix Summary<a class="headerlink" href="#17-compatibility-matrix-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th>Features</th>
+<th>Compatible</th>
+<th>Partial</th>
+<th>Missing</th>
+<th>Compatibility %</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Core Syntax</strong></td>
+<td>20</td>
+<td>20</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td><strong>Control Structures</strong></td>
+<td>15</td>
+<td>15</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td><strong>Inheritance</strong></td>
+<td>8</td>
+<td>8</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td><strong>Expressions</strong></td>
+<td>25</td>
+<td>23</td>
+<td>1</td>
+<td>1</td>
+<td>96%</td>
+</tr>
+<tr>
+<td><strong>Operators</strong></td>
+<td>20</td>
+<td>20</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td><strong>Filters</strong></td>
+<td>70+</td>
+<td>65+</td>
+<td>5+</td>
+<td>0</td>
+<td>95%+</td>
+</tr>
+<tr>
+<td><strong>Tests</strong></td>
+<td>30+</td>
+<td>30+</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td><strong>Global Functions</strong></td>
+<td>9</td>
+<td>9</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+<tr>
+<td><strong>Advanced Features</strong></td>
+<td>20</td>
+<td>20</td>
+<td>0</td>
+<td>0</td>
+<td>100%</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Overall Compatibility: 99%+</strong></p>
+<hr />
+<hr />
+<h2 id="18-recent-updates">18. Recent Updates<a class="headerlink" href="#18-recent-updates" title="Permanent link">&para;</a></h2>
+<p><strong>August 2025 - Filter Blocks Implementation</strong></p>
+<ul>
+<li>Filter blocks (<code>{% filter %}...{% endfilter %}</code>) now fully implemented</li>
+<li>Support for filter chaining, arguments, and complex content</li>
+<li>Comprehensive testing and documentation completed</li>
+<li>Overall compatibility increased to 99%+</li>
+</ul>
+<p><em>Last Updated: August 2025</em><br />
+<em>Go Miya Version: Latest with Filter Blocks</em><br />
+<em>Python Jinja2 Reference: 3.1.x</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; 2025-2026 Joao Pinheiro
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/zipreport/miya" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
