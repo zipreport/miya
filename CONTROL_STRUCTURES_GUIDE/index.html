@@ -2201,51 +2201,51 @@
 <h2 id="conditional-statements">Conditional Statements<a class="headerlink" href="#conditional-statements" title="Permanent link">&para;</a></h2>
 <h3 id="if-elif-else">If / Elif / Else<a class="headerlink" href="#if-elif-else" title="Permanent link">&para;</a></h3>
 <p>Basic conditional branching:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>{% if user.role == &quot;admin&quot; %}
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  &lt;p&gt;Admin access granted&lt;/p&gt;
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>{% elif user.role == &quot;moderator&quot; %}
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  &lt;p&gt;Moderator access granted&lt;/p&gt;
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>{% elif user.role == &quot;user&quot; %}
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  &lt;p&gt;Welcome, user!&lt;/p&gt;
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>{% else %}
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  &lt;p&gt;Access restricted&lt;/p&gt;
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>{% endif %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">user.role</span> <span class="o">==</span> <span class="s2">&quot;admin&quot;</span> <span class="cp">%}</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Admin access granted<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="cp">{%</span> <span class="k">elif</span> <span class="nv">user.role</span> <span class="o">==</span> <span class="s2">&quot;moderator&quot;</span> <span class="cp">%}</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Moderator access granted<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="cp">{%</span> <span class="k">elif</span> <span class="nv">user.role</span> <span class="o">==</span> <span class="s2">&quot;user&quot;</span> <span class="cp">%}</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Welcome, user!<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Access restricted<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="simple-if-statement">Simple If Statement<a class="headerlink" href="#simple-if-statement" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>{% if user.active %}
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  &lt;p&gt;Account is ACTIVE&lt;/p&gt;
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>{% else %}
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  &lt;p&gt;Account is INACTIVE&lt;/p&gt;
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>{% endif %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">user.active</span> <span class="cp">%}</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Account is ACTIVE<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Account is INACTIVE<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="nested-conditions">Nested Conditions<a class="headerlink" href="#nested-conditions" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>{% if user.active %}
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  {% if user.verified %}
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    &lt;p&gt; Fully verified and active account&lt;/p&gt;
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  {% else %}
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    &lt;p&gt; Active but needs email verification&lt;/p&gt;
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  {% endif %}
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>{% else %}
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  &lt;p&gt; Account needs activation&lt;/p&gt;
-</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>{% endif %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">user.active</span> <span class="cp">%}</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>  <span class="cp">{%</span> <span class="k">if</span> <span class="nv">user.verified</span> <span class="cp">%}</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span> Fully verified and active account<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>  <span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span> Active but needs email verification<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>  <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span> Account needs activation<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="multiple-conditions">Multiple Conditions<a class="headerlink" href="#multiple-conditions" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>{% if user.age &gt;= 18 and user.verified %}
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  &lt;p&gt;Access granted&lt;/p&gt;
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>{% endif %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">user.age</span> <span class="o">&gt;=</span> <span class="m">18</span> <span class="k">and</span> <span class="nv">user.verified</span> <span class="cp">%}</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Access granted<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>{% if user.premium or user.trial %}
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>  &lt;p&gt;Premium features enabled&lt;/p&gt;
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>{% endif %}
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">user.premium</span> <span class="k">or</span> <span class="nv">user.trial</span> <span class="cp">%}</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Premium features enabled<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <hr />
 <h2 id="for-loops">For Loops<a class="headerlink" href="#for-loops" title="Permanent link">&para;</a></h2>
 <h3 id="basic-iteration">Basic Iteration<a class="headerlink" href="#basic-iteration" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>&lt;ul&gt;
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>{% for product in products %}
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  &lt;li&gt;{{ product.name }} - ${{ product.price }}&lt;/li&gt;
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>{% endfor %}
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>&lt;/ul&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">product</span> <span class="k">in</span> <span class="nv">products</span> <span class="cp">%}</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">product.name</span> <span class="cp">}}</span> - $<span class="cp">{{</span> <span class="nv">product.price</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h3 id="loop-variables">Loop Variables<a class="headerlink" href="#loop-variables" title="Permanent link">&para;</a></h3>
 <p>Miya provides special loop variables:</p>
@@ -2296,65 +2296,65 @@
 </tbody>
 </table>
 <p><strong>Example:</strong></p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>&lt;table&gt;
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>{% for product in products %}
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  &lt;tr style=&quot;background: {{ &#39;lightblue&#39; if loop.first else &#39;lightyellow&#39; if loop.last else &#39;white&#39; }}&quot;&gt;
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    &lt;td&gt;{{ loop.index }}&lt;/td&gt;
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    &lt;td&gt;{{ product.name }}&lt;/td&gt;
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    &lt;td&gt;{{ loop.revindex }} remaining&lt;/td&gt;
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  &lt;/tr&gt;
-</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>{% endfor %}
-</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>&lt;/table&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">&lt;</span><span class="nt">table</span><span class="p">&gt;</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">product</span> <span class="k">in</span> <span class="nv">products</span> <span class="cp">%}</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  <span class="p">&lt;</span><span class="nt">tr</span> <span class="na">style</span><span class="o">=</span><span class="s">&quot;background: </span><span class="cp">{{</span> <span class="s1">&#39;lightblue&#39;</span> <span class="k">if</span> <span class="nb">loop</span><span class="nv">.first</span> <span class="k">else</span> <span class="s1">&#39;lightyellow&#39;</span> <span class="k">if</span> <span class="nb">loop</span><span class="nv">.last</span> <span class="k">else</span> <span class="s1">&#39;white&#39;</span> <span class="cp">}}</span><span class="s">&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>    <span class="p">&lt;</span><span class="nt">td</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nb">loop</span><span class="nv">.index</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">td</span><span class="p">&gt;</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>    <span class="p">&lt;</span><span class="nt">td</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">product.name</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">td</span><span class="p">&gt;</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>    <span class="p">&lt;</span><span class="nt">td</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nb">loop</span><span class="nv">.revindex</span> <span class="cp">}}</span> remaining<span class="p">&lt;/</span><span class="nt">td</span><span class="p">&gt;</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>  <span class="p">&lt;/</span><span class="nt">tr</span><span class="p">&gt;</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="p">&lt;/</span><span class="nt">table</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h3 id="conditional-iteration">Conditional Iteration<a class="headerlink" href="#conditional-iteration" title="Permanent link">&para;</a></h3>
 <p>Filter items directly in the loop:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>&lt;p&gt;Products over $50:&lt;/p&gt;
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>&lt;ul&gt;
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>{% for product in products if product.price &gt; 50 %}
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  &lt;li&gt;{{ product.name }} - ${{ product.price }}&lt;/li&gt;
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>{% endfor %}
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>&lt;/ul&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Products over $50:<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">product</span> <span class="k">in</span> <span class="nv">products</span> <span class="k">if</span> <span class="nv">product.price</span> <span class="o">&gt;</span> <span class="m">50</span> <span class="cp">%}</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>  <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">product.name</span> <span class="cp">}}</span> - $<span class="cp">{{</span> <span class="nv">product.price</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h3 id="loop-with-else">Loop with Else<a class="headerlink" href="#loop-with-else" title="Permanent link">&para;</a></h3>
 <p>Handle empty collections:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>&lt;ul&gt;
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>{% for item in items %}
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  &lt;li&gt;{{ item }}&lt;/li&gt;
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>{% else %}
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  &lt;li&gt;&lt;em&gt;No items to display&lt;/em&gt;&lt;/li&gt;
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>{% endfor %}
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>&lt;/ul&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">items</span> <span class="cp">%}</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>  <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">item</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>  <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;&lt;</span><span class="nt">em</span><span class="p">&gt;</span>No items to display<span class="p">&lt;/</span><span class="nt">em</span><span class="p">&gt;&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h3 id="nested-loops">Nested Loops<a class="headerlink" href="#nested-loops" title="Permanent link">&para;</a></h3>
 <p>Access parent loop variables with <code>loop.parent.loop</code>:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>{% for category in categories %}
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  &lt;h3&gt;{{ category.name }}&lt;/h3&gt;
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  &lt;ul&gt;
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  {% for item in category.items %}
-</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    &lt;li&gt;{{ item }} (Category {{ loop.parent.loop.index }})&lt;/li&gt;
-</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>  {% endfor %}
-</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>  &lt;/ul&gt;
-</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>{% endfor %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">category</span> <span class="k">in</span> <span class="nv">categories</span> <span class="cp">%}</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>  <span class="p">&lt;</span><span class="nt">h3</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">category.name</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">h3</span><span class="p">&gt;</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>  <span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>  <span class="cp">{%</span> <span class="k">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">category.items</span> <span class="cp">%}</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">item</span> <span class="cp">}}</span> (Category <span class="cp">{{</span> <span class="nb">loop</span><span class="nv">.parent.loop.index</span> <span class="cp">}}</span>)<span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>  <span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>  <span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <hr />
 <h2 id="inline-conditionals">Inline Conditionals<a class="headerlink" href="#inline-conditionals" title="Permanent link">&para;</a></h2>
 <h3 id="ternary-operator">Ternary Operator<a class="headerlink" href="#ternary-operator" title="Permanent link">&para;</a></h3>
 <p>Concise conditional expressions:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>{{ &#39;In Stock&#39; if stock &gt; 0 else &#39;Out of Stock&#39; }}
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>{{ price if price &gt; 0 else &#39;N/A&#39; }}
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>{{ &#39;SALE!&#39; if discount &gt; 0 else &#39;&#39; }}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="cp">{{</span> <span class="s1">&#39;In Stock&#39;</span> <span class="k">if</span> <span class="nv">stock</span> <span class="o">&gt;</span> <span class="m">0</span> <span class="k">else</span> <span class="s1">&#39;Out of Stock&#39;</span> <span class="cp">}}</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="cp">{{</span> <span class="nv">price</span> <span class="k">if</span> <span class="nv">price</span> <span class="o">&gt;</span> <span class="m">0</span> <span class="k">else</span> <span class="s1">&#39;N/A&#39;</span> <span class="cp">}}</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="cp">{{</span> <span class="s1">&#39;SALE!&#39;</span> <span class="k">if</span> <span class="nv">discount</span> <span class="o">&gt;</span> <span class="m">0</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <h3 id="important-limitation">Important Limitation<a class="headerlink" href="#important-limitation" title="Permanent link">&para;</a></h3>
 <p><strong>Inline conditionals MUST include the <code>else</code> clause</strong> in Miya Engine:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>{#  WORKS - includes else #}
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>{{ &#39;Badge&#39; if condition else &#39;&#39; }}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c">{#  WORKS - includes else #}</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="cp">{{</span> <span class="s1">&#39;Badge&#39;</span> <span class="k">if</span> <span class="nv">condition</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span> <span class="cp">}}</span>
 </span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
-</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>{#  FAILS - missing else #}
-</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>{{ &#39;Badge&#39; if condition }}
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c">{#  FAILS - missing else #}</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="cp">{{</span> <span class="s1">&#39;Badge&#39;</span> <span class="k">if</span> <span class="nv">condition</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <h3 id="chained-ternary">Chained Ternary<a class="headerlink" href="#chained-ternary" title="Permanent link">&para;</a></h3>
 <p>Multiple conditions in sequence:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>{{ &#39;Premium&#39; if total &gt; 1000 else &#39;Gold&#39; if total &gt; 500 else &#39;Silver&#39; if total &gt; 100 else &#39;Bronze&#39; }}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="cp">{{</span> <span class="s1">&#39;Premium&#39;</span> <span class="k">if</span> <span class="nv">total</span> <span class="o">&gt;</span> <span class="m">1000</span> <span class="k">else</span> <span class="s1">&#39;Gold&#39;</span> <span class="k">if</span> <span class="nv">total</span> <span class="o">&gt;</span> <span class="m">500</span> <span class="k">else</span> <span class="s1">&#39;Silver&#39;</span> <span class="k">if</span> <span class="nv">total</span> <span class="o">&gt;</span> <span class="m">100</span> <span class="k">else</span> <span class="s1">&#39;Bronze&#39;</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <p>Reads as:
 - If total &gt; 1000: "Premium"
@@ -2365,54 +2365,54 @@
 <h2 id="variable-assignment">Variable Assignment<a class="headerlink" href="#variable-assignment" title="Permanent link">&para;</a></h2>
 <h3 id="set-statement">Set Statement<a class="headerlink" href="#set-statement" title="Permanent link">&para;</a></h3>
 <p>Assign values to variables:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>{% set greeting = &quot;Hello, &quot; ~ user.name ~ &quot;!&quot; %}
-</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>{% set total = 0 %}
-</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>{% set product = products[0] %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-12-1"><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">greeting</span> <span class="o">=</span> <span class="s2">&quot;Hello, &quot;</span> <span class="o">~</span> <span class="nv">user.name</span> <span class="o">~</span> <span class="s2">&quot;!&quot;</span> <span class="cp">%}</span>
+</span><span id="__span-12-2"><a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">total</span> <span class="o">=</span> <span class="m">0</span> <span class="cp">%}</span>
+</span><span id="__span-12-3"><a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">product</span> <span class="o">=</span> <span class="nv">products</span><span class="o">[</span><span class="m">0</span><span class="o">]</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="multiple-assignments">Multiple Assignments<a class="headerlink" href="#multiple-assignments" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>{% set first_product = products[0] %}
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>{% set second_product = products[1] %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">first_product</span> <span class="o">=</span> <span class="nv">products</span><span class="o">[</span><span class="m">0</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">second_product</span> <span class="o">=</span> <span class="nv">products</span><span class="o">[</span><span class="m">1</span><span class="o">]</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="variables-in-loops">Variables in Loops<a class="headerlink" href="#variables-in-loops" title="Permanent link">&para;</a></h3>
 <p>Accumulate values (note: variables in loops are scoped):</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>{% set total_price = 0 %}
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>{% for product in products %}
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>  {% set total_price = total_price + product.price %}
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>{% endfor %}
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>&lt;p&gt;Total: ${{ total_price }}&lt;/p&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">total_price</span> <span class="o">=</span> <span class="m">0</span> <span class="cp">%}</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">product</span> <span class="k">in</span> <span class="nv">products</span> <span class="cp">%}</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>  <span class="cp">{%</span> <span class="k">set</span> <span class="nv">total_price</span> <span class="o">=</span> <span class="nv">total_price</span> <span class="o">+</span> <span class="nv">product.price</span> <span class="cp">%}</span>
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Total: $<span class="cp">{{</span> <span class="nv">total_price</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h3 id="block-assignment">Block Assignment<a class="headerlink" href="#block-assignment" title="Permanent link">&para;</a></h3>
 <p>Capture multi-line content:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>{% set formatted_html %}
-</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>&lt;div class=&quot;alert&quot;&gt;
-</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>  &lt;strong&gt;Important!&lt;/strong&gt; You have {{ products|length }} items.
-</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>&lt;/div&gt;
-</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>{% endset %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-15-1"><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">formatted_html</span> <span class="cp">%}</span>
+</span><span id="__span-15-2"><a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;alert&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-15-3"><a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>  <span class="p">&lt;</span><span class="nt">strong</span><span class="p">&gt;</span>Important!<span class="p">&lt;/</span><span class="nt">strong</span><span class="p">&gt;</span> You have <span class="cp">{{</span> <span class="nv">products</span><span class="o">|</span><span class="nf">length</span> <span class="cp">}}</span> items.
+</span><span id="__span-15-4"><a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-15-5"><a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="cp">{%</span> <span class="k">endset</span> <span class="cp">%}</span>
 </span><span id="__span-15-6"><a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>
-</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a>{{ formatted_html }}
+</span><span id="__span-15-7"><a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="cp">{{</span> <span class="nv">formatted_html</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <p>Block assignment captures everything between the tags, including HTML and template expressions.</p>
 <hr />
 <h2 id="with-statements">With Statements<a class="headerlink" href="#with-statements" title="Permanent link">&para;</a></h2>
 <h3 id="variable-scoping">Variable Scoping<a class="headerlink" href="#variable-scoping" title="Permanent link">&para;</a></h3>
 <p>Create local scope for variables:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>{% with total = products|length %}
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>  &lt;p&gt;You have {{ total }} products in your catalog.&lt;/p&gt;
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>  &lt;p&gt;{{ &#39;Large&#39; if total &gt; 5 else &#39;Small&#39; }} catalog&lt;/p&gt;
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>{% endwith %}
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>{# total is not available here #}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="cp">{%</span> <span class="k">with</span> <span class="nv">total</span> <span class="o">=</span> <span class="nv">products</span><span class="o">|</span><span class="nf">length</span> <span class="cp">%}</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>You have <span class="cp">{{</span> <span class="nv">total</span> <span class="cp">}}</span> products in your catalog.<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="s1">&#39;Large&#39;</span> <span class="k">if</span> <span class="nv">total</span> <span class="o">&gt;</span> <span class="m">5</span> <span class="k">else</span> <span class="s1">&#39;Small&#39;</span> <span class="cp">}}</span> catalog<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="cp">{%</span> <span class="k">endwith</span> <span class="cp">%}</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="c">{# total is not available here #}</span>
 </span></code></pre></div>
 <h3 id="multiple-variables">Multiple Variables<a class="headerlink" href="#multiple-variables" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>{% with min_price = 10, max_price = 100, currency = &#39;USD&#39; %}
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>  &lt;p&gt;Price Range: {{ currency }} {{ min_price }} - {{ currency }} {{ max_price }}&lt;/p&gt;
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>{% endwith %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="cp">{%</span> <span class="k">with</span> <span class="nv">min_price</span> <span class="o">=</span> <span class="m">10</span><span class="o">,</span> <span class="nv">max_price</span> <span class="o">=</span> <span class="m">100</span><span class="o">,</span> <span class="nv">currency</span> <span class="o">=</span> <span class="s1">&#39;USD&#39;</span> <span class="cp">%}</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Price Range: <span class="cp">{{</span> <span class="nv">currency</span> <span class="cp">}}</span> <span class="cp">{{</span> <span class="nv">min_price</span> <span class="cp">}}</span> - <span class="cp">{{</span> <span class="nv">currency</span> <span class="cp">}}</span> <span class="cp">{{</span> <span class="nv">max_price</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="cp">{%</span> <span class="k">endwith</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="nested-with">Nested With<a class="headerlink" href="#nested-with" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>{% with category = &quot;Electronics&quot; %}
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>  {% with count = products|length %}
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    &lt;p&gt;{{ category }} category has {{ count }} items&lt;/p&gt;
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>  {% endwith %}
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>{% endwith %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="cp">{%</span> <span class="k">with</span> <span class="nv">category</span> <span class="o">=</span> <span class="s2">&quot;Electronics&quot;</span> <span class="cp">%}</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>  <span class="cp">{%</span> <span class="k">with</span> <span class="nv">count</span> <span class="o">=</span> <span class="nv">products</span><span class="o">|</span><span class="nf">length</span> <span class="cp">%}</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>    <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">category</span> <span class="cp">}}</span> category has <span class="cp">{{</span> <span class="nv">count</span> <span class="cp">}}</span> items<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>  <span class="cp">{%</span> <span class="k">endwith</span> <span class="cp">%}</span>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="cp">{%</span> <span class="k">endwith</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="when-to-use-with">When to Use With<a class="headerlink" href="#when-to-use-with" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2421,156 +2421,156 @@
 <li><strong>Readability:</strong> Give meaningful names to complex filters</li>
 </ul>
 <p><strong>Example:</strong></p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>{# Without with #}
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>&lt;p&gt;Active users: {{ users|selectattr(&quot;active&quot;)|list|length }}&lt;/p&gt;
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>&lt;p&gt;Found {{ users|selectattr(&quot;active&quot;)|list|length }} matches&lt;/p&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c">{# Without with #}</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Active users: <span class="cp">{{</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">list</span><span class="o">|</span><span class="nf">length</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Found <span class="cp">{{</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">list</span><span class="o">|</span><span class="nf">length</span> <span class="cp">}}</span> matches<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
 </span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>{# With with - cleaner #}
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>{% with active_count = users|selectattr(&quot;active&quot;)|list|length %}
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>  &lt;p&gt;Active users: {{ active_count }}&lt;/p&gt;
-</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>  &lt;p&gt;Found {{ active_count }} matches&lt;/p&gt;
-</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>{% endwith %}
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="c">{# With with - cleaner #}</span>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="cp">{%</span> <span class="k">with</span> <span class="nv">active_count</span> <span class="o">=</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">list</span><span class="o">|</span><span class="nf">length</span> <span class="cp">%}</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Active users: <span class="cp">{{</span> <span class="nv">active_count</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Found <span class="cp">{{</span> <span class="nv">active_count</span> <span class="cp">}}</span> matches<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-19-9"><a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a><span class="cp">{%</span> <span class="k">endwith</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <hr />
 <h2 id="complex-control-flow">Complex Control Flow<a class="headerlink" href="#complex-control-flow" title="Permanent link">&para;</a></h2>
 <h3 id="combining-conditions-and-loops">Combining Conditions and Loops<a class="headerlink" href="#combining-conditions-and-loops" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>{% for product in products %}
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>  {% if loop.first %}
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>    &lt;p&gt;&lt;strong&gt;Featured Product:&lt;/strong&gt;&lt;/p&gt;
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>  {% endif %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">product</span> <span class="k">in</span> <span class="nv">products</span> <span class="cp">%}</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>  <span class="cp">{%</span> <span class="k">if</span> <span class="nb">loop</span><span class="nv">.first</span> <span class="cp">%}</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>    <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;&lt;</span><span class="nt">strong</span><span class="p">&gt;</span>Featured Product:<span class="p">&lt;/</span><span class="nt">strong</span><span class="p">&gt;&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>  <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>
-</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>  {% if product.price &gt; 50 %}
-</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    &lt;div&gt;
-</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>      &lt;p&gt;{{ product.name }} - ${{ product.price }}&lt;/p&gt;
-</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>      {% if product.stock &lt; 10 %}
-</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>        &lt;p style=&quot;color: red;&quot;&gt; Low Stock: {{ product.stock }} remaining&lt;/p&gt;
-</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>      {% endif %}
-</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>    &lt;/div&gt;
-</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a>  {% endif %}
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>  <span class="cp">{%</span> <span class="k">if</span> <span class="nv">product.price</span> <span class="o">&gt;</span> <span class="m">50</span> <span class="cp">%}</span>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>    <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>      <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">product.name</span> <span class="cp">}}</span> - $<span class="cp">{{</span> <span class="nv">product.price</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>      <span class="cp">{%</span> <span class="k">if</span> <span class="nv">product.stock</span> <span class="o">&lt;</span> <span class="m">10</span> <span class="cp">%}</span>
+</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a>        <span class="p">&lt;</span><span class="nt">p</span> <span class="na">style</span><span class="o">=</span><span class="s">&quot;color: red;&quot;</span><span class="p">&gt;</span> Low Stock: <span class="cp">{{</span> <span class="nv">product.stock</span> <span class="cp">}}</span> remaining<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-20-11"><a id="__codelineno-20-11" name="__codelineno-20-11" href="#__codelineno-20-11"></a>      <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</span><span id="__span-20-12"><a id="__codelineno-20-12" name="__codelineno-20-12" href="#__codelineno-20-12"></a>    <span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-20-13"><a id="__codelineno-20-13" name="__codelineno-20-13" href="#__codelineno-20-13"></a>  <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span><span id="__span-20-14"><a id="__codelineno-20-14" name="__codelineno-20-14" href="#__codelineno-20-14"></a>
-</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>  {% if loop.last %}
-</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a>    &lt;p&gt;&lt;em&gt;End of product list&lt;/em&gt;&lt;/p&gt;
-</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>  {% endif %}
-</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a>{% endfor %}
+</span><span id="__span-20-15"><a id="__codelineno-20-15" name="__codelineno-20-15" href="#__codelineno-20-15"></a>  <span class="cp">{%</span> <span class="k">if</span> <span class="nb">loop</span><span class="nv">.last</span> <span class="cp">%}</span>
+</span><span id="__span-20-16"><a id="__codelineno-20-16" name="__codelineno-20-16" href="#__codelineno-20-16"></a>    <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;&lt;</span><span class="nt">em</span><span class="p">&gt;</span>End of product list<span class="p">&lt;/</span><span class="nt">em</span><span class="p">&gt;&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-20-17"><a id="__codelineno-20-17" name="__codelineno-20-17" href="#__codelineno-20-17"></a>  <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</span><span id="__span-20-18"><a id="__codelineno-20-18" name="__codelineno-20-18" href="#__codelineno-20-18"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="complex-logic-example">Complex Logic Example<a class="headerlink" href="#complex-logic-example" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>{% for user in users %}
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>  {% if user.active and user.verified %}
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>    {% with days_since = (today - user.last_login).days %}
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>      {% if days_since &lt; 7 %}
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>        &lt;span class=&quot;badge-active&quot;&gt;{{ user.name }} - Active&lt;/span&gt;
-</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>      {% elif days_since &lt; 30 %}
-</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>        &lt;span class=&quot;badge-warning&quot;&gt;{{ user.name }} - Inactive&lt;/span&gt;
-</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>      {% else %}
-</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>        &lt;span class=&quot;badge-danger&quot;&gt;{{ user.name }} - Dormant&lt;/span&gt;
-</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>      {% endif %}
-</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>    {% endwith %}
-</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>  {% endif %}
-</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a>{% endfor %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span> <span class="cp">%}</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>  <span class="cp">{%</span> <span class="k">if</span> <span class="nv">user.active</span> <span class="k">and</span> <span class="nv">user.verified</span> <span class="cp">%}</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>    <span class="cp">{%</span> <span class="k">with</span> <span class="nv">days_since</span> <span class="o">=</span> <span class="o">(</span><span class="nv">today</span> <span class="o">-</span> <span class="nv">user.last_login</span><span class="o">)</span><span class="nv">.days</span> <span class="cp">%}</span>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>      <span class="cp">{%</span> <span class="k">if</span> <span class="nv">days_since</span> <span class="o">&lt;</span> <span class="m">7</span> <span class="cp">%}</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>        <span class="p">&lt;</span><span class="nt">span</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;badge-active&quot;</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">user.name</span> <span class="cp">}}</span> - Active<span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>      <span class="cp">{%</span> <span class="k">elif</span> <span class="nv">days_since</span> <span class="o">&lt;</span> <span class="m">30</span> <span class="cp">%}</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a>        <span class="p">&lt;</span><span class="nt">span</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;badge-warning&quot;</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">user.name</span> <span class="cp">}}</span> - Inactive<span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a>      <span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+</span><span id="__span-21-9"><a id="__codelineno-21-9" name="__codelineno-21-9" href="#__codelineno-21-9"></a>        <span class="p">&lt;</span><span class="nt">span</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;badge-danger&quot;</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">user.name</span> <span class="cp">}}</span> - Dormant<span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
+</span><span id="__span-21-10"><a id="__codelineno-21-10" name="__codelineno-21-10" href="#__codelineno-21-10"></a>      <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</span><span id="__span-21-11"><a id="__codelineno-21-11" name="__codelineno-21-11" href="#__codelineno-21-11"></a>    <span class="cp">{%</span> <span class="k">endwith</span> <span class="cp">%}</span>
+</span><span id="__span-21-12"><a id="__codelineno-21-12" name="__codelineno-21-12" href="#__codelineno-21-12"></a>  <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</span><span id="__span-21-13"><a id="__codelineno-21-13" name="__codelineno-21-13" href="#__codelineno-21-13"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <hr />
 <h2 id="practical-examples">Practical Examples<a class="headerlink" href="#practical-examples" title="Permanent link">&para;</a></h2>
 <h3 id="example-1-user-dashboard">Example 1: User Dashboard<a class="headerlink" href="#example-1-user-dashboard" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>{% if user.role == &quot;admin&quot; %}
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>  &lt;h2&gt;Admin Dashboard&lt;/h2&gt;
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>  &lt;ul&gt;
-</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>  {% for action in admin_actions %}
-</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>    &lt;li&gt;&lt;a href=&quot;{{ action.url }}&quot;&gt;{{ action.name }}&lt;/a&gt;&lt;/li&gt;
-</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>  {% endfor %}
-</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>  &lt;/ul&gt;
-</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>{% elif user.role == &quot;user&quot; %}
-</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>  &lt;h2&gt;User Dashboard&lt;/h2&gt;
-</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>  &lt;p&gt;Welcome back, {{ user.name }}!&lt;/p&gt;
-</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a>{% else %}
-</span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>  &lt;p&gt;Please log in to continue.&lt;/p&gt;
-</span><span id="__span-22-13"><a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a>{% endif %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">user.role</span> <span class="o">==</span> <span class="s2">&quot;admin&quot;</span> <span class="cp">%}</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>  <span class="p">&lt;</span><span class="nt">h2</span><span class="p">&gt;</span>Admin Dashboard<span class="p">&lt;/</span><span class="nt">h2</span><span class="p">&gt;</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>  <span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>  <span class="cp">{%</span> <span class="k">for</span> <span class="nv">action</span> <span class="k">in</span> <span class="nv">admin_actions</span> <span class="cp">%}</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>    <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;&lt;</span><span class="nt">a</span> <span class="na">href</span><span class="o">=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">action.url</span> <span class="cp">}}</span><span class="s">&quot;</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">action.name</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">a</span><span class="p">&gt;&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>  <span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>  <span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="cp">{%</span> <span class="k">elif</span> <span class="nv">user.role</span> <span class="o">==</span> <span class="s2">&quot;user&quot;</span> <span class="cp">%}</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>  <span class="p">&lt;</span><span class="nt">h2</span><span class="p">&gt;</span>User Dashboard<span class="p">&lt;/</span><span class="nt">h2</span><span class="p">&gt;</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Welcome back, <span class="cp">{{</span> <span class="nv">user.name</span> <span class="cp">}}</span>!<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a><span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+</span><span id="__span-22-12"><a id="__codelineno-22-12" name="__codelineno-22-12" href="#__codelineno-22-12"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Please log in to continue.<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-22-13"><a id="__codelineno-22-13" name="__codelineno-22-13" href="#__codelineno-22-13"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="example-2-shopping-cart">Example 2: Shopping Cart<a class="headerlink" href="#example-2-shopping-cart" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>{% set cart_total = 0 %}
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>&lt;h3&gt;Shopping Cart&lt;/h3&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">cart_total</span> <span class="o">=</span> <span class="m">0</span> <span class="cp">%}</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="p">&lt;</span><span class="nt">h3</span><span class="p">&gt;</span>Shopping Cart<span class="p">&lt;/</span><span class="nt">h3</span><span class="p">&gt;</span>
 </span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>{% for item in cart %}
-</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>  {% set item_total = item.price * item.quantity %}
-</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>  {% set cart_total = cart_total + item_total %}
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">cart</span> <span class="cp">%}</span>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>  <span class="cp">{%</span> <span class="k">set</span> <span class="nv">item_total</span> <span class="o">=</span> <span class="nv">item.price</span> <span class="o">*</span> <span class="nv">item.quantity</span> <span class="cp">%}</span>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>  <span class="cp">{%</span> <span class="k">set</span> <span class="nv">cart_total</span> <span class="o">=</span> <span class="nv">cart_total</span> <span class="o">+</span> <span class="nv">item_total</span> <span class="cp">%}</span>
 </span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>
-</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>  &lt;div class=&quot;cart-item&quot;&gt;
-</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>    &lt;h4&gt;{{ item.name }}&lt;/h4&gt;
-</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>    &lt;p&gt;Price: ${{ item.price }} × {{ item.quantity }} = ${{ item_total }}&lt;/p&gt;
-</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>  &lt;/div&gt;
-</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>{% else %}
-</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>  &lt;p&gt;Your cart is empty&lt;/p&gt;
-</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>{% endfor %}
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>  <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;cart-item&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>    <span class="p">&lt;</span><span class="nt">h4</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">item.name</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">h4</span><span class="p">&gt;</span>
+</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>    <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Price: $<span class="cp">{{</span> <span class="nv">item.price</span> <span class="cp">}}</span> × <span class="cp">{{</span> <span class="nv">item.quantity</span> <span class="cp">}}</span> = $<span class="cp">{{</span> <span class="nv">item_total</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>  <span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a><span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Your cart is empty<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
 </span><span id="__span-23-15"><a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a>
-</span><span id="__span-23-16"><a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a>{% if cart|length &gt; 0 %}
-</span><span id="__span-23-17"><a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a>  &lt;p&gt;&lt;strong&gt;Total: ${{ cart_total }}&lt;/strong&gt;&lt;/p&gt;
-</span><span id="__span-23-18"><a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a>{% endif %}
+</span><span id="__span-23-16"><a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">cart</span><span class="o">|</span><span class="nf">length</span> <span class="o">&gt;</span> <span class="m">0</span> <span class="cp">%}</span>
+</span><span id="__span-23-17"><a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;&lt;</span><span class="nt">strong</span><span class="p">&gt;</span>Total: $<span class="cp">{{</span> <span class="nv">cart_total</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">strong</span><span class="p">&gt;&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-23-18"><a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="example-3-product-filtering">Example 3: Product Filtering<a class="headerlink" href="#example-3-product-filtering" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>&lt;h3&gt;Available Products&lt;/h3&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="p">&lt;</span><span class="nt">h3</span><span class="p">&gt;</span>Available Products<span class="p">&lt;/</span><span class="nt">h3</span><span class="p">&gt;</span>
 </span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>{% with in_stock = products|selectattr(&quot;stock&quot;, &quot;greaterthan&quot;, 0)|list %}
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>  {% if in_stock|length &gt; 0 %}
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>    &lt;p&gt;Showing {{ in_stock|length }} products in stock&lt;/p&gt;
-</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>    &lt;ul&gt;
-</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>    {% for product in in_stock %}
-</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>      &lt;li&gt;
-</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>        {{ product.name }} - ${{ product.price }}
-</span><span id="__span-24-10"><a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a>        {{ &#39;(Low Stock!)&#39; if product.stock &lt; 5 else &#39;&#39; }}
-</span><span id="__span-24-11"><a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a>      &lt;/li&gt;
-</span><span id="__span-24-12"><a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a>    {% endfor %}
-</span><span id="__span-24-13"><a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a>    &lt;/ul&gt;
-</span><span id="__span-24-14"><a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a>  {% else %}
-</span><span id="__span-24-15"><a id="__codelineno-24-15" name="__codelineno-24-15" href="#__codelineno-24-15"></a>    &lt;p&gt;No products currently in stock&lt;/p&gt;
-</span><span id="__span-24-16"><a id="__codelineno-24-16" name="__codelineno-24-16" href="#__codelineno-24-16"></a>  {% endif %}
-</span><span id="__span-24-17"><a id="__codelineno-24-17" name="__codelineno-24-17" href="#__codelineno-24-17"></a>{% endwith %}
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a><span class="cp">{%</span> <span class="k">with</span> <span class="nv">in_stock</span> <span class="o">=</span> <span class="nv">products</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;stock&quot;</span><span class="o">,</span> <span class="s2">&quot;greaterthan&quot;</span><span class="o">,</span> <span class="m">0</span><span class="o">)|</span><span class="nf">list</span> <span class="cp">%}</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>  <span class="cp">{%</span> <span class="k">if</span> <span class="nv">in_stock</span><span class="o">|</span><span class="nf">length</span> <span class="o">&gt;</span> <span class="m">0</span> <span class="cp">%}</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>    <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Showing <span class="cp">{{</span> <span class="nv">in_stock</span><span class="o">|</span><span class="nf">length</span> <span class="cp">}}</span> products in stock<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>    <span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a>    <span class="cp">{%</span> <span class="k">for</span> <span class="nv">product</span> <span class="k">in</span> <span class="nv">in_stock</span> <span class="cp">%}</span>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>      <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>        <span class="cp">{{</span> <span class="nv">product.name</span> <span class="cp">}}</span> - $<span class="cp">{{</span> <span class="nv">product.price</span> <span class="cp">}}</span>
+</span><span id="__span-24-10"><a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a>        <span class="cp">{{</span> <span class="s1">&#39;(Low Stock!)&#39;</span> <span class="k">if</span> <span class="nv">product.stock</span> <span class="o">&lt;</span> <span class="m">5</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span> <span class="cp">}}</span>
+</span><span id="__span-24-11"><a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a>      <span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-24-12"><a id="__codelineno-24-12" name="__codelineno-24-12" href="#__codelineno-24-12"></a>    <span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-24-13"><a id="__codelineno-24-13" name="__codelineno-24-13" href="#__codelineno-24-13"></a>    <span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-24-14"><a id="__codelineno-24-14" name="__codelineno-24-14" href="#__codelineno-24-14"></a>  <span class="cp">{%</span> <span class="k">else</span> <span class="cp">%}</span>
+</span><span id="__span-24-15"><a id="__codelineno-24-15" name="__codelineno-24-15" href="#__codelineno-24-15"></a>    <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>No products currently in stock<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-24-16"><a id="__codelineno-24-16" name="__codelineno-24-16" href="#__codelineno-24-16"></a>  <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</span><span id="__span-24-17"><a id="__codelineno-24-17" name="__codelineno-24-17" href="#__codelineno-24-17"></a><span class="cp">{%</span> <span class="k">endwith</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <hr />
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
 <h3 id="1-keep-logic-simple">1. Keep Logic Simple<a class="headerlink" href="#1-keep-logic-simple" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>{#  Good - simple and clear #}
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>{% if user.active %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c">{#  Good - simple and clear #}</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">user.active</span> <span class="cp">%}</span>
 </span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>  Welcome back!
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>{% endif %}
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>
-</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a>{#  Avoid - too complex for template #}
-</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>{% if user.active and user.verified and user.payment_status == &quot;current&quot; and user.subscription_expires &gt; today %}
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="c">{#  Avoid - too complex for template #}</span>
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">user.active</span> <span class="k">and</span> <span class="nv">user.verified</span> <span class="k">and</span> <span class="nv">user.payment_status</span> <span class="o">==</span> <span class="s2">&quot;current&quot;</span> <span class="k">and</span> <span class="nv">user.subscription_expires</span> <span class="o">&gt;</span> <span class="nv">today</span> <span class="cp">%}</span>
 </span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a>  ...
-</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a>{% endif %}
+</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <p><strong>Better approach:</strong> Prepare data in application code, pass simple flags to template.</p>
 <h3 id="2-use-with-for-clarity">2. Use With for Clarity<a class="headerlink" href="#2-use-with-for-clarity" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>{#  Good - clear and reusable #}
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>{% with eligible = user.active and user.verified %}
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>  {% if eligible %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c">{#  Good - clear and reusable #}</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="cp">{%</span> <span class="k">with</span> <span class="nv">eligible</span> <span class="o">=</span> <span class="nv">user.active</span> <span class="k">and</span> <span class="nv">user.verified</span> <span class="cp">%}</span>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>  <span class="cp">{%</span> <span class="k">if</span> <span class="nv">eligible</span> <span class="cp">%}</span>
 </span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>    Premium features enabled
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>  {% endif %}
-</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a>{% endwith %}
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>  <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="cp">{%</span> <span class="k">endwith</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="3-avoid-deep-nesting">3. Avoid Deep Nesting<a class="headerlink" href="#3-avoid-deep-nesting" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>{#  Avoid - hard to read #}
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>{% if condition1 %}
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>  {% if condition2 %}
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>    {% if condition3 %}
-</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>      {% for item in items %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c">{#  Avoid - hard to read #}</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">condition1</span> <span class="cp">%}</span>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>  <span class="cp">{%</span> <span class="k">if</span> <span class="nv">condition2</span> <span class="cp">%}</span>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a>    <span class="cp">{%</span> <span class="k">if</span> <span class="nv">condition3</span> <span class="cp">%}</span>
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>      <span class="cp">{%</span> <span class="k">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">items</span> <span class="cp">%}</span>
 </span><span id="__span-27-6"><a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>        ...
-</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>      {% endfor %}
-</span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>    {% endif %}
-</span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>  {% endif %}
-</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a>{% endif %}
+</span><span id="__span-27-7"><a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>      <span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-27-8"><a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>    <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</span><span id="__span-27-9"><a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>  <span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
+</span><span id="__span-27-10"><a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span><span id="__span-27-11"><a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a>
-</span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a>{#  Better - flatten logic #}
-</span><span id="__span-27-13"><a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a>{% if condition1 and condition2 and condition3 %}
-</span><span id="__span-27-14"><a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a>  {% for item in items %}
+</span><span id="__span-27-12"><a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a><span class="c">{#  Better - flatten logic #}</span>
+</span><span id="__span-27-13"><a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">condition1</span> <span class="k">and</span> <span class="nv">condition2</span> <span class="k">and</span> <span class="nv">condition3</span> <span class="cp">%}</span>
+</span><span id="__span-27-14"><a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a>  <span class="cp">{%</span> <span class="k">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">items</span> <span class="cp">%}</span>
 </span><span id="__span-27-15"><a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a>    ...
-</span><span id="__span-27-16"><a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a>  {% endfor %}
-</span><span id="__span-27-17"><a id="__codelineno-27-17" name="__codelineno-27-17" href="#__codelineno-27-17"></a>{% endif %}
+</span><span id="__span-27-16"><a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a>  <span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-27-17"><a id="__codelineno-27-17" name="__codelineno-27-17" href="#__codelineno-27-17"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="4-always-include-else-in-inline-conditionals">4. Always Include Else in Inline Conditionals<a class="headerlink" href="#4-always-include-else-in-inline-conditionals" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>{#  Works in Miya #}
-</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>{{ &#39;Active&#39; if user.active else &#39;Inactive&#39; }}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c">{#  Works in Miya #}</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="cp">{{</span> <span class="s1">&#39;Active&#39;</span> <span class="k">if</span> <span class="nv">user.active</span> <span class="k">else</span> <span class="s1">&#39;Inactive&#39;</span> <span class="cp">}}</span>
 </span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
-</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>{#  Fails in Miya - missing else #}
-</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>{{ &#39;Active&#39; if user.active }}
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="c">{#  Fails in Miya - missing else #}</span>
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="cp">{{</span> <span class="s1">&#39;Active&#39;</span> <span class="k">if</span> <span class="nv">user.active</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <hr />
 <h2 id="complete-reference">Complete Reference<a class="headerlink" href="#complete-reference" title="Permanent link">&para;</a></h2>

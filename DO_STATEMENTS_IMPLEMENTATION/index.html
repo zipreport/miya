@@ -1752,102 +1752,102 @@
 <h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
 <p>Do statements in Jinja2 allow executing expressions purely for side effects without producing any output in the rendered template. This feature is now fully implemented in Miya Engine with complete compatibility with Python Jinja2.</p>
 <h2 id="syntax">Syntax<a class="headerlink" href="#syntax" title="Permanent link">&para;</a></h2>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>{% do expression %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">expression</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <p>The <code>do</code> statement evaluates any valid Jinja2 expression but discards the result, producing no template output.</p>
 <h2 id="basic-usage">Basic Usage<a class="headerlink" href="#basic-usage" title="Permanent link">&para;</a></h2>
 <h3 id="simple-expressions">Simple Expressions<a class="headerlink" href="#simple-expressions" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>{# Execute arithmetic - no output #}
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>{% do 5 + 3 * 2 %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c">{# Execute arithmetic - no output #}</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="cp">{%</span> <span class="k">do</span> <span class="m">5</span> <span class="o">+</span> <span class="m">3</span> <span class="o">*</span> <span class="m">2</span> <span class="cp">%}</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>{# Variable access - no output #}
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>{% set name = &quot;world&quot; %}
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>{% do name %}
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>Hello {{ name }}!  &lt;!-- Output: Hello world! --&gt;
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c">{# Variable access - no output #}</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">name</span> <span class="o">=</span> <span class="s2">&quot;world&quot;</span> <span class="cp">%}</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">name</span> <span class="cp">%}</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>Hello <span class="cp">{{</span> <span class="nv">name</span> <span class="cp">}}</span>!  <span class="cm">&lt;!-- Output: Hello world! --&gt;</span>
 </span></code></pre></div>
 <h3 id="filter-applications">Filter Applications<a class="headerlink" href="#filter-applications" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>{% set text = &quot;hello&quot; %}
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>{% do text|upper %}  {# Evaluates filter but produces no output #}
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Original: {{ text }}, Uppercase: {{ text|upper }}
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>&lt;!-- Output: Original: hello, Uppercase: HELLO --&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">text</span> <span class="o">=</span> <span class="s2">&quot;hello&quot;</span> <span class="cp">%}</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">text</span><span class="o">|</span><span class="nf">upper</span> <span class="cp">%}</span>  <span class="c">{# Evaluates filter but produces no output #}</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>Original: <span class="cp">{{</span> <span class="nv">text</span> <span class="cp">}}</span>, Uppercase: <span class="cp">{{</span> <span class="nv">text</span><span class="o">|</span><span class="nf">upper</span> <span class="cp">}}</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="cm">&lt;!-- Output: Original: hello, Uppercase: HELLO --&gt;</span>
 </span></code></pre></div>
 <h3 id="complex-expressions">Complex Expressions<a class="headerlink" href="#complex-expressions" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>{% set items = [&quot;a&quot;, &quot;b&quot;, &quot;c&quot;] %}
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>{% do items[1]|upper %}  {# Access and filter - no output #}
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>{% do (10 + 5) * 2 %}   {# Arithmetic - no output #}
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>{% do variable|default(&quot;fallback&quot;)|length %}  {# Chained operations #}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">items</span> <span class="o">=</span> <span class="o">[</span><span class="s2">&quot;a&quot;</span><span class="o">,</span> <span class="s2">&quot;b&quot;</span><span class="o">,</span> <span class="s2">&quot;c&quot;</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">items</span><span class="o">[</span><span class="m">1</span><span class="o">]|</span><span class="nf">upper</span> <span class="cp">%}</span>  <span class="c">{# Access and filter - no output #}</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="cp">{%</span> <span class="k">do</span> <span class="o">(</span><span class="m">10</span> <span class="o">+</span> <span class="m">5</span><span class="o">)</span> <span class="o">*</span> <span class="m">2</span> <span class="cp">%}</span>   <span class="c">{# Arithmetic - no output #}</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">variable</span><span class="o">|</span><span class="nf">default</span><span class="o">(</span><span class="s2">&quot;fallback&quot;</span><span class="o">)|</span><span class="nf">length</span> <span class="cp">%}</span>  <span class="c">{# Chained operations #}</span>
 </span></code></pre></div>
 <h2 id="integration-with-control-flow">Integration with Control Flow<a class="headerlink" href="#integration-with-control-flow" title="Permanent link">&para;</a></h2>
 <h3 id="in-conditional-statements">In Conditional Statements<a class="headerlink" href="#in-conditional-statements" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>{% set debug = true %}
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>{% if debug %}
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  {% do &quot;Debug mode activated&quot; %}  {# Expression evaluated, no output #}
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  &lt;p&gt;Debug information here&lt;/p&gt;
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>{% endif %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">debug</span> <span class="o">=</span> <span class="kp">true</span> <span class="cp">%}</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="cp">{%</span> <span class="k">if</span> <span class="nv">debug</span> <span class="cp">%}</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  <span class="cp">{%</span> <span class="k">do</span> <span class="s2">&quot;Debug mode activated&quot;</span> <span class="cp">%}</span>  <span class="c">{# Expression evaluated, no output #}</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>  <span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Debug information here<span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="cp">{%</span> <span class="k">endif</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="in-loops">In Loops<a class="headerlink" href="#in-loops" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>{% for i in [1, 2, 3, 4, 5] %}
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  {% do i * 2 %}  {# Evaluate expression for each iteration #}
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  &lt;li&gt;Item {{ i }}&lt;/li&gt;
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>{% endfor %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">i</span> <span class="k">in</span> <span class="o">[</span><span class="m">1</span><span class="o">,</span> <span class="m">2</span><span class="o">,</span> <span class="m">3</span><span class="o">,</span> <span class="m">4</span><span class="o">,</span> <span class="m">5</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>  <span class="cp">{%</span> <span class="k">do</span> <span class="nv">i</span> <span class="o">*</span> <span class="m">2</span> <span class="cp">%}</span>  <span class="c">{# Evaluate expression for each iteration #}</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>  <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span>Item <span class="cp">{{</span> <span class="nv">i</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="with-other-statements">With Other Statements<a class="headerlink" href="#with-other-statements" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>{# Combined with set statements #}
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>{% set counter = 0 %}
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>{% do counter + 1 %}  {# Evaluates but counter remains 0 #}
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>Counter value: {{ counter }}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c">{# Combined with set statements #}</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">counter</span> <span class="o">=</span> <span class="m">0</span> <span class="cp">%}</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">counter</span> <span class="o">+</span> <span class="m">1</span> <span class="cp">%}</span>  <span class="c">{# Evaluates but counter remains 0 #}</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>Counter value: <span class="cp">{{</span> <span class="nv">counter</span> <span class="cp">}}</span>
 </span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>{# In with blocks #}
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>{% with temp = &quot;temporary&quot; %}
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  {% do temp|upper %}
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>  Temp value: {{ temp }}
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a>{% endwith %}
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="c">{# In with blocks #}</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="cp">{%</span> <span class="k">with</span> <span class="nv">temp</span> <span class="o">=</span> <span class="s2">&quot;temporary&quot;</span> <span class="cp">%}</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>  <span class="cp">{%</span> <span class="k">do</span> <span class="nv">temp</span><span class="o">|</span><span class="nf">upper</span> <span class="cp">%}</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>  Temp value: <span class="cp">{{</span> <span class="nv">temp</span> <span class="cp">}}</span>
+</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="cp">{%</span> <span class="k">endwith</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h2 id="whitespace-control">Whitespace Control<a class="headerlink" href="#whitespace-control" title="Permanent link">&para;</a></h2>
 <p>Do statements support full whitespace control like other Jinja2 statements:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>{# Standard - preserves whitespace #}
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>Start {% do expression %} End
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>&lt;!-- Output: Start  End --&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c">{# Standard - preserves whitespace #}</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>Start <span class="cp">{%</span> <span class="k">do</span> <span class="nv">expression</span> <span class="cp">%}</span> End
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="cm">&lt;!-- Output: Start  End --&gt;</span>
 </span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>
-</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>{# Left trim #}
-</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>Start {%- do expression %} End  
-</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a>&lt;!-- Output: Start End --&gt;
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="c">{# Left trim #}</span>
+</span><span id="__span-7-6"><a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>Start <span class="cp">{%</span>- <span class="k">do</span> <span class="nv">expression</span> <span class="cp">%}</span> End  
+</span><span id="__span-7-7"><a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="cm">&lt;!-- Output: Start End --&gt;</span>
 </span><span id="__span-7-8"><a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
-</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>{# Right trim #}
-</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>Start {% do expression -%} End
-</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>&lt;!-- Output: Start End --&gt;
+</span><span id="__span-7-9"><a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="c">{# Right trim #}</span>
+</span><span id="__span-7-10"><a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a>Start <span class="cp">{%</span> <span class="k">do</span> <span class="nv">expression</span> -<span class="cp">%}</span> End
+</span><span id="__span-7-11"><a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="cm">&lt;!-- Output: Start End --&gt;</span>
 </span><span id="__span-7-12"><a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
-</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a>{# Both sides trim #}
-</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>Start {%- do expression -%} End
-</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>&lt;!-- Output: StartEnd --&gt;
+</span><span id="__span-7-13"><a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="c">{# Both sides trim #}</span>
+</span><span id="__span-7-14"><a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>Start <span class="cp">{%</span>- <span class="k">do</span> <span class="nv">expression</span> -<span class="cp">%}</span> End
+</span><span id="__span-7-15"><a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="cm">&lt;!-- Output: StartEnd --&gt;</span>
 </span></code></pre></div>
 <h2 id="use-cases">Use Cases<a class="headerlink" href="#use-cases" title="Permanent link">&para;</a></h2>
 <h3 id="1-expression-validation">1. Expression Validation<a class="headerlink" href="#1-expression-validation" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>{# Validate expressions without affecting output #}
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>{% set user_input = &quot;  UNSAFE DATA  &quot; %}
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>{% do user_input|trim|lower %}  {# Validate filter chain works #}
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>Clean input: {{ user_input|trim|lower }}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c">{# Validate expressions without affecting output #}</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">user_input</span> <span class="o">=</span> <span class="s2">&quot;  UNSAFE DATA  &quot;</span> <span class="cp">%}</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">user_input</span><span class="o">|</span><span class="nf">trim</span><span class="o">|</span><span class="nf">lower</span> <span class="cp">%}</span>  <span class="c">{# Validate filter chain works #}</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>Clean input: <span class="cp">{{</span> <span class="nv">user_input</span><span class="o">|</span><span class="nf">trim</span><span class="o">|</span><span class="nf">lower</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <h3 id="2-complex-calculations">2. Complex Calculations<a class="headerlink" href="#2-complex-calculations" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>{# Pre-evaluate complex expressions #}
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>{% set price = 19.99 %}
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>{% set quantity = 3 %}  
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>{% set tax_rate = 0.08 %}
-</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a>{% do (price * quantity * (1 + tax_rate))|round(2) %}  {# Test calculation #}
-</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>Total: ${{ (price * quantity * (1 + tax_rate))|round(2) }}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c">{# Pre-evaluate complex expressions #}</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">price</span> <span class="o">=</span> <span class="m">19.99</span> <span class="cp">%}</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">quantity</span> <span class="o">=</span> <span class="m">3</span> <span class="cp">%}</span>  
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">tax_rate</span> <span class="o">=</span> <span class="m">0.08</span> <span class="cp">%}</span>
+</span><span id="__span-9-5"><a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="cp">{%</span> <span class="k">do</span> <span class="o">(</span><span class="nv">price</span> <span class="o">*</span> <span class="nv">quantity</span> <span class="o">*</span> <span class="o">(</span><span class="m">1</span> <span class="o">+</span> <span class="nv">tax_rate</span><span class="o">))|</span><span class="nf">round</span><span class="o">(</span><span class="m">2</span><span class="o">)</span> <span class="cp">%}</span>  <span class="c">{# Test calculation #}</span>
+</span><span id="__span-9-6"><a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a>Total: $<span class="cp">{{</span> <span class="o">(</span><span class="nv">price</span> <span class="o">*</span> <span class="nv">quantity</span> <span class="o">*</span> <span class="o">(</span><span class="m">1</span> <span class="o">+</span> <span class="nv">tax_rate</span><span class="o">))|</span><span class="nf">round</span><span class="o">(</span><span class="m">2</span><span class="o">)</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <h3 id="3-debug-expressions">3. Debug Expressions<a class="headerlink" href="#3-debug-expressions" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>{# Test expressions during development #}
-</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>{% do undefined_var %}  &lt;!-- Will produce error if undefined --&gt;
-</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>{% do complex_filter_chain|filter1|filter2 %}  &lt;!-- Test filter chain --&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c">{# Test expressions during development #}</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">undefined_var</span> <span class="cp">%}</span>  <span class="cm">&lt;!-- Will produce error if undefined --&gt;</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">complex_filter_chain</span><span class="o">|</span><span class="nf">filter1</span><span class="o">|</span><span class="nf">filter2</span> <span class="cp">%}</span>  <span class="cm">&lt;!-- Test filter chain --&gt;</span>
 </span></code></pre></div>
 <h3 id="4-side-effect-simulation">4. Side Effect Simulation<a class="headerlink" href="#4-side-effect-simulation" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>{# In Miya Engine, simulate side effects through expression evaluation #}
-</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>{% set items = [1, 2, 3] %}
-</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>{% for item in items %}
-</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  {% do item * logging_factor %}  {# Simulate logging calculation #}
-</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  Processing item {{ item }}
-</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>{% endfor %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-11-1"><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c">{# In Miya Engine, simulate side effects through expression evaluation #}</span>
+</span><span id="__span-11-2"><a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">items</span> <span class="o">=</span> <span class="o">[</span><span class="m">1</span><span class="o">,</span> <span class="m">2</span><span class="o">,</span> <span class="m">3</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-11-3"><a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">items</span> <span class="cp">%}</span>
+</span><span id="__span-11-4"><a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>  <span class="cp">{%</span> <span class="k">do</span> <span class="nv">item</span> <span class="o">*</span> <span class="nv">logging_factor</span> <span class="cp">%}</span>  <span class="c">{# Simulate logging calculation #}</span>
+</span><span id="__span-11-5"><a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>  Processing item <span class="cp">{{</span> <span class="nv">item</span> <span class="cp">}}</span>
+</span><span id="__span-11-6"><a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h2 id="implementation-details">Implementation Details<a class="headerlink" href="#implementation-details" title="Permanent link">&para;</a></h2>
 <h3 id="ast-representation">AST Representation<a class="headerlink" href="#ast-representation" title="Permanent link">&para;</a></h3>
@@ -1869,11 +1869,11 @@
 <li>Preserves all error conditions and propagation</li>
 </ul>
 <h3 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h3>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>{# These produce appropriate errors #}
-</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>{% do undefined_variable %}     &lt;!-- Error: undefined variable --&gt;
-</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>{% do 5 + %}                    &lt;!-- Error: malformed expression --&gt;
-</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a>{% do %}                        &lt;!-- Error: expected expression --&gt;
-</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>{% do invalid.method() %}       &lt;!-- Error: method not found --&gt;
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-13-1"><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c">{# These produce appropriate errors #}</span>
+</span><span id="__span-13-2"><a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">undefined_variable</span> <span class="cp">%}</span>     <span class="cm">&lt;!-- Error: undefined variable --&gt;</span>
+</span><span id="__span-13-3"><a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="cp">{%</span> <span class="k">do</span> <span class="m">5</span> <span class="o">+</span> <span class="cp">%}</span>                    <span class="cm">&lt;!-- Error: malformed expression --&gt;</span>
+</span><span id="__span-13-4"><a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="cp">{%</span> <span class="k">do</span> <span class="cp">%}</span>                        <span class="cm">&lt;!-- Error: expected expression --&gt;</span>
+</span><span id="__span-13-5"><a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">invalid.method</span><span class="o">()</span> <span class="cp">%}</span>       <span class="cm">&lt;!-- Error: method not found --&gt;</span>
 </span></code></pre></div>
 <h2 id="performance-considerations">Performance Considerations<a class="headerlink" href="#performance-considerations" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1934,15 +1934,15 @@
 <p>*Note: Miya Engine focuses on expression evaluation rather than method-based side effects due to Go's type system differences.</p>
 <h2 id="migration-from-python-jinja2">Migration from Python Jinja2<a class="headerlink" href="#migration-from-python-jinja2" title="Permanent link">&para;</a></h2>
 <p>Most do statements will work identically:</p>
-<div class="language-text highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>{# These work the same #}
-</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>{% do variable %}
-</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>{% do 5 + 3 %}  
-</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>{% do text|filter %}
-</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>{% do complex_expression %}
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-14-1"><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c">{# These work the same #}</span>
+</span><span id="__span-14-2"><a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">variable</span> <span class="cp">%}</span>
+</span><span id="__span-14-3"><a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="cp">{%</span> <span class="k">do</span> <span class="m">5</span> <span class="o">+</span> <span class="m">3</span> <span class="cp">%}</span>  
+</span><span id="__span-14-4"><a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">text</span><span class="o">|</span><span class="nf">filter</span> <span class="cp">%}</span>
+</span><span id="__span-14-5"><a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="cp">{%</span> <span class="k">do</span> <span class="nv">complex_expression</span> <span class="cp">%}</span>
 </span><span id="__span-14-6"><a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>
-</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a>{# Python-specific method calls may need adaptation #}
-</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a>{# Python: {% do items.append(&quot;value&quot;) %} #}
-</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a>{# Miya Engine: Use set statements for variable modification #}
+</span><span id="__span-14-7"><a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="c">{# Python-specific method calls may need adaptation #}</span>
+</span><span id="__span-14-8"><a id="__codelineno-14-8" name="__codelineno-14-8" href="#__codelineno-14-8"></a><span class="c">{# Python: {% do items.append(&quot;value&quot;) %} #}</span>
+</span><span id="__span-14-9"><a id="__codelineno-14-9" name="__codelineno-14-9" href="#__codelineno-14-9"></a><span class="c">{# Miya Engine: Use set statements for variable modification #}</span>
 </span></code></pre></div>
 <h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
 <p>The implementation includes comprehensive test coverage:
