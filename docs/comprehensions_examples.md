@@ -6,7 +6,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### Product Filtering and Display
 
-```jinja2
+```html+jinja
 <!-- Filter and display available products -->
 <div class="product-grid">
   {% for product in products %}
@@ -37,7 +37,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### Shopping Cart Summary
 
-```jinja2
+```html+jinja
 <!-- Cart totals using comprehensions -->
 {% set cart_items = [{"name": item.product.name, "price": item.price, "qty": item.quantity, "total": item.price * item.quantity} for item in cart.items] %}
 {% set subtotal = [item.total for item in cart_items]|sum %}
@@ -65,7 +65,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### Analytics Dashboard
 
-```jinja2
+```html+jinja
 <!-- User engagement metrics -->
 {% set active_users = [user for user in users if user.last_login > thirty_days_ago] %}
 {% set user_stats = {
@@ -102,7 +102,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### Sales Report
 
-```jinja2
+```html+jinja
 <!-- Monthly sales breakdown -->
 {% set sales_by_month = {} %}
 {% for sale in sales %}
@@ -140,7 +140,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### Blog Post Listing
 
-```jinja2
+```html+jinja
 <!-- Blog posts with category filtering -->
 {% set published_posts = [post for post in posts if post.status == "published" and post.published_date <= now] %}
 {% set posts_by_category = {} %}
@@ -192,7 +192,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### Tag Cloud with Weights
 
-```jinja2
+```html+jinja
 <!-- Dynamic tag cloud -->
 {% set all_tags = [] %}
 {% for post in posts %}
@@ -233,7 +233,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### Dynamic Form Generation
 
-```jinja2
+```html+jinja
 <!-- Generate form fields with validation -->
 {% set required_fields = [field.name for field in form_schema.fields if field.required] %}
 {% set field_types = {field.name: field.type for field in form_schema.fields} %}
@@ -288,7 +288,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### Form Validation Display
 
-```jinja2
+```html+jinja
 <!-- Display form errors with styling -->
 {% set field_errors = {error.field: error.messages for error in form.errors} %}
 {% set global_errors = [error.message for error in form.errors if error.field == "__all__"] %}
@@ -326,7 +326,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### RESTful Data Display
 
-```jinja2
+```html+jinja
 <!-- Process API response with nested data -->
 {% set user_permissions = {user.id: [perm.name for perm in user.permissions] for user in api_response.users} %}
 {% set active_users = [user for user in api_response.users if user.status == "active"] %}
@@ -387,7 +387,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### Matrix Operations
 
-```jinja2
+```html+jinja
 <!-- Create a multiplication table -->
 {% set size = 10 %}
 {% set multiplication_table = [[x * y for x in range(1, size + 1)] for y in range(1, size + 1)] %}
@@ -416,7 +416,7 @@ This document provides practical, ready-to-use examples of list and dictionary c
 
 ### Data Transformation Pipeline
 
-```jinja2
+```html+jinja
 <!-- Multi-step data processing -->
 {% set raw_data = api_response.transactions %}
 

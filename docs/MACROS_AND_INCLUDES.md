@@ -26,7 +26,7 @@ Macros are reusable template functions that accept parameters and return rendere
 ### Basic Macro Definition
 
 **macros.html:**
-```jinja2
+```html+jinja
 {% macro render_input(name, type="text", placeholder="") %}
 <div class="form-group">
   <input type="{{ type }}"
@@ -39,7 +39,7 @@ Macros are reusable template functions that accept parameters and return rendere
 
 ### Using a Macro
 
-```jinja2
+```html+jinja
 {% import "macros.html" as forms %}
 
 {{ forms.render_input("username", placeholder="Enter username") }}
@@ -66,7 +66,7 @@ Macros are reusable template functions that accept parameters and return rendere
 
 ### Default Parameters
 
-```jinja2
+```html+jinja
 {% macro render_button(text, type="button", class="btn-primary", disabled=False) %}
 <button type="{{ type }}"
         class="btn {{ class }}"
@@ -77,7 +77,7 @@ Macros are reusable template functions that accept parameters and return rendere
 ```
 
 **Usage:**
-```jinja2
+```html+jinja
 {{ forms.render_button("Click Me") }}
 → <button type="button" class="btn btn-primary">Click Me</button>
 
@@ -92,7 +92,7 @@ Macros are reusable template functions that accept parameters and return rendere
 
 Parameters without defaults are required:
 
-```jinja2
+```html+jinja
 {% macro render_field(name, label, type="text", required=False, help_text="") %}
 <div class="form-field">
   <label>
@@ -108,7 +108,7 @@ Parameters without defaults are required:
 ```
 
 **Usage:**
-```jinja2
+```html+jinja
 {{ forms.render_field("full_name", label="Full Name", required=True) }}
 {{ forms.render_field("age", label="Age", type="number", help_text="Must be 18 or older") }}
 ```
@@ -117,7 +117,7 @@ Parameters without defaults are required:
 
 Access all macro variables:
 
-```jinja2
+```html+jinja
 {% macro render_table_row(cells, header=False) %}
 <tr>
   {% for cell in cells %}
@@ -139,7 +139,7 @@ Access all macro variables:
 
 Import all macros from a file into a namespace:
 
-```jinja2
+```html+jinja
 {% import "macros.html" as forms %}
 
 {{ forms.render_input("username") }}
@@ -156,7 +156,7 @@ Import all macros from a file into a namespace:
 
 Import specific macros directly:
 
-```jinja2
+```html+jinja
 {% from "macros.html" import render_badge, render_list %}
 
 {{ render_badge("New", type="info") }}
@@ -170,7 +170,7 @@ Import specific macros directly:
 
 ### Method 3: Import Multiple with Aliases
 
-```jinja2
+```html+jinja
 {% from "macros.html" import render_input as input, render_button as btn %}
 
 {{ input("username") }}
@@ -185,7 +185,7 @@ Import specific macros directly:
 
 Include templates to compose pages:
 
-```jinja2
+```html+jinja
 {% include "includes/header.html" %}
 
 <h1>Main Content</h1>
@@ -198,7 +198,7 @@ Include templates to compose pages:
 Included templates have access to the current context:
 
 **includes/footer.html:**
-```jinja2
+```html+jinja
 <footer>
   <p>&copy; {{ year|default(2024) }} {{ company|default("Miya Engine") }}</p>
   <p>
@@ -210,7 +210,7 @@ Included templates have access to the current context:
 ```
 
 **Usage:**
-```jinja2
+```html+jinja
 {# Variables are accessible in included template #}
 {% set year = 2024 %}
 {% set company = "My Company" %}
@@ -222,18 +222,18 @@ Included templates have access to the current context:
 ### Include with Context Control
 
 **Default behavior:** Full context access
-```jinja2
+```html+jinja
 {% include "template.html" %}
 ```
 
 **With only specific variables:**
-```jinja2
+```html+jinja
 {% include "template.html" with context %}  {# explicit, same as default #}
 ```
 
 ### Conditional Includes
 
-```jinja2
+```html+jinja
 {% if user.role == "admin" %}
   {% include "admin/navbar.html" %}
 {% else %}
@@ -248,7 +248,7 @@ Included templates have access to the current context:
 ### Example 1: Form Components Library
 
 **macros.html:**
-```jinja2
+```html+jinja
 {% macro render_input(name, type="text", placeholder="") %}
 <div class="form-group">
   <input type="{{ type }}" name="{{ name }}" placeholder="{{ placeholder }}" class="form-control">
@@ -276,7 +276,7 @@ Included templates have access to the current context:
 ```
 
 **Usage:**
-```jinja2
+```html+jinja
 {% import "macros.html" as forms %}
 
 <form>
@@ -290,7 +290,7 @@ Included templates have access to the current context:
 ### Example 2: UI Components
 
 **macros.html:**
-```jinja2
+```html+jinja
 {% macro render_badge(text, type="info") %}
 <span class="badge badge-{{ type }}">{{ text }}</span>
 {% endmacro %}
@@ -322,7 +322,7 @@ Included templates have access to the current context:
 ### Example 3: Data Tables
 
 **macros.html:**
-```jinja2
+```html+jinja
 {% macro render_table_row(cells, header=False) %}
 <tr>
   {% for cell in cells %}
@@ -337,7 +337,7 @@ Included templates have access to the current context:
 ```
 
 **Usage:**
-```jinja2
+```html+jinja
 {% import "macros.html" as ui %}
 
 <table>
@@ -351,7 +351,7 @@ Included templates have access to the current context:
 ### Example 4: Navigation Components
 
 **includes/header.html:**
-```jinja2
+```html+jinja
 <header class="site-header">
   <h1>{{ site_title|default("My Site") }}</h1>
   <nav>
@@ -365,7 +365,7 @@ Included templates have access to the current context:
 ```
 
 **page.html:**
-```jinja2
+```html+jinja
 {% set site_title = "My Awesome Site" %}
 {% set nav_items = [
   {"title": "Home", "url": "/"},
@@ -384,7 +384,7 @@ Included templates have access to the current context:
 
 ### Example 5: Macros in Loops
 
-```jinja2
+```html+jinja
 {% import "macros.html" as ui %}
 
 <h3>Product Catalog</h3>
@@ -401,7 +401,7 @@ Included templates have access to the current context:
 Macros can call other macros:
 
 **macros.html:**
-```jinja2
+```html+jinja
 {% macro render_icon(name) %}
 <i class="icon-{{ name }}"></i>
 {% endmacro %}
@@ -414,7 +414,7 @@ Macros can call other macros:
 ```
 
 **Usage:**
-```jinja2
+```html+jinja
 {% import "macros.html" as ui %}
 {{ ui.render_button_with_icon("Save", "save", type="submit") }}
 ```
@@ -428,7 +428,7 @@ Macros can call other macros:
 Jinja2's `caller()` function for macro call blocks is **NOT supported** in Miya Engine.
 
 **Jinja2 (Not in Miya):**
-```jinja2
+```html+jinja
 {#  This does NOT work in Miya #}
 {% macro render_dialog(title) %}
 <div class="dialog">
@@ -446,7 +446,7 @@ Jinja2's `caller()` function for macro call blocks is **NOT supported** in Miya 
 
 **Workaround:** Pass content as a parameter:
 
-```jinja2
+```html+jinja
 {#  Works in Miya #}
 {% macro render_dialog(title, content) %}
 <div class="dialog">
@@ -464,7 +464,7 @@ Jinja2's `caller()` function for macro call blocks is **NOT supported** in Miya 
 
 Or use direct macro invocation:
 
-```jinja2
+```html+jinja
 {% macro render_dialog(title, content) %}
 <div class="dialog">
   <h3>{{ title }}</h3>
@@ -492,7 +492,7 @@ templates/
 
 ### 2. Use Descriptive Names
 
-```jinja2
+```html+jinja
 {#  Good #}
 {% macro render_user_profile_card(user) %}
 
@@ -502,7 +502,7 @@ templates/
 
 ### 3. Provide Sensible Defaults
 
-```jinja2
+```html+jinja
 {% macro render_button(text, type="button", class="btn-primary") %}
   {# Sensible defaults make macros easy to use #}
 {% endmacro %}
@@ -510,7 +510,7 @@ templates/
 
 ### 4. Document Complex Macros
 
-```jinja2
+```html+jinja
 {#
   Renders a data table with sortable columns.
 
@@ -528,7 +528,7 @@ templates/
 
 Each macro should do one thing well:
 
-```jinja2
+```html+jinja
 {#  Good - focused macro #}
 {% macro render_input(name, type="text") %}
   ...

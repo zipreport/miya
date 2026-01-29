@@ -26,7 +26,7 @@ Global functions are built-in functions available in all templates without impor
 
 Generate sequences of numbers:
 
-```jinja2
+```html+jinja
 {# range(n) - generates 0 to n-1 #}
 {{ range(5)|list }}
 → [0, 1, 2, 3, 4]
@@ -44,7 +44,7 @@ Generate sequences of numbers:
 
 Use negative step for countdown:
 
-```jinja2
+```html+jinja
 {{ range(10, 0, -1)|list }}
 → [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
 
@@ -56,7 +56,7 @@ Use negative step for countdown:
 
 Most common use case:
 
-```jinja2
+```html+jinja
 {# Generate 10 items #}
 {% for i in range(10) %}
   <div>Item {{ i }}</div>
@@ -71,7 +71,7 @@ Most common use case:
 ### Practical Examples
 
 **Grid Layout:**
-```jinja2
+```html+jinja
 <table>
 {% for row in range(5) %}
   <tr>
@@ -84,7 +84,7 @@ Most common use case:
 ```
 
 **Pagination:**
-```jinja2
+```html+jinja
 <div class="pagination">
 {% for page_num in range(1, total_pages + 1) %}
   <a href="?page={{ page_num }}"
@@ -103,7 +103,7 @@ Most common use case:
 
 Build dictionaries in templates:
 
-```jinja2
+```html+jinja
 {# With keyword arguments #}
 {% set user = dict(name="Alice", age=30, role="admin") %}
 {{ user.name }}  → Alice
@@ -115,14 +115,14 @@ Build dictionaries in templates:
 
 ### From Key-Value Pairs
 
-```jinja2
+```html+jinja
 {% set config = dict([("key1", "value1"), ("key2", "value2")]) %}
 {{ config.key1 }}  → value1
 ```
 
 ### Dynamic Keys
 
-```jinja2
+```html+jinja
 {% set data = dict() %}
 {% for i in range(3) %}
   {% set _ = data.update({"item_" ~ i: i * 10}) %}
@@ -132,7 +132,7 @@ Build dictionaries in templates:
 ### Practical Examples
 
 **User Profile:**
-```jinja2
+```html+jinja
 {% set profile = dict(
   username="alice",
   email="alice@example.com",
@@ -157,7 +157,7 @@ Build dictionaries in templates:
 
 Cycle through values automatically:
 
-```jinja2
+```html+jinja
 {% set row_class = cycler("odd", "even") %}
 
 <table>
@@ -179,7 +179,7 @@ Cycle through values automatically:
 
 ### Multiple Values
 
-```jinja2
+```html+jinja
 {% set colors = cycler("red", "green", "blue") %}
 
 {% for i in range(9) %}
@@ -192,7 +192,7 @@ Cycles through: red, green, blue, red, green, blue, red, green, blue
 ### Practical Examples
 
 **Alternating Row Colors:**
-```jinja2
+```html+jinja
 {% set row_class = cycler("bg-light", "bg-white") %}
 
 <table>
@@ -211,7 +211,7 @@ Cycles through: red, green, blue, red, green, blue, red, green, blue
 ```
 
 **Status Indicators:**
-```jinja2
+```html+jinja
 {% set status_cycle = cycler("pending", "processing", "completed") %}
 
 {% for task in tasks %}
@@ -229,7 +229,7 @@ Cycles through: red, green, blue, red, green, blue, red, green, blue
 
 Automatically adds separator between items (but not before first):
 
-```jinja2
+```html+jinja
 {% set comma = joiner(", ") %}
 
 {% for item in items %}
@@ -241,7 +241,7 @@ Automatically adds separator between items (but not before first):
 
 ### How It Works
 
-```jinja2
+```html+jinja
 {% set sep = joiner("|") %}
 
 {{ sep() }}  → ""       {# First call returns empty string #}
@@ -252,7 +252,7 @@ Automatically adds separator between items (but not before first):
 ### Practical Examples
 
 **Breadcrumb Navigation:**
-```jinja2
+```html+jinja
 {% set separator = joiner(" > ") %}
 
 <nav>
@@ -265,7 +265,7 @@ Automatically adds separator between items (but not before first):
 **Output:** `Home > Products > Electronics > Laptops`
 
 **Tag List:**
-```jinja2
+```html+jinja
 {% set comma = joiner(", ") %}
 
 <p>Tags:
@@ -276,7 +276,7 @@ Automatically adds separator between items (but not before first):
 ```
 
 **Conditional Lists:**
-```jinja2
+```html+jinja
 {% set sep = joiner(" | ") %}
 
 <p>Actions:
@@ -302,7 +302,7 @@ Clean output even when some conditions are false!
 
 Create mutable objects for loop scoping:
 
-```jinja2
+```html+jinja
 {% set ns = namespace(count=0, total=0) %}
 
 {% for item in items %}
@@ -317,7 +317,7 @@ Create mutable objects for loop scoping:
 
 Template variables are **immutable** in loop scope:
 
-```jinja2
+```html+jinja
 {#  This doesn't work as expected #}
 {% set count = 0 %}
 {% for item in items %}
@@ -336,7 +336,7 @@ Template variables are **immutable** in loop scope:
 ### Practical Examples
 
 **Counting:**
-```jinja2
+```html+jinja
 {% set stats = namespace(active=0, inactive=0, total=0) %}
 
 {% for user in users %}
@@ -354,7 +354,7 @@ Template variables are **immutable** in loop scope:
 ```
 
 **Finding First Match:**
-```jinja2
+```html+jinja
 {% set result = namespace(found=False, match=None) %}
 
 {% for item in items %}
@@ -370,7 +370,7 @@ Template variables are **immutable** in loop scope:
 ```
 
 **Accumulating Results:**
-```jinja2
+```html+jinja
 {% set cart = namespace(subtotal=0, tax=0, total=0) %}
 
 {% for item in cart_items %}
@@ -394,7 +394,7 @@ Template variables are **immutable** in loop scope:
 
 Generate placeholder text:
 
-```jinja2
+```html+jinja
 {# Default - one paragraph #}
 {{ lipsum() }}
 
@@ -409,7 +409,7 @@ Generate placeholder text:
 ### Practical Examples
 
 **Mockup Pages:**
-```jinja2
+```html+jinja
 <article>
   <h1>{{ title|default("Article Title") }}</h1>
   <p class="lead">{{ lipsum(n=1) }}</p>
@@ -418,7 +418,7 @@ Generate placeholder text:
 ```
 
 **Placeholder Content:**
-```jinja2
+```html+jinja
 {% if product.description %}
   <p>{{ product.description }}</p>
 {% else %}
@@ -434,7 +434,7 @@ Generate placeholder text:
 
 Combine multiple iterables:
 
-```jinja2
+```html+jinja
 {% set names = ["Alice", "Bob", "Charlie"] %}
 {% set ages = [30, 25, 35] %}
 
@@ -452,7 +452,7 @@ Charlie is 35 years old
 
 ### Multiple Sequences
 
-```jinja2
+```html+jinja
 {% set products = ["Laptop", "Mouse", "Keyboard"] %}
 {% set prices = [999, 29, 79] %}
 {% set stock = [15, 50, 30] %}
@@ -473,7 +473,7 @@ Charlie is 35 years old
 
 `zip()` stops at the shortest sequence:
 
-```jinja2
+```html+jinja
 {% set a = [1, 2, 3, 4, 5] %}
 {% set b = ["a", "b", "c"] %}
 
@@ -487,7 +487,7 @@ Charlie is 35 years old
 ### Practical Examples
 
 **Parallel Data Display:**
-```jinja2
+```html+jinja
 {% for name, email, role in zip(names, emails, roles) %}
   <div class="user-card">
     <h3>{{ name }}</h3>
@@ -505,7 +505,7 @@ Charlie is 35 years old
 
 Get index and value together:
 
-```jinja2
+```html+jinja
 {% for index, item in enumerate(items) %}
   <p>{{ index }}: {{ item }}</p>
 {% endfor %}
@@ -520,7 +520,7 @@ Get index and value together:
 
 ### Custom Start Index
 
-```jinja2
+```html+jinja
 {% for index, item in enumerate(items, 1) %}
   <p>{{ index }}. {{ item }}</p>
 {% endfor %}
@@ -538,7 +538,7 @@ Get index and value together:
 ### Practical Examples
 
 **Numbered List:**
-```jinja2
+```html+jinja
 <ol>
 {% for num, task in enumerate(tasks, 1) %}
   <li value="{{ num }}">{{ task.title }}</li>
@@ -547,7 +547,7 @@ Get index and value together:
 ```
 
 **Table with Row Numbers:**
-```jinja2
+```html+jinja
 <table>
   <tr><th>#</th><th>Name</th><th>Email</th></tr>
 {% for i, user in enumerate(users, 1) %}
@@ -561,7 +561,7 @@ Get index and value together:
 ```
 
 **Alternative Styling:**
-```jinja2
+```html+jinja
 {% for index, product in enumerate(products) %}
   <div class="{{ 'even' if index % 2 == 0 else 'odd' }}">
     {{ product.name }}
@@ -577,7 +577,7 @@ Get index and value together:
 
 Generate URLs from endpoint names:
 
-```jinja2
+```html+jinja
 <a href="{{ url_for('home') }}">Home</a>
 <a href="{{ url_for('profile', user_id=123) }}">Profile</a>
 <a href="{{ url_for('search', q='laptops', category='electronics') }}">Search</a>
@@ -585,7 +585,7 @@ Generate URLs from endpoint names:
 
 ### With Query Parameters
 
-```jinja2
+```html+jinja
 {{ url_for('products', page=2, sort='price') }}
 → /products?page=2&sort=price
 ```
@@ -595,7 +595,7 @@ Generate URLs from endpoint names:
 **Note:** `url_for()` requires framework integration. Implementation depends on your web framework (Flask, Django, etc.). Miya Engine provides the template function, but URL routing is handled by your application.
 
 **Example with context:**
-```jinja2
+```html+jinja
 {# Application provides url_for implementation #}
 <nav>
   <a href="{{ url_for('index') }}">Home</a>
@@ -610,7 +610,7 @@ Generate URLs from endpoint names:
 
 ### Use Case 1: Alternating Table Rows
 
-```jinja2
+```html+jinja
 {% set row_class = cycler("row-light", "row-dark") %}
 
 <table>
@@ -625,7 +625,7 @@ Generate URLs from endpoint names:
 
 ### Use Case 2: Building Navigation
 
-```jinja2
+```html+jinja
 {% set separator = joiner(" > ") %}
 
 <nav class="breadcrumbs">
@@ -642,7 +642,7 @@ Generate URLs from endpoint names:
 
 ### Use Case 3: Creating Grids
 
-```jinja2
+```html+jinja
 <div class="grid">
 {% for row in range(5) %}
   <div class="grid-row">
@@ -658,7 +658,7 @@ Generate URLs from endpoint names:
 
 ### Use Case 4: Counting in Loops
 
-```jinja2
+```html+jinja
 {% set stats = namespace(active=0, total=0) %}
 
 {% for user in users %}
@@ -676,7 +676,7 @@ Generate URLs from endpoint names:
 
 ### Use Case 5: Parallel Iteration
 
-```jinja2
+```html+jinja
 {% for name, age, email in zip(names, ages, emails) %}
   <div class="contact-card">
     <h3>{{ name }}</h3>
@@ -688,7 +688,7 @@ Generate URLs from endpoint names:
 
 ### Use Case 6: Numbered Lists
 
-```jinja2
+```html+jinja
 <h3>Top 10 Products</h3>
 <ol class="leaderboard">
 {% for rank, product in enumerate(top_products, 1) %}

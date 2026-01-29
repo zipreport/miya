@@ -2,8 +2,7 @@
 
 This document details the **known limitations and differences** between Miya Engine and Jinja2, based on extensive testing of the implementation.
 
-> **Last Updated:** Based on testing all feature examples in `examples/features/`
-> **Miya Version:** Current implementation as of November 2024
+> **Miya Version:** v0.1.0
 
 ---
 
@@ -23,7 +22,7 @@ This document details the **known limitations and differences** between Miya Eng
 ###  1. List Comprehensions with Filter Clauses
 
 **Not Supported:**
-```jinja2
+```html+jinja
 {{ [x for x in numbers if x > 5] }}
 {{ [user.name for user in users if user.active] }}
 {{ [x for x in items if x.price > 100 and x.stock > 0] }}
@@ -37,7 +36,7 @@ parser error: expected 'else' in conditional expression
 **Reason:** The parser treats any `if` inside a comprehension as a ternary operator and requires an `else` clause.
 
 **Workaround:**
-```jinja2
+```html+jinja
 {# Use filter chains instead #}
 {{ users|selectattr("active")|map(attribute="name")|list }}
 {{ numbers|select("greaterthan", 5)|list }}
@@ -48,7 +47,7 @@ parser error: expected 'else' in conditional expression
 ###  2. Dictionary Comprehensions with `.items()` Unpacking
 
 **Not Supported:**
-```jinja2
+```html+jinja
 {{ {k: v for k, v in dict.items()} }}
 {{ {key|upper: value for key, value in config.items()} }}
 ```
@@ -61,7 +60,7 @@ parser error: expected 'in' in dict comprehension
 **Reason:** The parser doesn't support tuple unpacking in dictionary comprehensions.
 
 **Workaround:**
-```jinja2
+```html+jinja
 {# Only single-item iteration works #}
 {{ {user.id: user.name for user in users} }}
 {{ {item.key: item.value for item in key_value_list} }}
@@ -72,7 +71,7 @@ parser error: expected 'in' in dict comprehension
 ###  3. Nested Comprehensions
 
 **Not Supported:**
-```jinja2
+```html+jinja
 {{ [item for category in categories for item in category.items] }}
 {{ [(a, b) for a in list1 for b in list2] }}
 ```
@@ -85,7 +84,7 @@ parser error: unexpected 'for' in comprehension
 **Reason:** Multiple `for` clauses in a single comprehension are not parsed correctly.
 
 **Workaround:**
-```jinja2
+```html+jinja
 {# Use nested loops instead #}
 {% set result = [] %}
 {% for category in categories %}
@@ -100,7 +99,7 @@ parser error: unexpected 'for' in comprehension
 ###  4. Inline Conditionals Without `else`
 
 **Not Supported:**
-```jinja2
+```html+jinja
 {{ ", " if not loop.last }}
 {{ value if condition }}
 {{ user.name if user }}
@@ -114,7 +113,7 @@ parser error: expected 'else' in conditional expression
 **Reason:** The parser always expects a complete ternary expression with both branches.
 
 **Workaround:**
-```jinja2
+```html+jinja
 {# Use block-level conditionals #}
 {% if not loop.last %}, {% endif %}
 {% if condition %}{{ value }}{% endif %}
@@ -141,7 +140,7 @@ parser error: expected 'else' in conditional expression
 
 ### What Works
 
-```jinja2
+```html+jinja
 {#  Basic list comprehensions #}
 {{ [x * 2 for x in numbers] }}
 {{ [user.name for user in users] }}
@@ -177,7 +176,7 @@ The following filters appear to have issues when chained or used with certain da
 - `groupby` - Limited testing
 
 **Working Alternatives:**
-```jinja2
+```html+jinja
 {#  This may fail #}
 {{ numbers|sort|reverse }}
 
@@ -215,7 +214,7 @@ The following filters appear to have issues when chained or used with certain da
 ###  `caller()` Function Not Supported
 
 **Not Supported:**
-```jinja2
+```html+jinja
 {% macro wrapper(title) %}
   <div class="card">
     <h3>{{ title }}</h3>
@@ -234,7 +233,7 @@ cannot call non-function value of type *runtime.Undefined
 ```
 
 **Workaround:**
-```jinja2
+```html+jinja
 {# Pass content as a parameter instead #}
 {% macro wrapper(title, content) %}
   <div class="card">
@@ -252,14 +251,14 @@ cannot call non-function value of type *runtime.Undefined
 ###  Varargs and Kwargs Not Supported
 
 **Not Supported:**
-```jinja2
+```html+jinja
 {% macro flexible(*args, **kwargs) %}
   {#  Not supported #}
 {% endmacro %}
 ```
 
 **Workaround:**
-```jinja2
+```html+jinja
 {# Use explicit parameters with defaults #}
 {% macro flexible(param1="", param2="", param3="") %}
   {#  This works #}
@@ -273,24 +272,24 @@ cannot call non-function value of type *runtime.Undefined
 ###  `enumerate()` Keyword Arguments
 
 **Not Supported:**
-```jinja2
+```html+jinja
 {% for i, item in enumerate(items, start=1) %}  {#  #}
 ```
 
 **Workaround:**
-```jinja2
+```html+jinja
 {% for i, item in enumerate(items, 1) %}  {#  Positional arg #}
 ```
 
 ###  Dictionary Iteration with Tuple Unpacking
 
 **Not Supported:**
-```jinja2
+```html+jinja
 {% for key, value in dict.items() %}  {#  #}
 ```
 
 **Workaround:**
-```jinja2
+```html+jinja
 {# Iterate over keys #}
 {% for key in dict %}
   {{ key }}: {{ dict[key] }}
@@ -305,13 +304,13 @@ cannot call non-function value of type *runtime.Undefined
 ###  Multiple Variable Assignment
 
 **Not Supported:**
-```jinja2
+```html+jinja
 {% set a, b = 1, 2 %}  {#  #}
 {% set x, y = some_tuple %}  {#  #}
 ```
 
 **Workaround:**
-```jinja2
+```html+jinja
 {% set a = 1 %}
 {% set b = 2 %}
 ```
@@ -323,7 +322,7 @@ cannot call non-function value of type *runtime.Undefined
 ### Pattern 1: Filtering Data
 
 **Instead of comprehensions with filters:**
-```jinja2
+```html+jinja
 {#  Doesn't work #}
 {{ [user for user in users if user.active] }}
 
@@ -342,7 +341,7 @@ cannot call non-function value of type *runtime.Undefined
 ### Pattern 2: Complex Data Transformations
 
 **Instead of nested comprehensions:**
-```jinja2
+```html+jinja
 {#  Doesn't work #}
 {{ [item for cat in categories for item in cat.items] }}
 
@@ -358,7 +357,7 @@ cannot call non-function value of type *runtime.Undefined
 ### Pattern 3: Conditional Output
 
 **Instead of inline if without else:**
-```jinja2
+```html+jinja
 {#  Doesn't work #}
 {{ ", " if not loop.last }}
 
@@ -372,7 +371,7 @@ cannot call non-function value of type *runtime.Undefined
 ### Pattern 4: Dictionary Processing
 
 **Instead of .items() unpacking:**
-```jinja2
+```html+jinja
 {#  Doesn't work #}
 {{ {k|upper: v for k, v in dict.items()} }}
 

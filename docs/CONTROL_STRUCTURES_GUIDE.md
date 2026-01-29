@@ -23,7 +23,7 @@ Control structures enable conditional logic, loops, and variable management in t
 
 Basic conditional branching:
 
-```jinja2
+```html+jinja
 {% if user.role == "admin" %}
   <p>Admin access granted</p>
 {% elif user.role == "moderator" %}
@@ -37,7 +37,7 @@ Basic conditional branching:
 
 ### Simple If Statement
 
-```jinja2
+```html+jinja
 {% if user.active %}
   <p>Account is ACTIVE</p>
 {% else %}
@@ -47,7 +47,7 @@ Basic conditional branching:
 
 ### Nested Conditions
 
-```jinja2
+```html+jinja
 {% if user.active %}
   {% if user.verified %}
     <p> Fully verified and active account</p>
@@ -61,7 +61,7 @@ Basic conditional branching:
 
 ### Multiple Conditions
 
-```jinja2
+```html+jinja
 {% if user.age >= 18 and user.verified %}
   <p>Access granted</p>
 {% endif %}
@@ -77,7 +77,7 @@ Basic conditional branching:
 
 ### Basic Iteration
 
-```jinja2
+```html+jinja
 <ul>
 {% for product in products %}
   <li>{{ product.name }} - ${{ product.price }}</li>
@@ -101,7 +101,7 @@ Miya provides special loop variables:
 
 **Example:**
 
-```jinja2
+```html+jinja
 <table>
 {% for product in products %}
   <tr style="background: {{ 'lightblue' if loop.first else 'lightyellow' if loop.last else 'white' }}">
@@ -117,7 +117,7 @@ Miya provides special loop variables:
 
 Filter items directly in the loop:
 
-```jinja2
+```html+jinja
 <p>Products over $50:</p>
 <ul>
 {% for product in products if product.price > 50 %}
@@ -130,7 +130,7 @@ Filter items directly in the loop:
 
 Handle empty collections:
 
-```jinja2
+```html+jinja
 <ul>
 {% for item in items %}
   <li>{{ item }}</li>
@@ -144,7 +144,7 @@ Handle empty collections:
 
 Access parent loop variables with `loop.parent.loop`:
 
-```jinja2
+```html+jinja
 {% for category in categories %}
   <h3>{{ category.name }}</h3>
   <ul>
@@ -163,7 +163,7 @@ Access parent loop variables with `loop.parent.loop`:
 
 Concise conditional expressions:
 
-```jinja2
+```html+jinja
 {{ 'In Stock' if stock > 0 else 'Out of Stock' }}
 {{ price if price > 0 else 'N/A' }}
 {{ 'SALE!' if discount > 0 else '' }}
@@ -173,7 +173,7 @@ Concise conditional expressions:
 
 **Inline conditionals MUST include the `else` clause** in Miya Engine:
 
-```jinja2
+```html+jinja
 {#  WORKS - includes else #}
 {{ 'Badge' if condition else '' }}
 
@@ -185,7 +185,7 @@ Concise conditional expressions:
 
 Multiple conditions in sequence:
 
-```jinja2
+```html+jinja
 {{ 'Premium' if total > 1000 else 'Gold' if total > 500 else 'Silver' if total > 100 else 'Bronze' }}
 ```
 
@@ -203,7 +203,7 @@ Reads as:
 
 Assign values to variables:
 
-```jinja2
+```html+jinja
 {% set greeting = "Hello, " ~ user.name ~ "!" %}
 {% set total = 0 %}
 {% set product = products[0] %}
@@ -211,7 +211,7 @@ Assign values to variables:
 
 ### Multiple Assignments
 
-```jinja2
+```html+jinja
 {% set first_product = products[0] %}
 {% set second_product = products[1] %}
 ```
@@ -220,7 +220,7 @@ Assign values to variables:
 
 Accumulate values (note: variables in loops are scoped):
 
-```jinja2
+```html+jinja
 {% set total_price = 0 %}
 {% for product in products %}
   {% set total_price = total_price + product.price %}
@@ -232,7 +232,7 @@ Accumulate values (note: variables in loops are scoped):
 
 Capture multi-line content:
 
-```jinja2
+```html+jinja
 {% set formatted_html %}
 <div class="alert">
   <strong>Important!</strong> You have {{ products|length }} items.
@@ -252,7 +252,7 @@ Block assignment captures everything between the tags, including HTML and templa
 
 Create local scope for variables:
 
-```jinja2
+```html+jinja
 {% with total = products|length %}
   <p>You have {{ total }} products in your catalog.</p>
   <p>{{ 'Large' if total > 5 else 'Small' }} catalog</p>
@@ -262,7 +262,7 @@ Create local scope for variables:
 
 ### Multiple Variables
 
-```jinja2
+```html+jinja
 {% with min_price = 10, max_price = 100, currency = 'USD' %}
   <p>Price Range: {{ currency }} {{ min_price }} - {{ currency }} {{ max_price }}</p>
 {% endwith %}
@@ -270,7 +270,7 @@ Create local scope for variables:
 
 ### Nested With
 
-```jinja2
+```html+jinja
 {% with category = "Electronics" %}
   {% with count = products|length %}
     <p>{{ category }} category has {{ count }} items</p>
@@ -286,7 +286,7 @@ Create local scope for variables:
 
 **Example:**
 
-```jinja2
+```html+jinja
 {# Without with #}
 <p>Active users: {{ users|selectattr("active")|list|length }}</p>
 <p>Found {{ users|selectattr("active")|list|length }} matches</p>
@@ -304,7 +304,7 @@ Create local scope for variables:
 
 ### Combining Conditions and Loops
 
-```jinja2
+```html+jinja
 {% for product in products %}
   {% if loop.first %}
     <p><strong>Featured Product:</strong></p>
@@ -327,7 +327,7 @@ Create local scope for variables:
 
 ### Complex Logic Example
 
-```jinja2
+```html+jinja
 {% for user in users %}
   {% if user.active and user.verified %}
     {% with days_since = (today - user.last_login).days %}
@@ -349,7 +349,7 @@ Create local scope for variables:
 
 ### Example 1: User Dashboard
 
-```jinja2
+```html+jinja
 {% if user.role == "admin" %}
   <h2>Admin Dashboard</h2>
   <ul>
@@ -367,7 +367,7 @@ Create local scope for variables:
 
 ### Example 2: Shopping Cart
 
-```jinja2
+```html+jinja
 {% set cart_total = 0 %}
 <h3>Shopping Cart</h3>
 
@@ -390,7 +390,7 @@ Create local scope for variables:
 
 ### Example 3: Product Filtering
 
-```jinja2
+```html+jinja
 <h3>Available Products</h3>
 
 {% with in_stock = products|selectattr("stock", "greaterthan", 0)|list %}
@@ -416,7 +416,7 @@ Create local scope for variables:
 
 ### 1. Keep Logic Simple
 
-```jinja2
+```html+jinja
 {#  Good - simple and clear #}
 {% if user.active %}
   Welcome back!
@@ -432,7 +432,7 @@ Create local scope for variables:
 
 ### 2. Use With for Clarity
 
-```jinja2
+```html+jinja
 {#  Good - clear and reusable #}
 {% with eligible = user.active and user.verified %}
   {% if eligible %}
@@ -443,7 +443,7 @@ Create local scope for variables:
 
 ### 3. Avoid Deep Nesting
 
-```jinja2
+```html+jinja
 {#  Avoid - hard to read #}
 {% if condition1 %}
   {% if condition2 %}
@@ -465,7 +465,7 @@ Create local scope for variables:
 
 ### 4. Always Include Else in Inline Conditionals
 
-```jinja2
+```html+jinja
 {#  Works in Miya #}
 {{ 'Active' if user.active else 'Inactive' }}
 

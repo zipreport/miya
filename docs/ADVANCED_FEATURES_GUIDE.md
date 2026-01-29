@@ -25,7 +25,7 @@ Advanced template features for professionals. Miya Engine provides filter blocks
 
 Apply filters to entire blocks of content:
 
-```jinja2
+```html+jinja
 {% filter upper %}
 This entire block will be uppercase
 Including {{ variable }} variables
@@ -40,7 +40,7 @@ INCLUDING VALUE VARIABLES
 
 ### Single Filter
 
-```jinja2
+```html+jinja
 {% filter upper %}
   hello world
 {% endfilter %}
@@ -61,7 +61,7 @@ INCLUDING VALUE VARIABLES
 
 Apply multiple filters in sequence:
 
-```jinja2
+```html+jinja
 {% filter trim|upper|replace("WORLD", "MIYA") %}
    hello world
 {% endfilter %}
@@ -77,7 +77,7 @@ Apply multiple filters in sequence:
 
 Filters apply to the entire rendered output:
 
-```jinja2
+```html+jinja
 {% filter upper %}
 User list:
 {% for user in users %}
@@ -98,7 +98,7 @@ USER LIST:
 
 Filter blocks can be nested:
 
-```jinja2
+```html+jinja
 {% filter upper %}
 Outer block
 {% filter trim %}
@@ -123,7 +123,7 @@ END OUTER
 
 Execute expressions without output:
 
-```jinja2
+```html+jinja
 {% do expression %}
 ```
 
@@ -131,7 +131,7 @@ The `do` statement evaluates an expression but doesn't print the result.
 
 ### Examples
 
-```jinja2
+```html+jinja
 {# Execute without output #}
 {% do numbers|sum %}
 
@@ -144,7 +144,7 @@ The `do` statement evaluates an expression but doesn't print the result.
 
 ### When to Use
 
-```jinja2
+```html+jinja
 {# Trigger computation without displaying result #}
 {% set calculation_result = 0 %}
 {% do expensive_function(data) %}
@@ -163,7 +163,7 @@ The `do` statement evaluates an expression but doesn't print the result.
 
 Templates can generate unwanted whitespace:
 
-```jinja2
+```html+jinja
 <ul>
 {% for item in items %}
   <li>{{ item }}</li>
@@ -197,7 +197,7 @@ Use `-` to strip whitespace:
 
 Remove whitespace before tag:
 
-```jinja2
+```html+jinja
 <ul>
 {%- for item in items %}
   <li>{{ item }}</li>
@@ -216,7 +216,7 @@ Remove whitespace before tag:
 
 Remove whitespace after tag:
 
-```jinja2
+```html+jinja
 <ul>
 {% for item in items -%}
   <li>{{ item }}</li>
@@ -226,7 +226,7 @@ Remove whitespace after tag:
 
 ### Both Sides Control
 
-```jinja2
+```html+jinja
 <ul>
 {%- for item in items -%}
   <li>{{- item -}}</li>
@@ -242,7 +242,7 @@ Remove whitespace after tag:
 ### Practical Examples
 
 **Clean Comma-Separated List:**
-```jinja2
+```html+jinja
 Items: {%- for item in items -%}
   {{ item }}{% if not loop.last %}, {% endif %}
 {%- endfor %}
@@ -251,7 +251,7 @@ Items: {%- for item in items -%}
 **Output:** `Items: item1, item2, item3`
 
 **Compact Number List:**
-```jinja2
+```html+jinja
 Values:
 {%- for num in numbers -%}
   {{- num -}}
@@ -262,7 +262,7 @@ Values:
 **Output:** `Values: 1,2,3,4,5`
 
 **Clean HTML:**
-```jinja2
+```html+jinja
 <nav>
   {%- for link in links %}
   <a href="{{ link.url }}">{{ link.title }}</a>
@@ -284,7 +284,7 @@ Values:
 
 Prevent template processing for documentation or examples:
 
-```jinja2
+```html+jinja
 {% raw %}
   {% for item in items %}
     {{ item }}
@@ -302,7 +302,7 @@ Prevent template processing for documentation or examples:
 ### Use Cases
 
 **1. Documenting Template Syntax:**
-```jinja2
+```html+jinja
 <p>To print a variable, use:</p>
 <pre>
 {% raw %}
@@ -312,7 +312,7 @@ Prevent template processing for documentation or examples:
 ```
 
 **2. Client-Side Templates:**
-```jinja2
+```html+jinja
 <script type="text/template" id="user-template">
 {% raw %}
   <div class="user">
@@ -326,7 +326,7 @@ Prevent template processing for documentation or examples:
 The template inside `{% raw %}` won't be processed by Miya, allowing it to be used by client-side JavaScript.
 
 **3. Code Examples:**
-```jinja2
+```html+jinja
 <h3>Template Example:</h3>
 <pre><code>
 {% raw %}
@@ -345,7 +345,7 @@ The template inside `{% raw %}` won't be processed by Miya, allowing it to be us
 
 Autoescaping automatically escapes HTML special characters to prevent XSS attacks:
 
-```jinja2
+```html+jinja
 {# With autoescape ON (default) #}
 {{ "<script>alert('XSS')</script>" }}
 → &lt;script&gt;alert('XSS')&lt;/script&gt;
@@ -359,7 +359,7 @@ Autoescaping automatically escapes HTML special characters to prevent XSS attack
 
 Control escaping for specific regions:
 
-```jinja2
+```html+jinja
 {# Turn OFF autoescape #}
 {% autoescape false %}
   <p>{{ html_content }}</p>
@@ -375,7 +375,7 @@ Control escaping for specific regions:
 
 Mark specific strings as safe:
 
-```jinja2
+```html+jinja
 {# Mark as safe - won't be escaped #}
 {{ trusted_html|safe }}
 
@@ -386,7 +386,7 @@ Mark specific strings as safe:
 ### Practical Examples
 
 **Rendering Trusted HTML:**
-```jinja2
+```html+jinja
 {# Article body is pre-sanitized HTML #}
 {% autoescape false %}
 <div class="article-body">
@@ -401,7 +401,7 @@ Mark specific strings as safe:
 ```
 
 **Protecting User Input:**
-```jinja2
+```html+jinja
 {# Always escape user-provided content #}
 {% autoescape true %}
 <div class="comment">
@@ -417,7 +417,7 @@ Mark specific strings as safe:
 ```
 
 **Mixed Content:**
-```jinja2
+```html+jinja
 {# Escape user content, allow trusted HTML #}
 <div class="post">
   <h2>{{ post.title }}</h2>  {# Escaped #}
@@ -436,7 +436,7 @@ Mark specific strings as safe:
 
 ### Security Best Practices
 
-```jinja2
+```html+jinja
 {#  SAFE - user input is escaped #}
 <p>{{ user.name }}</p>
 <p>{{ user.comment }}</p>
@@ -663,7 +663,7 @@ func processUserTemplate(userTemplate string, data interface{}) string {
 
 ### Example 1: Clean HTML Output
 
-```jinja2
+```html+jinja
 <nav>
   <ul>
     {%- for item in nav_items %}
@@ -682,7 +682,7 @@ func processUserTemplate(userTemplate string, data interface{}) string {
 
 ### Example 2: Text Transformation Blocks
 
-```jinja2
+```html+jinja
 {# Convert entire section to uppercase #}
 {% filter upper %}
 <h1>Important Announcement</h1>
@@ -693,7 +693,7 @@ func processUserTemplate(userTemplate string, data interface{}) string {
 
 ### Example 3: Safe Content Rendering
 
-```jinja2
+```html+jinja
 <article>
   {# Title is escaped #}
   <h1>{{ article.title }}</h1>
@@ -718,7 +718,7 @@ func processUserTemplate(userTemplate string, data interface{}) string {
 
 ### Example 4: Template Documentation
 
-```jinja2
+```html+jinja
 <h2>Template Syntax Guide</h2>
 
 <h3>Variables:</h3>
@@ -745,7 +745,7 @@ func processUserTemplate(userTemplate string, data interface{}) string {
 
 ### Example 5: Combining Features
 
-```jinja2
+```html+jinja
 {# Filter block + whitespace control #}
 <div class="notice">
 {%- filter upper|trim -%}
@@ -811,7 +811,7 @@ func processUserTemplate(userTemplate string, data interface{}) string {
 
 ### 1. Use Whitespace Control Sparingly
 
-```jinja2
+```html+jinja
 {#  Good - strategic use #}
 Items: {%- for item in items %}{{ item }}{{ ", " if not loop.last }}{% endfor %}
 
@@ -823,7 +823,7 @@ Items: {%- for item in items %}{{ item }}{{ ", " if not loop.last }}{% endfor %}
 
 ### 2. Always Escape User Input
 
-```jinja2
+```html+jinja
 {#  SAFE #}
 <p>{{ user.comment }}</p>
 
@@ -833,7 +833,7 @@ Items: {%- for item in items %}{{ item }}{{ ", " if not loop.last }}{% endfor %}
 
 ### 3. Use Raw for Documentation Only
 
-```jinja2
+```html+jinja
 {#  Good - documenting syntax #}
 <pre>{% raw %}{{ variable }}{% endraw %}</pre>
 
@@ -843,7 +843,7 @@ Items: {%- for item in items %}{{ item }}{{ ", " if not loop.last }}{% endfor %}
 
 ### 4. Filter Blocks for Transformation
 
-```jinja2
+```html+jinja
 {#  Good - transform entire section #}
 {% filter upper %}
   {% include "announcement.html" %}

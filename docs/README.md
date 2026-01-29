@@ -48,7 +48,7 @@ Complete documentation for Miya Engine - a blazing-fast Jinja2-compatible templa
 
 Learn how to build reusable template hierarchies:
 
-```jinja2
+```html+jinja
 {# base.html #}
 <!DOCTYPE html>
 <html>
@@ -84,7 +84,7 @@ Learn how to build reusable template hierarchies:
 
 Master template control flow:
 
-```jinja2
+```html+jinja
 {# Conditionals #}
 {% if user.role == "admin" %}
   <p>Admin Panel</p>
@@ -121,7 +121,7 @@ Master template control flow:
 
 Transform data with 70+ built-in filters:
 
-```jinja2
+```html+jinja
 {# String filters #}
 {{ "hello world"|title }}              → Hello World
 {{ "  text  "|trim|upper }}            → TEXT
@@ -155,7 +155,7 @@ Transform data with 70+ built-in filters:
 
 Powerful conditional expressions:
 
-```jinja2
+```html+jinja
 {# Tests #}
 {% if user is defined and user.active %}
   Welcome!
@@ -188,7 +188,7 @@ Powerful conditional expressions:
 
 Build reusable components:
 
-```jinja2
+```html+jinja
 {# Define macro #}
 {% macro render_input(name, type="text") %}
 <input type="{{ type }}" name="{{ name }}" class="form-control">
@@ -220,7 +220,7 @@ Build reusable components:
 
 Essential template utilities:
 
-```jinja2
+```html+jinja
 {# range() - number sequences #}
 {% for i in range(10) %}{{ i }}{% endfor %}
 
@@ -262,7 +262,7 @@ Total: {{ ns.count }}
 
 Concise collection creation:
 
-```jinja2
+```html+jinja
 {# List comprehensions #}
 {{ [x * 2 for x in numbers] }}
 {{ [user.name for user in users] }}
@@ -291,7 +291,7 @@ Concise collection creation:
 
 Professional template control:
 
-```jinja2
+```html+jinja
 {# Filter blocks #}
 {% filter upper %}
   This entire block becomes uppercase
@@ -331,7 +331,7 @@ Professional template control:
 
 ### Most Common Operations
 
-```jinja2
+```html+jinja
 {# Variables #}
 {{ variable }}
 {{ user.name }}

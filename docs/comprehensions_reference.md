@@ -3,13 +3,13 @@
 ## Syntax Patterns
 
 ### List Comprehensions
-```jinja2
+```html+jinja
 {{ [expression for item in iterable] }}
 {{ [expression for item in iterable if condition] }}
 ```
 
 ### Dictionary Comprehensions  
-```jinja2
+```html+jinja
 {{ {key_expr: value_expr for item in iterable} }}
 {{ {key_expr: value_expr for item in iterable if condition} }}
 ```
@@ -38,7 +38,7 @@
 
 ## Complex Conditions
 
-```jinja2
+```html+jinja
 <!-- Multiple conditions -->
 {{ [item for item in items if item.price > 100 and item.category == "electronics"] }}
 
@@ -52,25 +52,25 @@
 ## Working with Different Data Types
 
 ### Lists
-```jinja2
+```html+jinja
 {{ [item.upper() for item in ["a", "b", "c"]] }}
 <!-- Result: ["A", "B", "C"] -->
 ```
 
 ### Dictionaries
-```jinja2
+```html+jinja
 {{ [v for k, v in {"a": 1, "b": 2}.items()] }}
 <!-- Result: [1, 2] -->
 ```
 
 ### Objects/Maps
-```jinja2
+```html+jinja
 {{ [user.email for user in users if user.active] }}
 <!-- Extract emails from active users -->
 ```
 
 ### Nested Structures
-```jinja2
+```html+jinja
 {{ [tag.name for post in posts for tag in post.tags] }}
 <!-- Flatten all tags from all posts -->
 ```
@@ -78,7 +78,7 @@
 ## Performance Tips
 
 ###  Good Practices
-```jinja2
+```html+jinja
 <!-- Simple transformations -->
 {{ [user.name for user in users] }}
 
@@ -90,7 +90,7 @@
 ```
 
 ###  Avoid These
-```jinja2
+```html+jinja
 <!-- Don't nest too deeply -->
 {{ [[f(x) for x in row] for row in [[g(y) for y in col] for col in matrix]] }}
 
@@ -104,7 +104,7 @@
 ## Error Handling
 
 ### Common Errors
-```jinja2
+```html+jinja
 <!--  Undefined variable -->
 {{ [x for x in undefined_list] }}
 <!-- Error: undefined variable -->
@@ -119,7 +119,7 @@
 ```
 
 ### Safe Patterns
-```jinja2
+```html+jinja
 <!--  Check if defined -->
 {{ [x for x in (items or [])] }}
 
@@ -133,7 +133,7 @@
 ## Debugging Tips
 
 ### 1. Test Components Separately
-```jinja2
+```html+jinja
 <!-- Test the iterable first -->
 {{ items }}
 
@@ -145,7 +145,7 @@
 ```
 
 ### 2. Use Intermediate Variables
-```jinja2
+```html+jinja
 <!-- Instead of complex one-liner -->
 {% set filtered_items = [item for item in items if item.active] %}
 {% set processed_items = [process(item) for item in filtered_items] %}
@@ -153,7 +153,7 @@
 ```
 
 ### 3. Add Debug Output
-```jinja2
+```html+jinja
 <!-- Debug the iteration -->
 {{ [debug(item) or item.name for item in items] }}
 ```
@@ -161,7 +161,7 @@
 ## Integration with Filters
 
 ### Chaining with Filters
-```jinja2
+```html+jinja
 <!-- Apply filters after comprehension -->
 {{ [user.name for user in users]|join(", ") }}
 
@@ -173,7 +173,7 @@
 ```
 
 ### Common Filter Combinations
-```jinja2
+```html+jinja
 <!-- Count items -->
 {{ [1 for item in items if condition]|length }}
 
@@ -190,7 +190,7 @@
 ## Template Organization
 
 ### Keep Templates Clean
-```jinja2
+```html+jinja
 <!--  Good: Short and readable -->
 {% set active_users = [u for u in users if u.active] %}
 <div>{{ active_users|length }} active users</div>
@@ -200,7 +200,7 @@
 ```
 
 ### Use Macros for Reusable Logic
-```jinja2
+```html+jinja
 {% macro filter_active_items(items) %}
   {{ [item for item in items if item.active and item.visible] }}
 {% endmacro %}
@@ -214,28 +214,28 @@
 ## Quick Examples by Use Case
 
 ### Data Extraction
-```jinja2
+```html+jinja
 {{ [user.email for user in users] }}                    <!-- Extract emails -->
 {{ [post.title for post in posts if post.featured] }}   <!-- Extract featured titles -->
 {{ [order.total for order in orders]|sum }}             <!-- Sum order totals -->
 ```
 
 ### Data Transformation
-```jinja2
+```html+jinja
 {{ [name.title() for name in names] }}                  <!-- Title case names -->
 {{ [price * 1.1 for price in prices] }}                 <!-- Add 10% to prices -->
 {{ [{"id": item.id, "name": item.name} for item in items] }} <!-- Create new structure -->
 ```
 
 ### Data Filtering
-```jinja2
+```html+jinja
 {{ [user for user in users if user.age >= 18] }}        <!-- Adults only -->
 {{ [post for post in posts if "python" in post.tags] }} <!-- Posts with Python tag -->
 {{ [item for item in items if item.price < 100] }}      <!-- Affordable items -->
 ```
 
 ### Dictionary Operations
-```jinja2
+```html+jinja
 {{ {user.id: user.name for user in users} }}            <!-- ID to name mapping -->
 {{ {k.upper(): v for k, v in data.items()} }}           <!-- Uppercase keys -->
 {{ {k: v for k, v in settings.items() if v is not none} }} <!-- Remove null values -->

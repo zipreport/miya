@@ -22,13 +22,13 @@ List and dictionary comprehensions provide concise syntax for creating collectio
 
 Transform collections in a single line:
 
-```jinja2
+```html+jinja
 {{ [expression for item in iterable] }}
 ```
 
 ### Simple Transformations
 
-```jinja2
+```html+jinja
 {# Double each number #}
 {{ [x * 2 for x in numbers] }}
 → [2, 4, 6, 8, 10]
@@ -46,7 +46,7 @@ Transform collections in a single line:
 
 Apply template filters in comprehensions:
 
-```jinja2
+```html+jinja
 {# Title case all names #}
 {{ [name|title for name in names] }}
 → ["Alice", "Bob", "Charlie"]
@@ -66,7 +66,7 @@ Apply template filters in comprehensions:
 
 ### Arithmetic Operations
 
-```jinja2
+```html+jinja
 {# Calculate totals #}
 {{ [price * quantity for price, quantity in zip(prices, quantities)] }}
 
@@ -80,7 +80,7 @@ Apply template filters in comprehensions:
 
 ### String Operations
 
-```jinja2
+```html+jinja
 {# Concatenate strings #}
 {{ [first ~ " " ~ last for first, last in zip(first_names, last_names)] }}
 → ["Alice Smith", "Bob Jones", "Charlie Brown"]
@@ -98,13 +98,13 @@ Apply template filters in comprehensions:
 
 Create dictionaries from iterables:
 
-```jinja2
+```html+jinja
 {{ {key_expr: value_expr for item in iterable} }}
 ```
 
 ### Simple Mappings
 
-```jinja2
+```html+jinja
 {# Create ID to name mapping #}
 {{ {user.id: user.name for user in users} }}
 → {1: "Alice", 2: "Bob", 3: "Charlie"}
@@ -120,7 +120,7 @@ Create dictionaries from iterables:
 
 ### With Transformations
 
-```jinja2
+```html+jinja
 {# Uppercase keys #}
 {{ {key|upper: value for key, value in data} }}
 
@@ -136,7 +136,7 @@ Create dictionaries from iterables:
 ###  Inline If Clauses Not Supported
 
 **Jinja2 syntax (NOT in Miya):**
-```jinja2
+```html+jinja
 {#  Does NOT work in Miya #}
 {{ [x for x in numbers if x > 5] }}
 {{ [user.name for user in users if user.active] }}
@@ -148,7 +148,7 @@ Create dictionaries from iterables:
 ###  Dict Unpacking with .items() Not Supported
 
 **Jinja2 syntax (NOT in Miya):**
-```jinja2
+```html+jinja
 {#  Does NOT work in Miya #}
 {{ {k: v for k, v in data.items()} }}
 {{ {k.upper(): v * 2 for k, v in config.items()} }}
@@ -159,7 +159,7 @@ Create dictionaries from iterables:
 ###  Nested Comprehensions Not Supported
 
 **Jinja2 syntax (NOT in Miya):**
-```jinja2
+```html+jinja
 {#  Does NOT work in Miya #}
 {{ [item for sublist in lists for item in sublist] }}
 {{ [x * y for x in range(3) for y in range(3)] }}
@@ -175,7 +175,7 @@ Create dictionaries from iterables:
 
 Instead of inline `if`, use filters to pre-filter data:
 
-```jinja2
+```html+jinja
 {#  Not supported #}
 {{ [x for x in numbers if x > 5] }}
 
@@ -199,7 +199,7 @@ Instead of inline `if`, use filters to pre-filter data:
 
 For complex filtering, use traditional loops:
 
-```jinja2
+```html+jinja
 {#  Not supported #}
 {{ [x * 2 for x in numbers if x is even] }}
 
@@ -235,14 +235,14 @@ ctx.Set("active_users", activeUsers)
 ```
 
 **In template:**
-```jinja2
+```html+jinja
 {# Simple comprehension on pre-filtered data #}
 {{ [user.name for user in active_users] }}
 ```
 
 ### Alternative 4: Use Set with Block Assignment
 
-```jinja2
+```html+jinja
 {# Collect filtered results #}
 {% set filtered_names %}
   {% for user in users if user.active %}
@@ -260,7 +260,7 @@ ctx.Set("active_users", activeUsers)
 
 ### Example 1: Extract Names
 
-```jinja2
+```html+jinja
 {# Simple property extraction #}
 {% set user_names = [user.name for user in users] %}
 <p>Users: {{ user_names|join(", ") }}</p>
@@ -272,7 +272,7 @@ ctx.Set("active_users", activeUsers)
 
 ### Example 2: Calculate Totals
 
-```jinja2
+```html+jinja
 {# Calculate line totals #}
 {% set line_totals = [item.price * item.qty for item in cart] %}
 <p>Line Totals: {{ line_totals }}</p>
@@ -285,7 +285,7 @@ ctx.Set("active_users", activeUsers)
 
 ### Example 3: Create Lookups
 
-```jinja2
+```html+jinja
 {# Create ID lookup dictionary #}
 {% set user_lookup = {user.id: user.name for user in users} %}
 
@@ -299,7 +299,7 @@ ctx.Set("active_users", activeUsers)
 
 ### Example 4: Format Display Names
 
-```jinja2
+```html+jinja
 {# Create formatted names #}
 {% set display_names = [user.name ~ " <" ~ user.email ~ ">" for user in users] %}
 
@@ -312,7 +312,7 @@ ctx.Set("active_users", activeUsers)
 
 ### Example 5: Nested Data (Use Loops)
 
-```jinja2
+```html+jinja
 {#  Nested comprehension not supported #}
 {# {{ [item.name for category in categories for item in category.items] }} #}
 
@@ -327,7 +327,7 @@ ctx.Set("active_users", activeUsers)
 
 ### Example 6: Filter Then Comprehend
 
-```jinja2
+```html+jinja
 {# First filter with selectattr, then comprehend #}
 {% set active_users = users|selectattr("active")|list %}
 {% set active_emails = [user.email for user in active_users] %}
@@ -340,7 +340,7 @@ ctx.Set("active_users", activeUsers)
 
 ### Example 7: Conditional Value Transformation
 
-```jinja2
+```html+jinja
 {# Using ternary in comprehension #}
 {% set statuses = [
   "Active" if user.active else "Inactive"
@@ -356,7 +356,7 @@ ctx.Set("active_users", activeUsers)
 
 ### Example 8: Working with Zip
 
-```jinja2
+```html+jinja
 {# Combine multiple lists #}
 {% set names = ["Alice", "Bob", "Charlie"] %}
 {% set scores = [95, 87, 92] %}
@@ -395,7 +395,7 @@ ctx.Set("active_users", activeUsers)
 
 ### 1. Use Filters for Filtering
 
-```jinja2
+```html+jinja
 {#  Good - use filters #}
 {{ users|selectattr("active")|map(attribute="name")|list }}
 
@@ -405,7 +405,7 @@ ctx.Set("active_users", activeUsers)
 
 ### 2. Keep Comprehensions Simple
 
-```jinja2
+```html+jinja
 {#  Good - simple transformation #}
 {{ [x * 2 for x in numbers] }}
 
@@ -415,7 +415,7 @@ ctx.Set("active_users", activeUsers)
 
 ### 3. Pre-filter in Application Code
 
-```jinja2
+```html+jinja
 {#  Good - filter in Go, comprehend in template #}
 # Go: ctx.Set("active_users", filterActiveUsers(users))
 {{ [user.name for user in active_users] }}
@@ -426,7 +426,7 @@ ctx.Set("active_users", activeUsers)
 
 ### 4. Use Descriptive Variable Names
 
-```jinja2
+```html+jinja
 {#  Good - clear purpose #}
 {% set user_emails = [user.email for user in users] %}
 

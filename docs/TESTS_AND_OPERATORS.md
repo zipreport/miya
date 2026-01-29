@@ -42,7 +42,7 @@ Perform mathematical operations:
 
 **Examples:**
 
-```jinja2
+```html+jinja
 {# Basic arithmetic #}
 <p>Total: ${{ price * quantity }}</p>
 <p>Average: {{ total / count }}</p>
@@ -77,7 +77,7 @@ Compare values:
 
 **Examples:**
 
-```jinja2
+```html+jinja
 {# Price comparisons #}
 {% if product.price < 100 %}
   <span class="affordable">Affordable</span>
@@ -118,7 +118,7 @@ Combine boolean expressions:
 
 **Examples:**
 
-```jinja2
+```html+jinja
 {# AND - all conditions must be true #}
 {% if user.active and user.verified %}
   <p>Full access granted</p>
@@ -155,7 +155,7 @@ Combine boolean expressions:
 
 Use parentheses `()` to control order:
 
-```jinja2
+```html+jinja
 {# Different results based on grouping #}
 {{ true or false and false }}    → true  (and first)
 {{ (true or false) and false }}  → false (or first)
@@ -172,7 +172,7 @@ Test membership in collections:
 
 **Examples:**
 
-```jinja2
+```html+jinja
 {# List membership #}
 {% if "admin" in user.roles %}
   <p>Admin access</p>
@@ -202,7 +202,7 @@ Test membership in collections:
 
 Tests use the `is` syntax to check conditions:
 
-```jinja2
+```html+jinja
 {{ value is test_name }}
 {{ value is test_name(argument) }}
 {{ value is not test_name }}
@@ -225,7 +225,7 @@ Check variable types:
 
 **Examples:**
 
-```jinja2
+```html+jinja
 {# Check if variable exists #}
 {% if user is defined %}
   <p>Welcome, {{ user.name }}!</p>
@@ -267,7 +267,7 @@ Check container types:
 
 **Examples:**
 
-```jinja2
+```html+jinja
 {# Check if iterable #}
 {% if items is iterable %}
   <ul>
@@ -302,7 +302,7 @@ Tests for numbers:
 
 **Examples:**
 
-```jinja2
+```html+jinja
 {# Alternating row colors #}
 {% for item in items %}
   <tr class="{{ 'even-row' if loop.index is even else 'odd-row' }}">
@@ -336,7 +336,7 @@ Tests for strings:
 
 **Examples:**
 
-```jinja2
+```html+jinja
 {# File type checking #}
 {% if filename is endswith(".pdf") %}
   <span class="icon-pdf">{{ filename }}</span>
@@ -368,7 +368,7 @@ Alternative comparison syntax:
 
 **Examples:**
 
-```jinja2
+```html+jinja
 {# Equality test #}
 {% if status is equalto("active") %}
   <span class="badge-success">Active</span>
@@ -384,7 +384,7 @@ Alternative comparison syntax:
 
 Use `is not` to negate any test:
 
-```jinja2
+```html+jinja
 {# Not defined #}
 {% if error is not defined %}
   <p>No errors</p>
@@ -412,7 +412,7 @@ Use `is not` to negate any test:
 
 ### Example 1: User Access Control
 
-```jinja2
+```html+jinja
 {% if user is defined and user.active %}
   {% if user.role == "admin" %}
     <div class="admin-panel">
@@ -443,7 +443,7 @@ Use `is not` to negate any test:
 
 ### Example 2: Product Display
 
-```jinja2
+```html+jinja
 {% for product in products %}
   <div class="product-card">
     <h3>{{ product.name }}</h3>
@@ -477,7 +477,7 @@ Use `is not` to negate any test:
 
 ### Example 3: Form Validation Display
 
-```jinja2
+```html+jinja
 <form>
   {# Username field #}
   <div class="form-group">
@@ -518,7 +518,7 @@ Use `is not` to negate any test:
 
 ### Example 4: Data Table with Highlighting
 
-```jinja2
+```html+jinja
 <table>
   <thead>
     <tr>
@@ -558,7 +558,7 @@ Use `is not` to negate any test:
 
 ### Example 5: Complex Conditional Logic
 
-```jinja2
+```html+jinja
 {% for order in orders %}
   <div class="order">
     <h3>Order #{{ order.id }}</h3>
@@ -623,7 +623,7 @@ Use `is not` to negate any test:
 
 ### 1. Use Tests for Type Checking
 
-```jinja2
+```html+jinja
 {#  Good - explicit type test #}
 {% if value is defined and value is not none %}
   {{ value }}
@@ -637,7 +637,7 @@ Use `is not` to negate any test:
 
 ### 2. Combine Operators Clearly
 
-```jinja2
+```html+jinja
 {#  Good - clear with parentheses #}
 {% if (user.active and user.verified) or user.role == "admin" %}
 
@@ -647,7 +647,7 @@ Use `is not` to negate any test:
 
 ### 3. Use Appropriate Tests
 
-```jinja2
+```html+jinja
 {#  Good - use even test #}
 {% if number is even %}
 

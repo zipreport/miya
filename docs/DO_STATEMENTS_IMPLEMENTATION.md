@@ -6,7 +6,7 @@ Do statements in Jinja2 allow executing expressions purely for side effects with
 
 ## Syntax
 
-```jinja2
+```html+jinja
 {% do expression %}
 ```
 
@@ -15,7 +15,7 @@ The `do` statement evaluates any valid Jinja2 expression but discards the result
 ## Basic Usage
 
 ### Simple Expressions
-```jinja2
+```html+jinja
 {# Execute arithmetic - no output #}
 {% do 5 + 3 * 2 %}
 
@@ -26,7 +26,7 @@ Hello {{ name }}!  <!-- Output: Hello world! -->
 ```
 
 ### Filter Applications
-```jinja2
+```html+jinja
 {% set text = "hello" %}
 {% do text|upper %}  {# Evaluates filter but produces no output #}
 Original: {{ text }}, Uppercase: {{ text|upper }}
@@ -34,7 +34,7 @@ Original: {{ text }}, Uppercase: {{ text|upper }}
 ```
 
 ### Complex Expressions
-```jinja2
+```html+jinja
 {% set items = ["a", "b", "c"] %}
 {% do items[1]|upper %}  {# Access and filter - no output #}
 {% do (10 + 5) * 2 %}   {# Arithmetic - no output #}
@@ -44,7 +44,7 @@ Original: {{ text }}, Uppercase: {{ text|upper }}
 ## Integration with Control Flow
 
 ### In Conditional Statements
-```jinja2
+```html+jinja
 {% set debug = true %}
 {% if debug %}
   {% do "Debug mode activated" %}  {# Expression evaluated, no output #}
@@ -53,7 +53,7 @@ Original: {{ text }}, Uppercase: {{ text|upper }}
 ```
 
 ### In Loops
-```jinja2
+```html+jinja
 {% for i in [1, 2, 3, 4, 5] %}
   {% do i * 2 %}  {# Evaluate expression for each iteration #}
   <li>Item {{ i }}</li>
@@ -61,7 +61,7 @@ Original: {{ text }}, Uppercase: {{ text|upper }}
 ```
 
 ### With Other Statements
-```jinja2
+```html+jinja
 {# Combined with set statements #}
 {% set counter = 0 %}
 {% do counter + 1 %}  {# Evaluates but counter remains 0 #}
@@ -78,7 +78,7 @@ Counter value: {{ counter }}
 
 Do statements support full whitespace control like other Jinja2 statements:
 
-```jinja2
+```html+jinja
 {# Standard - preserves whitespace #}
 Start {% do expression %} End
 <!-- Output: Start  End -->
@@ -99,7 +99,7 @@ Start {%- do expression -%} End
 ## Use Cases
 
 ### 1. Expression Validation
-```jinja2
+```html+jinja
 {# Validate expressions without affecting output #}
 {% set user_input = "  UNSAFE DATA  " %}
 {% do user_input|trim|lower %}  {# Validate filter chain works #}
@@ -107,7 +107,7 @@ Clean input: {{ user_input|trim|lower }}
 ```
 
 ### 2. Complex Calculations
-```jinja2
+```html+jinja
 {# Pre-evaluate complex expressions #}
 {% set price = 19.99 %}
 {% set quantity = 3 %}  
@@ -117,14 +117,14 @@ Total: ${{ (price * quantity * (1 + tax_rate))|round(2) }}
 ```
 
 ### 3. Debug Expressions
-```jinja2
+```html+jinja
 {# Test expressions during development #}
 {% do undefined_var %}  <!-- Will produce error if undefined -->
 {% do complex_filter_chain|filter1|filter2 %}  <!-- Test filter chain -->
 ```
 
 ### 4. Side Effect Simulation
-```jinja2
+```html+jinja
 {# In Miya Engine, simulate side effects through expression evaluation #}
 {% set items = [1, 2, 3] %}
 {% for item in items %}
@@ -154,7 +154,7 @@ type DoNode struct {
 - Preserves all error conditions and propagation
 
 ### Error Handling
-```jinja2
+```html+jinja
 {# These produce appropriate errors #}
 {% do undefined_variable %}     <!-- Error: undefined variable -->
 {% do 5 + %}                    <!-- Error: malformed expression -->
@@ -186,7 +186,7 @@ type DoNode struct {
 
 Most do statements will work identically:
 
-```jinja2
+```html+jinja
 {# These work the same #}
 {% do variable %}
 {% do 5 + 3 %}  

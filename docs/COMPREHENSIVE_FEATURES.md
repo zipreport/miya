@@ -16,7 +16,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 
 ### **Status: 100% Compatible **
 
-```jinja2
+```html+jinja
 <!-- base.html -->
 <!DOCTYPE html>
 <html>
@@ -57,7 +57,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ### **Status: 100% Compatible **
 
 ### **Conditional Statements**
-```jinja2
+```html+jinja
 {% if user.active %}
     <span class="active">Active User</span>
 {% elif user.pending %}
@@ -72,7 +72,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **For Loops with Advanced Features**
-```jinja2
+```html+jinja
 {% for user in users %}
     <li class="user-{{ loop.index }}">
         {{ user.name }} 
@@ -107,7 +107,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 -  `loop.revindex0` - Reverse index (0-based)
 
 ### **Variable Assignment**
-```jinja2
+```html+jinja
 <!-- Simple assignment -->
 {% set name = "John Doe" %}
 
@@ -125,7 +125,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **With Statements (Scoping)**
-```jinja2
+```html+jinja
 {% with recent_users = users|selectattr("active")|sort(attribute="created", reverse=true)|list %}
     {% if recent_users %}
         <h3>Recent Active Users ({{ recent_users|length }})</h3>
@@ -143,21 +143,21 @@ This document provides the complete feature reference for Miya (miya), based on 
 ### **Status: 100% Compatible **
 
 ### **Template Inclusion**
-```jinja2
+```html+jinja
 <!-- Include with context passing -->
 {% include "partials/header.html" %}
 {% include "partials/user_stats.html" %}
 ```
 
 ### **Namespace Imports**
-```jinja2
+```html+jinja
 {% import "macros/forms.html" as forms %}
 {{ forms.input_field("username", "text", "", "Username", required=true) }}
 {{ forms.render_card("Title", content_data) }}
 ```
 
 ### **Selective Imports**
-```jinja2
+```html+jinja
 {% from "macros/forms.html" import input_field, render_card %}
 {{ input_field("email", "email", "", "Email") }}
 {{ render_card("User Info", user_data) }}
@@ -175,7 +175,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 
 ### **Status: 90% Compatible **
 
-```jinja2
+```html+jinja
 <!-- Basic macro -->
 {% macro greeting(name) %}
     <h1>Hello, {{ name }}!</h1>
@@ -223,7 +223,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 -  Keyword arguments (`**kwargs`) - Parser limitation
 
 **Workarounds:**
-```jinja2
+```html+jinja
 <!-- Instead of *args, use explicit parameters or lists -->
 {% macro render_items(items, class="") %}
     <ul class="{{ class }}">
@@ -241,7 +241,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ### **Status: 98% Compatible **
 
 ### **String Filters (18 filters)**
-```jinja2
+```html+jinja
 {{ "hello world"|upper }}                    → "HELLO WORLD"
 {{ "HELLO WORLD"|lower }}                    → "hello world"
 {{ "hello world"|title }}                    → "Hello World"
@@ -262,7 +262,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **Collection Filters (15 filters)**
-```jinja2
+```html+jinja
 {{ [1,3,2]|sort }}                          → [1,2,3]
 {{ [1,2,3]|reverse }}                       → [3,2,1]
 {{ [1,1,2,2]|unique }}                      → [1,2]
@@ -281,7 +281,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **Numeric Filters (10 filters)**
-```jinja2
+```html+jinja
 {{ -42|abs }}                               → 42
 {{ 3.14159|round(2) }}                      → 3.14
 {{ 3.7|ceil }}                              → 4
@@ -295,7 +295,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **HTML/Security Filters (11 filters)**
-```jinja2
+```html+jinja
 {{ "<script>"|escape }}                     → "&lt;script&gt;"
 {{ "<script>"|e }}                          → "&lt;script&gt;" (alias)
 {{ html_content|safe }}                     → unescaped HTML
@@ -310,7 +310,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **Utility Filters (11 filters)**
-```jinja2
+```html+jinja
 {{ user.email|default("No email") }}        → fallback value
 {{ user.email|d("No email") }}              → alias
 {{ user|attr("name") }}                     → get attribute
@@ -325,7 +325,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **Date/Time Filters (8 filters)**
-```jinja2
+```html+jinja
 {{ now|date }}                              → formatted date
 {{ now|time }}                              → formatted time
 {{ now|strftime("%Y-%m-%d") }}              → custom format
@@ -343,7 +343,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ### **Status: 95% Compatible **
 
 ### **Type Tests (8 tests)**
-```jinja2
+```html+jinja
 {{ variable is defined }}                   → true if exists
 {{ variable is undefined }}                 → true if doesn't exist
 {{ value is none }}                         → true if None/null
@@ -355,7 +355,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **Container Tests (4 tests)**
-```jinja2
+```html+jinja
 {{ value is sequence }}                     → true if list/array
 {{ value is mapping }}                      → true if dict/map
 {{ value is iterable }}                     → true if can iterate
@@ -363,14 +363,14 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **Numeric Tests (3 tests)**
-```jinja2
+```html+jinja
 {{ number is even }}                        → true if even
 {{ number is odd }}                         → true if odd
 {{ number is divisibleby(3) }}              → true if divisible
 ```
 
 ### **String Tests (7 tests)**
-```jinja2
+```html+jinja
 {{ text is lower }}                         → true if lowercase
 {{ text is upper }}                         → true if uppercase
 {{ text is startswith("Hello") }}           → true if starts with
@@ -381,7 +381,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **Comparison Tests (4 tests)**
-```jinja2
+```html+jinja
 {{ value is equalto(other) }}               → true if equal
 {{ value is sameas(other) }}                → true if same object
 {{ item is in(collection) }}                → true if contains
@@ -389,7 +389,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **Negated Tests**
-```jinja2
+```html+jinja
 {{ value is not defined }}                  → negation of any test
 {{ value is not none }}
 {{ value is not empty }}
@@ -402,7 +402,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ### **Status: 85% Compatible **
 
 ### **Whitespace Control**
-```jinja2
+```html+jinja
 {%- for item in items -%}
     <li>{{- item -}}</li>
 {%- endfor -%}
@@ -412,7 +412,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 ```
 
 ### **Raw Blocks**
-```jinja2
+```html+jinja
 {% raw %}
 This {{ will not }} be {% processed %}
 Shows actual template syntax: {% for item in items %}{{ item }}{% endfor %}
@@ -420,7 +420,7 @@ Shows actual template syntax: {% for item in items %}{{ item }}{% endfor %}
 ```
 
 ### **Filter Blocks**
-```jinja2
+```html+jinja
 {% filter upper %}
 This entire block will be uppercase.
 Including {{ variable }} content.
@@ -435,7 +435,7 @@ Numbers like {{ 12345 }} are also affected.
 ```
 
 ### **Autoescaping Control**
-```jinja2
+```html+jinja
 {% autoescape true %}
     {{ user_input }}  <!-- will be HTML escaped -->
 {% endautoescape %}
@@ -446,7 +446,7 @@ Numbers like {{ 12345 }} are also affected.
 ```
 
 ### **Complex Expressions**
-```jinja2
+```html+jinja
 <!-- Arithmetic and comparisons -->
 {{ (active_count / user_count * 100)|round if user_count > 0 else 0 }}
 
@@ -588,7 +588,7 @@ ctx.Set("current_time", time.Now())
 ##  Usage Examples
 
 ### **Complete Web Application Template**
-```jinja2
+```html+jinja
 <!-- templates/layout.html -->
 <!DOCTYPE html>
 <html lang="en">

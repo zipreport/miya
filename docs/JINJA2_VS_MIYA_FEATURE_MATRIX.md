@@ -150,7 +150,7 @@ optimizations.
 
 **Basic Usage:**
 
-```jinja2
+```html+jinja
 {% filter upper %}
   Hello World
 {% endfilter %}
@@ -159,7 +159,7 @@ optimizations.
 
 **Filter Chaining:**
 
-```jinja2
+```html+jinja
 {% filter upper|reverse %}
   hello world
 {% endfilter %}
@@ -168,7 +168,7 @@ optimizations.
 
 **Filters with Arguments:**
 
-```jinja2
+```html+jinja
 {% filter truncate(10) %}
   This is a very long text that will be truncated
 {% endfilter %}
@@ -177,7 +177,7 @@ optimizations.
 
 **Complex Content Support:**
 
-```jinja2
+```html+jinja
 {% filter upper %}
   Hello {{ name }}!
   {% for item in items %}
@@ -188,7 +188,7 @@ optimizations.
 
 **Nested Filter Blocks:**
 
-```jinja2
+```html+jinja
 {% filter upper %}
   Outer content
   {% filter lower %}
@@ -215,7 +215,7 @@ purely for side effects without producing template output.
 
 **Basic Usage:**
 
-```jinja2
+```html+jinja
 {% set items = [] %}
 {% do items.append("hello") %}  {# Python-style method calls #}
 {{ items[0] }}  <!-- Output: hello -->
@@ -228,7 +228,7 @@ Original value: {{ value }}  <!-- Output: Original value: 42 -->
 
 **Expression Evaluation:**
 
-```jinja2
+```html+jinja
 {# Arithmetic expressions #}
 {% do 5 + 3 * 2 %}
 
@@ -243,7 +243,7 @@ Filtered: {{ text|upper }}  <!-- Output: Filtered: HELLO -->
 
 **Integration with Control Flow:**
 
-```jinja2
+```html+jinja
 {# In conditionals #}
 {% if condition %}
   {% do complex_expression %}
@@ -262,7 +262,7 @@ Start{%- do expression -%}End  <!-- Output: StartEnd -->
 
 **Use Cases:**
 
-```jinja2
+```html+jinja
 {# Trigger calculations without output #}
 {% set counter = 0 %}
 {% for i in range(10) %}
@@ -292,7 +292,7 @@ Clean input: {{ user_input|trim|lower }}
 
 **Error Handling:**
 
-```jinja2
+```html+jinja
 {# Undefined variable error propagation #}
 {% do undefined_variable %}  <!-- Error: undefined variable -->
 

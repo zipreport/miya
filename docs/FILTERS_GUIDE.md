@@ -23,7 +23,7 @@ Filters transform variables and expressions in templates. Miya Engine supports 7
 
 ### Syntax
 
-```jinja2
+```html+jinja
 {{ variable|filter }}
 {{ variable|filter(arg1, arg2) }}
 {{ variable|filter1|filter2|filter3 }}
@@ -31,7 +31,7 @@ Filters transform variables and expressions in templates. Miya Engine supports 7
 
 ### Examples
 
-```jinja2
+```html+jinja
 {{ "hello"|upper }}                    → HELLO
 {{ 3.14159|round(2) }}                 → 3.14
 {{ items|join(", ") }}                 → item1, item2, item3
@@ -52,7 +52,7 @@ Filters transform variables and expressions in templates. Miya Engine supports 7
 | `capitalize` | `{{"hello world"\|capitalize}}` | `Hello world` |
 | `title` | `{{"hello world"\|title}}` | `Hello World` |
 
-```jinja2
+```html+jinja
 {{ "miya engine"|upper }}              → MIYA ENGINE
 {{ "MIYA ENGINE"|lower }}              → miya engine
 {{ "hello world"|title }}              → Hello World
@@ -70,7 +70,7 @@ Filters transform variables and expressions in templates. Miya Engine supports 7
 | `slugify` | URL-safe slug | `{{"Hello World!"\|slugify}}` → `hello-world` |
 
 **Examples:**
-```jinja2
+```html+jinja
 {{ "   hello world   "|trim }}         → "hello world"
 {{ "Hello World"|replace("World", "Miya") }}  → "Hello Miya"
 {{ long_text|truncate(30) }}           → "This is a very long text..."
@@ -89,7 +89,7 @@ Filters transform variables and expressions in templates. Miya Engine supports 7
 | `split` | Split to list | `{{"a,b,c"\|split(",")}}` → `["a","b","c"]` |
 
 **Examples:**
-```jinja2
+```html+jinja
 {{ "The quick brown fox"|wordcount }}  → 4
 {{ "filename.txt"|endswith(".txt") }}  → true
 {{ "hello world"|contains("world") }}  → true
@@ -119,7 +119,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 | `list` | Convert to list | `{{range(5)\|list}}` → `[0,1,2,3,4]` |
 
 **Examples:**
-```jinja2
+```html+jinja
 {{ numbers|first }}                    → 1
 {{ numbers|last }}                     → 10
 {{ items|length }}                     → 5
@@ -136,7 +136,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 | `rejectattr` | Reject by attribute | `{{users\|rejectattr("active")}}` |
 
 **Examples:**
-```jinja2
+```html+jinja
 {# Extract all user names #}
 {{ users|map(attribute="name")|join(", ") }}
 → "Alice, Bob, Charlie"
@@ -161,7 +161,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 | `pow` | Power operation | `{{2\|pow(8)}}` → `256` |
 
 **Examples:**
-```jinja2
+```html+jinja
 {{ -42|abs }}                          → 42
 {{ 3.14159|round(2) }}                 → 3.14
 {{ "123"|int + 7 }}                    → 130
@@ -173,7 +173,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 
  **Note:** `sum`, `min`, `max` may have limited support. Test in your use case.
 
-```jinja2
+```html+jinja
 {# May work in some contexts #}
 {{ numbers|sum }}
 {{ numbers|min }}
@@ -194,7 +194,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 | `urlencode` | URL encode | `{{"hello world"\|urlencode}}` → `hello%20world` |
 
 **Examples:**
-```jinja2
+```html+jinja
 {# Auto-escape user input #}
 {{ user_input|escape }}
 → &lt;script&gt;alert('XSS')&lt;/script&gt;
@@ -225,7 +225,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 
 ### Default Values
 
-```jinja2
+```html+jinja
 {{ undefined_var|default("fallback") }}     → "fallback"
 {{ none_var|default("default") }}           → "default"
 {{ ""|default("empty string") }}            → "empty string"
@@ -243,7 +243,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 | `filesizeformat` | Format file size | `{{1536\|filesizeformat}}` → `1.5 KB` |
 
 **Examples:**
-```jinja2
+```html+jinja
 {{ "Hello {0}, you have {1} messages"|format(name, count) }}
 → "Hello Alice, you have 5 messages"
 
@@ -265,7 +265,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 
 Apply multiple filters in sequence:
 
-```jinja2
+```html+jinja
 {{ "  hello world  "|trim|upper|replace("WORLD", "MIYA") }}
 → "HELLO MIYA"
 
@@ -278,7 +278,7 @@ Apply multiple filters in sequence:
 
 ### Order Matters
 
-```jinja2
+```html+jinja
 {# Different results based on order #}
 {{ "hello"|upper|replace("L", "X") }}      → "HEXXO"
 {{ "hello"|replace("l", "X")|upper }}      → "HEXXO"
@@ -286,7 +286,7 @@ Apply multiple filters in sequence:
 
 ### Chaining with Arguments
 
-```jinja2
+```html+jinja
 {{ value|default("N/A")|upper|center(20, "-") }}
 → "--------N/A---------"
 
@@ -300,7 +300,7 @@ Apply multiple filters in sequence:
 
 ### Example 1: User Display Names
 
-```jinja2
+```html+jinja
 {# Format user names #}
 {% for user in users %}
   {{ user.name|title }} ({{ user.role|capitalize }})
@@ -312,7 +312,7 @@ Apply multiple filters in sequence:
 
 ### Example 2: Price Formatting
 
-```jinja2
+```html+jinja
 {# Format currency #}
 ${{ price|round(2) }}
 
@@ -323,7 +323,7 @@ Discounted: ${{ (price * 0.9)|round(2) }}
 
 ### Example 3: Safe HTML Rendering
 
-```jinja2
+```html+jinja
 {# Escape user content #}
 <div class="comment">
   {{ user_comment|escape }}
@@ -337,7 +337,7 @@ Discounted: ${{ (price * 0.9)|round(2) }}
 
 ### Example 4: List Processing
 
-```jinja2
+```html+jinja
 {# Join list items #}
 Tags: {{ tags|join(", ") }}
 
@@ -356,7 +356,7 @@ First: {{ items|first }}, Last: {{ items|last }}
 
 Based on testing, these filters may not work reliably:
 
-```jinja2
+```html+jinja
 {# May fail with "requires a sequence" error #}
 {{ numbers|sort }}
 {{ numbers|reverse }}
@@ -369,7 +369,7 @@ Based on testing, these filters may not work reliably:
 
 Instead of problematic filters, use:
 
-```jinja2
+```html+jinja
 {# Use in loops #}
 {% for num in numbers %}{{ num }}{% endfor %}
 
@@ -382,7 +382,7 @@ Instead of problematic filters, use:
 
 ### Comprehension Filters Don't Work
 
-```jinja2
+```html+jinja
 {#  This doesn't work #}
 {{ [x for x in numbers if x > 5] }}
 

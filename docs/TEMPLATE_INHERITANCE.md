@@ -31,7 +31,7 @@ Template inheritance allows you to build a base "skeleton" template containing c
 
 ### Syntax
 
-```jinja2
+```html+jinja
 {# base.html #}
 {% block blockname %}
   default content
@@ -92,7 +92,7 @@ A base template defines the overall structure with placeholder blocks:
 Child templates use `{% extends %}` to inherit from a base template:
 
 **`page.html`:**
-```jinja2
+```html+jinja
 {% extends "base.html" %}
 
 {% block title %}My Page Title{% endblock %}
@@ -124,7 +124,7 @@ Child templates use `{% extends %}` to inherit from a base template:
 The `{{ super() }}` function includes the parent block's content:
 
 **Example:**
-```jinja2
+```html+jinja
 {% extends "base.html" %}
 
 {% block header %}
@@ -144,7 +144,7 @@ The `{{ super() }}` function includes the parent block's content:
 ### Use Cases for super()
 
 1. **Appending to parent content:**
-   ```jinja2
+   ```html+jinja
    {% block navigation %}
        {{ super() }}
        <a href="/new-link">New Link</a>
@@ -152,7 +152,7 @@ The `{{ super() }}` function includes the parent block's content:
    ```
 
 2. **Prepending to parent content:**
-   ```jinja2
+   ```html+jinja
    {% block footer %}
        <p>Additional info</p>
        {{ super() }}
@@ -160,7 +160,7 @@ The `{{ super() }}` function includes the parent block's content:
    ```
 
 3. **Wrapping parent content:**
-   ```jinja2
+   ```html+jinja
    {% block content %}
        <div class="wrapper">
            {{ super() }}
@@ -175,7 +175,7 @@ The `{{ super() }}` function includes the parent block's content:
 ### 1. Design Block Structure Carefully
 
 **Good block hierarchy:**
-```jinja2
+```html+jinja
 {% block page %}
     {% block header %}...{% endblock %}
     {% block content %}
@@ -189,7 +189,7 @@ The `{{ super() }}` function includes the parent block's content:
 
 ### 2. Use Empty Blocks for Optional Content
 
-```jinja2
+```html+jinja
 {# Optional blocks that child templates can fill #}
 {% block extra_css %}{% endblock %}
 {% block extra_js %}{% endblock %}
@@ -198,14 +198,14 @@ The `{{ super() }}` function includes the parent block's content:
 
 ### 3. Provide Sensible Defaults
 
-```jinja2
+```html+jinja
 {% block title %}{{ site_name }} - Default Title{% endblock %}
 {% block description %}Default site description{% endblock %}
 ```
 
 ### 4. Document Your Blocks
 
-```jinja2
+```html+jinja
 {# base.html #}
 
 {# Block: page_title - Sets the browser title (required) #}
@@ -229,7 +229,7 @@ base.html
 ```
 
 **Example:**
-```jinja2
+```html+jinja
 {# base.html - Foundation #}
 {% block container %}
     {% block header %}{% endblock %}
@@ -300,7 +300,7 @@ Here's a complete working example from `examples/features/inheritance/`:
 ### Child Template
 
 **`child.html`:**
-```jinja2
+```html+jinja
 {% extends "base.html" %}
 
 {% block title %}{{ page_title }} - Miya Engine{% endblock %}
@@ -454,7 +454,7 @@ templates/
 
 ### Pattern 2: Dashboard Layout
 
-```jinja2
+```html+jinja
 {# dashboard_base.html #}
 {% extends "base.html" %}
 
@@ -478,7 +478,7 @@ templates/
 
 ### Pattern 3: Email Templates
 
-```jinja2
+```html+jinja
 {# email_base.html #}
 <!DOCTYPE html>
 <html>
@@ -528,7 +528,7 @@ fsLoader := loader.NewFileSystemLoader([]string{".", "templates"}, templateParse
 **Cause:** Content outside blocks in child templates is ignored.
 
 **Solution:**
-```jinja2
+```html+jinja
 {#  This is ignored #}
 <p>This content is outside any block</p>
 

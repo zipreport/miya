@@ -22,7 +22,7 @@ Comprehensions allow you to create new lists or dictionaries by:
 3. Optionally filtering elements with a condition
 
 **Basic Syntax:**
-```jinja2
+```html+jinja
 {{ [expression for variable in iterable] }}
 {{ [expression for variable in iterable if condition] }}
 {{ {key_expr: value_expr for variable in iterable} }}
@@ -35,7 +35,7 @@ Comprehensions allow you to create new lists or dictionaries by:
 
 Transform each element in a list:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ [x * 2 for x in numbers] }}
 
@@ -47,7 +47,7 @@ Transform each element in a list:
 
 Apply string operations:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ [name.upper() for name in users] }}
 
@@ -59,7 +59,7 @@ Apply string operations:
 
 Extract properties from objects:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ [user.name for user in users] }}
 
@@ -73,7 +73,7 @@ Extract properties from objects:
 
 Create dictionaries from iterables:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ {user.name: user.age for user in users} }}
 
@@ -85,7 +85,7 @@ Create dictionaries from iterables:
 
 Transform keys while preserving values:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ {key.upper(): value for key, value in items.items()} }}
 
@@ -97,7 +97,7 @@ Transform keys while preserving values:
 
 Transform values while preserving keys:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ {key: value * 2 for key, value in scores.items()} }}
 
@@ -111,7 +111,7 @@ Transform values while preserving keys:
 
 Filter elements based on conditions:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ [x for x in numbers if x > 5] }}
 
@@ -123,7 +123,7 @@ Filter elements based on conditions:
 
 Use complex boolean expressions:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ [user.name for user in users if user.age >= 18 and user.active] }}
 
@@ -139,7 +139,7 @@ Use complex boolean expressions:
 
 Filter dictionary entries:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ {key: value for key, value in scores.items() if value > 80} }}
 
@@ -153,7 +153,7 @@ Filter dictionary entries:
 
 Perform calculations in comprehensions:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ [x**2 + 1 for x in range(1, 5)] }}
 
@@ -165,7 +165,7 @@ Perform calculations in comprehensions:
 
 Format strings within comprehensions:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ [user.name + " (" + user.role + ")" for user in users] }}
 
@@ -177,7 +177,7 @@ Format strings within comprehensions:
 
 Apply filters within comprehensions:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ [name|title for name in names] }}
 
@@ -191,7 +191,7 @@ Apply filters within comprehensions:
 
 Create nested list structures:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ [[x * y for x in row] for y in [1, 2, 3]] }}
 
@@ -203,7 +203,7 @@ Create nested list structures:
 
 Flatten nested structures:
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {{ [item for sublist in nested_list for item in sublist] }}
 
@@ -217,7 +217,7 @@ Flatten nested structures:
 
 Comprehensions create new collections in memory:
 
-```jinja2
+```html+jinja
 <!-- Efficient: Direct iteration -->
 {% for user in users %}
   {{ user.name }}
@@ -233,7 +233,7 @@ Comprehensions create new collections in memory:
 
 For complex filtering, consider using filters instead:
 
-```jinja2
+```html+jinja
 <!-- Comprehension approach -->
 {{ [user for user in users if user.age > 18 and user.department == "engineering"] }}
 
@@ -247,7 +247,7 @@ For complex filtering, consider using filters instead:
 
 #### 1. Navigation Menu Generation
 
-```jinja2
+```html+jinja
 <!-- Template -->
 <nav>
   {% for item in [{"url": page.url, "title": page.title, "active": page.slug == current_page} for page in pages if page.visible] %}
@@ -260,7 +260,7 @@ For complex filtering, consider using filters instead:
 
 #### 2. Form Field Processing
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {% set required_fields = [field.name for field in form.fields if field.required] %}
 {% set field_errors = {field.name: field.errors for field in form.fields if field.errors} %}
@@ -283,7 +283,7 @@ For complex filtering, consider using filters instead:
 
 #### 3. Data Aggregation
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {% set total_sales = [sale.amount for sale in sales if sale.status == "completed"]|sum %}
 {% set sales_by_category = {category: [sale.amount for sale in sales if sale.category == category]|sum for category in categories} %}
@@ -304,7 +304,7 @@ For complex filtering, consider using filters instead:
 
 #### 4. Tag Cloud Generation
 
-```jinja2
+```html+jinja
 <!-- Template -->
 {% set tag_counts = {tag.name: tag.count for tag in tags if tag.count > 0} %}
 {% set max_count = tag_counts.values()|max %}
@@ -336,7 +336,7 @@ For complex filtering, consider using filters instead:
 
 ### Error Examples
 
-```jinja2
+```html+jinja
 <!-- This will cause an error -->
 {{ [x for x in undefined_variable] }}
 
@@ -348,7 +348,7 @@ For complex filtering, consider using filters instead:
 
 ### 1. Keep Comprehensions Simple
 
-```jinja2
+```html+jinja
 <!-- Good: Simple and readable -->
 {{ [user.name for user in users] }}
 
@@ -358,7 +358,7 @@ For complex filtering, consider using filters instead:
 
 ### 2. Use Meaningful Variable Names
 
-```jinja2
+```html+jinja
 <!-- Good -->
 {{ [product.name for product in products if product.in_stock] }}
 
@@ -368,7 +368,7 @@ For complex filtering, consider using filters instead:
 
 ### 3. Consider Readability vs. Conciseness
 
-```jinja2
+```html+jinja
 <!-- Sometimes a traditional loop is more readable -->
 {% set active_user_names = [] %}
 {% for user in users %}
@@ -383,7 +383,7 @@ For complex filtering, consider using filters instead:
 
 ### 4. Use Filters for Common Operations
 
-```jinja2
+```html+jinja
 <!-- Instead of -->
 {{ [user for user in users if user.age >= 18] }}
 

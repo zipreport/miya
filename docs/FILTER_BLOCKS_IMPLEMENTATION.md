@@ -63,7 +63,7 @@ case lexer.TokenFilter:
 ## Usage Examples
 
 ### Basic Filter Block
-```jinja2
+```html+jinja
 {% filter upper %}
 Hello World
 {% endfilter %}
@@ -71,7 +71,7 @@ Hello World
 ```
 
 ### Filter Chaining
-```jinja2
+```html+jinja
 {% filter trim|upper|reverse %}
   hello world  
 {% endfilter %}
@@ -79,7 +79,7 @@ Hello World
 ```
 
 ### Complex Content
-```jinja2
+```html+jinja
 {% filter upper %}
 {% for user in users %}
   - {{ user.name }}
@@ -88,7 +88,7 @@ Hello World
 ```
 
 ### Nested Filter Blocks
-```jinja2
+```html+jinja
 {% filter upper %}
 Outer: 
 {% filter lower %}
@@ -131,7 +131,7 @@ INNER CONTENT
 
 The implementation supports the following patterns:
 
-```jinja2
+```html+jinja
 <!-- Basic Filter Block -->
 {% filter upper %}Hello {{ user.name }}! Welcome to our application.{% endfilter %}
 <!-- Output: "HELLO JOHN DOE! WELCOME TO OUR APPLICATION." -->
