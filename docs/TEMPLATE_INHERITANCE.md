@@ -542,7 +542,7 @@ fsLoader := loader.NewFileSystemLoader([]string{".", "templates"}, templateParse
 
 ## See Also
 
-- [Working Example](../../examples/features/inheritance/) - Complete runnable example
+- [Working Example](https://github.com/zipreport/miya/tree/master/examples/features/inheritance/) - Complete runnable example
 - [MIYA_LIMITATIONS.md](MIYA_LIMITATIONS.md) - Known limitations
 - [Macros and Includes](MACROS_AND_INCLUDES.md) - Related template organization features
 

@@ -12,7 +12,7 @@ Filters transform variables and expressions in templates. Miya Engine supports 7
 2. [String Filters](#string-filters)
 3. [Collection Filters](#collection-filters)
 4. [Numeric Filters](#numeric-filters)
-5. [HTML & Security Filters](#html--security-filters)
+5. [HTML & Security Filters](#html-security-filters)
 6. [Utility Filters](#utility-filters)
 7. [Filter Chaining](#filter-chaining)
 8. [Limitations](#limitations)
@@ -417,7 +417,7 @@ Instead of problematic filters, use:
 
 ## See Also
 
-- [Working Example](../../examples/features/filters/) - Complete filter examples
+- [Working Example](https://github.com/zipreport/miya/tree/master/examples/features/filters/) - Complete filter examples
 - [MIYA_LIMITATIONS.md](MIYA_LIMITATIONS.md) - Known filter limitations
 - [Filter Blocks](FILTER_BLOCKS_IMPLEMENTATION.md) - Apply filters to entire blocks
 

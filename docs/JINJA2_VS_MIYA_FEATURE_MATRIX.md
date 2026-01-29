@@ -37,8 +37,8 @@ including implementation differences and compatibility notes.
 ##  Documentation Links
 
 - **[COMPREHENSIVE_FEATURES.md](COMPREHENSIVE_FEATURES.md)** - Complete feature reference with examples
-- **[Example Code](../examples/go/complex/)** - Working examples of all features
-- **[Template Examples](../examples/go/complex/templates/)** - Professional template organization
+- **[Example Code](https://github.com/zipreport/miya/tree/master/examples/go/complex/)** - Working examples of all features
+- **[Template Examples](https://github.com/zipreport/miya/tree/master/examples/go/complex/templates/)** - Professional template organization
 
 ---
 

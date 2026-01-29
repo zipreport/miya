@@ -14,7 +14,7 @@ Advanced template features for professionals. Miya Engine provides filter blocks
 4. [Raw Blocks](#raw-blocks)
 5. [Autoescape Control](#autoescape-control)
 6. [Environment Configuration](#environment-configuration)
-7. [Performance & Memory Management](#performance--memory-management)
+7. [Performance & Memory Management](#performance-memory-management)
 8. [Practical Examples](#practical-examples)
 
 ---
@@ -858,10 +858,10 @@ Items: {%- for item in items %}{{ item }}{{ ", " if not loop.last }}{% endfor %}
 
 ## See Also
 
-- [Working Example](../examples/features/advanced/) - Complete advanced features demo
+- [Working Example](https://github.com/zipreport/miya/tree/master/examples/features/advanced/) - Complete advanced features demo
 - [Filters Guide](FILTERS_GUIDE.md) - Available filters for filter blocks
 - [Control Structures](CONTROL_STRUCTURES_GUIDE.md) - Template control flow
-- [Security](FILTERS_GUIDE.md#html--security-filters) - HTML escaping and security
+- [Security](FILTERS_GUIDE.md#html-security-filters) - HTML escaping and security
 
 ---
 

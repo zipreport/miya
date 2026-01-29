@@ -499,7 +499,7 @@ All loop variables available: `index`, `index0`, `first`, `last`, `length`, `rev
 
 ## See Also
 
-- [Working Example](../examples/features/control-structures/) - Complete control structures demo
+- [Working Example](https://github.com/zipreport/miya/tree/master/examples/features/control-structures/) - Complete control structures demo
 - [Tests & Operators](TESTS_AND_OPERATORS.md) - Conditional expressions
 - [Filters Guide](FILTERS_GUIDE.md) - Data transformation in templates
 - [Miya Limitations](MIYA_LIMITATIONS.md) - Known limitations

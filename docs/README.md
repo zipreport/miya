@@ -426,7 +426,7 @@ docs/
 1. Start with [Template Inheritance](TEMPLATE_INHERITANCE.md)
 2. Learn [Control Structures](CONTROL_STRUCTURES_GUIDE.md)
 3. Master [Filters](FILTERS_GUIDE.md)
-4. Explore [Working Examples](../examples/features/)
+4. Explore [Working Examples](https://github.com/zipreport/miya/tree/master/examples/features/)
 
 ### Intermediate
 

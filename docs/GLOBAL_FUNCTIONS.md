@@ -8,15 +8,15 @@ Global functions are built-in functions available in all templates without impor
 
 ## Table of Contents
 
-1. [range() - Number Sequences](#range---number-sequences)
-2. [dict() - Dictionary Constructor](#dict---dictionary-constructor)
-3. [cycler() - Cycle Through Values](#cycler---cycle-through-values)
-4. [joiner() - Smart Joining](#joiner---smart-joining)
-5. [namespace() - Mutable Container](#namespace---mutable-container)
-6. [lipsum() - Lorem Ipsum Generator](#lipsum---lorem-ipsum-generator)
-7. [zip() - Combine Sequences](#zip---combine-sequences)
-8. [enumerate() - Index with Values](#enumerate---index-with-values)
-9. [url_for() - URL Generation](#url_for---url-generation)
+1. [range() - Number Sequences](#range-number-sequences)
+2. [dict() - Dictionary Constructor](#dict-dictionary-constructor)
+3. [cycler() - Cycle Through Values](#cycler-cycle-through-values)
+4. [joiner() - Smart Joining](#joiner-smart-joining)
+5. [namespace() - Mutable Container](#namespace-mutable-container)
+6. [lipsum() - Lorem Ipsum Generator](#lipsum-lorem-ipsum-generator)
+7. [zip() - Combine Sequences](#zip-combine-sequences)
+8. [enumerate() - Index with Values](#enumerate-index-with-values)
+9. [url_for() - URL Generation](#url_for-url-generation)
 
 ---
 
@@ -727,7 +727,7 @@ Generate URLs from endpoint names:
 
 ## See Also
 
-- [Working Example](../examples/features/global-functions/) - Complete function examples
+- [Working Example](https://github.com/zipreport/miya/tree/master/examples/features/global-functions/) - Complete function examples
 - [Control Structures](CONTROL_STRUCTURES_GUIDE.md) - Using functions in loops
 - [Filters Guide](FILTERS_GUIDE.md) - Data transformation
 - [Miya Limitations](MIYA_LIMITATIONS.md) - Known limitations

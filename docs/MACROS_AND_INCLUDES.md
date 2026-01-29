@@ -581,7 +581,7 @@ Each macro should do one thing well:
 
 ## See Also
 
-- [Working Example](../examples/features/macros-includes/) - Complete macro examples
+- [Working Example](https://github.com/zipreport/miya/tree/master/examples/features/macros-includes/) - Complete macro examples
 - [Template Inheritance](TEMPLATE_INHERITANCE.md) - Extending templates
 - [Control Structures](CONTROL_STRUCTURES_GUIDE.md) - Logic in templates
 - [Miya Limitations](MIYA_LIMITATIONS.md) - Known limitations

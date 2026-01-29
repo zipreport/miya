@@ -667,10 +667,10 @@ ctx.Set("current_time", time.Now())
 
 ##  Related Documentation
 
-- **[Example Code](../examples/go/complex/)** - Complete feature examples
-- **[Template Files](../examples/go/complex/templates/)** - Example template organization
-- **[Not Supported Features](../examples/go/complex/not_supported.md)** - Limitations and workarounds
-- **[Performance Benchmarks](../examples/go/comprehensive/)** - Performance analysis
+- **[Example Code](https://github.com/zipreport/miya/tree/master/examples/go/complex)** - Complete feature examples
+- **[Template Files](https://github.com/zipreport/miya/tree/master/examples/go/complex/templates)** - Example template organization
+- **[Limitations](MIYA_LIMITATIONS.md)** - Known limitations and workarounds
+- **[Performance Benchmarks](https://github.com/zipreport/miya/tree/master/examples/go/comprehensive)** - Performance analysis
 
 ---
 

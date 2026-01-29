@@ -659,7 +659,7 @@ Use `is not` to negate any test:
 
 ## See Also
 
-- [Working Example](../examples/features/tests-operators/) - Complete tests and operators demo
+- [Working Example](https://github.com/zipreport/miya/tree/master/examples/features/tests-operators/) - Complete tests and operators demo
 - [Control Structures](CONTROL_STRUCTURES_GUIDE.md) - Using tests in conditionals
 - [Filters Guide](FILTERS_GUIDE.md) - Data transformation
 - [Miya Limitations](MIYA_LIMITATIONS.md) - Known limitations

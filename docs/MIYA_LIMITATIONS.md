@@ -418,7 +418,7 @@ done
 
 ## See Also
 
-- [Feature Examples](../examples/features/) - Working examples of all supported features
+- [Feature Examples](https://github.com/zipreport/miya/tree/master/examples/features/) - Working examples of all supported features
 - [JINJA2_VS_MIYA_FEATURE_MATRIX.md](JINJA2_VS_MIYA_FEATURE_MATRIX.md) - Complete compatibility matrix
 - [COMPREHENSIVE_FEATURES.md](COMPREHENSIVE_FEATURES.md) - All supported features with examples
 

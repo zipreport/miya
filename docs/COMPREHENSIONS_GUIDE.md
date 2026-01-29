@@ -468,7 +468,7 @@ Miya's comprehension support covers the most common use cases. For advanced filt
 
 ## See Also
 
-- [Working Example](../examples/features/comprehensions/) - Complete comprehensions demo
+- [Working Example](https://github.com/zipreport/miya/tree/master/examples/features/comprehensions/) - Complete comprehensions demo
 - [Filters Guide](FILTERS_GUIDE.md) - Using selectattr/select for filtering
 - [Control Structures](CONTROL_STRUCTURES_GUIDE.md) - Alternative loop syntax
-- [Miya Limitations](MIYA_LIMITATIONS.MD) - All known limitations
+- [Miya Limitations](MIYA_LIMITATIONS.md) - All known limitations
