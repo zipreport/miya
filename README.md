@@ -8,6 +8,8 @@
 
 A high-performance Jinja2-compatible template engine implementation in Go.
 
+**[Documentation](https://zipreport.github.io/miya)** | **[Go Reference](https://pkg.go.dev/github.com/zipreport/miya)**
+
 ## Features
 
 - **Jinja2 Compatibility**: Parse and render Jinja2 templates with familiar syntax
@@ -158,7 +160,7 @@ tmpl.Release()
 
 ## Documentation
 
-See [docs/](docs/) for detailed documentation.
+Full documentation is available at **[zipreport.github.io/miya](https://zipreport.github.io/miya)**.
 
 ## More Examples
 
