@@ -265,7 +265,10 @@ func GroupByFilter(value interface{}, args ...interface{}) (interface{}, error) 
 	}
 }
 
-// ToJSONFilter converts value to JSON string
+// ToJSONFilter converts value to JSON string.
+// Returns a SafeValue to prevent HTML auto-escaping, matching Jinja2's
+// tojson behavior which returns Markup. This is necessary for safe
+// embedding of JSON in <script> blocks where HTML entities are not decoded.
 func ToJSONFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	indent := 0
 	if len(args) > 0 {
@@ -288,7 +291,7 @@ func ToJSONFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("failed to convert to JSON: %v", err)
 	}
 
-	return string(data), nil
+	return runtime.SafeValue{Value: string(data)}, nil
 }
 
 // FromJSONFilter parses JSON string to value

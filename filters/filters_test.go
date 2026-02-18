@@ -3,6 +3,8 @@ package filters
 import (
 	"reflect"
 	"testing"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 func TestFilterRegistry(t *testing.T) {
@@ -253,8 +255,8 @@ func TestUtilityFilters(t *testing.T) {
 		{"default without value", DefaultFilter, "", []interface{}{"fallback"}, "fallback", false},
 		{"default boolean true", DefaultFilter, true, []interface{}{"fallback", true}, true, false},
 		{"default boolean false", DefaultFilter, false, []interface{}{"fallback", true}, "fallback", false},
-		{"tojson", ToJSONFilter, map[string]interface{}{"key": "value"}, nil, `{"key":"value"}`, false},
-		{"tojson indent", ToJSONFilter, map[string]interface{}{"key": "value"}, []interface{}{2}, "{\n  \"key\": \"value\"\n}", false},
+		{"tojson", ToJSONFilter, map[string]interface{}{"key": "value"}, nil, runtime.SafeValue{Value: `{"key":"value"}`}, false},
+		{"tojson indent", ToJSONFilter, map[string]interface{}{"key": "value"}, []interface{}{2}, runtime.SafeValue{Value: "{\n  \"key\": \"value\"\n}"}, false},
 		{"fromjson", FromJSONFilter, `{"key":"value"}`, nil, map[string]interface{}{"key": "value"}, false},
 		{"string", StringFilter, 123, nil, "123", false},
 	}
