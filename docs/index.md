@@ -75,6 +75,10 @@ func main() {
 
 ## Documentation
 
+### Getting Started
+
+- **[Usage Guide](USAGE_GUIDE.md)** - Loading templates, contexts, concurrency, web server integration
+
 ### Core Features
 
 - **[Template Inheritance](TEMPLATE_INHERITANCE.md)** - Learn about extends, blocks, and super() for template composition

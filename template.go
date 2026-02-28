@@ -19,6 +19,9 @@ var (
 	blogAuthorLinkRegex = regexp.MustCompile(`(?i)By\s+<a\s+href="[^"]*">([^<]+)</a>`)
 )
 
+// Template is a compiled template ready for rendering.
+// It holds the parsed AST and a reference to the Environment that created it.
+// Templates are safe for concurrent rendering.
 type Template struct {
 	name   string
 	source string
@@ -30,6 +33,8 @@ type Template struct {
 	cacheMu             sync.RWMutex // Protects hasInheritanceCache
 }
 
+// Render executes the template with the given context and returns the rendered output as a string.
+// It resolves template inheritance, applies whitespace processing, and handles auto-escaping.
 func (t *Template) Render(context Context) (string, error) {
 	var buf bytes.Buffer
 	err := t.RenderTo(&buf, context)
@@ -55,6 +60,8 @@ func (t *Template) Render(context Context) (string, error) {
 	return output, nil
 }
 
+// RenderTo executes the template with the given context and writes the output to w.
+// This is more efficient than Render when writing to an io.Writer directly.
 func (t *Template) RenderTo(w io.Writer, context Context) error {
 	if t.ast == nil {
 		// If no AST is available, just write the source as-is
@@ -150,14 +157,17 @@ func (a *TemplateContextAdapter) IsAutoescapeEnabled() bool {
 	return a.env.autoEscape
 }
 
+// Name returns the template name (filename or "<string>" for string templates).
 func (t *Template) Name() string {
 	return t.name
 }
 
+// Source returns the original template source code.
 func (t *Template) Source() string {
 	return t.source
 }
 
+// AST returns the parsed abstract syntax tree of the template.
 func (t *Template) AST() parser.Node {
 	return t.ast
 }

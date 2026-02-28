@@ -67,27 +67,24 @@ Apply template filters in comprehensions:
 ### Arithmetic Operations
 
 ```html+jinja
-{# Calculate totals #}
-{{ [price * quantity for price, quantity in zip(prices, quantities)] }}
-
 {# Apply discount #}
 {{ [price * 0.9 for price in prices] }}
 → [8.99, 17.99, 26.99]
 
-{# Complex expressions #}
-{{ [price * qty * (1 - discount/100) for price, qty, discount in product_data] }}
+{# Calculate with expressions #}
+{{ [item.price * item.qty for item in cart] }}
 ```
 
 ### String Operations
 
 ```html+jinja
-{# Concatenate strings #}
-{{ [first ~ " " ~ last for first, last in zip(first_names, last_names)] }}
-→ ["Alice Smith", "Bob Jones", "Charlie Brown"]
-
 {# Format user display #}
 {{ [user.name ~ " (" ~ user.role ~ ")" for user in users] }}
 → ["Alice (admin)", "Bob (user)", "Charlie (moderator)"]
+
+{# Concatenate with filter #}
+{{ [name|upper for name in names] }}
+→ ["ALICE", "BOB", "CHARLIE"]
 ```
 
 ---
@@ -258,6 +255,50 @@ ctx.Set("active_users", activeUsers)
 
 ## Practical Examples
 
+### Real-World: Shopping Cart Summary
+
+```html+jinja
+{# Calculate line totals using list comprehension #}
+{% set cart_items = [{"name": item.product.name, "price": item.price, "qty": item.quantity, "total": item.price * item.quantity} for item in cart.items] %}
+{% set subtotal = [item.total for item in cart_items]|sum %}
+{% set tax = subtotal * 0.08 %}
+
+<div class="cart-summary">
+  <h3>Order Summary</h3>
+  {% for item in cart_items %}
+    <div class="cart-item">
+      <span>{{ item.name }} ({{ item.qty }}x)</span>
+      <span>${{ item.total }}</span>
+    </div>
+  {% endfor %}
+  <div class="totals">
+    <div>Subtotal: ${{ subtotal }}</div>
+    <div>Tax: ${{ tax|round(2) }}</div>
+    <div class="total">Total: ${{ (subtotal + tax)|round(2) }}</div>
+  </div>
+</div>
+```
+
+### Real-World: Dynamic Form Fields
+
+```html+jinja
+{# Extract required fields and field types using comprehensions #}
+{% set required_fields = [field.name for field in form_schema.fields] %}
+{% set field_types = {field.name: field.type for field in form_schema.fields} %}
+
+<form id="dynamic-form" method="post">
+  {% for field in form_schema.fields %}
+    <div class="form-group">
+      <label for="{{ field.name }}">{{ field.label }}</label>
+      <input type="{{ field_types[field.name] }}"
+             name="{{ field.name }}"
+             id="{{ field.name }}">
+    </div>
+  {% endfor %}
+  <button type="submit">Submit</button>
+</form>
+```
+
 ### Example 1: Extract Names
 
 ```html+jinja
@@ -354,21 +395,18 @@ ctx.Set("active_users", activeUsers)
 </ul>
 ```
 
-### Example 8: Working with Zip
+### Example 8: Working with Zip (Use For Loop)
+
+Tuple unpacking (`for a, b in zip(...)`) is not supported in comprehensions. Use a `{% for %}` loop instead:
 
 ```html+jinja
-{# Combine multiple lists #}
+{# Combine multiple lists — use for loop (supports unpacking) #}
 {% set names = ["Alice", "Bob", "Charlie"] %}
 {% set scores = [95, 87, 92] %}
 
-{% set results = [
-  name ~ ": " ~ score
-  for name, score in zip(names, scores)
-] %}
-
 <ul>
-{% for result in results %}
-  <li>{{ result }}</li>
+{% for name, score in zip(names, scores) %}
+  <li>{{ name }}: {{ score }}</li>
 {% endfor %}
 </ul>
 ```
@@ -387,7 +425,8 @@ ctx.Set("active_users", activeUsers)
 | Nested | `[x for list in lists for x in list]` |  Not supported | Use nested loops |
 | With Filters | `[x|filter for x in list]` |  Supported | - |
 | With Expressions | `[x * 2 for x in list]` |  Supported | - |
-| With Zip | `[a + b for a, b in zip(l1, l2)]` |  Supported | - |
+| With Zip (unpacking) | `[a + b for a, b in zip(l1, l2)]` |  Not supported | Use `{% for %}` loop with unpacking |
+| With Ternary | `["yes" if x else "no" for x in list]` |  Supported | - |
 
 ---
 
@@ -409,8 +448,8 @@ ctx.Set("active_users", activeUsers)
 {#  Good - simple transformation #}
 {{ [x * 2 for x in numbers] }}
 
-{#  Avoid - too complex #}
-{{ [complex_function(x, y, z) for x, y, z in zip(a, b, c) if condition] }}
+{#  Avoid - too complex (tuple unpacking and inline if not supported) #}
+{# {{ [complex_function(x, y, z) for x, y, z in zip(a, b, c) if condition] }} #}
 ```
 
 ### 3. Pre-filter in Application Code

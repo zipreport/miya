@@ -22,6 +22,9 @@ func capitalizeFirst(s string) string {
 	return string(unicode.ToUpper(r)) + s[size:]
 }
 
+// Context holds template variables and provides scoped variable lookup.
+// It supports nested scopes via Push/Pop for block and loop contexts,
+// and dot-notation access for nested attributes (e.g., "user.name").
 type Context interface {
 	Get(key string) (interface{}, bool)
 	Set(key string, value interface{})
@@ -32,6 +35,8 @@ type Context interface {
 	Clone() Context
 }
 
+// LoopInfo provides the special "loop" variable available inside {% for %} blocks.
+// It tracks the current iteration state, matching Jinja2's loop variable.
 type LoopInfo struct {
 	Index     int
 	Index0    int
@@ -52,12 +57,15 @@ type context struct {
 	allCacheValid bool
 }
 
+// NewContext creates a new empty Context for passing variables to template rendering.
 func NewContext() Context {
 	return &context{
 		data: make(map[string]interface{}, 8), // Phase 4a: Pre-size for typical usage
 	}
 }
 
+// NewContextFrom creates a new Context pre-populated with the given key-value pairs.
+// The data map is copied; subsequent mutations to the original map do not affect the context.
 func NewContextFrom(data map[string]interface{}) Context {
 	// Phase 4a: Pre-size based on input size
 	ctx := &context{

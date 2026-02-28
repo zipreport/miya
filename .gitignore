@@ -33,6 +33,7 @@ Thumbs.db
 # Project specific
 /build/
 /dist/
+site/
 *.log
 coverage.html
 coverage.txt

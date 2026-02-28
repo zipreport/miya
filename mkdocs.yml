@@ -35,6 +35,7 @@ theme:
 nav:
   - Home: index.md
   - Getting Started:
+      - Usage Guide: USAGE_GUIDE.md
       - Comprehensive Features: COMPREHENSIVE_FEATURES.md
       - Jinja2 Compatibility: JINJA2_VS_MIYA_FEATURE_MATRIX.md
   - Core Features:
@@ -50,11 +51,10 @@ nav:
       - Do Statements: DO_STATEMENTS_IMPLEMENTATION.md
   - Comprehensions:
       - Guide: COMPREHENSIONS_GUIDE.md
-      - Examples: comprehensions_examples.md
-      - Reference: comprehensions_reference.md
-      - List & Dict: LIST_DICT_COMPREHENSIONS.md
+      - Reference: COMPREHENSIONS_REFERENCE.md
   - Reference:
       - Limitations: MIYA_LIMITATIONS.md
+      - Error Handling: ERROR_HANDLING.md
 
 markdown_extensions:
   - pymdownx.highlight:

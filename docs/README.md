@@ -7,8 +7,9 @@ Complete documentation for Miya Engine - a blazing-fast Jinja2-compatible templa
 ##  Quick Start
 
 1. **Installation**: `go get github.com/zipreport/miya`
-2. **Basic Usage**: See main [README.md](../README.md) for quick start
-3. **Working Examples**: Check `examples/features/` for complete working demos
+2. **[Usage Guide](USAGE_GUIDE.md)**: Loading templates, contexts, concurrency, web server integration
+3. **Basic Usage**: See main [README.md](../README.md) for quick start
+4. **Working Examples**: Check `examples/features/` for complete working demos
 
 ---
 
@@ -389,6 +390,7 @@ Miya Engine is ~95% compatible with Jinja2. Key differences:
 ```
 docs/
 ├── README.md                          # This file - documentation index
+├── USAGE_GUIDE.md                     # Library usage, loaders, concurrency
 │
 ├── Core Feature Guides/
 │   ├── TEMPLATE_INHERITANCE.md        # Extends, blocks, super()
@@ -398,23 +400,16 @@ docs/
 │   ├── MACROS_AND_INCLUDES.md         # Reusable components
 │   ├── GLOBAL_FUNCTIONS.md            # range, cycler, namespace, etc.
 │   ├── COMPREHENSIONS_GUIDE.md        # List/dict comprehensions
-│   └── ADVANCED_FEATURES_GUIDE.md     # Filter blocks, whitespace, etc.
+│   ├── ADVANCED_FEATURES_GUIDE.md     # Filter blocks, whitespace, etc.
+│   └── COMPREHENSIONS_REFERENCE.md    # Comprehensions quick reference
 │
 ├── Reference Documentation/
 │   ├── MIYA_LIMITATIONS.md            # Complete limitations list
 │   ├── JINJA2_VS_MIYA_FEATURE_MATRIX.md  # Compatibility matrix
 │   ├── COMPREHENSIVE_FEATURES.md      # Complete feature overview
+│   ├── ERROR_HANDLING.md              # Error handling & debugging
 │   ├── FILTER_BLOCKS_IMPLEMENTATION.md   # Filter blocks details
 │   └── DO_STATEMENTS_IMPLEMENTATION.md   # Do statement details
-│
-└── Legacy Docs/ (may be outdated)
-    ├── LIST_DICT_COMPREHENSIONS.md    # Old comprehensions doc
-    ├── comprehensions_examples.md
-    ├── comprehensions_reference.md
-    ├── filters/
-    ├── flow_control/
-    ├── inheritance/
-    └── tests/
 ```
 
 ---
@@ -502,6 +497,6 @@ See [MIYA_LIMITATIONS.md](MIYA_LIMITATIONS.md) for complete details.
 
 ---
 
-**Last Updated**: 2024
+**Last Updated**: 2026
 **Version**: Based on Miya Engine latest
 **Jinja2 Version**: Compatible with Jinja2 3.x syntax

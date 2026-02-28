@@ -19,6 +19,17 @@ import (
 	"github.com/zipreport/miya/whitespace"
 )
 
+// Environment is the central configuration object for template compilation and rendering.
+// It holds the template loader, filter/test registries, caching, and all rendering options.
+// An Environment is safe for concurrent use; its template cache is protected by sync.RWMutex.
+//
+// Create an Environment with NewEnvironment and configure it using EnvironmentOption functions:
+//
+//	env := miya.NewEnvironment(
+//	    miya.WithLoader(loader),
+//	    miya.WithAutoEscape(true),
+//	    miya.WithTrimBlocks(true),
+//	)
 type Environment struct {
 	loader              Loader
 	filterRegistry      *filters.FilterRegistry
@@ -56,6 +67,8 @@ type Environment struct {
 	commentEndString   string
 }
 
+// EnvironmentOption is a functional option for configuring an Environment.
+// Use the With* functions (WithLoader, WithAutoEscape, etc.) to create options.
 type EnvironmentOption func(*Environment)
 
 // hashString generates a content-based cache key for template strings
@@ -66,6 +79,8 @@ func hashString(s string) string {
 	return fmt.Sprintf("__string__%x", h.Sum64())
 }
 
+// NewEnvironment creates a new template Environment with the given options.
+// By default, auto-escaping is enabled and undefined variables are handled silently.
 func NewEnvironment(opts ...EnvironmentOption) *Environment {
 	inheritanceCache := runtime.NewInheritanceCache()
 
@@ -131,6 +146,8 @@ func NewEnvironment(opts ...EnvironmentOption) *Environment {
 	return env
 }
 
+// GetTemplate loads and returns a compiled template by name using the configured loader.
+// Templates are cached after first compilation; subsequent calls return the cached version.
 func (e *Environment) GetTemplate(name string) (*Template, error) {
 	e.cacheMutex.RLock()
 	if tmpl, ok := e.cache[name]; ok {
@@ -200,6 +217,8 @@ func (e *Environment) hasInlineWhitespaceControl(source string) bool {
 		strings.Contains(source, "-#}")
 }
 
+// FromString compiles a template from a string source.
+// The compiled template is cached using a content hash as the cache key.
 func (e *Environment) FromString(source string) (*Template, error) {
 	// Generate cache key from content hash (Phase 2 optimization)
 	cacheKey := hashString(source)
@@ -226,6 +245,7 @@ func (e *Environment) FromString(source string) (*Template, error) {
 	return tmpl, nil
 }
 
+// SetLoader sets the template loader for the environment and reinitializes the inheritance resolver.
 func (e *Environment) SetLoader(loader Loader) {
 	e.loader = loader
 	// Create inheritance resolver if we have a loader
@@ -252,6 +272,7 @@ func (e *Environment) ApplyFilter(name string, value interface{}, args ...interf
 	return e.filterRegistry.Apply(name, value, args...)
 }
 
+// AddGlobal registers a global variable that will be available in all templates rendered by this environment.
 func (e *Environment) AddGlobal(name string, value interface{}) {
 	e.globals[name] = value
 }
@@ -537,6 +558,8 @@ func (e *Environment) compile(name, source string) (*Template, error) {
 	}, nil
 }
 
+// WithLoader returns an EnvironmentOption that sets the template loader.
+// The loader is used by GetTemplate to locate and read template sources.
 func WithLoader(loader Loader) EnvironmentOption {
 	return func(e *Environment) {
 		e.loader = loader
@@ -547,24 +570,32 @@ func WithLoader(loader Loader) EnvironmentOption {
 	}
 }
 
+// WithAutoEscape returns an EnvironmentOption that enables or disables HTML auto-escaping.
+// When enabled (the default), template output is automatically HTML-escaped.
 func WithAutoEscape(enabled bool) EnvironmentOption {
 	return func(e *Environment) {
 		e.autoEscape = enabled
 	}
 }
 
+// WithTrimBlocks returns an EnvironmentOption that enables or disables trimming of
+// the first newline after a block tag.
 func WithTrimBlocks(enabled bool) EnvironmentOption {
 	return func(e *Environment) {
 		e.trimBlocks = enabled
 	}
 }
 
+// WithLstripBlocks returns an EnvironmentOption that enables or disables stripping of
+// leading whitespace and tabs from the start of a line to a block tag.
 func WithLstripBlocks(enabled bool) EnvironmentOption {
 	return func(e *Environment) {
 		e.lstripBlocks = enabled
 	}
 }
 
+// WithKeepTrailingNewline returns an EnvironmentOption that preserves
+// the trailing newline at the end of rendered templates.
 func WithKeepTrailingNewline(enabled bool) EnvironmentOption {
 	return func(e *Environment) {
 		e.keepTrailingNewline = enabled
