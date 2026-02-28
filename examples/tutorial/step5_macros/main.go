@@ -12,31 +12,7 @@ import (
 
 	"github.com/zipreport/miya"
 	"github.com/zipreport/miya/loader"
-	"github.com/zipreport/miya/parser"
 )
-
-// SimpleTemplateParser implements loader.TemplateParser interface
-type SimpleTemplateParser struct {
-	env *miya.Environment
-}
-
-func NewSimpleTemplateParser(env *miya.Environment) *SimpleTemplateParser {
-	return &SimpleTemplateParser{env: env}
-}
-
-func (stp *SimpleTemplateParser) ParseTemplate(name, content string) (*parser.TemplateNode, error) {
-	template, err := stp.env.FromString(content)
-	if err != nil {
-		return nil, err
-	}
-
-	if templateNode, ok := template.AST().(*parser.TemplateNode); ok {
-		templateNode.Name = name
-		return templateNode, nil
-	}
-
-	return nil, fmt.Errorf("failed to extract template node")
-}
 
 func main() {
 	fmt.Println("=== Step 5: Macros & Components ===")
@@ -162,12 +138,13 @@ Hello, {{ title }} {{ name }}!
 </form>`
 
 	// Set up string loader
-	envWithLoader := miya.NewEnvironment()
-	templateParser := NewSimpleTemplateParser(envWithLoader)
+	templateParser := loader.NewDirectTemplateParser()
 	stringLoader := loader.NewStringLoader(templateParser)
 	stringLoader.AddTemplate("forms.html", macroLibrary)
 	stringLoader.AddTemplate("register.html", formTemplate)
-	envWithLoader.SetLoader(stringLoader)
+	envWithLoader := miya.NewEnvironment(
+		miya.WithLoader(stringLoader),
+	)
 	tmpl4, err := envWithLoader.GetTemplate("register.html")
 	if err != nil {
 		log.Fatal(err)

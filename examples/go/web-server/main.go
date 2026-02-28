@@ -9,7 +9,6 @@ import (
 
 	miya "github.com/zipreport/miya"
 	"github.com/zipreport/miya/loader"
-	"github.com/zipreport/miya/parser"
 )
 
 type Product struct {
@@ -30,29 +29,6 @@ type PageData struct {
 }
 
 var env *miya.Environment
-
-// SimpleTemplateParser implements loader.TemplateParser interface
-type SimpleTemplateParser struct {
-	env *miya.Environment
-}
-
-func NewSimpleTemplateParser(env *miya.Environment) *SimpleTemplateParser {
-	return &SimpleTemplateParser{env: env}
-}
-
-func (stp *SimpleTemplateParser) ParseTemplate(name, content string) (*parser.TemplateNode, error) {
-	template, err := stp.env.FromString(content)
-	if err != nil {
-		return nil, err
-	}
-
-	if templateNode, ok := template.AST().(*parser.TemplateNode); ok {
-		templateNode.Name = name
-		return templateNode, nil
-	}
-
-	return nil, fmt.Errorf("failed to extract template node")
-}
 
 func init() {
 	// Create templates directory
@@ -251,10 +227,11 @@ func init() {
 	os.WriteFile("templates/about.html", []byte(aboutTemplate), 0644)
 
 	// Initialize Jinja2 environment
-	env = miya.NewEnvironment()
-	templateParser := NewSimpleTemplateParser(env)
+	templateParser := loader.NewDirectTemplateParser()
 	fsLoader := loader.NewFileSystemLoader([]string{"templates"}, templateParser)
-	env.SetLoader(fsLoader)
+	env = miya.NewEnvironment(
+		miya.WithLoader(fsLoader),
+	)
 }
 
 func getSampleProducts() []Product {

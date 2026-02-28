@@ -105,38 +105,25 @@ import (
 
     "github.com/zipreport/miya"
     "github.com/zipreport/miya/loader"
-    "github.com/zipreport/miya/parser"
 )
 
-// SimpleTemplateParser bridges the loader and the environment.
-// The loader needs a parser to turn raw template source into ASTs.
-type SimpleTemplateParser struct {
-    env *miya.Environment
-}
-
-func (p *SimpleTemplateParser) ParseTemplate(name, content string) (*parser.TemplateNode, error) {
-    tmpl, err := p.env.FromString(content)
-    if err != nil {
-        return nil, err
-    }
-    return tmpl.GetASTAsTemplateNode(), nil
-}
-
 func main() {
-    // Create environment first (without loader)
+    // Create a direct template parser (parses templates independently of the environment)
+    templateParser := loader.NewDirectTemplateParser()
+
+    // Create the loader with search paths (tried in order)
+    fsLoader := loader.NewFileSystemLoader(
+        []string{"templates", "views"},
+        templateParser,
+    )
+
+    // Create the environment with the loader
     env := miya.NewEnvironment(
+        miya.WithLoader(fsLoader),
         miya.WithAutoEscape(true),
         miya.WithTrimBlocks(true),
         miya.WithLstripBlocks(true),
     )
-
-    // Create the parser bridge, then the loader, then connect them
-    templateParser := &SimpleTemplateParser{env: env}
-    fsLoader := loader.NewFileSystemLoader(
-        []string{"templates", "views"}, // search paths (tried in order)
-        templateParser,
-    )
-    env.SetLoader(fsLoader)
 
     // Now load templates by name
     tmpl, err := env.GetTemplate("page.html")
@@ -169,11 +156,12 @@ import "embed"
 var embeddedTemplates embed.FS
 
 func main() {
-    env := miya.NewEnvironment()
-    templateParser := &SimpleTemplateParser{env: env}
-
+    templateParser := loader.NewDirectTemplateParser()
     embedLoader := loader.NewEmbedLoader(embeddedTemplates, "templates", templateParser)
-    env.SetLoader(embedLoader)
+
+    env := miya.NewEnvironment(
+        miya.WithLoader(embedLoader),
+    )
 
     tmpl, _ := env.GetTemplate("page.html")
     // ...
@@ -186,7 +174,7 @@ Load templates from in-memory strings, useful for unit tests:
 
 ```go
 env := miya.NewEnvironment()
-templateParser := &SimpleTemplateParser{env: env}
+templateParser := loader.NewDirectTemplateParser()
 
 strLoader := loader.NewStringLoader(templateParser)
 strLoader.AddTemplate("base.html", `
@@ -565,33 +553,20 @@ import (
 
     "github.com/zipreport/miya"
     "github.com/zipreport/miya/loader"
-    "github.com/zipreport/miya/parser"
 )
-
-type SimpleTemplateParser struct {
-    env *miya.Environment
-}
-
-func (p *SimpleTemplateParser) ParseTemplate(name, content string) (*parser.TemplateNode, error) {
-    tmpl, err := p.env.FromString(content)
-    if err != nil {
-        return nil, err
-    }
-    return tmpl.GetASTAsTemplateNode(), nil
-}
 
 var env *miya.Environment
 
 func init() {
+    templateParser := loader.NewDirectTemplateParser()
+    fsLoader := loader.NewFileSystemLoader([]string{"templates"}, templateParser)
+
     env = miya.NewEnvironment(
+        miya.WithLoader(fsLoader),
         miya.WithAutoEscape(true),
         miya.WithTrimBlocks(true),
         miya.WithLstripBlocks(true),
     )
-
-    templateParser := &SimpleTemplateParser{env: env}
-    fsLoader := loader.NewFileSystemLoader([]string{"templates"}, templateParser)
-    env.SetLoader(fsLoader)
 
     // Register application-wide globals
     env.AddGlobal("site_name", "My App")

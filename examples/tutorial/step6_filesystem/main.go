@@ -16,31 +16,7 @@ import (
 
 	"github.com/zipreport/miya"
 	"github.com/zipreport/miya/loader"
-	"github.com/zipreport/miya/parser"
 )
-
-// SimpleTemplateParser implements loader.TemplateParser interface
-type SimpleTemplateParser struct {
-	env *miya.Environment
-}
-
-func NewSimpleTemplateParser(env *miya.Environment) *SimpleTemplateParser {
-	return &SimpleTemplateParser{env: env}
-}
-
-func (stp *SimpleTemplateParser) ParseTemplate(name, content string) (*parser.TemplateNode, error) {
-	template, err := stp.env.FromString(content)
-	if err != nil {
-		return nil, err
-	}
-
-	if templateNode, ok := template.AST().(*parser.TemplateNode); ok {
-		templateNode.Name = name
-		return templateNode, nil
-	}
-
-	return nil, fmt.Errorf("failed to extract template node")
-}
 
 func main() {
 	fmt.Println("=== Step 6: Loading Templates from Disk ===")
@@ -60,18 +36,16 @@ func main() {
 	fmt.Println("Example 1 - Basic FileSystemLoader:")
 	fmt.Println("------------------------------------")
 
-	// Create environment first, then the loader
-	env := miya.NewEnvironment(
-		miya.WithAutoEscape(true), // Enable HTML auto-escaping
-	)
-
 	// Create template parser and filesystem loader
-	templateParser := NewSimpleTemplateParser(env)
+	templateParser := loader.NewDirectTemplateParser()
 	fsLoader := loader.NewFileSystemLoader([]string{templateDir}, templateParser)
 	fsLoader.SetExtensions([]string{".html", ".txt"})
 
-	// Set the loader on the environment
-	env.SetLoader(fsLoader)
+	// Create environment with the loader
+	env := miya.NewEnvironment(
+		miya.WithLoader(fsLoader),
+		miya.WithAutoEscape(true), // Enable HTML auto-escaping
+	)
 
 	// Load and render a simple template
 	tmpl1, err := env.GetTemplate("hello.html")

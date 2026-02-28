@@ -12,31 +12,7 @@ import (
 
 	"github.com/zipreport/miya"
 	"github.com/zipreport/miya/loader"
-	"github.com/zipreport/miya/parser"
 )
-
-// SimpleTemplateParser implements loader.TemplateParser interface
-type SimpleTemplateParser struct {
-	env *miya.Environment
-}
-
-func NewSimpleTemplateParser(env *miya.Environment) *SimpleTemplateParser {
-	return &SimpleTemplateParser{env: env}
-}
-
-func (stp *SimpleTemplateParser) ParseTemplate(name, content string) (*parser.TemplateNode, error) {
-	template, err := stp.env.FromString(content)
-	if err != nil {
-		return nil, err
-	}
-
-	if templateNode, ok := template.AST().(*parser.TemplateNode); ok {
-		templateNode.Name = name
-		return templateNode, nil
-	}
-
-	return nil, fmt.Errorf("failed to extract template node")
-}
 
 func main() {
 	fmt.Println("=== Step 4: Template Inheritance ===")
@@ -113,15 +89,16 @@ func main() {
 {% endblock %}`
 
 	// 4. Create an environment and string loader with our templates
-	env := miya.NewEnvironment()
-	templateParser := NewSimpleTemplateParser(env)
+	templateParser := loader.NewDirectTemplateParser()
 	stringLoader := loader.NewStringLoader(templateParser)
 	stringLoader.AddTemplate("base.html", baseTemplate)
 	stringLoader.AddTemplate("home.html", homeTemplate)
 	stringLoader.AddTemplate("about.html", aboutTemplate)
 
-	// 5. Set the loader on the environment
-	env.SetLoader(stringLoader)
+	// 5. Create the environment with the loader
+	env := miya.NewEnvironment(
+		miya.WithLoader(stringLoader),
+	)
 
 	// 6. Render the home page
 	fmt.Println("Example 1 - Home Page (basic inheritance):")

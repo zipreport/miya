@@ -7,31 +7,7 @@ import (
 
 	miya "github.com/zipreport/miya"
 	"github.com/zipreport/miya/loader"
-	"github.com/zipreport/miya/parser"
 )
-
-// SimpleTemplateParser implements loader.TemplateParser interface
-type SimpleTemplateParser struct {
-	env *miya.Environment
-}
-
-func NewSimpleTemplateParser(env *miya.Environment) *SimpleTemplateParser {
-	return &SimpleTemplateParser{env: env}
-}
-
-func (stp *SimpleTemplateParser) ParseTemplate(name, content string) (*parser.TemplateNode, error) {
-	template, err := stp.env.FromString(content)
-	if err != nil {
-		return nil, err
-	}
-
-	if templateNode, ok := template.AST().(*parser.TemplateNode); ok {
-		templateNode.Name = name
-		return templateNode, nil
-	}
-
-	return nil, fmt.Errorf("failed to extract template node")
-}
 
 func main() {
 	// Example 1: Template inheritance
@@ -106,10 +82,12 @@ func inheritanceExample() {
 	os.WriteFile("templates/home.html", []byte(childTemplate), 0644)
 
 	// Create environment with file loader
-	env := miya.NewEnvironment(miya.WithAutoEscape(false))
-	templateParser := NewSimpleTemplateParser(env)
+	templateParser := loader.NewDirectTemplateParser()
 	fsLoader := loader.NewFileSystemLoader([]string{"templates"}, templateParser)
-	env.SetLoader(fsLoader)
+	env := miya.NewEnvironment(
+		miya.WithLoader(fsLoader),
+		miya.WithAutoEscape(false),
+	)
 
 	// Render child template
 	tmpl, err := env.GetTemplate("home.html")

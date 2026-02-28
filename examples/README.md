@@ -207,40 +207,24 @@ env.AddTest("palindrome", func(value interface{}, args ...interface{}) (bool, er
 env := miya.NewEnvironment()
 result, err := env.RenderString(templateString, context)
 
-// From filesystem (requires a template parser)
-// First, create a parser that implements loader.TemplateParser
-type SimpleTemplateParser struct {
-    env *miya.Environment
-}
-
-func (p *SimpleTemplateParser) ParseTemplate(name, content string) (*parser.TemplateNode, error) {
-    tmpl, err := p.env.FromString(content)
-    if err != nil {
-        return nil, err
-    }
-    if node, ok := tmpl.AST().(*parser.TemplateNode); ok {
-        node.Name = name
-        return node, nil
-    }
-    return nil, fmt.Errorf("failed to extract template node")
-}
-
-// Then use it with the filesystem loader
-env := miya.NewEnvironment()
-templateParser := &SimpleTemplateParser{env: env}
+// From filesystem (using the built-in DirectTemplateParser)
+templateParser := loader.NewDirectTemplateParser()
 fsLoader := loader.NewFileSystemLoader([]string{"templates"}, templateParser)
-env.SetLoader(fsLoader)
+env := miya.NewEnvironment(
+    miya.WithLoader(fsLoader),
+)
 
 tmpl, err := env.GetTemplate("template.html")
 result, err := tmpl.Render(context)
 
 // In-memory templates with StringLoader (for template inheritance without files)
-env := miya.NewEnvironment()
-templateParser := &SimpleTemplateParser{env: env}
+templateParser := loader.NewDirectTemplateParser()
 stringLoader := loader.NewStringLoader(templateParser)
 stringLoader.AddTemplate("base.html", baseTemplateContent)
 stringLoader.AddTemplate("child.html", childTemplateContent)
-env.SetLoader(stringLoader)
+env := miya.NewEnvironment(
+    miya.WithLoader(stringLoader),
+)
 
 tmpl, err := env.GetTemplate("child.html")
 result, err := tmpl.Render(context)

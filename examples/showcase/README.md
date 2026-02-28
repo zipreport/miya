@@ -162,36 +162,18 @@ import (
     "fmt"
     "github.com/zipreport/miya"
     "github.com/zipreport/miya/loader"
-    "github.com/zipreport/miya/parser"
 )
 
-// SimpleTemplateParser implements loader.TemplateParser
-type SimpleTemplateParser struct {
-    env *miya.Environment
-}
-
-func (p *SimpleTemplateParser) ParseTemplate(name, content string) (*parser.TemplateNode, error) {
-    tmpl, err := p.env.FromString(content)
-    if err != nil {
-        return nil, err
-    }
-    if node, ok := tmpl.AST().(*parser.TemplateNode); ok {
-        node.Name = name
-        return node, nil
-    }
-    return nil, fmt.Errorf("failed to extract template node")
-}
-
 func main() {
-    // Create environment first
+    // Create template parser and filesystem loader
+    templateParser := loader.NewDirectTemplateParser()
+    fsLoader := loader.NewFileSystemLoader([]string{"templates"}, templateParser)
+
+    // Create environment with the loader
     env := miya.NewEnvironment(
+        miya.WithLoader(fsLoader),
         miya.WithAutoEscape(true),
     )
-
-    // Create template parser and filesystem loader
-    templateParser := &SimpleTemplateParser{env: env}
-    fsLoader := loader.NewFileSystemLoader([]string{"templates"}, templateParser)
-    env.SetLoader(fsLoader)
 
     // Create context
     ctx := miya.NewContextFrom(map[string]interface{}{
