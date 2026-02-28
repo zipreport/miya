@@ -16,7 +16,7 @@
         <link rel="prev" href="../DO_STATEMENTS_IMPLEMENTATION/">
       
       
-        <link rel="next" href="../comprehensions_examples/">
+        <link rel="next" href="../COMPREHENSIONS_REFERENCE/">
       
       
         
@@ -335,6 +335,34 @@
 
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../USAGE_GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Usage Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
             
               
                 
@@ -1150,6 +1178,28 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#real-world-shopping-cart-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-World: Shopping Cart Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#real-world-dynamic-form-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-World: Dynamic Form Fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#example-1-extract-names" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1227,10 +1277,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#example-8-working-with-zip" class="md-nav__link">
+  <a href="#example-8-working-with-zip-use-for-loop" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example 8: Working with Zip
+        Example 8: Working with Zip (Use For Loop)
       
     </span>
   </a>
@@ -1352,35 +1402,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../comprehensions_examples/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Examples
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../comprehensions_reference/" class="md-nav__link">
+      <a href="../COMPREHENSIONS_REFERENCE/" class="md-nav__link">
         
   
   
@@ -1388,34 +1410,6 @@
     
   
     Reference
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../LIST_DICT_COMPREHENSIONS/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    List & Dict
   
 
     
@@ -1505,6 +1499,34 @@
     
   
     Limitations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ERROR_HANDLING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Error Handling
   
 
     
@@ -1808,6 +1830,28 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#real-world-shopping-cart-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-World: Shopping Cart Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#real-world-dynamic-form-fields" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-World: Dynamic Form Fields
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#example-1-extract-names" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1885,10 +1929,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#example-8-working-with-zip" class="md-nav__link">
+  <a href="#example-8-working-with-zip-use-for-loop" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Example 8: Working with Zip
+        Example 8: Working with Zip (Use For Loop)
       
     </span>
   </a>
@@ -2066,24 +2110,21 @@
 </span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>→ [&quot;ALICE&quot;, &quot;BOB&quot;, &quot;CHARLIE&quot;]
 </span></code></pre></div>
 <h3 id="arithmetic-operations">Arithmetic Operations<a class="headerlink" href="#arithmetic-operations" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c">{# Calculate totals #}</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">price</span> <span class="o">*</span> <span class="nv">quantity</span> <span class="nv">for</span> <span class="nv">price</span><span class="o">,</span> <span class="nv">quantity</span> <span class="k">in</span> <span class="nv">zip</span><span class="o">(</span><span class="nv">prices</span><span class="o">,</span> <span class="nv">quantities</span><span class="o">)]</span> <span class="cp">}}</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c">{# Apply discount #}</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">price</span> <span class="o">*</span> <span class="m">0.9</span> <span class="nv">for</span> <span class="nv">price</span> <span class="k">in</span> <span class="nv">prices</span><span class="o">]</span> <span class="cp">}}</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>→ [8.99, 17.99, 26.99]
-</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>
-</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="c">{# Complex expressions #}</span>
-</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">price</span> <span class="o">*</span> <span class="nv">qty</span> <span class="o">*</span> <span class="o">(</span><span class="m">1</span> <span class="o">-</span> <span class="nv">discount</span><span class="o">/</span><span class="m">100</span><span class="o">)</span> <span class="nv">for</span> <span class="nv">price</span><span class="o">,</span> <span class="nv">qty</span><span class="o">,</span> <span class="nv">discount</span> <span class="k">in</span> <span class="nv">product_data</span><span class="o">]</span> <span class="cp">}}</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c">{# Apply discount #}</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">price</span> <span class="o">*</span> <span class="m">0.9</span> <span class="nv">for</span> <span class="nv">price</span> <span class="k">in</span> <span class="nv">prices</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>→ [8.99, 17.99, 26.99]
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="c">{# Calculate with expressions #}</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">item.price</span> <span class="o">*</span> <span class="nv">item.qty</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">cart</span><span class="o">]</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <h3 id="string-operations">String Operations<a class="headerlink" href="#string-operations" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c">{# Concatenate strings #}</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">first</span> <span class="o">~</span> <span class="s2">&quot; &quot;</span> <span class="o">~</span> <span class="nv">last</span> <span class="nv">for</span> <span class="nv">first</span><span class="o">,</span> <span class="nv">last</span> <span class="k">in</span> <span class="nv">zip</span><span class="o">(</span><span class="nv">first_names</span><span class="o">,</span> <span class="nv">last_names</span><span class="o">)]</span> <span class="cp">}}</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>→ [&quot;Alice Smith&quot;, &quot;Bob Jones&quot;, &quot;Charlie Brown&quot;]
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c">{# Format user display #}</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="o">~</span> <span class="s2">&quot; (&quot;</span> <span class="o">~</span> <span class="nv">user.role</span> <span class="o">~</span> <span class="s2">&quot;)&quot;</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>→ [&quot;Alice (admin)&quot;, &quot;Bob (user)&quot;, &quot;Charlie (moderator)&quot;]
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c">{# Format user display #}</span>
-</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="o">~</span> <span class="s2">&quot; (&quot;</span> <span class="o">~</span> <span class="nv">user.role</span> <span class="o">~</span> <span class="s2">&quot;)&quot;</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">}}</span>
-</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>→ [&quot;Alice (admin)&quot;, &quot;Bob (user)&quot;, &quot;Charlie (moderator)&quot;]
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c">{# Concatenate with filter #}</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">name</span><span class="o">|</span><span class="nf">upper</span> <span class="nv">for</span> <span class="nv">name</span> <span class="k">in</span> <span class="nv">names</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>→ [&quot;ALICE&quot;, &quot;BOB&quot;, &quot;CHARLIE&quot;]
 </span></code></pre></div>
 <hr />
 <h2 id="dictionary-comprehensions">Dictionary Comprehensions<a class="headerlink" href="#dictionary-comprehensions" title="Permanent link">&para;</a></h2>
@@ -2206,96 +2247,130 @@
 </span></code></pre></div>
 <hr />
 <h2 id="practical-examples">Practical Examples<a class="headerlink" href="#practical-examples" title="Permanent link">&para;</a></h2>
+<h3 id="real-world-shopping-cart-summary">Real-World: Shopping Cart Summary<a class="headerlink" href="#real-world-shopping-cart-summary" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c">{# Calculate line totals using list comprehension #}</span>
+</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">cart_items</span> <span class="o">=</span> <span class="o">[{</span><span class="s2">&quot;name&quot;</span><span class="o">:</span> <span class="nv">item.product.name</span><span class="o">,</span> <span class="s2">&quot;price&quot;</span><span class="o">:</span> <span class="nv">item.price</span><span class="o">,</span> <span class="s2">&quot;qty&quot;</span><span class="o">:</span> <span class="nv">item.quantity</span><span class="o">,</span> <span class="s2">&quot;total&quot;</span><span class="o">:</span> <span class="nv">item.price</span> <span class="o">*</span> <span class="nv">item.quantity</span><span class="o">}</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">cart.items</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">subtotal</span> <span class="o">=</span> <span class="o">[</span><span class="nv">item.total</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">cart_items</span><span class="o">]|</span><span class="nf">sum</span> <span class="cp">%}</span>
+</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">tax</span> <span class="o">=</span> <span class="nv">subtotal</span> <span class="o">*</span> <span class="m">0.08</span> <span class="cp">%}</span>
+</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>
+</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;cart-summary&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>  <span class="p">&lt;</span><span class="nt">h3</span><span class="p">&gt;</span>Order Summary<span class="p">&lt;/</span><span class="nt">h3</span><span class="p">&gt;</span>
+</span><span id="__span-16-8"><a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>  <span class="cp">{%</span> <span class="k">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">cart_items</span> <span class="cp">%}</span>
+</span><span id="__span-16-9"><a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>    <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;cart-item&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-16-10"><a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>      <span class="p">&lt;</span><span class="nt">span</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">item.name</span> <span class="cp">}}</span> (<span class="cp">{{</span> <span class="nv">item.qty</span> <span class="cp">}}</span>x)<span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
+</span><span id="__span-16-11"><a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a>      <span class="p">&lt;</span><span class="nt">span</span><span class="p">&gt;</span>$<span class="cp">{{</span> <span class="nv">item.total</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">span</span><span class="p">&gt;</span>
+</span><span id="__span-16-12"><a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a>    <span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-16-13"><a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a>  <span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-16-14"><a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a>  <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;totals&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-16-15"><a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a>    <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;</span>Subtotal: $<span class="cp">{{</span> <span class="nv">subtotal</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-16-16"><a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a>    <span class="p">&lt;</span><span class="nt">div</span><span class="p">&gt;</span>Tax: $<span class="cp">{{</span> <span class="nv">tax</span><span class="o">|</span><span class="nf">round</span><span class="o">(</span><span class="m">2</span><span class="o">)</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-16-17"><a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a>    <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;total&quot;</span><span class="p">&gt;</span>Total: $<span class="cp">{{</span> <span class="o">(</span><span class="nv">subtotal</span> <span class="o">+</span> <span class="nv">tax</span><span class="o">)|</span><span class="nf">round</span><span class="o">(</span><span class="m">2</span><span class="o">)</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-16-18"><a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a>  <span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-16-19"><a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span></code></pre></div>
+<h3 id="real-world-dynamic-form-fields">Real-World: Dynamic Form Fields<a class="headerlink" href="#real-world-dynamic-form-fields" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c">{# Extract required fields and field types using comprehensions #}</span>
+</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">required_fields</span> <span class="o">=</span> <span class="o">[</span><span class="nv">field.name</span> <span class="nv">for</span> <span class="nv">field</span> <span class="k">in</span> <span class="nv">form_schema.fields</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">field_types</span> <span class="o">=</span> <span class="o">{</span><span class="nv">field.name</span><span class="o">:</span> <span class="nv">field.type</span> <span class="nv">for</span> <span class="nv">field</span> <span class="k">in</span> <span class="nv">form_schema.fields</span><span class="o">}</span> <span class="cp">%}</span>
+</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a>
+</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a><span class="p">&lt;</span><span class="nt">form</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;dynamic-form&quot;</span> <span class="na">method</span><span class="o">=</span><span class="s">&quot;post&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>  <span class="cp">{%</span> <span class="k">for</span> <span class="nv">field</span> <span class="k">in</span> <span class="nv">form_schema.fields</span> <span class="cp">%}</span>
+</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a>    <span class="p">&lt;</span><span class="nt">div</span> <span class="na">class</span><span class="o">=</span><span class="s">&quot;form-group&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>      <span class="p">&lt;</span><span class="nt">label</span> <span class="na">for</span><span class="o">=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">field.name</span> <span class="cp">}}</span><span class="s">&quot;</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">field.label</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">label</span><span class="p">&gt;</span>
+</span><span id="__span-17-9"><a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>      <span class="p">&lt;</span><span class="nt">input</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">field_types</span><span class="o">[</span><span class="nv">field.name</span><span class="o">]</span> <span class="cp">}}</span><span class="s">&quot;</span>
+</span><span id="__span-17-10"><a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a>             <span class="na">name</span><span class="o">=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">field.name</span> <span class="cp">}}</span><span class="s">&quot;</span>
+</span><span id="__span-17-11"><a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>             <span class="na">id</span><span class="o">=</span><span class="s">&quot;</span><span class="cp">{{</span> <span class="nv">field.name</span> <span class="cp">}}</span><span class="s">&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-17-12"><a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a>    <span class="p">&lt;/</span><span class="nt">div</span><span class="p">&gt;</span>
+</span><span id="__span-17-13"><a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a>  <span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-17-14"><a id="__codelineno-17-14" name="__codelineno-17-14" href="#__codelineno-17-14"></a>  <span class="p">&lt;</span><span class="nt">button</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;submit&quot;</span><span class="p">&gt;</span>Submit<span class="p">&lt;/</span><span class="nt">button</span><span class="p">&gt;</span>
+</span><span id="__span-17-15"><a id="__codelineno-17-15" name="__codelineno-17-15" href="#__codelineno-17-15"></a><span class="p">&lt;/</span><span class="nt">form</span><span class="p">&gt;</span>
+</span></code></pre></div>
 <h3 id="example-1-extract-names">Example 1: Extract Names<a class="headerlink" href="#example-1-extract-names" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-16-1"><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c">{# Simple property extraction #}</span>
-</span><span id="__span-16-2"><a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">user_names</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-16-3"><a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Users: <span class="cp">{{</span> <span class="nv">user_names</span><span class="o">|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
-</span><span id="__span-16-4"><a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a>
-</span><span id="__span-16-5"><a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="c">{# With filter #}</span>
-</span><span id="__span-16-6"><a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">user_names</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.name</span><span class="o">|</span><span class="nf">title</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-16-7"><a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Users: <span class="cp">{{</span> <span class="nv">user_names</span><span class="o">|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c">{# Simple property extraction #}</span>
+</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">user_names</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Users: <span class="cp">{{</span> <span class="nv">user_names</span><span class="o">|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>
+</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="c">{# With filter #}</span>
+</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">user_names</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.name</span><span class="o">|</span><span class="nf">title</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Users: <span class="cp">{{</span> <span class="nv">user_names</span><span class="o">|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h3 id="example-2-calculate-totals">Example 2: Calculate Totals<a class="headerlink" href="#example-2-calculate-totals" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-17-1"><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c">{# Calculate line totals #}</span>
-</span><span id="__span-17-2"><a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">line_totals</span> <span class="o">=</span> <span class="o">[</span><span class="nv">item.price</span> <span class="o">*</span> <span class="nv">item.qty</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">cart</span><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-17-3"><a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Line Totals: <span class="cp">{{</span> <span class="nv">line_totals</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
-</span><span id="__span-17-4"><a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Cart Total: $<span class="cp">{{</span> <span class="nv">line_totals</span><span class="o">|</span><span class="nf">sum</span><span class="o">|</span><span class="nf">round</span><span class="o">(</span><span class="m">2</span><span class="o">)</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
-</span><span id="__span-17-5"><a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>
-</span><span id="__span-17-6"><a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a><span class="c">{# With discount #}</span>
-</span><span id="__span-17-7"><a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">discounted</span> <span class="o">=</span> <span class="o">[</span><span class="nv">price</span> <span class="o">*</span> <span class="m">0.9</span> <span class="nv">for</span> <span class="nv">price</span> <span class="k">in</span> <span class="nv">prices</span><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-17-8"><a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Discounted Prices: <span class="cp">{{</span> <span class="nv">discounted</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c">{# Calculate line totals #}</span>
+</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">line_totals</span> <span class="o">=</span> <span class="o">[</span><span class="nv">item.price</span> <span class="o">*</span> <span class="nv">item.qty</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">cart</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Line Totals: <span class="cp">{{</span> <span class="nv">line_totals</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Cart Total: $<span class="cp">{{</span> <span class="nv">line_totals</span><span class="o">|</span><span class="nf">sum</span><span class="o">|</span><span class="nf">round</span><span class="o">(</span><span class="m">2</span><span class="o">)</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>
+</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a><span class="c">{# With discount #}</span>
+</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">discounted</span> <span class="o">=</span> <span class="o">[</span><span class="nv">price</span> <span class="o">*</span> <span class="m">0.9</span> <span class="nv">for</span> <span class="nv">price</span> <span class="k">in</span> <span class="nv">prices</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Discounted Prices: <span class="cp">{{</span> <span class="nv">discounted</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h3 id="example-3-create-lookups">Example 3: Create Lookups<a class="headerlink" href="#example-3-create-lookups" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-18-1"><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c">{# Create ID lookup dictionary #}</span>
-</span><span id="__span-18-2"><a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">user_lookup</span> <span class="o">=</span> <span class="o">{</span><span class="nv">user.id</span><span class="o">:</span> <span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">}</span> <span class="cp">%}</span>
-</span><span id="__span-18-3"><a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
-</span><span id="__span-18-4"><a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c">{# Use the lookup #}</span>
-</span><span id="__span-18-5"><a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>User 123: <span class="cp">{{</span> <span class="nv">user_lookup</span><span class="o">[</span><span class="m">123</span><span class="o">]</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
-</span><span id="__span-18-6"><a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
-</span><span id="__span-18-7"><a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c">{# Email to role mapping #}</span>
-</span><span id="__span-18-8"><a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">role_map</span> <span class="o">=</span> <span class="o">{</span><span class="nv">user.email</span><span class="o">:</span> <span class="nv">user.role</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">}</span> <span class="cp">%}</span>
-</span><span id="__span-18-9"><a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>alice@example.com is: <span class="cp">{{</span> <span class="nv">role_map</span><span class="o">[</span><span class="s2">&quot;alice@example.com&quot;</span><span class="o">]</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c">{# Create ID lookup dictionary #}</span>
+</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">user_lookup</span> <span class="o">=</span> <span class="o">{</span><span class="nv">user.id</span><span class="o">:</span> <span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">}</span> <span class="cp">%}</span>
+</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c">{# Use the lookup #}</span>
+</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>User 123: <span class="cp">{{</span> <span class="nv">user_lookup</span><span class="o">[</span><span class="m">123</span><span class="o">]</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
+</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="c">{# Email to role mapping #}</span>
+</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">role_map</span> <span class="o">=</span> <span class="o">{</span><span class="nv">user.email</span><span class="o">:</span> <span class="nv">user.role</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">}</span> <span class="cp">%}</span>
+</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>alice@example.com is: <span class="cp">{{</span> <span class="nv">role_map</span><span class="o">[</span><span class="s2">&quot;alice@example.com&quot;</span><span class="o">]</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h3 id="example-4-format-display-names">Example 4: Format Display Names<a class="headerlink" href="#example-4-format-display-names" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-19-1"><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c">{# Create formatted names #}</span>
-</span><span id="__span-19-2"><a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">display_names</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.name</span> <span class="o">~</span> <span class="s2">&quot; &lt;&quot;</span> <span class="o">~</span> <span class="nv">user.email</span> <span class="o">~</span> <span class="s2">&quot;&gt;&quot;</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-19-3"><a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
-</span><span id="__span-19-4"><a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="p">&lt;</span><span class="nt">select</span> <span class="na">name</span><span class="o">=</span><span class="s">&quot;recipient&quot;</span><span class="p">&gt;</span>
-</span><span id="__span-19-5"><a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">name</span> <span class="k">in</span> <span class="nv">display_names</span> <span class="cp">%}</span>
-</span><span id="__span-19-6"><a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>  <span class="p">&lt;</span><span class="nt">option</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">name</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;</span>
-</span><span id="__span-19-7"><a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
-</span><span id="__span-19-8"><a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a><span class="p">&lt;/</span><span class="nt">select</span><span class="p">&gt;</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c">{# Create formatted names #}</span>
+</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">display_names</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.name</span> <span class="o">~</span> <span class="s2">&quot; &lt;&quot;</span> <span class="o">~</span> <span class="nv">user.email</span> <span class="o">~</span> <span class="s2">&quot;&gt;&quot;</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
+</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="p">&lt;</span><span class="nt">select</span> <span class="na">name</span><span class="o">=</span><span class="s">&quot;recipient&quot;</span><span class="p">&gt;</span>
+</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">name</span> <span class="k">in</span> <span class="nv">display_names</span> <span class="cp">%}</span>
+</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>  <span class="p">&lt;</span><span class="nt">option</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">name</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">option</span><span class="p">&gt;</span>
+</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="p">&lt;/</span><span class="nt">select</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <h3 id="example-5-nested-data-use-loops">Example 5: Nested Data (Use Loops)<a class="headerlink" href="#example-5-nested-data-use-loops" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-20-1"><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c">{#  Nested comprehension not supported #}</span>
-</span><span id="__span-20-2"><a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="c">{# {{ [item.name for category in categories for item in category.items] }} #}</span>
-</span><span id="__span-20-3"><a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-</span><span id="__span-20-4"><a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c">{#  Use nested loops instead #}</span>
-</span><span id="__span-20-5"><a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">category</span> <span class="k">in</span> <span class="nv">categories</span> <span class="cp">%}</span>
-</span><span id="__span-20-6"><a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>  <span class="p">&lt;</span><span class="nt">h3</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">category.name</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">h3</span><span class="p">&gt;</span>
-</span><span id="__span-20-7"><a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>  <span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
-</span><span id="__span-20-8"><a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>    <span class="cp">{{</span> <span class="o">[</span><span class="nv">item.name</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">category.items</span><span class="o">]|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span>
-</span><span id="__span-20-9"><a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>  <span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
-</span><span id="__span-20-10"><a id="__codelineno-20-10" name="__codelineno-20-10" href="#__codelineno-20-10"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c">{#  Nested comprehension not supported #}</span>
+</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="c">{# {{ [item.name for category in categories for item in category.items] }} #}</span>
+</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="c">{#  Use nested loops instead #}</span>
+</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">category</span> <span class="k">in</span> <span class="nv">categories</span> <span class="cp">%}</span>
+</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>  <span class="p">&lt;</span><span class="nt">h3</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">category.name</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">h3</span><span class="p">&gt;</span>
+</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a>  <span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>    <span class="cp">{{</span> <span class="o">[</span><span class="nv">item.name</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">category.items</span><span class="o">]|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span>
+</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>  <span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <h3 id="example-6-filter-then-comprehend">Example 6: Filter Then Comprehend<a class="headerlink" href="#example-6-filter-then-comprehend" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-21-1"><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c">{# First filter with selectattr, then comprehend #}</span>
-</span><span id="__span-21-2"><a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">active_users</span> <span class="o">=</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">list</span> <span class="cp">%}</span>
-</span><span id="__span-21-3"><a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">active_emails</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.email</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">active_users</span><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-21-4"><a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a>
-</span><span id="__span-21-5"><a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Active user emails: <span class="cp">{{</span> <span class="nv">active_emails</span><span class="o">|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
-</span><span id="__span-21-6"><a id="__codelineno-21-6" name="__codelineno-21-6" href="#__codelineno-21-6"></a>
-</span><span id="__span-21-7"><a id="__codelineno-21-7" name="__codelineno-21-7" href="#__codelineno-21-7"></a><span class="c">{# Or chain it all #}</span>
-</span><span id="__span-21-8"><a id="__codelineno-21-8" name="__codelineno-21-8" href="#__codelineno-21-8"></a><span class="cp">{{</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">map</span><span class="o">(</span><span class="nv">attribute</span><span class="o">=</span><span class="s2">&quot;email&quot;</span><span class="o">)|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c">{# First filter with selectattr, then comprehend #}</span>
+</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">active_users</span> <span class="o">=</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">list</span> <span class="cp">%}</span>
+</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">active_emails</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.email</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">active_users</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>
+</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="p">&lt;</span><span class="nt">p</span><span class="p">&gt;</span>Active user emails: <span class="cp">{{</span> <span class="nv">active_emails</span><span class="o">|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">p</span><span class="p">&gt;</span>
+</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>
+</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a><span class="c">{# Or chain it all #}</span>
+</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="cp">{{</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">map</span><span class="o">(</span><span class="nv">attribute</span><span class="o">=</span><span class="s2">&quot;email&quot;</span><span class="o">)|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <h3 id="example-7-conditional-value-transformation">Example 7: Conditional Value Transformation<a class="headerlink" href="#example-7-conditional-value-transformation" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-22-1"><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c">{# Using ternary in comprehension #}</span>
-</span><span id="__span-22-2"><a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">statuses</span> <span class="o">=</span> <span class="o">[</span>
-</span><span id="__span-22-3"><a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>  <span class="s2">&quot;Active&quot;</span> <span class="k">if</span> <span class="nv">user.active</span> <span class="k">else</span> <span class="s2">&quot;Inactive&quot;</span>
-</span><span id="__span-22-4"><a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a>  <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span>
-</span><span id="__span-22-5"><a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-22-6"><a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>
-</span><span id="__span-22-7"><a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
-</span><span id="__span-22-8"><a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">status</span> <span class="k">in</span> <span class="nv">statuses</span> <span class="cp">%}</span>
-</span><span id="__span-22-9"><a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>  <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">status</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
-</span><span id="__span-22-10"><a id="__codelineno-22-10" name="__codelineno-22-10" href="#__codelineno-22-10"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
-</span><span id="__span-22-11"><a id="__codelineno-22-11" name="__codelineno-22-11" href="#__codelineno-22-11"></a><span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c">{# Using ternary in comprehension #}</span>
+</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">statuses</span> <span class="o">=</span> <span class="o">[</span>
+</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>  <span class="s2">&quot;Active&quot;</span> <span class="k">if</span> <span class="nv">user.active</span> <span class="k">else</span> <span class="s2">&quot;Inactive&quot;</span>
+</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a>  <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span>
+</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-24-6"><a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>
+</span><span id="__span-24-7"><a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-24-8"><a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">status</span> <span class="k">in</span> <span class="nv">statuses</span> <span class="cp">%}</span>
+</span><span id="__span-24-9"><a id="__codelineno-24-9" name="__codelineno-24-9" href="#__codelineno-24-9"></a>  <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">status</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-24-10"><a id="__codelineno-24-10" name="__codelineno-24-10" href="#__codelineno-24-10"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-24-11"><a id="__codelineno-24-11" name="__codelineno-24-11" href="#__codelineno-24-11"></a><span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
 </span></code></pre></div>
-<h3 id="example-8-working-with-zip">Example 8: Working with Zip<a class="headerlink" href="#example-8-working-with-zip" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-23-1"><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c">{# Combine multiple lists #}</span>
-</span><span id="__span-23-2"><a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">names</span> <span class="o">=</span> <span class="o">[</span><span class="s2">&quot;Alice&quot;</span><span class="o">,</span> <span class="s2">&quot;Bob&quot;</span><span class="o">,</span> <span class="s2">&quot;Charlie&quot;</span><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-23-3"><a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">scores</span> <span class="o">=</span> <span class="o">[</span><span class="m">95</span><span class="o">,</span> <span class="m">87</span><span class="o">,</span> <span class="m">92</span><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-23-4"><a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>
-</span><span id="__span-23-5"><a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">results</span> <span class="o">=</span> <span class="o">[</span>
-</span><span id="__span-23-6"><a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>  <span class="nv">name</span> <span class="o">~</span> <span class="s2">&quot;: &quot;</span> <span class="o">~</span> <span class="nv">score</span>
-</span><span id="__span-23-7"><a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>  <span class="nv">for</span> <span class="nv">name</span><span class="o">,</span> <span class="nv">score</span> <span class="k">in</span> <span class="nv">zip</span><span class="o">(</span><span class="nv">names</span><span class="o">,</span> <span class="nv">scores</span><span class="o">)</span>
-</span><span id="__span-23-8"><a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-23-9"><a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>
-</span><span id="__span-23-10"><a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a><span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
-</span><span id="__span-23-11"><a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">result</span> <span class="k">in</span> <span class="nv">results</span> <span class="cp">%}</span>
-</span><span id="__span-23-12"><a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>  <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">result</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
-</span><span id="__span-23-13"><a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
-</span><span id="__span-23-14"><a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a><span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
+<h3 id="example-8-working-with-zip-use-for-loop">Example 8: Working with Zip (Use For Loop)<a class="headerlink" href="#example-8-working-with-zip-use-for-loop" title="Permanent link">&para;</a></h3>
+<p>Tuple unpacking (<code>for a, b in zip(...)</code>) is not supported in comprehensions. Use a <code>{% for %}</code> loop instead:</p>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c">{# Combine multiple lists — use for loop (supports unpacking) #}</span>
+</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">names</span> <span class="o">=</span> <span class="o">[</span><span class="s2">&quot;Alice&quot;</span><span class="o">,</span> <span class="s2">&quot;Bob&quot;</span><span class="o">,</span> <span class="s2">&quot;Charlie&quot;</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">scores</span> <span class="o">=</span> <span class="o">[</span><span class="m">95</span><span class="o">,</span> <span class="m">87</span><span class="o">,</span> <span class="m">92</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a>
+</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+</span><span id="__span-25-6"><a id="__codelineno-25-6" name="__codelineno-25-6" href="#__codelineno-25-6"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">name</span><span class="o">,</span> <span class="nv">score</span> <span class="k">in</span> <span class="nv">zip</span><span class="o">(</span><span class="nv">names</span><span class="o">,</span> <span class="nv">scores</span><span class="o">)</span> <span class="cp">%}</span>
+</span><span id="__span-25-7"><a id="__codelineno-25-7" name="__codelineno-25-7" href="#__codelineno-25-7"></a>  <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">name</span> <span class="cp">}}</span>: <span class="cp">{{</span> <span class="nv">score</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+</span><span id="__span-25-8"><a id="__codelineno-25-8" name="__codelineno-25-8" href="#__codelineno-25-8"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
+</span><span id="__span-25-9"><a id="__codelineno-25-9" name="__codelineno-25-9" href="#__codelineno-25-9"></a><span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
 </span></code></pre></div>
 <hr />
 <h2 id="feature-comparison">Feature Comparison<a class="headerlink" href="#feature-comparison" title="Permanent link">&para;</a></h2>
@@ -2358,8 +2433,14 @@
 <td>-</td>
 </tr>
 <tr>
-<td>With Zip</td>
+<td>With Zip (unpacking)</td>
 <td><code>[a + b for a, b in zip(l1, l2)]</code></td>
+<td>Not supported</td>
+<td>Use <code>{% for %}</code> loop with unpacking</td>
+</tr>
+<tr>
+<td>With Ternary</td>
+<td><code>["yes" if x else "no" for x in list]</code></td>
 <td>Supported</td>
 <td>-</td>
 </tr>
@@ -2368,33 +2449,33 @@
 <hr />
 <h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
 <h3 id="1-use-filters-for-filtering">1. Use Filters for Filtering<a class="headerlink" href="#1-use-filters-for-filtering" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-24-1"><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c">{#  Good - use filters #}</span>
-</span><span id="__span-24-2"><a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="cp">{{</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">map</span><span class="o">(</span><span class="nv">attribute</span><span class="o">=</span><span class="s2">&quot;name&quot;</span><span class="o">)|</span><span class="nf">list</span> <span class="cp">}}</span>
-</span><span id="__span-24-3"><a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
-</span><span id="__span-24-4"><a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="c">{#  Avoid - inline if not supported #}</span>
-</span><span id="__span-24-5"><a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span> <span class="k">if</span> <span class="nv">user.active</span><span class="o">]</span> <span class="cp">}}</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c">{#  Good - use filters #}</span>
+</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="cp">{{</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">map</span><span class="o">(</span><span class="nv">attribute</span><span class="o">=</span><span class="s2">&quot;name&quot;</span><span class="o">)|</span><span class="nf">list</span> <span class="cp">}}</span>
+</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
+</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="c">{#  Avoid - inline if not supported #}</span>
+</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span> <span class="k">if</span> <span class="nv">user.active</span><span class="o">]</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <h3 id="2-keep-comprehensions-simple">2. Keep Comprehensions Simple<a class="headerlink" href="#2-keep-comprehensions-simple" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-25-1"><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c">{#  Good - simple transformation #}</span>
-</span><span id="__span-25-2"><a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">x</span> <span class="o">*</span> <span class="m">2</span> <span class="nv">for</span> <span class="nv">x</span> <span class="k">in</span> <span class="nv">numbers</span><span class="o">]</span> <span class="cp">}}</span>
-</span><span id="__span-25-3"><a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
-</span><span id="__span-25-4"><a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="c">{#  Avoid - too complex #}</span>
-</span><span id="__span-25-5"><a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">complex_function</span><span class="o">(</span><span class="nv">x</span><span class="o">,</span> <span class="nv">y</span><span class="o">,</span> <span class="nv">z</span><span class="o">)</span> <span class="nv">for</span> <span class="nv">x</span><span class="o">,</span> <span class="nv">y</span><span class="o">,</span> <span class="nv">z</span> <span class="k">in</span> <span class="nv">zip</span><span class="o">(</span><span class="nv">a</span><span class="o">,</span> <span class="nv">b</span><span class="o">,</span> <span class="nv">c</span><span class="o">)</span> <span class="k">if</span> <span class="nv">condition</span><span class="o">]</span> <span class="cp">}}</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c">{#  Good - simple transformation #}</span>
+</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">x</span> <span class="o">*</span> <span class="m">2</span> <span class="nv">for</span> <span class="nv">x</span> <span class="k">in</span> <span class="nv">numbers</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
+</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="c">{#  Avoid - too complex (tuple unpacking and inline if not supported) #}</span>
+</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="c">{# {{ [complex_function(x, y, z) for x, y, z in zip(a, b, c) if condition] }} #}</span>
 </span></code></pre></div>
 <h3 id="3-pre-filter-in-application-code">3. Pre-filter in Application Code<a class="headerlink" href="#3-pre-filter-in-application-code" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-26-1"><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c">{#  Good - filter in Go, comprehend in template #}</span>
-</span><span id="__span-26-2"><a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a># Go: ctx.Set(&quot;active_users&quot;, filterActiveUsers(users))
-</span><span id="__span-26-3"><a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">active_users</span><span class="o">]</span> <span class="cp">}}</span>
-</span><span id="__span-26-4"><a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a>
-</span><span id="__span-26-5"><a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a><span class="c">{#  Avoid - trying to filter in comprehension #}</span>
-</span><span id="__span-26-6"><a id="__codelineno-26-6" name="__codelineno-26-6" href="#__codelineno-26-6"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span> <span class="k">if</span> <span class="nv">user.active</span><span class="o">]</span> <span class="cp">}}</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-28-1"><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c">{#  Good - filter in Go, comprehend in template #}</span>
+</span><span id="__span-28-2"><a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a># Go: ctx.Set(&quot;active_users&quot;, filterActiveUsers(users))
+</span><span id="__span-28-3"><a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">active_users</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-28-4"><a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a>
+</span><span id="__span-28-5"><a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="c">{#  Avoid - trying to filter in comprehension #}</span>
+</span><span id="__span-28-6"><a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span> <span class="k">if</span> <span class="nv">user.active</span><span class="o">]</span> <span class="cp">}}</span>
 </span></code></pre></div>
 <h3 id="4-use-descriptive-variable-names">4. Use Descriptive Variable Names<a class="headerlink" href="#4-use-descriptive-variable-names" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-27-1"><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c">{#  Good - clear purpose #}</span>
-</span><span id="__span-27-2"><a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">user_emails</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.email</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">%}</span>
-</span><span id="__span-27-3"><a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
-</span><span id="__span-27-4"><a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="c">{#  Avoid - unclear #}</span>
-</span><span id="__span-27-5"><a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">x</span> <span class="o">=</span> <span class="o">[</span><span class="nv">u.e</span> <span class="nv">for</span> <span class="nv">u</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">%}</span>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-29-1"><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a><span class="c">{#  Good - clear purpose #}</span>
+</span><span id="__span-29-2"><a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">user_emails</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.email</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-29-3"><a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>
+</span><span id="__span-29-4"><a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="c">{#  Avoid - unclear #}</span>
+</span><span id="__span-29-5"><a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">x</span> <span class="o">=</span> <span class="o">[</span><span class="nv">u.e</span> <span class="nv">for</span> <span class="nv">u</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">%}</span>
 </span></code></pre></div>
 <hr />
 <h2 id="summary">Summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>

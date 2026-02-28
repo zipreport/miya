@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://zipreport.github.io/miya/FILTER_BLOCKS_IMPLEMENTATION/">
+        <link rel="canonical" href="https://zipreport.github.io/miya/COMPREHENSIONS_REFERENCE/">
       
       
-        <link rel="prev" href="../GLOBAL_FUNCTIONS/">
+        <link rel="prev" href="../COMPREHENSIONS_GUIDE/">
       
       
-        <link rel="next" href="../DO_STATEMENTS_IMPLEMENTATION/">
+        <link rel="next" href="../MIYA_LIMITATIONS/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Filter Blocks - Miya Engine</title>
+        <title>Reference - Miya Engine</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#filter-blocks-implementation-guide" class="md-skip">
+        <a href="#listdict-comprehensions-quick-reference" class="md-skip">
           Skip to content
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Filter Blocks
+              Reference
             
           </span>
         </div>
@@ -604,8 +604,6 @@
       
   
   
-    
-  
   
   
     
@@ -618,11 +616,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
         
           
           <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
@@ -643,7 +643,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
             
@@ -742,37 +742,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Filter Blocks
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../FILTER_BLOCKS_IMPLEMENTATION/" class="md-nav__link">
         
   
   
@@ -788,270 +761,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Overview
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architecture
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Architecture">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#1-ast-integration-parserastgo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        1. AST Integration (parser/ast.go)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#2-parser-implementation-parserparsergo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Parser Implementation (parser/parser.go)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-runtime-evaluation-runtimeevaluatorgo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Runtime Evaluation (runtime/evaluator.go)
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage Examples
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Usage Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#basic-filter-block" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Basic Filter Block
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#filter-chaining" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Filter Chaining
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#complex-content" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Complex Content
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#nested-filter-blocks" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Nested Filter Blocks
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#completed-implementation-details" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Completed Implementation Details
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Completed Implementation Details">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#implementation-summary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Implementation Summary
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#working-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Working Examples
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#technical-implementation-details" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Technical Implementation Details
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Technical Implementation Details">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#filter-chain-processing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Filter Chain Processing
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#error-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Error Handling
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#performance-considerations" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Performance Considerations
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#integration-points" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Integration Points
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#testing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Testing
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#migration-from-python-jinja2" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Migration from Python Jinja2
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1096,8 +805,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -1108,13 +819,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -1135,7 +844,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1178,10 +887,37 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../COMPREHENSIONS_REFERENCE/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1197,6 +933,259 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#supported-syntax" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Syntax
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Supported Syntax">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#list-comprehensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        List Comprehensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dictionary-comprehensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dictionary Comprehensions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#supported-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Patterns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not Supported
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operators-in-comprehensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operators in Comprehensions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Use Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Use Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#data-extraction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Extraction
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-transformation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Transformation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#creating-lookups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Lookups
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#chaining-with-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chaining with Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#common-errors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Errors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#safe-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Safe Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#debugging-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Debugging Tips
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Debugging Tips">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-test-components-separately" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Test Components Separately
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-use-intermediate-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Use Intermediate Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workaround-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workaround Patterns
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1353,33 +1342,22 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
+  <a href="#supported-syntax" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Overview
+        Supported Syntax
       
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#architecture" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Architecture
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Architecture">
+    <nav class="md-nav" aria-label="Supported Syntax">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1-ast-integration-parserastgo" class="md-nav__link">
+  <a href="#list-comprehensions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. AST Integration (parser/ast.go)
+        List Comprehensions
       
     </span>
   </a>
@@ -1387,21 +1365,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#2-parser-implementation-parserparsergo" class="md-nav__link">
+  <a href="#dictionary-comprehensions" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2. Parser Implementation (parser/parser.go)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#3-runtime-evaluation-runtimeevaluatorgo" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        3. Runtime Evaluation (runtime/evaluator.go)
+        Dictionary Comprehensions
       
     </span>
   </a>
@@ -1414,22 +1381,55 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#usage-examples" class="md-nav__link">
+  <a href="#supported-patterns" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Usage Examples
+        Supported Patterns
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Usage Examples">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-supported" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not Supported
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#operators-in-comprehensions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Operators in Comprehensions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Use Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Use Cases">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#basic-filter-block" class="md-nav__link">
+  <a href="#data-extraction" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Basic Filter Block
+        Data Extraction
       
     </span>
   </a>
@@ -1437,10 +1437,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#filter-chaining" class="md-nav__link">
+  <a href="#data-transformation" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Filter Chaining
+        Data Transformation
       
     </span>
   </a>
@@ -1448,10 +1448,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#complex-content" class="md-nav__link">
+  <a href="#creating-lookups" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Complex Content
+        Creating Lookups
       
     </span>
   </a>
@@ -1459,10 +1459,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#nested-filter-blocks" class="md-nav__link">
+  <a href="#chaining-with-filters" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Nested Filter Blocks
+        Chaining with Filters
       
     </span>
   </a>
@@ -1475,68 +1475,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#completed-implementation-details" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Completed Implementation Details
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Completed Implementation Details">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#implementation-summary" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Implementation Summary
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#working-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Working Examples
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#technical-implementation-details" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Technical Implementation Details
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Technical Implementation Details">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#filter-chain-processing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Filter Chain Processing
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#error-handling" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1545,13 +1483,14 @@
     </span>
   </a>
   
-</li>
+    <nav class="md-nav" aria-label="Error Handling">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#performance-considerations" class="md-nav__link">
+  <a href="#common-errors" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Performance Considerations
+        Common Errors
       
     </span>
   </a>
@@ -1559,10 +1498,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#integration-points" class="md-nav__link">
+  <a href="#safe-patterns" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Integration Points
+        Safe Patterns
       
     </span>
   </a>
@@ -1575,10 +1514,49 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#testing" class="md-nav__link">
+  <a href="#debugging-tips" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Testing
+        Debugging Tips
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Debugging Tips">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-test-components-separately" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Test Components Separately
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-use-intermediate-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Use Intermediate Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#workaround-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Workaround Patterns
       
     </span>
   </a>
@@ -1586,10 +1564,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#migration-from-python-jinja2" class="md-nav__link">
+  <a href="#see-also" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Migration from Python Jinja2
+        See Also
       
     </span>
   </a>
@@ -1616,199 +1594,213 @@
   
 
 
-<h1 id="filter-blocks-implementation-guide">Filter Blocks Implementation Guide<a class="headerlink" href="#filter-blocks-implementation-guide" title="Permanent link">&para;</a></h1>
-<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
-<p><strong>STATUS:  FULLY IMPLEMENTED AND WORKING</strong></p>
-<p>This document provides technical details about the filter blocks (<code>{% filter %}...{% endfilter %}</code>) implementation in Go Miya, which provides full compatibility with Python Jinja2's filter block functionality.</p>
-<p>Filter blocks are now <strong>production-ready</strong> and support all advanced features including chaining, arguments, nesting, and complex template content.</p>
-<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
-<h3 id="1-ast-integration-parserastgo">1. AST Integration (<code>parser/ast.go</code>)<a class="headerlink" href="#1-ast-integration-parserastgo" title="Permanent link">&para;</a></h3>
-<p><strong>FilterBlockNode Structure:</strong>
-<div class="language-go highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="kd">type</span><span class="w"> </span><span class="nx">FilterBlockNode</span><span class="w"> </span><span class="kd">struct</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="nx">baseNode</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="nx">FilterChain</span><span class="w"> </span><span class="p">[]</span><span class="nx">FilterNode</span><span class="w"> </span><span class="c1">// Chain of filters to apply</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="nx">Body</span><span class="w">        </span><span class="p">[]</span><span class="nx">Node</span><span class="w">       </span><span class="c1">// Content to be filtered</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="p">}</span>
-</span></code></pre></div></p>
-<p><strong>Key Features:</strong>
-- Supports multiple chained filters in a single block
-- Contains arbitrary template content (text, variables, loops, etc.)
-- Proper line/column tracking for error reporting
-- Integrates seamlessly with existing AST structure</p>
-<h3 id="2-parser-implementation-parserparsergo">2. Parser Implementation (<code>parser/parser.go</code>)<a class="headerlink" href="#2-parser-implementation-parserparsergo" title="Permanent link">&para;</a></h3>
-<p><strong>parseFilterBlock() Function:</strong>
-- Parses <code>{% filter filterName(args)|nextFilter %}</code> syntax
-- Handles filter chaining with <code>|</code> separator
-- Supports filter arguments and named parameters
-- Validates filter syntax and provides meaningful error messages
-- Properly handles block termination with <code>{% endfilter %}</code></p>
-<p><strong>Parser Integration:</strong>
-<div class="language-go highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">case</span><span class="w"> </span><span class="nx">lexer</span><span class="p">.</span><span class="nx">TokenFilter</span><span class="p">:</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="nx">p</span><span class="p">.</span><span class="nx">parseFilterBlock</span><span class="p">()</span>
-</span></code></pre></div></p>
-<h3 id="3-runtime-evaluation-runtimeevaluatorgo">3. Runtime Evaluation (<code>runtime/evaluator.go</code>)<a class="headerlink" href="#3-runtime-evaluation-runtimeevaluatorgo" title="Permanent link">&para;</a></h3>
-<p><strong>EvalFilterBlockNode() Function:</strong>
-- Renders the block content first into a string
-- Applies each filter in the chain sequentially (left-to-right)
-- Uses the existing <code>EnvironmentContext.ApplyFilter()</code> system
-- Maintains compatibility with all built-in and custom filters
-- Provides proper error handling and context</p>
-<p><strong>Evaluation Flow:</strong>
-1. Execute block content (variables, loops, conditions, etc.)
-2. Capture rendered output as string
-3. Apply each filter in sequence:
-   - Evaluate filter arguments
-   - Call filter function via environment context
-   - Pass result to next filter in chain
-4. Return final filtered result</p>
-<h2 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h2>
-<h3 id="basic-filter-block">Basic Filter Block<a class="headerlink" href="#basic-filter-block" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="cp">{%</span> <span class="k">filter</span> <span class="nf">upper</span> <span class="cp">%}</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>Hello World
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="cp">{%</span> <span class="k">endfilter</span> <span class="cp">%}</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="cm">&lt;!-- Output: HELLO WORLD --&gt;</span>
+<h1 id="listdict-comprehensions-quick-reference">List/Dict Comprehensions - Quick Reference<a class="headerlink" href="#listdict-comprehensions-quick-reference" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Note:</strong> This reference reflects Miya Engine's actual comprehension support. For the full guide with workarounds, see <a href="../COMPREHENSIONS_GUIDE/">COMPREHENSIONS_GUIDE.md</a>.</p>
+</blockquote>
+<h2 id="supported-syntax">Supported Syntax<a class="headerlink" href="#supported-syntax" title="Permanent link">&para;</a></h2>
+<h3 id="list-comprehensions">List Comprehensions<a class="headerlink" href="#list-comprehensions" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">expression</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">iterable</span><span class="o">]</span> <span class="cp">}}</span>
 </span></code></pre></div>
-<h3 id="filter-chaining">Filter Chaining<a class="headerlink" href="#filter-chaining" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="cp">{%</span> <span class="k">filter</span> <span class="nf">trim</span><span class="o">|</span><span class="nf">upper</span><span class="o">|</span><span class="nf">reverse</span> <span class="cp">%}</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>  hello world  
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="cp">{%</span> <span class="k">endfilter</span> <span class="cp">%}</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="cm">&lt;!-- Output: DLROW OLLEH --&gt;</span>
+<h3 id="dictionary-comprehensions">Dictionary Comprehensions<a class="headerlink" href="#dictionary-comprehensions" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="cp">{{</span> <span class="o">{</span><span class="nv">key_expr</span><span class="o">:</span> <span class="nv">value_expr</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">iterable</span><span class="o">}</span> <span class="cp">}}</span>
 </span></code></pre></div>
-<h3 id="complex-content">Complex Content<a class="headerlink" href="#complex-content" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="cp">{%</span> <span class="k">filter</span> <span class="nf">upper</span> <span class="cp">%}</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="cp">{%</span> <span class="k">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span> <span class="cp">%}</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>  - <span class="cp">{{</span> <span class="nv">user.name</span> <span class="cp">}}</span>
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="cp">{%</span> <span class="k">endfilter</span> <span class="cp">%}</span>
+<h2 id="supported-patterns">Supported Patterns<a class="headerlink" href="#supported-patterns" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Example</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Transform</strong></td>
+<td><code>[x * 2 for x in [1,2,3]]</code></td>
+<td><code>[2, 4, 6]</code></td>
+</tr>
+<tr>
+<td><strong>Extract</strong></td>
+<td><code>[user.name for user in users]</code></td>
+<td><code>["Alice", "Bob"]</code></td>
+</tr>
+<tr>
+<td><strong>Dict from List</strong></td>
+<td><code>{user.id: user.name for user in users}</code></td>
+<td><code>{1: "Alice", 2: "Bob"}</code></td>
+</tr>
+<tr>
+<td><strong>With Filters</strong></td>
+<td><code>[name\|title for name in names]</code></td>
+<td><code>["Alice", "Bob"]</code></td>
+</tr>
+<tr>
+<td><strong>With Expressions</strong></td>
+<td><code>[x * 2 + 1 for x in nums]</code></td>
+<td>Transformed list</td>
+</tr>
+<tr>
+<td><strong>With Ternary</strong></td>
+<td><code>["yes" if x else "no" for x in flags]</code></td>
+<td>Conditional values</td>
+</tr>
+</tbody>
+</table>
+<h2 id="not-supported">Not Supported<a class="headerlink" href="#not-supported" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Pattern</th>
+<th>Example</th>
+<th>Workaround</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Inline if</strong></td>
+<td><code>[x for x in list if cond]</code></td>
+<td>Use <code>selectattr</code>/<code>select</code> filters</td>
+</tr>
+<tr>
+<td><strong>Tuple unpacking</strong></td>
+<td><code>[a ~ b for a, b in zip(l1, l2)]</code></td>
+<td>Use <code>{% for %}</code> loop with unpacking instead</td>
+</tr>
+<tr>
+<td><strong>Dict .items()</strong></td>
+<td><code>{k: v for k, v in dict.items()}</code></td>
+<td>Loop over list of objects instead</td>
+</tr>
+<tr>
+<td><strong>Nested</strong></td>
+<td><code>[x for l in lists for x in l]</code></td>
+<td>Use nested for loops</td>
+</tr>
+</tbody>
+</table>
+<h2 id="operators-in-comprehensions">Operators in Comprehensions<a class="headerlink" href="#operators-in-comprehensions" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Operation</th>
+<th>Syntax</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Arithmetic</strong></td>
+<td><code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>, <code>**</code>, <code>%</code></td>
+<td><code>[x ** 2 for x in nums]</code></td>
+</tr>
+<tr>
+<td><strong>String concat</strong></td>
+<td><code>~</code></td>
+<td><code>[user.name ~ " &lt;" ~ user.email ~ "&gt;" for user in users]</code></td>
+</tr>
+<tr>
+<td><strong>Ternary</strong></td>
+<td><code>a if cond else b</code></td>
+<td><code>["Yes" if x else "No" for x in flags]</code></td>
+</tr>
+<tr>
+<td><strong>Filters</strong></td>
+<td><code>\|filter_name</code></td>
+<td><code>[name\|upper for name in names]</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="common-use-cases">Common Use Cases<a class="headerlink" href="#common-use-cases" title="Permanent link">&para;</a></h2>
+<h3 id="data-extraction">Data Extraction<a class="headerlink" href="#data-extraction" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c">{# Extract a property from a list of objects #}</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.email</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c">{# Sum values #}</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">order.total</span> <span class="nv">for</span> <span class="nv">order</span> <span class="k">in</span> <span class="nv">orders</span><span class="o">]|</span><span class="nf">sum</span> <span class="cp">}}</span>
 </span></code></pre></div>
-<h3 id="nested-filter-blocks">Nested Filter Blocks<a class="headerlink" href="#nested-filter-blocks" title="Permanent link">&para;</a></h3>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="cp">{%</span> <span class="k">filter</span> <span class="nf">upper</span> <span class="cp">%}</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>Outer: 
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="cp">{%</span> <span class="k">filter</span> <span class="nf">lower</span> <span class="cp">%}</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>INNER CONTENT
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="cp">{%</span> <span class="k">endfilter</span> <span class="cp">%}</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="cp">{%</span> <span class="k">endfilter</span> <span class="cp">%}</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="cm">&lt;!-- Output: OUTER: inner content --&gt;</span>
+<h3 id="data-transformation">Data Transformation<a class="headerlink" href="#data-transformation" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c">{# Apply arithmetic #}</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">price</span> <span class="o">*</span> <span class="m">1.1</span> <span class="nv">for</span> <span class="nv">price</span> <span class="k">in</span> <span class="nv">prices</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c">{# Format strings #}</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="o">~</span> <span class="s2">&quot; &lt;&quot;</span> <span class="o">~</span> <span class="nv">user.email</span> <span class="o">~</span> <span class="s2">&quot;&gt;&quot;</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c">{# Apply filters #}</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">name</span><span class="o">|</span><span class="nf">title</span> <span class="nv">for</span> <span class="nv">name</span> <span class="k">in</span> <span class="nv">raw_names</span><span class="o">]</span> <span class="cp">}}</span>
 </span></code></pre></div>
-<h2 id="completed-implementation-details">Completed Implementation Details<a class="headerlink" href="#completed-implementation-details" title="Permanent link">&para;</a></h2>
-<h3 id="implementation-summary">Implementation Summary<a class="headerlink" href="#implementation-summary" title="Permanent link">&para;</a></h3>
-<p><strong>All components have been successfully implemented and tested:</strong></p>
-<ol>
-<li><strong>AST Node</strong>: <code>FilterBlockNode</code> added to <code>parser/ast.go</code></li>
-<li>Stores filter chain and template body</li>
-<li>Proper string representation for debugging</li>
-<li>
-<p>Follows established Miya Engine patterns</p>
-</li>
-<li>
-<p><strong>Parser Integration</strong>: <code>parseFilterBlock()</code> added to <code>parser/parser.go</code></p>
-</li>
-<li>Added <code>case lexer.TokenFilter:</code> to block statement switch</li>
-<li>Parses complex filter chains: <code>{% filter upper|trim|truncate(10) %}</code></li>
-<li>Handles arguments and named parameters</li>
-<li>
-<p>Comprehensive error handling</p>
-</li>
-<li>
-<p><strong>Evaluator Support</strong>: <code>EvalFilterBlockNode()</code> added to <code>runtime/evaluator.go</code></p>
-</li>
-<li>Renders template body content first</li>
-<li>Applies filter chain sequentially (left-to-right)</li>
-<li>
-<p>Proper string conversion and error propagation</p>
-</li>
-<li>
-<p><strong>Comprehensive Testing</strong>: All test cases pass</p>
-</li>
-<li>Basic filter blocks</li>
-<li>Chained filters with arguments</li>
-<li>Complex template content (loops, variables, conditionals)</li>
-<li>Nested filter blocks</li>
-<li>Error conditions</li>
-</ol>
-<h3 id="working-examples">Working Examples<a class="headerlink" href="#working-examples" title="Permanent link">&para;</a></h3>
-<p>The implementation supports the following patterns:</p>
-<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="cm">&lt;!-- Basic Filter Block --&gt;</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="cp">{%</span> <span class="k">filter</span> <span class="nf">upper</span> <span class="cp">%}</span>Hello <span class="cp">{{</span> <span class="nv">user.name</span> <span class="cp">}}</span>! Welcome to our application.<span class="cp">{%</span> <span class="k">endfilter</span> <span class="cp">%}</span>
-</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="cm">&lt;!-- Output: &quot;HELLO JOHN DOE! WELCOME TO OUR APPLICATION.&quot; --&gt;</span>
-</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="cm">&lt;!-- Chained Filters --&gt;</span>
-</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="cp">{%</span> <span class="k">filter</span> <span class="nf">trim</span><span class="o">|</span><span class="nf">upper</span><span class="o">|</span><span class="nf">reverse</span> <span class="cp">%}</span>   Hello World   <span class="cp">{%</span> <span class="k">endfilter</span> <span class="cp">%}</span>
-</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="cm">&lt;!-- Output: &quot;DLROW OLLEH&quot; --&gt;</span>
-</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="cm">&lt;!-- Complex Content with Loops --&gt;</span>
-</span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="cp">{%</span> <span class="k">filter</span> <span class="nf">upper</span> <span class="cp">%}</span>
-</span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>  User Preferences:
-</span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a>  <span class="cp">{%</span> <span class="k">for</span> <span class="nv">key</span><span class="o">,</span> <span class="nv">value</span> <span class="k">in</span> <span class="nv">user.preferences</span> <span class="cp">%}</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>  - <span class="cp">{{</span> <span class="nv">key</span> <span class="cp">}}</span>: <span class="cp">{{</span> <span class="nv">value</span> <span class="cp">}}</span>
-</span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a>  <span class="cp">{%</span> <span class="k">endfor</span> <span class="cp">%}</span>
-</span><span id="__span-6-15"><a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="cp">{%</span> <span class="k">endfilter</span> <span class="cp">%}</span>
-</span><span id="__span-6-16"><a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="cm">&lt;!-- Output: All content processed through UPPER filter --&gt;</span>
+<h3 id="creating-lookups">Creating Lookups<a class="headerlink" href="#creating-lookups" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c">{# ID to name mapping #}</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">user_lookup</span> <span class="o">=</span> <span class="o">{</span><span class="nv">user.id</span><span class="o">:</span> <span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">}</span> <span class="cp">%}</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="cp">{{</span> <span class="nv">user_lookup</span><span class="o">[</span><span class="m">123</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="c">{# Email to role mapping #}</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">role_map</span> <span class="o">=</span> <span class="o">{</span><span class="nv">user.email</span><span class="o">:</span> <span class="nv">user.role</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">}</span> <span class="cp">%}</span>
 </span></code></pre></div>
-<h2 id="technical-implementation-details">Technical Implementation Details<a class="headerlink" href="#technical-implementation-details" title="Permanent link">&para;</a></h2>
-<h3 id="filter-chain-processing">Filter Chain Processing<a class="headerlink" href="#filter-chain-processing" title="Permanent link">&para;</a></h3>
-<ol>
-<li><strong>Parse-time</strong>: Filters are parsed into <code>FilterNode</code> structures containing:</li>
-<li>Filter name</li>
-<li>Arguments (evaluated at runtime)</li>
-<li>
-<p>Named arguments (keyword parameters)</p>
-</li>
-<li>
-<p><strong>Runtime</strong>: Filters are applied using the environment's filter registry:
-   <div class="language-go highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">if</span><span class="w"> </span><span class="nx">envCtx</span><span class="p">,</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">ctx</span><span class="p">.(</span><span class="nx">EnvironmentContext</span><span class="p">);</span><span class="w"> </span><span class="nx">ok</span><span class="w"> </span><span class="p">{</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">    </span><span class="nx">result</span><span class="p">,</span><span class="w"> </span><span class="nx">err</span><span class="w"> </span><span class="o">:=</span><span class="w"> </span><span class="nx">envCtx</span><span class="p">.</span><span class="nx">ApplyFilter</span><span class="p">(</span><span class="nx">filterNode</span><span class="p">.</span><span class="nx">FilterName</span><span class="p">,</span><span class="w"> </span><span class="nx">filteredContent</span><span class="p">,</span><span class="w"> </span><span class="nx">args</span><span class="o">...</span><span class="p">)</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="p">}</span>
-</span></code></pre></div></p>
-</li>
-</ol>
-<h3 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Parse Errors</strong>: Invalid filter syntax, missing <code>endfilter</code>, etc.</li>
-<li><strong>Runtime Errors</strong>: Unknown filters, filter execution errors</li>
-<li><strong>Context Errors</strong>: Missing environment context for filter application</li>
-</ul>
-<h3 id="performance-considerations">Performance Considerations<a class="headerlink" href="#performance-considerations" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Content Buffering</strong>: Block content is rendered once and cached</li>
-<li><strong>Filter Chain Optimization</strong>: Sequential application without intermediate allocations</li>
-<li><strong>Memory Management</strong>: Efficient string handling for large content blocks</li>
-</ul>
-<h3 id="integration-points">Integration Points<a class="headerlink" href="#integration-points" title="Permanent link">&para;</a></h3>
-<p><strong>With Existing Systems:</strong>
--  Filter Registry: Uses <code>Environment.GetFilter()</code>
--  Context System: Compatible with <code>EnvironmentContext</code>
--  Error System: Integrates with template error reporting
--  Extensions: Works with custom filter implementations</p>
-<p><strong>Compatibility:</strong>
--  All built-in filters (70+ filters supported)
--  Custom filters via environment registration
--  Filter arguments and named parameters
--  Filter chaining with proper precedence</p>
-<h2 id="testing">Testing<a class="headerlink" href="#testing" title="Permanent link">&para;</a></h2>
-<p>The implementation includes comprehensive tests covering:</p>
-<ul>
-<li>Basic filter application</li>
-<li>Filter chaining</li>
-<li>Filters with arguments</li>
-<li>Complex template content</li>
-<li>Nested filter blocks</li>
-<li>Error conditions (invalid filters, syntax errors)</li>
-<li>Integration with existing filter system</li>
-</ul>
-<h2 id="migration-from-python-jinja2">Migration from Python Jinja2<a class="headerlink" href="#migration-from-python-jinja2" title="Permanent link">&para;</a></h2>
-<p><strong>Direct Compatibility:</strong>
-- All filter block syntax works identically
-- Same filter chaining behavior
-- Compatible error handling
-- Same performance characteristics (or better)</p>
-<p><strong>No Changes Required:</strong>
-- Existing filter block templates work without modification
-- Filter registration and usage patterns are identical
-- Template inheritance and includes work with filter blocks</p>
+<h3 id="chaining-with-filters">Chaining with Filters<a class="headerlink" href="#chaining-with-filters" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c">{# Apply filters after comprehension #}</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c">{# Sort results #}</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">users</span><span class="o">]|</span><span class="nf">sort</span> <span class="cp">}}</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c">{# Get unique values #}</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">item.category</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">items</span><span class="o">]|</span><span class="nf">unique</span> <span class="cp">}}</span>
+</span></code></pre></div>
+<h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<h3 id="common-errors">Common Errors<a class="headerlink" href="#common-errors" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c">{# Undefined variable — error in strict mode, empty in silent mode #}</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">x</span> <span class="nv">for</span> <span class="nv">x</span> <span class="k">in</span> <span class="nv">undefined_list</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c">{# Wrong variable scope #}</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="cp">{{</span> <span class="o">{</span><span class="nv">x</span><span class="o">:</span> <span class="nv">y</span> <span class="nv">for</span> <span class="nv">x</span> <span class="k">in</span> <span class="nv">items</span><span class="o">}</span> <span class="cp">}}</span>  <span class="c">{# Error: y is not defined #}</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="c">{# Non-iterable #}</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">x</span> <span class="nv">for</span> <span class="nv">x</span> <span class="k">in</span> <span class="m">123</span><span class="o">]</span> <span class="cp">}}</span>       <span class="c">{# Error: int is not iterable #}</span>
+</span></code></pre></div>
+<h3 id="safe-patterns">Safe Patterns<a class="headerlink" href="#safe-patterns" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c">{# Use default filter for potentially undefined lists #}</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">x</span> <span class="nv">for</span> <span class="nv">x</span> <span class="k">in</span> <span class="nv">items</span><span class="o">|</span><span class="nf">default</span><span class="o">([])]</span> <span class="cp">}}</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c">{# Proper variable scope #}</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="cp">{{</span> <span class="o">{</span><span class="nv">item.key</span><span class="o">:</span> <span class="nv">item.value</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">items</span><span class="o">}</span> <span class="cp">}}</span>
+</span></code></pre></div>
+<h2 id="debugging-tips">Debugging Tips<a class="headerlink" href="#debugging-tips" title="Permanent link">&para;</a></h2>
+<h3 id="1-test-components-separately">1. Test Components Separately<a class="headerlink" href="#1-test-components-separately" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c">{# Test the iterable first #}</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="cp">{{</span> <span class="nv">items</span> <span class="cp">}}</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c">{# Then test simple iteration #}</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">item</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">items</span><span class="o">]</span> <span class="cp">}}</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c">{# Then add the expression #}</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="cp">{{</span> <span class="o">[</span><span class="nv">item.name</span> <span class="nv">for</span> <span class="nv">item</span> <span class="k">in</span> <span class="nv">items</span><span class="o">]</span> <span class="cp">}}</span>
+</span></code></pre></div>
+<h3 id="2-use-intermediate-variables">2. Use Intermediate Variables<a class="headerlink" href="#2-use-intermediate-variables" title="Permanent link">&para;</a></h3>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c">{# Break complex operations into steps #}</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">filtered</span> <span class="o">=</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">list</span> <span class="cp">%}</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="cp">{%</span> <span class="k">set</span> <span class="nv">names</span> <span class="o">=</span> <span class="o">[</span><span class="nv">user.name</span> <span class="nv">for</span> <span class="nv">user</span> <span class="k">in</span> <span class="nv">filtered</span><span class="o">]</span> <span class="cp">%}</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="cp">{{</span> <span class="nv">names</span><span class="o">|</span><span class="nf">join</span><span class="o">(</span><span class="s2">&quot;, &quot;</span><span class="o">)</span> <span class="cp">}}</span>
+</span></code></pre></div>
+<h2 id="workaround-patterns">Workaround Patterns<a class="headerlink" href="#workaround-patterns" title="Permanent link">&para;</a></h2>
+<p>For features not directly supported, use filter chains:</p>
+<div class="language-html+jinja highlight"><pre><span></span><code><span id="__span-10-1"><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c">{# Instead of: [x for x in numbers if x &gt; 5] #}</span>
+</span><span id="__span-10-2"><a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="cp">{{</span> <span class="nv">numbers</span><span class="o">|</span><span class="nf">select</span><span class="o">(</span><span class="s2">&quot;greaterthan&quot;</span><span class="o">,</span> <span class="m">5</span><span class="o">)|</span><span class="nf">list</span> <span class="cp">}}</span>
+</span><span id="__span-10-3"><a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>
+</span><span id="__span-10-4"><a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="c">{# Instead of: [user.name for user in users if user.active] #}</span>
+</span><span id="__span-10-5"><a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="cp">{{</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;active&quot;</span><span class="o">)|</span><span class="nf">map</span><span class="o">(</span><span class="nv">attribute</span><span class="o">=</span><span class="s2">&quot;name&quot;</span><span class="o">)|</span><span class="nf">list</span> <span class="cp">}}</span>
+</span><span id="__span-10-6"><a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>
+</span><span id="__span-10-7"><a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="c">{# Instead of: [user for user in users if user.age &gt;= 18] #}</span>
+</span><span id="__span-10-8"><a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="cp">{{</span> <span class="nv">users</span><span class="o">|</span><span class="nf">selectattr</span><span class="o">(</span><span class="s2">&quot;age&quot;</span><span class="o">,</span> <span class="s2">&quot;&gt;=&quot;</span><span class="o">,</span> <span class="m">18</span><span class="o">)|</span><span class="nf">list</span> <span class="cp">}}</span>
+</span></code></pre></div>
 <hr />
-<p><em>Implementation completed: August 2025</em><br />
-<em>Go Miya Version: Latest</em></p>
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../COMPREHENSIONS_GUIDE/">Comprehensions Guide</a> - Full guide with examples and workarounds</li>
+<li><a href="../FILTERS_GUIDE/">Filters Guide</a> - Using selectattr/select for filtering</li>
+<li><a href="../CONTROL_STRUCTURES_GUIDE/">Control Structures</a> - Alternative loop syntax</li>
+<li><a href="../MIYA_LIMITATIONS/">Miya Limitations</a> - All known limitations</li>
+</ul>
 
 
 
