@@ -1793,6 +1793,64 @@
    "context": {},
    "entry": "main",
    "expect": {
+    "output": "\"a\\u0027b\""
+   },
+   "id": "esc-018",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ \"a'b\"|tojson }}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "k": "<v\">"
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "<a k=\"&lt;v&#34;&gt;\">"
+   },
+   "id": "esc-019",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "<a{{ d|xmlattr }}>"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "go <a href=\"http://x.com\" rel=\"noopener\">http://x.com</a> &lt;b&gt;"
+   },
+   "id": "esc-020",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'go http://x.com <b>'|urlize }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
     "output": "<b>a&amp;</b>"
    },
    "id": "macesc-001",

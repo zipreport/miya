@@ -114,20 +114,10 @@
   "plan": "027",
   "reason": "want \"&lt;b&gt;\", got \"&amp;lt;b&amp;gt;\""
  },
- "esc-004": {
-  "kind": "output",
-  "plan": "031",
-  "reason": "want \"&lt;script&gt;x&lt;/script&gt;\", got \"<script>x</script>\""
- },
  "esc-005": {
   "kind": "output",
   "plan": "054",
-  "reason": "want \"see <a href=\\\"http://a.com/&lt;b&gt;\\\" rel=\\\"noopener\\\">http://a.com/&lt;b&gt;</a> now\", got \"see <a href=\\\"http://a.com/\\\">http://a.com/</a><b> now\""
- },
- "esc-006": {
-  "kind": "output",
-  "plan": "031",
-  "reason": "want \"<a title='\\\"a\\\\u0027b\\\"'>\", got \"<a title='\\\"a'b\\\"'>\""
+  "reason": "want \"see <a href=\\\"http://a.com/&lt;b&gt;\\\" rel=\\\"noopener\\\">http://a.com/&lt;b&gt;</a> now\", got \"see <a href=\\\"http://a.com/\\\">http://a.com/</a>&lt;b&gt; now\""
  },
  "esc-008": {
   "kind": "output",
@@ -138,11 +128,6 @@
   "kind": "output",
   "plan": "048",
   "reason": "want \"[&#39;&lt;i&gt;&#39;]\", got \"[<i>]\""
- },
- "esc-010": {
-  "kind": "output",
-  "plan": "031",
-  "reason": "want \"<a k=\\\"v\\\">\", got \"<a k=&#34;v&#34;>\""
  },
  "esc-012": {
   "kind": "output",
@@ -157,12 +142,12 @@
  "esc-016": {
   "kind": "output",
   "plan": "054",
-  "reason": "want \"&lt;b&gt; <a href=\\\"http://a.com\\\" rel=\\\"noopener\\\">http://a.com</a>\", got \"<b> <a href=\\\"http://a.com\\\">http://a.com</a>\""
+  "reason": "want \"&lt;b&gt; <a href=\\\"http://a.com\\\" rel=\\\"noopener\\\">http://a.com</a>\", got \"&lt;b&gt; <a href=\\\"http://a.com\\\">http://a.com</a>\""
  },
- "esc-017": {
+ "esc-020": {
   "kind": "output",
-  "plan": "031",
-  "reason": "want \"\\\"\\\\u003ca\\\\u0027b\\\\u003e\\\"\", got \"\\\"\\\\u003ca'b\\\\u003e\\\"\""
+  "plan": "054",
+  "reason": "want \"go <a href=\\\"http://x.com\\\" rel=\\\"noopener\\\">http://x.com</a> &lt;b&gt;\", got \"go <a href=\\\"http://x.com\\\">http://x.com</a> &lt;b&gt;\""
  },
  "fkw-001": {
   "kind": "output",
@@ -747,27 +732,27 @@
  "uni-001": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"ç\", got \"Ã\""
+  "reason": "want \"\u00e7\", got \"\u00c3\""
  },
  "uni-002": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"açú\", got \"aç\""
+  "reason": "want \"a\u00e7\u00fa\", got \"a\u00e7\""
  },
  "uni-003": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"racúça\", got \"rac\\xbaç\\xc3a\""
+  "reason": "want \"rac\u00fa\u00e7a\", got \"rac\\xba\u00e7\\xc3a\""
  },
  "uni-004": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"a.ç.ú.\", got \"a.ç..ú..\""
+  "reason": "want \"a.\u00e7.\u00fa.\", got \"a.\u00e7..\u00fa..\""
  },
  "uni-005": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"ñ\", got \"±\""
+  "reason": "want \"\u00f1\", got \"\u00b1\""
  },
  "with-001": {
   "kind": "output",

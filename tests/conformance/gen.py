@@ -156,6 +156,9 @@ case("esc-014", "{{ s }}", {"s": "<b>&"}, autoescape=False)
 case("esc-015", "{{ s|e }}", {"s": "<b>&"}, autoescape=False)
 case("esc-016", "{{ s|urlize }}", {"s": "<b> http://a.com"}, autoescape=False)
 case("esc-017", "{{ q|tojson }}", {"q": "<a'b>"}, autoescape=False)
+case("esc-018", "{{ \"a'b\"|tojson }}")
+case("esc-019", "<a{{ d|xmlattr }}>", {"d": {"k": "<v\">"}})
+case("esc-020", "{{ 'go http://x.com <b>'|urlize }}")
 
 # --- macro / caller / set-block output escaping (plan 027) ------------------
 case("macesc-001", "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{{ b('a&') }}")
