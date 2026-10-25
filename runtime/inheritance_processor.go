@@ -12,7 +12,6 @@ type InheritanceProcessor struct {
 	env           EnvironmentInterface
 	templateCache map[string]*parser.TemplateNode
 	cache         *InheritanceCache
-	hasher        *ContextHasher
 }
 
 // EnvironmentInterface defines the minimal interface needed from Environment
@@ -41,7 +40,6 @@ func NewInheritanceProcessor(env EnvironmentInterface) *InheritanceProcessor {
 		env:           env,
 		templateCache: make(map[string]*parser.TemplateNode),
 		cache:         NewInheritanceCache(),
-		hasher:        NewContextHasher(),
 	}
 }
 
@@ -51,7 +49,6 @@ func NewInheritanceProcessorWithCache(env EnvironmentInterface, cache *Inheritan
 		env:           env,
 		templateCache: make(map[string]*parser.TemplateNode),
 		cache:         cache,
-		hasher:        NewContextHasher(),
 	}
 }
 
@@ -66,16 +63,6 @@ func (p *InheritanceProcessor) ResolveInheritance(template TemplateInterface, co
 		return ast, nil // No inheritance needed
 	}
 
-	// Try to get resolved template from cache first
-	contextHash := p.hasher.HashContext(context)
-	// TEMPORARY: Disable caching for templates with super() calls to avoid cache collisions
-	// TODO: Improve cache key to include template content hash
-	if !p.hasInheritanceDirectives(ast) {
-		if cachedTemplate, found := p.cache.GetResolvedTemplate(templateName, contextHash); found {
-			return cachedTemplate, nil
-		}
-	}
-
 	// Check if we have the hierarchy cached
 	var hierarchy *InheritanceHierarchy
 	var err error
@@ -84,6 +71,12 @@ func (p *InheritanceProcessor) ResolveInheritance(template TemplateInterface, co
 	if p.hasDynamicInheritance(template.AST()) {
 		// Build inheritance hierarchy with context for dynamic resolution
 		hierarchy, err = p.buildInheritanceHierarchyWithContext(template, context)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build inheritance hierarchy: %v", err)
+		}
+	} else if templateName == "<string>" {
+		// Every FromString template has this name, so the cache cannot tell them apart
+		hierarchy, err = p.buildInheritanceHierarchy(template)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build inheritance hierarchy: %v", err)
 		}
@@ -108,15 +101,6 @@ func (p *InheritanceProcessor) ResolveInheritance(template TemplateInterface, co
 	if err != nil {
 		return nil, fmt.Errorf("failed to build final template: %v", err)
 	}
-
-	// Cache the resolved template
-	templateChain := make([]string, len(hierarchy.Templates))
-	for i, tmpl := range hierarchy.Templates {
-		if tmpl.Name != "" {
-			templateChain[i] = tmpl.Name
-		}
-	}
-	p.cache.StoreResolvedTemplate(templateName, contextHash, finalTemplate, templateChain)
 
 	return finalTemplate, nil
 }

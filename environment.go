@@ -622,8 +622,9 @@ func WithUndefinedBehavior(behavior runtime.UndefinedBehavior) EnvironmentOption
 // ClearCache clears the template cache
 func (e *Environment) ClearCache() {
 	e.cacheMutex.Lock()
-	defer e.cacheMutex.Unlock()
 	e.cache = make(map[string]*Template)
+	e.cacheMutex.Unlock()
+	e.ClearInheritanceCache()
 }
 
 // GetCacheSize returns the number of cached templates
