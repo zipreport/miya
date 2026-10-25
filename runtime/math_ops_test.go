@@ -370,3 +370,26 @@ func TestSetAttributeAndItem(t *testing.T) {
 		}
 	})
 }
+
+func TestApplyBinaryOpLogicalOperands(t *testing.T) {
+	e := NewEvaluator()
+	tests := []struct {
+		op          string
+		left, right interface{}
+		want        interface{}
+	}{
+		{"or", "", "x", "x"},
+		{"or", "a", "x", "a"},
+		{"and", 0, "x", 0},
+		{"and", 1, "x", "x"},
+	}
+	for _, tt := range tests {
+		got, err := e.applyBinaryOp(tt.op, tt.left, tt.right)
+		if err != nil {
+			t.Fatalf("%v %s %v: %v", tt.left, tt.op, tt.right, err)
+		}
+		if got != tt.want {
+			t.Errorf("%#v %s %#v = %#v, want %#v", tt.left, tt.op, tt.right, got, tt.want)
+		}
+	}
+}
