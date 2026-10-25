@@ -1283,6 +1283,8 @@ func (p *InheritanceProcessor) replaceSuperInNode(node parser.Node) (parser.Node
 			Iterable:  n.Iterable,
 			Body:      newBody,
 			Else:      newElse,
+			Condition: n.Condition,
+			Recursive: n.Recursive,
 		}, nil
 
 	default:
