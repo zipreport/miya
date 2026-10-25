@@ -569,6 +569,11 @@
   "plan": "037",
   "reason": "want \"33\", got render-time error: MathError: math error in floor division: division by zero at line 1, column 7"
  },
+ "nopanic-002": {
+  "kind": "output",
+  "plan": "030",
+  "reason": "want \"[[1, 2], [3]]\", got \"[[1 2] [3]]\" (list repr)"
+ },
  "parse-001": {
   "kind": "error",
   "plan": "038",

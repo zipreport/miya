@@ -362,6 +362,12 @@ case("err-006", "{% block a %}{% block a %}{% endblock %}{% endblock %}")
 case("err-007", templates={"main": "{% extends 'nope' %}"})
 case("err-008", templates={"main": "{% include 'nope' %}"})
 
+# --- bad data and malformed tags: errors, not panics (plan 030) -------------
+case("nopanic-001", "{{ n + 1 }}", {"n": None})
+case("nopanic-002", "{{ l|batch(2)|list }}", {"l": [1, 2, 3]})
+case("nopanic-003", "{{ s|indent(-1, true) }}", {"s": "hello world"})
+case("nopanic-004", "{% extends 1 %}")
+
 
 def render(c):
     env = jinja2.Environment(

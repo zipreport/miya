@@ -5338,6 +5338,90 @@
    "templates": {
     "main": "{% include 'nope' %}"
    }
+  },
+  {
+   "context": {
+    "n": null
+   },
+   "entry": "main",
+   "expect": {
+    "error": "TypeError",
+    "phase": "render"
+   },
+   "id": "nopanic-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ n + 1 }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     1,
+     2,
+     3
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "[[1, 2], [3]]"
+   },
+   "id": "nopanic-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|batch(2)|list }}"
+   }
+  },
+  {
+   "context": {
+    "s": "hello world"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "hello world"
+   },
+   "id": "nopanic-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|indent(-1, true) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateNotFound",
+    "phase": "render"
+   },
+   "id": "nopanic-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% extends 1 %}"
+   }
   }
  ],
  "jinja2": "3.1.6",
