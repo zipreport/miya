@@ -2177,7 +2177,12 @@ func TestTemplateMacroCall(t *testing.T) {
 			Defaults: map[string]interface{}{
 				"greeting_word": "Hello",
 			},
-			Body:    []parser.Node{},
+			Body: []parser.Node{
+				parser.NewVariableNode(parser.NewIdentifierNode("greeting_word", 1, 1), 1, 1),
+				&parser.TextNode{Content: " "},
+				parser.NewVariableNode(parser.NewIdentifierNode("name", 1, 1), 1, 1),
+				&parser.TextNode{Content: "!"},
+			},
 			Context: ctx,
 		}
 
@@ -2187,12 +2192,8 @@ func TestTemplateMacroCall(t *testing.T) {
 			t.Fatalf("Unexpected error: %v", err)
 		}
 
-		// Since this is the built-in greeting macro, it should work
 		if result != "Hi Alice!" {
-			// It's a mock, so check for the test implementation pattern
-			if !stringContains(fmt.Sprintf("%v", result), "Alice") {
-				t.Errorf("Expected result to contain 'Alice', got %v", result)
-			}
+			t.Errorf("Expected %q, got %v", "Hi Alice!", result)
 		}
 
 		// Test with default parameter

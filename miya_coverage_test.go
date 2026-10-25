@@ -560,35 +560,6 @@ func TestNormalizeHTMLOptionWhitespace(t *testing.T) {
 	}
 }
 
-// TestNormalizeBlogAuthorLinks tests blog author link normalization
-func TestNormalizeBlogAuthorLinks(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "author link",
-			input:    `By <a href="/authors/john">John Doe</a>`,
-			expected: `By John Doe`,
-		},
-		{
-			name:     "no author link",
-			input:    `By John Doe`,
-			expected: `By John Doe`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := normalizeBlogAuthorLinks(tt.input)
-			if result != tt.expected {
-				t.Errorf("normalizeBlogAuthorLinks(%q) = %q, expected %q", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
-
 // Benchmark tests
 func BenchmarkContextOperations(b *testing.B) {
 	ctx := NewContext()

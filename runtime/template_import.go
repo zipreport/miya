@@ -130,17 +130,7 @@ func (tm *TemplateMacro) Call(evaluator *DefaultEvaluator, callCtx Context, args
 		return result, nil
 	}
 
-	// For empty body, return debug message with parameters for testing
-	paramStr := ""
-	for i, paramName := range tm.Parameters {
-		if val, exists := macroCtx.GetVariable(paramName); exists {
-			if i > 0 {
-				paramStr += ", "
-			}
-			paramStr += fmt.Sprintf("%v", val)
-		}
-	}
-	return fmt.Sprintf("[Macro %s executed with: %s]", tm.Name, paramStr), nil
+	return "", nil
 }
 
 // TemplateLoader interface for loading templates
