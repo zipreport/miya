@@ -1,6 +1,7 @@
 package miya
 
 import (
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -548,4 +549,116 @@ func (l *simpleTestLoader) ListTemplates() ([]string, error) {
 		names = append(names, name)
 	}
 	return names, nil
+}
+
+func TestConcurrentRendererLifecycle(t *testing.T) {
+	t.Run("before_start", func(t *testing.T) {
+		env := NewEnvironment()
+		tmpl, err := env.FromString("x")
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := NewConcurrentTemplateRenderer(tmpl, 1)
+		select {
+		case res := <-r.RenderAsync(NewContext()):
+			if res.err == nil || !strings.Contains(res.err.Error(), "not started") {
+				t.Fatalf("err = %v, want not started", res.err)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("no result within 1s")
+		}
+	})
+
+	t.Run("stop_start_stop", func(t *testing.T) {
+		env := NewEnvironment()
+		tmpl, err := env.FromString("x")
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := NewConcurrentTemplateRenderer(tmpl, 1)
+		func() {
+			defer func() {
+				if p := recover(); p != nil {
+					t.Fatalf("panic: %v", p)
+				}
+			}()
+			r.Start()
+			r.Stop()
+			r.Start()
+			r.Stop()
+		}()
+	})
+
+	t.Run("pending_jobs_at_stop", func(t *testing.T) {
+		for iter := 0; iter < 10; iter++ {
+			gate := make(chan struct{})
+			env := NewEnvironment()
+			env.AddGlobal("wait", func() (interface{}, error) { <-gate; return "", nil })
+			tmpl, err := env.FromString("{{ wait() }}x")
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := NewConcurrentTemplateRenderer(tmpl, 1)
+			r.Start()
+			chans := make([]<-chan renderResult, 3)
+			for i := range chans {
+				chans[i] = r.RenderAsync(NewContext())
+			}
+			time.Sleep(10 * time.Millisecond)
+			go r.Stop()
+			time.Sleep(50 * time.Millisecond)
+			close(gate)
+			for i, ch := range chans {
+				select {
+				case <-ch:
+				case <-time.After(2 * time.Second):
+					t.Fatalf("iteration %d: job %d got no result", iter, i)
+				}
+			}
+		}
+	})
+}
+
+func TestTemplateCacheSizes(t *testing.T) {
+	env := NewEnvironment()
+	tmpl, err := env.FromString("x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := func(name string, size int, f func(t *testing.T, tc *TemplateCache)) {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if p := recover(); p != nil {
+					t.Fatalf("panic: %v", p)
+				}
+			}()
+			f(t, NewTemplateCache(size))
+		})
+	}
+	run("zero", 0, func(t *testing.T, tc *TemplateCache) {
+		tc.Put("a", tmpl)
+		if _, ok := tc.Get("a"); ok {
+			t.Fatal("size 0 cache must not store")
+		}
+	})
+	run("negative", -1, func(t *testing.T, tc *TemplateCache) {
+		for _, k := range []string{"a", "b", "c"} {
+			tc.Put(k, tmpl)
+		}
+		for _, k := range []string{"a", "b", "c"} {
+			if _, ok := tc.Get(k); !ok {
+				t.Fatalf("unbounded cache lost %q", k)
+			}
+		}
+	})
+	run("one", 1, func(t *testing.T, tc *TemplateCache) {
+		tc.Put("a", tmpl)
+		tc.Put("b", tmpl)
+		if _, ok := tc.Get("a"); ok {
+			t.Fatal("a should be evicted")
+		}
+		if _, ok := tc.Get("b"); !ok {
+			t.Fatal("b should be kept")
+		}
+	})
 }

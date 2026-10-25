@@ -770,3 +770,20 @@ func BenchmarkConcurrentCacheAccess(b *testing.B) {
 		}
 	})
 }
+
+func TestInheritanceCacheCleanupConcurrent(t *testing.T) {
+	c := NewInheritanceCache()
+	c.cleanupInterval = 0
+
+	var wg sync.WaitGroup
+	for g := 0; g < 4; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 200; i++ {
+				c.GetHierarchy("x")
+			}
+		}()
+	}
+	wg.Wait()
+}

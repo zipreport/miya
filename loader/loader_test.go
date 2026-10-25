@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -703,4 +704,32 @@ func TestCachingLoaderInterface(t *testing.T) {
 			t.Errorf("Expected non-negative miss count, got %d", stats.Misses)
 		}
 	})
+}
+
+func TestCachedLoaderStatsConcurrent(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.html"), []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fl := NewFileSystemLoader([]string{dir}, NewDirectTemplateParser())
+
+	var wg sync.WaitGroup
+	for g := 0; g < 4; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 50; i++ {
+				if _, err := fl.LoadTemplate("a.html"); err != nil {
+					t.Errorf("LoadTemplate: %v", err)
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	s := fl.GetCacheStats()
+	if s.Hits+s.Misses != 200 {
+		t.Fatalf("hits+misses = %d, want 200", s.Hits+s.Misses)
+	}
 }
