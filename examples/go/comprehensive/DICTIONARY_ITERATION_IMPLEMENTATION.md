@@ -332,7 +332,7 @@ func TestDictionaryIteration(t *testing.T) {
             expected: "x=1,y=2,",
         },
         {
-            name:     "Single variable gets value",
+            name:     "Single variable gets key",
             template: `{% for item in dict %}{{ item }};{% endfor %}`,
             data: map[string]interface{}{
                 "dict": map[string]interface{}{
@@ -340,7 +340,7 @@ func TestDictionaryIteration(t *testing.T) {
                     "b": "banana",
                 },
             },
-            expected: "apple;banana;",
+            expected: "a;b;",
         },
     }
     

@@ -200,22 +200,28 @@ func DictSortFilter(value interface{}, args ...interface{}) (interface{}, error)
 			pairs = append(pairs, kv{key: k, value: val})
 		}
 
-		sort.Slice(pairs, func(i, j int) bool {
-			var a, b string
-			if byKey {
-				a, b = pairs[i].key, pairs[j].key
-			} else {
-				a, b = ToString(pairs[i].value), ToString(pairs[j].value)
+		less := func(i, j int) bool {
+			fi, fj := pairs[i].key, pairs[j].key
+			if !byKey {
+				fi, fj = ToString(pairs[i].value), ToString(pairs[j].value)
 			}
-
+			gi, gj := fi, fj
 			if !caseSensitive {
-				a, b = strings.ToLower(a), strings.ToLower(b)
+				gi, gj = strings.ToLower(fi), strings.ToLower(fj)
 			}
-
+			if gi != gj {
+				return gi < gj
+			}
+			if fi != fj {
+				return fi < fj
+			}
+			return pairs[i].key < pairs[j].key
+		}
+		sort.SliceStable(pairs, func(i, j int) bool {
 			if reverse {
-				return a > b
+				return less(j, i)
 			}
-			return a < b
+			return less(i, j)
 		})
 
 		result := make([][]interface{}, len(pairs))

@@ -50,9 +50,9 @@ This document outlines the key differences between Python Jinja2 and the Miya En
 <li><strong>theme:</strong> {{ user.preferences.theme }}</li>
 <li><strong>language:</strong> {{ user.preferences.language }}</li>
 
-<!-- OR loop unpacking not supported -->
+<!-- OR loop unpacking -->
 {% for item in user.preferences %}
-    <!-- Only gets values, not key-value pairs -->
+    <!-- Gets the keys, in sorted order; use .items() for key-value pairs -->
 {% endfor %}
 ```
 

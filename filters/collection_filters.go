@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 // FirstFilter returns the first item in a sequence
@@ -40,7 +41,8 @@ func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		}
 	case string:
 		if len(v) > 0 {
-			return string(v[0]), nil
+			r, _ := utf8.DecodeRuneInString(v)
+			return string(r), nil
 		}
 	default:
 		// Use reflection for other slice types
@@ -88,7 +90,8 @@ func LastFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		}
 	case string:
 		if len(v) > 0 {
-			return string(v[len(v)-1]), nil
+			r, _ := utf8.DecodeLastRuneInString(v)
+			return string(r), nil
 		}
 	default:
 		// Use reflection for other slice types

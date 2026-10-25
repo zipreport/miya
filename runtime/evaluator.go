@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -1551,8 +1552,9 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 		case "keys":
 			// Return a callable function that returns the keys
 			return func(args ...interface{}) (interface{}, error) {
-				keys := make([]interface{}, 0, len(v))
-				for k := range v {
+				sorted := sortedKeys(v)
+				keys := make([]interface{}, 0, len(sorted))
+				for _, k := range sorted {
 					keys = append(keys, k)
 				}
 				return keys, nil
@@ -1561,8 +1563,8 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 			// Return a callable function that returns the values
 			return func(args ...interface{}) (interface{}, error) {
 				values := make([]interface{}, 0, len(v))
-				for _, val := range v {
-					values = append(values, val)
+				for _, k := range sortedKeys(v) {
+					values = append(values, v[k])
 				}
 				return values, nil
 			}
@@ -1631,14 +1633,20 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 			return nil, fmt.Errorf("string index must be integer, got %T", key)
 		}
 		// Support negative indexing like Python
-		if keyInt < 0 {
-			keyInt = len(v) + keyInt
+		n := keyInt
+		if n < 0 {
+			n += utf8.RuneCountInString(v)
 		}
-		if keyInt < 0 || keyInt >= len(v) {
-			// Return undefined for out of bounds access (Jinja2 behavior)
-			return NewUndefined(fmt.Sprintf("index[%d]", keyInt), UndefinedSilent, nil), nil
+		if n >= 0 {
+			for _, r := range v {
+				if n == 0 {
+					return string(r), nil
+				}
+				n--
+			}
 		}
-		return string(v[keyInt]), nil
+		// Return undefined for out of bounds access (Jinja2 behavior)
+		return NewUndefined(fmt.Sprintf("index[%d]", keyInt), UndefinedSilent, nil), nil
 	default:
 		// Try reflection for slice/array access
 		rv := reflect.ValueOf(obj)
@@ -1990,6 +1998,18 @@ func (e *DefaultEvaluator) applyTest(name string, value interface{}, args []inte
 	}
 }
 
+// sortedKeys returns the keys of m in sorted (code-point) order. Go maps
+// have no insertion order, so miya walks dicts by sorted key (Jinja2 uses
+// insertion order).
+func sortedKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) {
 	if obj == nil {
 		return nil, nil
@@ -2030,25 +2050,25 @@ func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) 
 		return result, nil
 
 	case map[string]interface{}:
-		// Return values only for single variable iteration
+		// Return keys in sorted order (Python semantics)
 		result := make([]interface{}, 0, len(v))
-		for _, value := range v {
-			result = append(result, value)
+		for _, key := range sortedKeys(v) {
+			result = append(result, key)
 		}
 		return result, nil
 
 	case *DictItems:
 		// Handle DictItems objects - return key-value pairs for iteration
 		result := make([]interface{}, 0, len(v.data))
-		for key, value := range v.data {
-			result = append(result, []interface{}{key, value})
+		for _, key := range sortedKeys(v.data) {
+			result = append(result, []interface{}{key, v.data[key]})
 		}
 		return result, nil
 
 	case string:
-		result := make([]interface{}, len(v))
-		for i, r := range v {
-			result[i] = string(r)
+		result := make([]interface{}, 0, utf8.RuneCountInString(v))
+		for _, r := range v {
+			result = append(result, string(r))
 		}
 		return result, nil
 	}
@@ -2107,7 +2127,7 @@ func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) 
 }
 
 // makeIterableForVariables creates an iterable based on the number of variables
-// For maps with multiple variables, returns key-value pairs; otherwise returns values
+// For maps with multiple variables, returns key-value pairs; otherwise returns keys
 func (e *DefaultEvaluator) makeIterableForVariables(obj interface{}, numVariables int) ([]interface{}, error) {
 	if obj == nil {
 		return nil, nil
@@ -2164,8 +2184,8 @@ func (e *DefaultEvaluator) makeIterableForVariables(obj interface{}, numVariable
 		// Handle .items() method result - always returns key-value pairs
 		// Pre-allocate with known capacity to avoid reallocations
 		result := make([]interface{}, 0, len(v.data))
-		for key, value := range v.data {
-			result = append(result, []interface{}{key, value})
+		for _, key := range sortedKeys(v.data) {
+			result = append(result, []interface{}{key, v.data[key]})
 		}
 		return result, nil
 	case map[string]interface{}:
@@ -2173,16 +2193,16 @@ func (e *DefaultEvaluator) makeIterableForVariables(obj interface{}, numVariable
 			// Return key-value pairs for unpacking
 			// Pre-allocate with known capacity to avoid reallocations
 			result := make([]interface{}, 0, len(v))
-			for key, value := range v {
-				result = append(result, []interface{}{key, value})
+			for _, key := range sortedKeys(v) {
+				result = append(result, []interface{}{key, v[key]})
 			}
 			return result, nil
 		} else if numVariables == 1 {
-			// Return values only for single variable
+			// Return keys in sorted order for single variable
 			// Pre-allocate with known capacity to avoid reallocations
 			result := make([]interface{}, 0, len(v))
-			for _, value := range v {
-				result = append(result, value)
+			for _, key := range sortedKeys(v) {
+				result = append(result, key)
 			}
 			return result, nil
 		} else {
@@ -2957,201 +2977,67 @@ func (e *DefaultEvaluator) slice(obj interface{}, start, end, step *int) (interf
 	}
 }
 
-func (e *DefaultEvaluator) sliceString(s string, start, end, step *int) string {
-	length := len(s)
-
-	// Default values
-	startVal := 0
-	endVal := length
+// sliceBounds resolves Python slice bounds for a sequence of length n, as
+// CPython's PySlice_AdjustIndices does. Iterate i from start while
+// i < stop (step > 0) or i > stop (step < 0). The caller rejects step 0.
+func sliceBounds(n int, start, end, step *int) (int, int, int) {
 	stepVal := 1
-
-	if start != nil {
-		startVal = *start
-		if startVal < 0 {
-			startVal += length
-		}
-		if startVal < 0 {
-			startVal = 0
-		}
-		if startVal > length {
-			startVal = length
-		}
-	}
-
-	if end != nil {
-		endVal = *end
-		if endVal < 0 {
-			endVal += length
-		}
-		if endVal < 0 {
-			endVal = 0
-		}
-		if endVal > length {
-			endVal = length
-		}
-	}
-
 	if step != nil {
 		stepVal = *step
 	}
-
-	if stepVal == 1 {
-		// Simple case
-		if startVal >= endVal {
-			return ""
-		}
-		return s[startVal:endVal]
+	lower, upper := 0, n
+	if stepVal < 0 {
+		lower, upper = -1, n-1
 	}
+	adjust := func(p *int, def int) int {
+		if p == nil {
+			return def
+		}
+		v := *p
+		if v < 0 {
+			v += n
+			if v < lower {
+				v = lower
+			}
+		} else if v > upper {
+			v = upper
+		}
+		return v
+	}
+	if stepVal < 0 {
+		return adjust(start, upper), adjust(end, lower), stepVal
+	}
+	return adjust(start, lower), adjust(end, upper), stepVal
+}
 
-	// Step-wise slicing
+func (e *DefaultEvaluator) sliceString(s string, start, end, step *int) string {
+	r := []rune(s)
+	startVal, endVal, stepVal := sliceBounds(len(r), start, end, step)
+
 	var result strings.Builder
-	if stepVal > 0 {
-		for i := startVal; i < endVal; i += stepVal {
-			result.WriteByte(s[i])
-		}
-	} else {
-		// Negative step
-		if start == nil {
-			startVal = length - 1
-		}
-		if end == nil {
-			endVal = -1
-		}
-		for i := startVal; i > endVal; i += stepVal {
-			result.WriteByte(s[i])
-		}
+	for i := startVal; (stepVal > 0 && i < endVal) || (stepVal < 0 && i > endVal); i += stepVal {
+		result.WriteRune(r[i])
 	}
-
 	return result.String()
 }
 
 func (e *DefaultEvaluator) sliceSlice(s []interface{}, start, end, step *int) []interface{} {
-	length := len(s)
+	startVal, endVal, stepVal := sliceBounds(len(s), start, end, step)
 
-	// Default values
-	startVal := 0
-	endVal := length
-	stepVal := 1
-
-	if start != nil {
-		startVal = *start
-		if startVal < 0 {
-			startVal += length
-		}
-		if startVal < 0 {
-			startVal = 0
-		}
-		if startVal > length {
-			startVal = length
-		}
+	result := []interface{}{}
+	for i := startVal; (stepVal > 0 && i < endVal) || (stepVal < 0 && i > endVal); i += stepVal {
+		result = append(result, s[i])
 	}
-
-	if end != nil {
-		endVal = *end
-		if endVal < 0 {
-			endVal += length
-		}
-		if endVal < 0 {
-			endVal = 0
-		}
-		if endVal > length {
-			endVal = length
-		}
-	}
-
-	if step != nil {
-		stepVal = *step
-	}
-
-	if stepVal == 1 {
-		// Simple case
-		if startVal >= endVal {
-			return []interface{}{}
-		}
-		return s[startVal:endVal]
-	}
-
-	// Step-wise slicing
-	var result []interface{}
-	if stepVal > 0 {
-		for i := startVal; i < endVal; i += stepVal {
-			result = append(result, s[i])
-		}
-	} else {
-		// Negative step
-		if start == nil {
-			startVal = length - 1
-		}
-		if end == nil {
-			endVal = -1
-		}
-		for i := startVal; i > endVal; i += stepVal {
-			result = append(result, s[i])
-		}
-	}
-
 	return result
 }
 
 func (e *DefaultEvaluator) sliceReflect(rv reflect.Value, start, end, step *int) interface{} {
-	length := rv.Len()
+	startVal, endVal, stepVal := sliceBounds(rv.Len(), start, end, step)
 
-	// Default values
-	startVal := 0
-	endVal := length
-	stepVal := 1
-
-	if start != nil {
-		startVal = *start
-		if startVal < 0 {
-			startVal += length
-		}
-		if startVal < 0 {
-			startVal = 0
-		}
-		if startVal > length {
-			startVal = length
-		}
+	result := reflect.MakeSlice(reflect.SliceOf(rv.Type().Elem()), 0, 0)
+	for i := startVal; (stepVal > 0 && i < endVal) || (stepVal < 0 && i > endVal); i += stepVal {
+		result = reflect.Append(result, rv.Index(i))
 	}
-
-	if end != nil {
-		endVal = *end
-		if endVal < 0 {
-			endVal += length
-		}
-		if endVal < 0 {
-			endVal = 0
-		}
-		if endVal > length {
-			endVal = length
-		}
-	}
-
-	if step != nil {
-		stepVal = *step
-	}
-
-	// Create result slice
-	elemType := rv.Type().Elem()
-	result := reflect.MakeSlice(reflect.SliceOf(elemType), 0, 0)
-
-	if stepVal > 0 {
-		for i := startVal; i < endVal; i += stepVal {
-			result = reflect.Append(result, rv.Index(i))
-		}
-	} else {
-		// Negative step
-		if start == nil {
-			startVal = length - 1
-		}
-		if end == nil {
-			endVal = -1
-		}
-		for i := startVal; i > endVal; i += stepVal {
-			result = reflect.Append(result, rv.Index(i))
-		}
-	}
-
 	return result.Interface()
 }
 

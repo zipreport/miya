@@ -1,29 +1,4 @@
 {
- "dict-001": {
-  "kind": "output",
-  "plan": "035",
-  "reason": "want \"a,\", got \"10,\""
- },
- "dict-002": {
-  "kind": "output",
-  "plan": "035",
-  "reason": "want \"a=1;\", got \"1=;\""
- },
- "dict-003": {
-  "kind": "output",
-  "plan": "035",
-  "reason": "want \"abc\", got \"bca\""
- },
- "dict-004": {
-  "kind": "output",
-  "plan": "035",
-  "reason": "want \"ab\", got \"ba\""
- },
- "dlit-003": {
-  "kind": "output",
-  "plan": "035",
-  "reason": "want \"x\", got \"1\""
- },
  "dlit-004": {
   "kind": "error",
   "plan": "051",
@@ -633,31 +608,6 @@
   "kind": "error",
   "plan": "049",
   "reason": "want \"x\", got render-time error: UndefinedError: undefined variable: object.zz at line 1, column 7"
- },
- "uni-001": {
-  "kind": "output",
-  "plan": "035",
-  "reason": "want \"ç\", got \"Ã\""
- },
- "uni-002": {
-  "kind": "output",
-  "plan": "035",
-  "reason": "want \"açú\", got \"aç\""
- },
- "uni-003": {
-  "kind": "output",
-  "plan": "035",
-  "reason": "want \"racúça\", got \"rac\\xbaç\\xc3a\""
- },
- "uni-004": {
-  "kind": "output",
-  "plan": "035",
-  "reason": "want \"a.ç.ú.\", got \"a.ç..ú..\""
- },
- "uni-005": {
-  "kind": "output",
-  "plan": "035",
-  "reason": "want \"ñ\", got \"±\""
  },
  "with-001": {
   "kind": "output",
