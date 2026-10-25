@@ -734,7 +734,8 @@ func (e *Environment) applyBlockTrimming(output string) string {
 	}
 
 	lines := strings.Split(output, "\n")
-	for i, line := range lines {
+	for i := 0; i < len(lines); i++ {
+		line := lines[i]
 		if e.lstripBlocks {
 			// Remove leading whitespace from lines that start with block tags
 			if strings.Contains(line, e.blockStartString) {

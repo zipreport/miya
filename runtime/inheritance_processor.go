@@ -274,6 +274,9 @@ func (p *InheritanceProcessor) buildInheritanceHierarchy(template TemplateInterf
 			hierarchy.RootTemplate = ast
 			break
 		}
+		if parentName == "<<DYNAMIC>>" {
+			return nil, fmt.Errorf("parent template %s: {%% extends %%} must name its parent with a string literal", current.Name())
+		}
 
 		// Load parent template
 		parentTemplate, err := p.env.GetTemplate(parentName)
@@ -299,7 +302,9 @@ func (p *InheritanceProcessor) findExtendsTemplate(node parser.Node) string {
 		}
 	case *parser.ExtendsNode:
 		if literal, ok := n.Template.(*parser.LiteralNode); ok {
-			return strings.Trim(literal.Value.(string), "\"'")
+			if name, ok := literal.Value.(string); ok {
+				return strings.Trim(name, "\"'")
+			}
 		}
 		// For dynamic inheritance, we can't resolve at parse time
 		// Return a special marker to indicate dynamic inheritance
@@ -319,8 +324,12 @@ func (p *InheritanceProcessor) hasDynamicInheritance(node parser.Node) bool {
 		}
 	case *parser.ExtendsNode:
 		// If it's not a literal node, it's dynamic
-		_, isLiteral := n.Template.(*parser.LiteralNode)
-		return !isLiteral
+		literal, isLiteral := n.Template.(*parser.LiteralNode)
+		if !isLiteral {
+			return true
+		}
+		_, isString := literal.Value.(string)
+		return !isString
 	}
 	return false
 }
@@ -391,23 +400,23 @@ func (p *InheritanceProcessor) findExtendsTemplateWithContext(node parser.Node, 
 		}
 	case *parser.ExtendsNode:
 		if literal, ok := n.Template.(*parser.LiteralNode); ok {
-			// Static template name
-			return strings.Trim(literal.Value.(string), "\"'"), nil
-		} else {
-			// Dynamic template name - evaluate expression
-			evaluator := NewCachedEvaluator()
-			templateName, err := evaluator.EvalNodeCached(n.Template, context)
-			if err != nil {
-				return "", fmt.Errorf("failed to evaluate dynamic template name: %v", err)
-			}
-
-			// Convert result to string
-			if str, ok := templateName.(string); ok {
-				return str, nil
-			} else {
-				return "", fmt.Errorf("dynamic template name must be a string, got %T", templateName)
+			if name, ok := literal.Value.(string); ok {
+				// Static template name
+				return strings.Trim(name, "\"'"), nil
 			}
 		}
+		// Dynamic template name - evaluate expression
+		evaluator := NewCachedEvaluator()
+		templateName, err := evaluator.EvalNodeCached(n.Template, context)
+		if err != nil {
+			return "", fmt.Errorf("failed to evaluate dynamic template name: %v", err)
+		}
+
+		// Convert result to string
+		if str, ok := templateName.(string); ok {
+			return str, nil
+		}
+		return "", fmt.Errorf("dynamic template name must be a string, got %T", templateName)
 	}
 	return "", nil
 }

@@ -358,8 +358,9 @@ func (l *Lexer) lexExpression() (*Token, error) {
 	case '-':
 		// Could be minus or start of end delimiter trim
 		if l.peekString("-"+l.config.VarEndString) || l.peekString("-"+l.config.BlockEndString) {
-			// This will be handled by lexVariable or lexBlock
-			return nil, nil
+			// The matching end delimiter is handled by lexVariable/lexBlock before
+			// reaching here, so this is the wrong end delimiter for the open tag.
+			return nil, fmt.Errorf("unexpected '-' before end delimiter at line %d, column %d", line, column)
 		}
 		l.readChar()
 		return l.makeTokenAt(TokenMinus, "-", line, column), nil
