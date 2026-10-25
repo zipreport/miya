@@ -229,16 +229,6 @@
   "plan": "038",
   "reason": "want \"1\", got compile-time error: parser error in template main: expected attribute name after '.' at line 1, column 7"
  },
- "parse-009": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"true\", got render-time error: cannot compare bool and int"
- },
- "parse-010": {
-  "kind": "output",
-  "plan": "038",
-  "reason": "want \"true\", got \"false\""
- },
  "parse-011": {
   "kind": "output",
   "plan": "038",

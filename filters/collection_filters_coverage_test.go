@@ -306,11 +306,13 @@ func TestReverseFilter(t *testing.T) {
 		}
 	})
 
-	t.Run("int slice not supported", func(t *testing.T) {
-		// ReverseFilter doesn't support typed slices via reflection
-		_, err := ReverseFilter([]int{1, 2, 3})
-		if err == nil {
-			t.Error("ReverseFilter should return error for []int")
+	t.Run("int slice", func(t *testing.T) {
+		result, err := ReverseFilter([]int{1, 2, 3})
+		if err != nil {
+			t.Fatalf("ReverseFilter returned error: %v", err)
+		}
+		if !reflect.DeepEqual(result, []interface{}{3, 2, 1}) {
+			t.Errorf("ReverseFilter([]int{1,2,3}) = %v, want [3 2 1]", result)
 		}
 	})
 }

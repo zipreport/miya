@@ -3122,8 +3122,8 @@ func TestEvaluatorUtilityFunctions(t *testing.T) {
 			{42, 42, false},
 			{"123", 123, false},
 			{3.14, 3, false},
-			{true, 0, true},  // bool not supported
-			{false, 0, true}, // bool not supported
+			{true, 1, false}, // bool counts as 0/1, as in Python
+			{false, 0, false},
 			{"not_a_number", 0, true},
 		}
 
@@ -3153,7 +3153,7 @@ func TestEvaluatorUtilityFunctions(t *testing.T) {
 			{42, 42.0, false},
 			{3.14, 3.14, false},
 			{"123.45", 123.45, false},
-			{true, 0.0, true}, // bool not supported
+			{true, 1.0, false}, // bool counts as 0/1, as in Python
 			{"not_a_number", 0.0, true},
 		}
 

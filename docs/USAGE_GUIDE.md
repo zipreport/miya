@@ -230,25 +230,23 @@ ctx := miya.NewContextFrom(map[string]interface{}{
 
 You can pass any Go value into the context. Miya handles:
 
-- **Primitives**: `string`, `int`, `float64`, `bool`
-- **Collections**: slices, arrays, maps
-- **Structs**: fields are accessed by name (Miya tries both `field` and `Field`)
-- **Methods**: zero-argument methods are callable (e.g., `{{ user.Name }}` can call a `Name()` method)
-- **Nested access**: dot notation works through maps, structs, and methods (e.g., `{{ user.address.city }}`)
+- **Primitives**: `string`, `bool` and numbers of every Go kind (`int32`, `uint8`, `float32`, ...), including named types such as `type Status string`. Pointers behave as the value they point to; a nil pointer is `none`
+- **Collections**: slices, arrays and maps of any element type, including `map[interface{}]interface{}` with string keys (what YAML decoders produce). Maps with string keys iterate in sorted order; maps with other keys iterate bools, then numbers, then strings
+- **Structs**: exported fields are accessed by name, and `user.name` finds `Name`. An embedded field is reachable only by its exact type name
+- **Nested access**: dot notation works through maps, structs and pointers (e.g., `{{ user.address.city }}`)
+- **Methods**: Go methods are **not** callable from templates. Pass computed values as data, or register a global function with `env.AddGlobal`
+- **Funcs**: a func-typed value in the data is callable (that is how globals work), so do not pass funcs you would not let template authors call
 
 ```go
 type User struct {
-    Name  string
-    Email string
-    Age   int
-}
-
-func (u User) DisplayName() string {
-    return u.Name + " <" + u.Email + ">"
+    Name        string
+    Email       string
+    Age         int
+    DisplayName string // computed by the application
 }
 
 ctx := miya.NewContext()
-ctx.Set("user", User{Name: "Alice", Email: "alice@example.com", Age: 30})
+ctx.Set("user", User{Name: "Alice", Email: "alice@example.com", Age: 30, DisplayName: "Alice <alice@example.com>"})
 ctx.Set("items", []map[string]interface{}{
     {"name": "Widget", "price": 9.99},
     {"name": "Gadget", "price": 19.99},
@@ -257,7 +255,7 @@ ctx.Set("items", []map[string]interface{}{
 
 ```html+jinja
 {{ user.name }}           {# "Alice" — struct field #}
-{{ user.displayName }}    {# "Alice <alice@example.com>" — method call #}
+{{ user.displayName }}    {# "Alice <alice@example.com>" — struct field computed by the application #}
 {{ items[0].name }}       {# "Widget" — slice index + map access #}
 ```
 

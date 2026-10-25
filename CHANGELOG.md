@@ -15,6 +15,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Typed Go maps, slices and arrays work in templates: `m.key`, `m['key']`, `m[1]`, `for k in m`, `for k, v in m`, `m.keys()`, negative indexes, and the `join`, `reverse`, `batch`, `items`, `keys`, `values` and `dictsort` filters. Maps with string keys decoded from YAML (`map[interface{}]interface{}`) work too. Maps with non-string keys iterate in a fixed order (bools, numbers, then strings).
+- Maps with a named key type, unhashable keys in `in` or `m[...]`, and struct fields reached through a nil embedded pointer no longer crash the render; a pointer that points to itself no longer hangs it.
+- Arithmetic (`+ - * / **`, unary `-`) works with every Go numeric type and named numeric types.
+- `user.name` finds the struct field `Name`, as documented.
 - Indexing, slicing, iterating, `first` and `last` on strings work on characters instead of UTF-8 bytes: `{{ "açúcar"[1] }}` prints `ç`, not `Ã`.
 - Slices with a negative step follow Python's bounds: `{{ s[10::-1] }}` no longer panics on a string or list shorter than 11, and `s[:-10:-1]` includes the first element.
 - Bad data and malformed templates return errors instead of panicking or crashing the process: `nil` in `+`, `+` on lists of different element types, nil functions (called or iterated), `{% extends %}` with a non-string (also in a parent template), mismatched `-%}`/`-}}`, negative `truncate`/`truncatehtml` length, huge `center`/`pad_left`/`pad_right`/`indent`/`batch` sizes, NaN and infinite `currency`, a crash in the trim-blocks pass, and templates nested more than 500 levels deep (previously a fatal stack overflow). `Render`, `RenderTo` and `CallMacro` recover any other panic as an error wrapping `ErrRenderPanic`; `inheritance.InheritanceEvaluator` does not.
@@ -61,6 +65,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Breaking:** a nil pointer prints as empty, is false in `{% if %}`, is `none`, and is treated like `none` by `default`; it printed `<nil>` and was true. A non-nil pointer to a string, number, bool, slice or map behaves as the value it points to (it printed a memory address). Zero values of named bool, string and number types (`type Flag bool`) are false in `{% if %}` and in `default(x, true)`, named bools and strings compare equal to plain ones, and named strings and numbers pass `is string` / `is number`.
+- **Breaking:** booleans are numbers in arithmetic and comparison, as in Python: `true + 1` is `2` and `true == 1` is true (both used to fail or be false).
+- Go methods are not callable from templates. The docs used to promise zero-argument method calls, which never worked; they now say so. Pass computed values as data, or register a global function.
 - **Breaking:** iterating a dict yields its keys, as in Jinja2: `{% for k in d %}` (and comprehensions, `{% set a, b = d %}`) used to yield the values. Use `d.values()` for values. `{% for k, v in d %}` still yields (key, value) pairs. Loops that unpack list-of-dict items into two variables (`{% for a, b in list_of_dicts %}`) now get each dict's two keys, as in Jinja2; use `item.field` instead.
 - Dicts are walked in sorted key order (`for`, `.items()`, `.keys()`, `.values()`), so output no longer changes between renders. The order is code-point order, as Python's `sorted()`: uppercase before lowercase, accented letters after `z`, and `"10"` before `"9"`. This is a deliberate difference from Jinja2, which uses insertion order: Go maps have none.
 - `dictsort` is deterministic: keys (or values) that compare equal case-insensitively are ordered by code point, then by key. Jinja2 orders such ties by insertion order.

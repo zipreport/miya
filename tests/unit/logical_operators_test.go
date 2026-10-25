@@ -89,15 +89,15 @@ func TestLogicalOperators(t *testing.T) {
 // Each subtest pins current miya behaviour that differs from Jinja2; the plan
 // named in the comment must update the expectation when it fixes the cause.
 func TestLogicalOperatorsKnownDivergences(t *testing.T) {
-	// owner: plan 047 (typed nil becomes none and falsy); Jinja2 would give R.
+	// A typed nil pointer is none and falsy (plan 047), so `or` yields R as in Jinja2.
 	t.Run("typed_nil_or", func(t *testing.T) {
 		env := miya.NewEnvironment(miya.WithAutoEscape(false))
 		got, err := env.RenderString(`{{ tnil or 'R' }}`, miya.NewContextFrom(map[string]interface{}{"tnil": (*struct{ X int })(nil)}))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if got != "<nil>" {
-			t.Errorf("got %q, want %q", got, "<nil>")
+		if got != "R" {
+			t.Errorf("got %q, want %q", got, "R")
 		}
 	})
 
