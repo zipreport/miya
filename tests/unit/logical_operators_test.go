@@ -1,6 +1,7 @@
 package miya_test
 
 import (
+	"strings"
 	"testing"
 
 	miya "github.com/zipreport/miya"
@@ -119,7 +120,7 @@ func TestLogicalOperatorsKnownDivergences(t *testing.T) {
 		return miya.NewEnvironment(miya.WithLoader(sl), miya.WithStrictUndefined(true))
 	}
 
-	// owner: plan 034 (dynamic extends ignores strict mode); Jinja2 raises UndefinedError.
+	// Matches Jinja2 since plan 034: a dynamic extends follows strict mode.
 	t.Run("strict_dynamic_extends", func(t *testing.T) {
 		env := newStrictEnv(`{% extends nope or 'base.html' %}{% block c %}C{% endblock %}`)
 		tpl, err := env.GetTemplate("child.html")
@@ -127,11 +128,8 @@ func TestLogicalOperatorsKnownDivergences(t *testing.T) {
 			t.Fatalf("GetTemplate: %v", err)
 		}
 		got, err := tpl.Render(miya.NewContext())
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		if got != "B[C]" {
-			t.Errorf("got %q, want %q", got, "B[C]")
+		if err == nil || !strings.Contains(err.Error(), "UndefinedError") || !strings.Contains(err.Error(), "nope") {
+			t.Errorf("got %q, %v; want an UndefinedError naming nope", got, err)
 		}
 	})
 

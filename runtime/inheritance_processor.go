@@ -52,8 +52,16 @@ func NewInheritanceProcessorWithCache(env EnvironmentInterface, cache *Inheritan
 	}
 }
 
-// ResolveInheritance resolves template inheritance at render-time with caching
+// ResolveInheritance resolves template inheritance at render-time with caching.
+// A dynamic {% extends expr %} is evaluated with a default evaluator.
 func (p *InheritanceProcessor) ResolveInheritance(template TemplateInterface, context Context) (*parser.TemplateNode, error) {
+	return p.ResolveInheritanceWith(template, context, NewEvaluator())
+}
+
+// ResolveInheritanceWith is ResolveInheritance with the evaluator that
+// evaluates a dynamic {% extends expr %}; pass the render's evaluator so the
+// expression follows the environment's undefined behaviour.
+func (p *InheritanceProcessor) ResolveInheritanceWith(template TemplateInterface, context Context, eval Evaluator) (*parser.TemplateNode, error) {
 	ast := template.AST()
 	templateName := template.Name()
 
@@ -70,7 +78,7 @@ func (p *InheritanceProcessor) ResolveInheritance(template TemplateInterface, co
 	// For dynamic inheritance, we can't cache hierarchies since they depend on context
 	if p.hasDynamicInheritance(template.AST()) {
 		// Build inheritance hierarchy with context for dynamic resolution
-		hierarchy, err = p.buildInheritanceHierarchyWithContext(template, context)
+		hierarchy, err = p.buildInheritanceHierarchyWithContext(template, context, eval)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build inheritance hierarchy: %v", err)
 		}
@@ -272,7 +280,7 @@ func (p *InheritanceProcessor) hasDynamicInheritance(node parser.Node) bool {
 }
 
 // buildInheritanceHierarchyWithContext builds hierarchy with context for dynamic template resolution
-func (p *InheritanceProcessor) buildInheritanceHierarchyWithContext(template TemplateInterface, context Context) (*InheritanceHierarchy, error) {
+func (p *InheritanceProcessor) buildInheritanceHierarchyWithContext(template TemplateInterface, context Context, eval Evaluator) (*InheritanceHierarchy, error) {
 	hierarchy := &InheritanceHierarchy{
 		Templates:   make([]*parser.TemplateNode, 0),
 		BlockMap:    make(map[string]*parser.BlockNode),
@@ -304,7 +312,7 @@ func (p *InheritanceProcessor) buildInheritanceHierarchyWithContext(template Tem
 		}
 
 		// Find parent template - use context for dynamic resolution
-		parentName, err := p.findExtendsTemplateWithContext(ast, context)
+		parentName, err := p.findExtendsTemplateWithContext(ast, context, eval)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve parent template: %v", err)
 		}
@@ -327,11 +335,11 @@ func (p *InheritanceProcessor) buildInheritanceHierarchyWithContext(template Tem
 }
 
 // findExtendsTemplateWithContext finds template name with context evaluation for dynamic inheritance
-func (p *InheritanceProcessor) findExtendsTemplateWithContext(node parser.Node, context Context) (string, error) {
+func (p *InheritanceProcessor) findExtendsTemplateWithContext(node parser.Node, context Context, eval Evaluator) (string, error) {
 	switch n := node.(type) {
 	case *parser.TemplateNode:
 		for _, child := range n.Children {
-			if result, err := p.findExtendsTemplateWithContext(child, context); result != "" || err != nil {
+			if result, err := p.findExtendsTemplateWithContext(child, context, eval); result != "" || err != nil {
 				return result, err
 			}
 		}
@@ -343,8 +351,7 @@ func (p *InheritanceProcessor) findExtendsTemplateWithContext(node parser.Node, 
 			}
 		}
 		// Dynamic template name - evaluate expression
-		evaluator := NewCachedEvaluator()
-		templateName, err := evaluator.EvalNodeCached(n.Template, context)
+		templateName, err := eval.EvalNode(n.Template, context)
 		if err != nil {
 			return "", fmt.Errorf("failed to evaluate dynamic template name: %v", err)
 		}

@@ -73,6 +73,13 @@ func (t *Template) RenderTo(w io.Writer, context Context) (err error) {
 		}
 	}
 
+	// Get evaluator from pool (performance optimization)
+	evaluator := t.env.evaluatorPool.Get().(*runtime.DefaultEvaluator)
+
+	// Reset evaluator state for this render
+	evaluator.SetUndefinedBehavior(t.env.undefinedBehavior)
+	evaluator.SetImportSystem(t.env.importSystem)
+
 	// Resolve inheritance at render-time if needed
 	finalAST := t.ast
 	if t.hasInheritanceDirectives() {
@@ -80,19 +87,13 @@ func (t *Template) RenderTo(w io.Writer, context Context) (err error) {
 		processor := t.env.getInheritanceProcessor()
 		// Create context adapter for runtime package compatibility
 		runtimeCtx := &TemplateContextAdapter{ctx: ctx, env: t.env}
-		resolvedAST, err := processor.ResolveInheritance(&templateAdapter{template: t}, runtimeCtx)
+		resolvedAST, err := processor.ResolveInheritanceWith(&templateAdapter{template: t}, runtimeCtx, evaluator)
 		if err != nil {
+			t.env.evaluatorPool.Put(evaluator)
 			return fmt.Errorf("inheritance resolution error: %v", err)
 		}
 		finalAST = resolvedAST
 	}
-
-	// Get evaluator from pool (performance optimization)
-	evaluator := t.env.evaluatorPool.Get().(*runtime.DefaultEvaluator)
-
-	// Reset evaluator state for this render
-	evaluator.SetUndefinedBehavior(t.env.undefinedBehavior)
-	evaluator.SetImportSystem(t.env.importSystem)
 
 	result, err := evaluator.EvalNode(finalAST, &TemplateContextAdapter{ctx: ctx, env: t.env})
 	t.env.evaluatorPool.Put(evaluator)
