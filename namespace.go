@@ -12,6 +12,7 @@ import (
 // Namespace represents a Jinja2 namespace object
 // Namespaces are mutable objects that allow sharing data between scopes
 type Namespace struct {
+	runtime.NamespaceMarker
 	mu   sync.RWMutex
 	data map[string]interface{}
 }

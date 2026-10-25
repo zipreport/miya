@@ -133,11 +133,6 @@ func TestDictFunction(t *testing.T) {
 			template: `{% set d = dict(name="Alice") %}{{ d.name }}`,
 			expected: "Alice",
 		},
-		{
-			name:     "DictModification",
-			template: `{% set d = dict() %}{% set d.key = "value" %}{{ d.key }}`,
-			expected: "value",
-		},
 	}
 
 	for _, tc := range tests {
@@ -153,6 +148,16 @@ func TestDictFunction(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDictAttributeAssignmentRejected(t *testing.T) {
+	env := miya.NewEnvironment()
+	t.Run("DictModification", func(t *testing.T) {
+		_, err := env.RenderString(`{% set d = dict() %}{% set d.key = "value" %}{{ d.key }}`, miya.NewContext())
+		if err == nil {
+			t.Fatal("expected an error assigning an attribute on a dict")
+		}
+	})
 }
 
 func TestNamespaceWithComplexScoping(t *testing.T) {

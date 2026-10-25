@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/zipreport/miya/parser"
@@ -700,11 +701,11 @@ func TestEvalAssignmentNode(t *testing.T) {
 		ctx := &simpleContext{variables: map[string]interface{}{"obj": obj}}
 
 		_, err := e.EvalAssignmentNode(node, ctx)
-		if err != nil {
-			t.Fatalf("EvalAssignmentNode attribute failed: %v", err)
+		if err == nil {
+			t.Fatal("expected error assigning an attribute on a map")
 		}
-		if obj["newattr"] != "newvalue" {
-			t.Errorf("attribute should be set, got %v", obj["newattr"])
+		if _, ok := obj["newattr"]; ok {
+			t.Errorf("map was modified: %v", obj)
 		}
 	})
 
@@ -720,11 +721,11 @@ func TestEvalAssignmentNode(t *testing.T) {
 		ctx := &simpleContext{variables: map[string]interface{}{"obj": obj}}
 
 		_, err := e.EvalAssignmentNode(node, ctx)
-		if err != nil {
-			t.Fatalf("EvalAssignmentNode item failed: %v", err)
+		if err == nil {
+			t.Fatal("expected error assigning an item on a map")
 		}
-		if obj["b"] != 2 {
-			t.Errorf("item should be set, got %v", obj["b"])
+		if _, ok := obj["b"]; ok {
+			t.Errorf("map was modified: %v", obj)
 		}
 	})
 
@@ -1616,11 +1617,11 @@ func TestSetAttributeCoverage(t *testing.T) {
 	t.Run("set on map[string]interface{}", func(t *testing.T) {
 		m := map[string]interface{}{}
 		err := e.setAttribute(m, "key", "value")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		if err == nil || !strings.Contains(err.Error(), "non-namespace object") {
+			t.Fatalf("err = %v, want non-namespace object", err)
 		}
-		if m["key"] != "value" {
-			t.Error("setAttribute did not set value in map")
+		if len(m) != 0 {
+			t.Errorf("map was modified: %v", m)
 		}
 	})
 
@@ -1631,11 +1632,11 @@ func TestSetAttributeCoverage(t *testing.T) {
 		}
 		obj := &TestStruct{}
 		err := e.setAttribute(obj, "Name", "test")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		if err == nil || !strings.Contains(err.Error(), "non-namespace object") {
+			t.Fatalf("err = %v, want non-namespace object", err)
 		}
-		if obj.Name != "test" {
-			t.Errorf("expected Name='test', got %q", obj.Name)
+		if obj.Name != "" {
+			t.Errorf("struct was modified: %q", obj.Name)
 		}
 	})
 
@@ -1645,29 +1646,11 @@ func TestSetAttributeCoverage(t *testing.T) {
 		}
 		obj := &TestStruct{}
 		err := e.setAttribute(obj, "myField", "value")
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		if err == nil || !strings.Contains(err.Error(), "non-namespace object") {
+			t.Fatalf("err = %v, want non-namespace object", err)
 		}
-		if obj.MyField != "value" {
-			t.Errorf("expected MyField='value', got %q", obj.MyField)
-		}
-	})
-
-	t.Run("set on struct invalid field", func(t *testing.T) {
-		type TestStruct struct {
-			Name string
-		}
-		obj := &TestStruct{}
-		err := e.setAttribute(obj, "nonexistent", "value")
-		if err == nil {
-			t.Error("expected error for nonexistent field")
-		}
-	})
-
-	t.Run("set on non-settable type", func(t *testing.T) {
-		err := e.setAttribute(42, "attr", "value")
-		if err == nil {
-			t.Error("expected error for int type")
+		if obj.MyField != "" {
+			t.Errorf("struct was modified: %q", obj.MyField)
 		}
 	})
 
@@ -1676,16 +1659,51 @@ func TestSetAttributeCoverage(t *testing.T) {
 			Count int
 		}
 		obj := &TestStruct{}
-		// Try to set string to int field - should work due to type conversion
 		err := e.setAttribute(obj, "Count", 42)
-		if err != nil {
+		if err == nil || !strings.Contains(err.Error(), "non-namespace object") {
+			t.Fatalf("err = %v, want non-namespace object", err)
+		}
+		if obj.Count != 0 {
+			t.Errorf("struct was modified: %d", obj.Count)
+		}
+	})
+
+	t.Run("set on namespace", func(t *testing.T) {
+		ns := &markedNamespace{data: map[string]interface{}{}}
+		if err := e.setAttribute(ns, "key", "value"); err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if obj.Count != 42 {
-			t.Errorf("expected Count=42, got %d", obj.Count)
+		if ns.data["key"] != "value" {
+			t.Errorf("namespace not updated: %v", ns.data)
+		}
+	})
+
+	t.Run("set on unmarked Get/Set type", func(t *testing.T) {
+		ns := &unmarkedNamespace{data: map[string]interface{}{}}
+		err := e.setAttribute(ns, "key", "value")
+		if err == nil || !strings.Contains(err.Error(), "non-namespace object") {
+			t.Fatalf("err = %v, want non-namespace object", err)
+		}
+		if len(ns.data) != 0 {
+			t.Errorf("value was modified: %v", ns.data)
 		}
 	})
 }
+
+type markedNamespace struct {
+	NamespaceMarker
+	data map[string]interface{}
+}
+
+func (n *markedNamespace) Get(k string) (interface{}, bool) { v, ok := n.data[k]; return v, ok }
+func (n *markedNamespace) Set(k string, v interface{})      { n.data[k] = v }
+
+type unmarkedNamespace struct {
+	data map[string]interface{}
+}
+
+func (n *unmarkedNamespace) Get(k string) (interface{}, bool) { v, ok := n.data[k]; return v, ok }
+func (n *unmarkedNamespace) Set(k string, v interface{})      { n.data[k] = v }
 
 // TestContextWrapperAutoescapeCoverage tests ContextWrapper autoescape methods
 func TestContextWrapperAutoescapeCoverage(t *testing.T) {

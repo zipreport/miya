@@ -331,42 +331,31 @@ func TestSetAttributeAndItem(t *testing.T) {
 
 	t.Run("setAttribute on map", func(t *testing.T) {
 		m := map[string]interface{}{"existing": "value"}
-		err := e.setAttribute(m, "new_key", "new_value")
-		if err != nil {
-			t.Fatalf("setAttribute failed: %v", err)
+		if err := e.setAttribute(m, "new_key", "new_value"); err == nil {
+			t.Fatal("expected error assigning an attribute on a map")
 		}
-		if m["new_key"] != "new_value" {
-			t.Error("setAttribute did not set value")
+		if _, ok := m["new_key"]; ok || len(m) != 1 {
+			t.Errorf("map was modified: %v", m)
 		}
 	})
 
 	t.Run("setItem on slice", func(t *testing.T) {
 		s := []interface{}{"a", "b", "c"}
-		err := e.setItem(s, 1, "X")
-		if err != nil {
-			t.Fatalf("setItem failed: %v", err)
+		if err := e.setItem(s, 1, "X"); err == nil {
+			t.Fatal("expected error assigning an item on a slice")
 		}
-		if s[1] != "X" {
-			t.Error("setItem did not set value")
-		}
-	})
-
-	t.Run("setItem out of bounds", func(t *testing.T) {
-		s := []interface{}{"a"}
-		err := e.setItem(s, 10, "X")
-		if err == nil {
-			t.Error("expected error for out of bounds")
+		if s[1] != "b" {
+			t.Errorf("slice was modified: %v", s)
 		}
 	})
 
 	t.Run("setItem on map", func(t *testing.T) {
 		m := map[string]interface{}{}
-		err := e.setItem(m, "key", "value")
-		if err != nil {
-			t.Fatalf("setItem on map failed: %v", err)
+		if err := e.setItem(m, "key", "value"); err == nil {
+			t.Fatal("expected error assigning an item on a map")
 		}
-		if m["key"] != "value" {
-			t.Error("setItem did not set map value")
+		if len(m) != 0 {
+			t.Errorf("map was modified: %v", m)
 		}
 	})
 }

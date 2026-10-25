@@ -162,6 +162,18 @@ type NamespaceInterface interface {
 	Set(key string, value interface{})
 }
 
+// NamespaceMarker marks a type as a namespace() object. Embed it to let templates
+// assign attributes on the type with {% set x.attr = ... %}.
+type NamespaceMarker struct{}
+
+func (NamespaceMarker) miyaNamespace() {}
+
+// assignableNamespace is satisfied only by types that embed NamespaceMarker.
+type assignableNamespace interface {
+	NamespaceInterface
+	miyaNamespace()
+}
+
 // EnvironmentContext provides access to the template environment
 type EnvironmentContext interface {
 	Context
@@ -2971,95 +2983,28 @@ func (e *DefaultEvaluator) toFloat(obj interface{}) (float64, error) {
 	}
 }
 
-// setAttribute sets an attribute on an object (for assignment expressions)
+// setAttribute sets an attribute on an object (for assignment expressions).
+// Only namespace() objects accept attribute assignment.
 func (e *DefaultEvaluator) setAttribute(obj interface{}, attr string, value interface{}) error {
 	if obj == nil {
 		return fmt.Errorf("cannot set attribute on nil object")
 	}
 
 	switch v := obj.(type) {
-	case NamespaceInterface:
+	case assignableNamespace:
 		v.Set(attr, value)
 		return nil
-	case map[string]interface{}:
-		v[attr] = value
-		return nil
 	}
 
-	rv := reflect.ValueOf(obj)
-	if rv.Kind() == reflect.Ptr {
-		rv = rv.Elem()
-	}
-
-	if rv.Kind() == reflect.Struct {
-		field := rv.FieldByName(attr)
-		if !field.IsValid() {
-			// Try with capitalized field name
-			field = rv.FieldByName(capitalizeFirst(attr))
-		}
-
-		if field.IsValid() && field.CanSet() {
-			valueRv := reflect.ValueOf(value)
-			if valueRv.Type().ConvertibleTo(field.Type()) {
-				field.Set(valueRv.Convert(field.Type()))
-				return nil
-			}
-			return fmt.Errorf("cannot assign %T to %s field", value, field.Type())
-		}
-		return fmt.Errorf("cannot set field %s on struct", attr)
-	}
-
-	return fmt.Errorf("cannot set attribute on %T", obj)
+	return fmt.Errorf("cannot assign attribute on non-namespace object (%T)", obj)
 }
 
-// setItem sets an item in a container (for assignment expressions)
+// setItem rejects item assignment: templates cannot modify maps or slices.
 func (e *DefaultEvaluator) setItem(obj, key, value interface{}) error {
 	if obj == nil {
 		return fmt.Errorf("cannot set item on nil object")
 	}
-
-	switch v := obj.(type) {
-	case map[string]interface{}:
-		keyStr := fmt.Sprintf("%v", key)
-		v[keyStr] = value
-		return nil
-	case []interface{}:
-		keyInt, err := e.toInt(key)
-		if err != nil {
-			return fmt.Errorf("list index must be integer, got %T", key)
-		}
-		// Support negative indexing like Python
-		if keyInt < 0 {
-			keyInt = len(v) + keyInt
-		}
-		if keyInt < 0 || keyInt >= len(v) {
-			return fmt.Errorf("list index out of range: %d", keyInt)
-		}
-		v[keyInt] = value
-		return nil
-	default:
-		// Try reflection for slice assignment
-		rv := reflect.ValueOf(obj)
-		if rv.Kind() == reflect.Slice {
-			keyInt, err := e.toInt(key)
-			if err != nil {
-				return fmt.Errorf("index must be integer, got %T", key)
-			}
-			if keyInt < 0 || keyInt >= rv.Len() {
-				return fmt.Errorf("index out of range: %d", keyInt)
-			}
-
-			valueRv := reflect.ValueOf(value)
-			elemType := rv.Type().Elem()
-			if valueRv.Type().ConvertibleTo(elemType) {
-				rv.Index(keyInt).Set(valueRv.Convert(elemType))
-				return nil
-			}
-			return fmt.Errorf("cannot assign %T to slice element of type %s", value, elemType)
-		}
-
-		return fmt.Errorf("object is not subscriptable for assignment: %T", obj)
-	}
+	return fmt.Errorf("cannot assign to an item of %T; use namespace() for mutable state", obj)
 }
 
 // slice implements Python-style slicing
