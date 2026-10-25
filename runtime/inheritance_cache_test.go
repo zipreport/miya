@@ -88,16 +88,16 @@ func TestNewInheritanceCache(t *testing.T) {
 		t.Error("Expected initialized resolved cache map")
 	}
 
-	if cache.hierarchyTTL != 15*time.Minute {
-		t.Errorf("Expected hierarchyTTL of 15 minutes, got %v", cache.hierarchyTTL)
+	if time.Duration(cache.hierarchyTTL.Load()) != 15*time.Minute {
+		t.Errorf("Expected hierarchyTTL of 15 minutes, got %v", time.Duration(cache.hierarchyTTL.Load()))
 	}
 
-	if cache.resolvedTTL != 5*time.Minute {
-		t.Errorf("Expected resolvedTTL of 5 minutes, got %v", cache.resolvedTTL)
+	if time.Duration(cache.resolvedTTL.Load()) != 5*time.Minute {
+		t.Errorf("Expected resolvedTTL of 5 minutes, got %v", time.Duration(cache.resolvedTTL.Load()))
 	}
 
-	if cache.maxEntries != 1000 {
-		t.Errorf("Expected maxEntries of 1000, got %d", cache.maxEntries)
+	if int(cache.maxEntries.Load()) != 1000 {
+		t.Errorf("Expected maxEntries of 1000, got %d", cache.maxEntries.Load())
 	}
 }
 
@@ -108,8 +108,8 @@ func TestSetHierarchyTTL(t *testing.T) {
 	newTTL := 30 * time.Minute
 	cache.SetHierarchyTTL(newTTL)
 
-	if cache.hierarchyTTL != newTTL {
-		t.Errorf("Expected hierarchyTTL of %v, got %v", newTTL, cache.hierarchyTTL)
+	if time.Duration(cache.hierarchyTTL.Load()) != newTTL {
+		t.Errorf("Expected hierarchyTTL of %v, got %v", newTTL, time.Duration(cache.hierarchyTTL.Load()))
 	}
 }
 
@@ -120,8 +120,8 @@ func TestSetResolvedTTL(t *testing.T) {
 	newTTL := 10 * time.Minute
 	cache.SetResolvedTTL(newTTL)
 
-	if cache.resolvedTTL != newTTL {
-		t.Errorf("Expected resolvedTTL of %v, got %v", newTTL, cache.resolvedTTL)
+	if time.Duration(cache.resolvedTTL.Load()) != newTTL {
+		t.Errorf("Expected resolvedTTL of %v, got %v", newTTL, time.Duration(cache.resolvedTTL.Load()))
 	}
 }
 
@@ -132,8 +132,8 @@ func TestSetMaxEntries(t *testing.T) {
 	newMax := 500
 	cache.SetMaxEntries(newMax)
 
-	if cache.maxEntries != newMax {
-		t.Errorf("Expected maxEntries of %d, got %d", newMax, cache.maxEntries)
+	if int(cache.maxEntries.Load()) != newMax {
+		t.Errorf("Expected maxEntries of %d, got %d", newMax, cache.maxEntries.Load())
 	}
 }
 

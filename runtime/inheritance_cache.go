@@ -69,41 +69,43 @@ type InheritanceCache struct {
 	}
 
 	// Configuration
-	hierarchyTTL time.Duration // How long to keep hierarchy entries
-	resolvedTTL  time.Duration // How long to keep resolved templates
-	maxEntries   int           // Maximum cache entries
+	hierarchyTTL atomic.Int64 // How long to keep hierarchy entries (time.Duration)
+	resolvedTTL  atomic.Int64 // How long to keep resolved templates (time.Duration)
+	maxEntries   atomic.Int64 // Maximum cache entries
 
 	// Cleanup management
+	cleanupMu       sync.Mutex
 	lastCleanup     time.Time
 	cleanupInterval time.Duration
 }
 
 // NewInheritanceCache creates a new inheritance cache
 func NewInheritanceCache() *InheritanceCache {
-	return &InheritanceCache{
+	c := &InheritanceCache{
 		hierarchyCache:  make(map[string]*InheritanceCacheEntry),
 		resolvedCache:   make(map[string]*ResolvedTemplateCacheEntry),
-		hierarchyTTL:    15 * time.Minute, // Hierarchies are relatively stable
-		resolvedTTL:     5 * time.Minute,  // Resolved templates may vary by context
-		maxEntries:      1000,             // Reasonable default
 		lastCleanup:     time.Now(),
 		cleanupInterval: 2 * time.Minute,
 	}
+	c.hierarchyTTL.Store(int64(15 * time.Minute)) // Hierarchies are relatively stable
+	c.resolvedTTL.Store(int64(5 * time.Minute))   // Resolved templates may vary by context
+	c.maxEntries.Store(1000)                      // Reasonable default
+	return c
 }
 
 // SetHierarchyTTL sets the time-to-live for hierarchy cache entries
 func (c *InheritanceCache) SetHierarchyTTL(ttl time.Duration) {
-	c.hierarchyTTL = ttl
+	c.hierarchyTTL.Store(int64(ttl))
 }
 
 // SetResolvedTTL sets the time-to-live for resolved template cache entries
 func (c *InheritanceCache) SetResolvedTTL(ttl time.Duration) {
-	c.resolvedTTL = ttl
+	c.resolvedTTL.Store(int64(ttl))
 }
 
 // SetMaxEntries sets the maximum number of cache entries
 func (c *InheritanceCache) SetMaxEntries(max int) {
-	c.maxEntries = max
+	c.maxEntries.Store(int64(max))
 }
 
 // GetHierarchy retrieves a cached template hierarchy
@@ -145,7 +147,7 @@ func (c *InheritanceCache) StoreHierarchy(templateName string, hierarchy *Inheri
 	defer c.hierarchyMutex.Unlock()
 
 	// Check if we need to make space
-	if len(c.hierarchyCache) >= c.maxEntries {
+	if len(c.hierarchyCache) >= int(c.maxEntries.Load()) {
 		c.evictOldestHierarchy()
 	}
 
@@ -153,7 +155,7 @@ func (c *InheritanceCache) StoreHierarchy(templateName string, hierarchy *Inheri
 	entry := &InheritanceCacheEntry{
 		Hierarchy:   hierarchy,
 		CreatedAt:   now,
-		ExpiresAt:   now.Add(c.hierarchyTTL),
+		ExpiresAt:   now.Add(time.Duration(c.hierarchyTTL.Load())),
 		AccessCount: 1,
 		LastAccess:  now,
 	}
@@ -202,7 +204,7 @@ func (c *InheritanceCache) StoreResolvedTemplate(templateName string, contextHas
 	defer c.resolvedMutex.Unlock()
 
 	// Check if we need to make space
-	if len(c.resolvedCache) >= c.maxEntries {
+	if len(c.resolvedCache) >= int(c.maxEntries.Load()) {
 		c.evictOldestResolved()
 	}
 
@@ -214,7 +216,7 @@ func (c *InheritanceCache) StoreResolvedTemplate(templateName string, contextHas
 		ContextHash:   contextHash,
 		TemplateChain: templateChain,
 		CreatedAt:     now,
-		ExpiresAt:     now.Add(c.resolvedTTL),
+		ExpiresAt:     now.Add(time.Duration(c.resolvedTTL.Load())),
 		AccessCount:   1,
 		LastAccess:    now,
 	}
@@ -332,9 +334,13 @@ func (c *InheritanceCache) evictOldestResolved() {
 
 // performCleanupIfNeeded performs periodic cleanup of expired entries
 func (c *InheritanceCache) performCleanupIfNeeded() {
+	c.cleanupMu.Lock()
 	if time.Since(c.lastCleanup) < c.cleanupInterval {
+		c.cleanupMu.Unlock()
 		return
 	}
+	c.lastCleanup = time.Now()
+	c.cleanupMu.Unlock()
 
 	go c.cleanup() // Run cleanup in background
 }
@@ -368,8 +374,6 @@ func (c *InheritanceCache) cleanup() {
 		delete(c.resolvedCache, key)
 	}
 	c.resolvedMutex.Unlock()
-
-	c.lastCleanup = now
 }
 
 // ContextHasher creates context hashes for cache keys
