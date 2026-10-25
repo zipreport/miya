@@ -229,4 +229,57 @@ func TestReleaseBoundsCache(t *testing.T) {
 	releaseCacheSize(t, env, 0)
 }
 
-var _ = strings.Repeat
+const releaseBenchSrc = `<h1>{{ title | upper }}</h1>
+{% if user and user.active %}Hello {{ user.name | default("anon") | title }}!{% endif %}
+<ul>{% for item in items %}<li class="{{ loop.cycle('a','b') }}">{{ loop.index }}: {{ item.name }} {{ item.tags | join(", ") }}{% if item.price > 10 and not item.sold %}!{% endif %} {{ item["sku"] ~ "-" ~ (item.qty + 1) }}</li>{% endfor %}</ul>
+{{ range(1, 5) | list | length }} {{ items[0].name | replace("x", "y") }}
+`
+
+func releaseBenchContext() miya.Context {
+	items := make([]interface{}, 20)
+	for i := range items {
+		items[i] = map[string]interface{}{
+			"name": "item", "price": float64(i), "sold": i%2 == 0,
+			"tags": []string{"x", "y"}, "sku": "S", "qty": i,
+		}
+	}
+	ctx := miya.NewContext()
+	ctx.Set("title", "report")
+	ctx.Set("user", map[string]interface{}{"active": true, "name": "jo"})
+	ctx.Set("items", items)
+	return ctx
+}
+
+func BenchmarkReleaseParse(b *testing.B) {
+	src := strings.Repeat(releaseBenchSrc, 8)
+	env := miya.NewEnvironment()
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		env.ClearCache()
+		if _, err := env.FromString(src); err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkReleaseRender(b *testing.B) {
+	src := strings.Repeat(releaseBenchSrc, 8)
+	env := miya.NewEnvironment()
+	tm, err := env.FromString(src)
+	if err != nil {
+		b.Fatal(err)
+	}
+	ctx := releaseBenchContext()
+	out, err := tm.Render(ctx)
+	if err != nil || len(out) <= 100 {
+		b.Fatalf("render: len=%d err=%v", len(out), err)
+	}
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := tm.Render(ctx); err != nil {
+			b.Fatal(err)
+		}
+	}
+}

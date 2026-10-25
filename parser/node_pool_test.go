@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestAcquireReleaseLiteralNode(t *testing.T) {
+func TestAcquireLiteralNode(t *testing.T) {
 	// Acquire a node
 	node := AcquireLiteralNode("test", "test", 1, 2)
 	if node == nil {
@@ -24,10 +24,9 @@ func TestAcquireReleaseLiteralNode(t *testing.T) {
 		t.Errorf("expected column 2, got %d", node.Column())
 	}
 
-	// Release and verify reuse
+	// Acquire returns a node with the given fields; Release is a no-op.
 	ReleaseLiteralNode(node)
 
-	// Acquire again - should get a pooled node
 	node2 := AcquireLiteralNode(42, "42", 3, 4)
 	if node2 == nil {
 		t.Fatal("second AcquireLiteralNode returned nil")
@@ -38,7 +37,7 @@ func TestAcquireReleaseLiteralNode(t *testing.T) {
 	ReleaseLiteralNode(node2)
 }
 
-func TestAcquireReleaseIdentifierNode(t *testing.T) {
+func TestAcquireIdentifierNode(t *testing.T) {
 	node := AcquireIdentifierNode("myvar", 5, 10)
 	if node == nil {
 		t.Fatal("AcquireIdentifierNode returned nil")
@@ -66,7 +65,7 @@ func TestAcquireReleaseIdentifierNode(t *testing.T) {
 	ReleaseIdentifierNode(node2)
 }
 
-func TestAcquireReleaseBinaryOpNode(t *testing.T) {
+func TestAcquireBinaryOpNode(t *testing.T) {
 	left := AcquireLiteralNode(1, "1", 1, 1)
 	right := AcquireLiteralNode(2, "2", 1, 5)
 
@@ -89,7 +88,7 @@ func TestAcquireReleaseBinaryOpNode(t *testing.T) {
 	ReleaseLiteralNode(right)
 }
 
-func TestAcquireReleaseFilterNode(t *testing.T) {
+func TestAcquireFilterNode(t *testing.T) {
 	expr := AcquireIdentifierNode("value", 1, 1)
 	args := []ExpressionNode{AcquireLiteralNode("arg1", "arg1", 1, 10)}
 
@@ -113,7 +112,7 @@ func TestAcquireReleaseFilterNode(t *testing.T) {
 	ReleaseFilterNode(node)
 }
 
-func TestAcquireReleaseUnaryOpNode(t *testing.T) {
+func TestAcquireUnaryOpNode(t *testing.T) {
 	operand := AcquireLiteralNode(5, "5", 1, 2)
 
 	node := AcquireUnaryOpNode("-", operand, 1, 1)
@@ -131,7 +130,7 @@ func TestAcquireReleaseUnaryOpNode(t *testing.T) {
 	ReleaseLiteralNode(operand)
 }
 
-func TestAcquireReleaseAttributeNode(t *testing.T) {
+func TestAcquireAttributeNode(t *testing.T) {
 	obj := AcquireIdentifierNode("user", 1, 1)
 
 	node := AcquireAttributeNode(obj, "name", 1, 5)
@@ -149,7 +148,7 @@ func TestAcquireReleaseAttributeNode(t *testing.T) {
 	ReleaseIdentifierNode(obj)
 }
 
-func TestAcquireReleaseGetItemNode(t *testing.T) {
+func TestAcquireGetItemNode(t *testing.T) {
 	obj := AcquireIdentifierNode("items", 1, 1)
 	key := AcquireLiteralNode(0, "0", 1, 7)
 
@@ -169,7 +168,7 @@ func TestAcquireReleaseGetItemNode(t *testing.T) {
 	ReleaseLiteralNode(key)
 }
 
-func TestAcquireReleaseCallNode(t *testing.T) {
+func TestAcquireCallNode(t *testing.T) {
 	fn := AcquireIdentifierNode("print", 1, 1)
 
 	node := AcquireCallNode(fn, 1, 5)
@@ -226,7 +225,7 @@ func TestReleaseAST(t *testing.T) {
 	ReleaseAST(nil)
 }
 
-func TestConcurrentPoolAccess(t *testing.T) {
+func TestConcurrentAcquire(t *testing.T) {
 	const goroutines = 100
 	const iterations = 1000
 
@@ -272,7 +271,7 @@ func TestReleaseNilNodes(t *testing.T) {
 	ReleaseAST(nil)
 }
 
-func TestNodeReuseAfterRelease(t *testing.T) {
+func TestAcquireFilterNodeHasEmptyNamedArgs(t *testing.T) {
 	// Verify that released nodes get their fields properly reset
 
 	// Test LiteralNode
@@ -300,26 +299,10 @@ func TestNodeReuseAfterRelease(t *testing.T) {
 	ReleaseFilterNode(filter2)
 }
 
-func BenchmarkAcquireReleaseLiteralNode(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		node := AcquireLiteralNode(i, "test", 1, 1)
-		ReleaseLiteralNode(node)
-	}
-}
-
 func BenchmarkNewLiteralNode(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		_ = NewLiteralNode(i, "test", 1, 1)
-	}
-}
-
-func BenchmarkAcquireReleaseIdentifierNode(b *testing.B) {
-	b.ReportAllocs()
-	for i := 0; i < b.N; i++ {
-		node := AcquireIdentifierNode("test", 1, 1)
-		ReleaseIdentifierNode(node)
 	}
 }
 
@@ -330,21 +313,6 @@ func BenchmarkNewIdentifierNode(b *testing.B) {
 	}
 }
 
-func BenchmarkAcquireReleaseBinaryOpNode(b *testing.B) {
-	left := AcquireLiteralNode(1, "1", 1, 1)
-	right := AcquireLiteralNode(2, "2", 1, 1)
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		node := AcquireBinaryOpNode(left, "+", right, 1, 1)
-		ReleaseBinaryOpNode(node)
-	}
-
-	ReleaseLiteralNode(left)
-	ReleaseLiteralNode(right)
-}
-
 func BenchmarkNewBinaryOpNode(b *testing.B) {
 	left := NewLiteralNode(1, "1", 1, 1)
 	right := NewLiteralNode(2, "2", 1, 1)
@@ -353,42 +321,5 @@ func BenchmarkNewBinaryOpNode(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = NewBinaryOpNode(left, "+", right, 1, 1)
-	}
-}
-
-func BenchmarkParseExpressionPooled(b *testing.B) {
-	// Benchmark parsing a moderately complex expression
-	// This tests the overall impact of pooling on parser performance
-	source := "a + b * c - d / e"
-
-	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		// We'd need to import lexer here, but this gives the structure
-		// For now, just allocate/release typical expression nodes
-		a := AcquireIdentifierNode("a", 1, 1)
-		b := AcquireIdentifierNode("b", 1, 5)
-		c := AcquireIdentifierNode("c", 1, 9)
-		d := AcquireIdentifierNode("d", 1, 13)
-		e := AcquireIdentifierNode("e", 1, 17)
-
-		mul := AcquireBinaryOpNode(b, "*", c, 1, 7)
-		div := AcquireBinaryOpNode(d, "/", e, 1, 15)
-		add := AcquireBinaryOpNode(a, "+", mul, 1, 3)
-		sub := AcquireBinaryOpNode(add, "-", div, 1, 11)
-
-		_ = source
-		_ = sub
-
-		// Release in order
-		ReleaseBinaryOpNode(sub)
-		ReleaseBinaryOpNode(add)
-		ReleaseBinaryOpNode(div)
-		ReleaseBinaryOpNode(mul)
-		ReleaseIdentifierNode(e)
-		ReleaseIdentifierNode(d)
-		ReleaseIdentifierNode(c)
-		// Note: b and a were already passed to binary nodes but we lost the references
-		// In real code, ReleaseAST handles this recursively
 	}
 }
