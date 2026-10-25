@@ -106,7 +106,7 @@ func (c *context) Get(key string) (interface{}, bool) {
 
 		// Check environment globals
 		if c.env != nil {
-			if val, ok := c.env.globals[key]; ok {
+			if val, ok := c.env.lookupGlobal(key); ok {
 				return val, true
 			}
 		}
@@ -128,7 +128,7 @@ func (c *context) Get(key string) (interface{}, bool) {
 
 	// Check environment globals (only for simple keys)
 	if c.env != nil && len(parts) == 1 {
-		if val, ok := c.env.globals[key]; ok {
+		if val, ok := c.env.lookupGlobal(key); ok {
 			return val, true
 		}
 	}
@@ -260,9 +260,11 @@ func (c *context) All() map[string]interface{} {
 
 	// Phase 3b optimization: Start with environment globals (if present)
 	if c.env != nil {
+		c.env.globalsMu.RLock()
 		for k, v := range c.env.globals {
 			result[k] = v
 		}
+		c.env.globalsMu.RUnlock()
 	}
 
 	// Collect all values from parent contexts (overrides globals)

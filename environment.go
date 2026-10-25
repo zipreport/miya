@@ -40,6 +40,7 @@ type Environment struct {
 	whitespaceProcessor *whitespace.WhitespaceProcessor
 	extensionRegistry   *extensions.Registry
 	globals             map[string]interface{}
+	globalsMu           sync.RWMutex
 	tests               map[string]TestFunc // deprecated, use testRegistry
 	cache               map[string]*Template
 	cacheMutex          sync.RWMutex
@@ -297,7 +298,17 @@ func (e *Environment) ApplyFilter(name string, value interface{}, args ...interf
 
 // AddGlobal registers a global variable that will be available in all templates rendered by this environment.
 func (e *Environment) AddGlobal(name string, value interface{}) {
+	e.globalsMu.Lock()
+	defer e.globalsMu.Unlock()
 	e.globals[name] = value
+}
+
+// lookupGlobal reads one global under the lock.
+func (e *Environment) lookupGlobal(key string) (interface{}, bool) {
+	e.globalsMu.RLock()
+	defer e.globalsMu.RUnlock()
+	v, ok := e.globals[key]
+	return v, ok
 }
 
 // AddExtension registers an extension with the environment
