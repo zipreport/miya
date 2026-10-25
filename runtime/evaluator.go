@@ -503,14 +503,14 @@ func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) 
 			}
 			kwargs[name] = v
 		}
-		if applier, ok := ctx.(KwargsFilterApplier); ok {
+		if applier, ok := filterContext(ctx).(KwargsFilterApplier); ok {
 			return applier.ApplyFilterKwargs(node.FilterName, value, args, kwargs)
 		}
 		return nil, fmt.Errorf("filter %q: keyword arguments need an environment", node.FilterName)
 	}
 
 	// Try to use environment's filter registry if available
-	if envCtx, ok := ctx.(EnvironmentContext); ok {
+	if envCtx, ok := filterContext(ctx).(EnvironmentContext); ok {
 		return envCtx.ApplyFilter(node.FilterName, value, args...)
 	}
 
@@ -1142,7 +1142,7 @@ func (e *DefaultEvaluator) EvalTestNode(node *parser.TestNode, ctx Context) (int
 
 	// Try to use environment's test registry if available
 	var result bool
-	if envCtx, ok := ctx.(EnvironmentContext); ok {
+	if envCtx, ok := filterContext(ctx).(EnvironmentContext); ok {
 		var testErr error
 		result, testErr = envCtx.ApplyTest(node.TestName, value, args...)
 		if testErr != nil {
@@ -3072,6 +3072,18 @@ func (e *DefaultEvaluator) sliceReflect(rv reflect.Value, start, end, step *int)
 type autoescapeContext struct {
 	Context
 	autoescape bool
+}
+
+// filterContext peels autoescapeContext wrappers so that filter and test
+// lookups reach the environment-aware context underneath.
+func filterContext(ctx Context) Context {
+	for {
+		ac, ok := ctx.(*autoescapeContext)
+		if !ok {
+			return ctx
+		}
+		ctx = ac.Context
+	}
 }
 
 // IsAutoescapeEnabled returns whether autoescape is enabled in this context

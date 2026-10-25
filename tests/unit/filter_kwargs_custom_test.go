@@ -69,3 +69,33 @@ func TestFilterKeywordArgsCustomFilter(t *testing.T) {
 		}
 	})
 }
+
+func TestFilterKeywordArgsInAutoescapeBlock(t *testing.T) {
+	newEnv := func(t *testing.T) *miya.Environment {
+		env := miya.NewEnvironment()
+		if err := env.AddFilter("shout", func(v interface{}, args ...interface{}) (interface{}, error) {
+			return fmt.Sprintf("%v!", v), nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := env.AddTest("mytest", func(v interface{}, args ...interface{}) (bool, error) {
+			return true, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return env
+	}
+	tests := []struct{ name, tpl, want string }{
+		{"kwargs_in_autoescape_block", `{% autoescape true %}{{ [3,1,2]|sort(reverse=true)|join(',') }}{% endautoescape %}`, "3,2,1"},
+		{"custom_filter_in_autoescape_block", `{% autoescape true %}{{ 'a'|shout }}{% endautoescape %}`, "a!"},
+		{"custom_test_in_autoescape_block", `{% autoescape true %}{{ 3 is mytest }}{% endautoescape %}`, "true"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := newEnv(t).RenderString(tc.tpl, miya.NewContext())
+			if err != nil || got != tc.want {
+				t.Errorf("got %q, %v; want %q", got, err, tc.want)
+			}
+		})
+	}
+}

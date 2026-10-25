@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `with context` / `without context` parse, including after a trailing comma in `from ... import a, with context`.
 - Filters honour keyword arguments, bound by name to Jinja2's parameters: `sort(reverse=true)`, `map(attribute="name", default="-")`, `sum(attribute="price", start=10)`, `round(precision=1)`, `join(d=", ", attribute="n")`, `int(base=16)`, `truncate(length=…)` and more. They used to be silently ignored.
 - `trim(chars=none)` strips whitespace, as in Jinja2.
+- Custom filters and tests, and keyword arguments to filters, work inside `{% autoescape %}` blocks. A custom filter or test used there failed with `unknown filter` / `unknown test`.
 
 ### Changed
 
