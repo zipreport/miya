@@ -2,6 +2,7 @@ package miya_test
 
 import (
 	"encoding/json"
+	"math"
 	"testing"
 
 	miya "github.com/zipreport/miya"
@@ -19,6 +20,7 @@ func numbersContext() miya.Context {
 		"big1": int64(9007199254740993),
 		"big2": int64(9007199254740992),
 		"m":    Money(5),
+		"nan":  math.NaN(),
 	})
 }
 
@@ -52,6 +54,7 @@ func TestNumericComparison(t *testing.T) {
 		{"r20", `0 > 0`, "F"},
 		{"r21", `-1 < u8`, "T"},
 		{"r22", `u8 > -1`, "T"},
+		{"r23", `nan > 1`, "F"},
 	}
 
 	for _, tc := range tests {
