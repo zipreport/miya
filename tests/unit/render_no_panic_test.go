@@ -41,6 +41,7 @@ func TestRenderNoPanic(t *testing.T) {
 		{name: "nil_reflect_func", tpl: `{{ f() }}`, ctx: map[string]interface{}{"f": nilReflect}, wantErr: "cannot call nil function", notPanic: true},
 		{name: "for_nil_func", tpl: `{% for x in f %}{{ x }}{% endfor %}`, ctx: map[string]interface{}{"f": nilIter}, wantErr: "nil function", notPanic: true},
 		{name: "for_nil_func_unpack", tpl: `{% for a, b in f %}{{ a }}{% endfor %}`, ctx: map[string]interface{}{"f": nilIter}, wantErr: "nil function", notPanic: true},
+		{name: "comprehension_nil_func", tpl: `{{ [x for x in f]|length }}`, ctx: map[string]interface{}{"f": nilIter}, wantErr: "nil function", notPanic: true},
 		{name: "for_func_ok", tpl: `{% for x in f %}{{ x }}{% endfor %}`, ctx: map[string]interface{}{"f": func() []interface{} { return []interface{}{1, 2} }}, wantOut: sp("12")},
 		{name: "list_concat_too_large", tpl: `{{ (a + b)|length }}`, ctx: map[string]interface{}{"a": make([]bool, 6000000), "b": make([]bool, 6000000)}, wantErr: "too large", notPanic: true},
 		{name: "list_concat_ok", tpl: `{{ (a + b)|length }}`, ctx: map[string]interface{}{"a": make([]bool, 3), "b": make([]bool, 3)}, wantOut: sp("6")},
