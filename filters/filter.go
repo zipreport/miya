@@ -11,13 +11,23 @@ import (
 type FilterFunc func(value interface{}, args ...interface{}) (interface{}, error)
 
 type FilterRegistry struct {
-	filters map[string]FilterFunc
-	mutex   sync.RWMutex
+	filters     map[string]FilterFunc
+	params      map[string][]Param
+	kwargsNames map[string]bool
+	mutex       sync.RWMutex
 }
 
 func NewRegistry() *FilterRegistry {
 	registry := &FilterRegistry{
-		filters: make(map[string]FilterFunc),
+		filters:     make(map[string]FilterFunc),
+		params:      make(map[string][]Param, len(builtinParams)),
+		kwargsNames: make(map[string]bool, len(kwargsFilters)),
+	}
+	for name, params := range builtinParams {
+		registry.params[name] = params
+	}
+	for name := range kwargsFilters {
+		registry.kwargsNames[name] = true
 	}
 
 	// Register all built-in filters
@@ -53,6 +63,65 @@ func (r *FilterRegistry) Apply(name string, value interface{}, args ...interface
 	return fn(value, args...)
 }
 
+// SetParams declares the parameter names of a registered filter so that it can
+// be called with keyword arguments.
+func (r *FilterRegistry) SetParams(name string, params ...Param) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if _, exists := r.filters[name]; !exists {
+		return fmt.Errorf("filter %q is not registered", name)
+	}
+	if r.kwargsNames[name] {
+		return fmt.Errorf("filter %q takes keyword arguments directly; its parameters cannot be declared", name)
+	}
+	r.params[name] = append([]Param(nil), params...)
+	return nil
+}
+
+// RegisterWithParams registers a filter and declares its parameters under one
+// lock.
+func (r *FilterRegistry) RegisterWithParams(name string, fn FilterFunc, params ...Param) error {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	if _, exists := r.filters[name]; exists {
+		return fmt.Errorf("filter %q already registered", name)
+	}
+	r.filters[name] = fn
+	r.params[name] = append([]Param(nil), params...)
+	return nil
+}
+
+// ApplyKwargs applies a filter with keyword arguments, binding them to the
+// filter's declared parameters. The filter is called without the lock held.
+func (r *FilterRegistry) ApplyKwargs(name string, value interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+	if len(kwargs) == 0 {
+		return r.Apply(name, value, args...)
+	}
+
+	r.mutex.RLock()
+	fn, ok := r.filters[name]
+	isKwargs := r.kwargsNames[name]
+	params, hasParams := r.params[name]
+	r.mutex.RUnlock()
+
+	if !ok {
+		return nil, fmt.Errorf("unknown filter: %s", name)
+	}
+	if isKwargs {
+		return fn(value, append(args[:len(args):len(args)], KwArgs(kwargs))...)
+	}
+	if !hasParams {
+		return nil, fmt.Errorf("filter %q does not accept keyword arguments; declare its parameters with Environment.SetFilterParams or AddFilterWithParams", name)
+	}
+	bound, err := bindKwargs(name, params, args, kwargs)
+	if err != nil {
+		return nil, err
+	}
+	return fn(value, bound...)
+}
+
 func (r *FilterRegistry) List() []string {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -70,6 +139,8 @@ func (r *FilterRegistry) Unregister(name string) bool {
 
 	if _, exists := r.filters[name]; exists {
 		delete(r.filters, name)
+		delete(r.params, name)
+		delete(r.kwargsNames, name)
 		return true
 	}
 	return false

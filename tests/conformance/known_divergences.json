@@ -59,65 +59,20 @@
   "plan": "054",
   "reason": "want \"go <a href=\\\"http://x.com\\\" rel=\\\"noopener\\\">http://x.com</a> &lt;b&gt;\", got \"go <a href=\\\"http://x.com\\\">http://x.com</a> &lt;b&gt;\""
  },
- "fkw-001": {
-  "kind": "output",
-  "plan": "036",
-  "reason": "want \"3,2,1\", got \"1,2,3\""
- },
- "fkw-002": {
-  "kind": "error",
-  "plan": "036",
-  "reason": "want \"a,b\", got render-time error: map filter requires attribute or filter name"
- },
- "fkw-003": {
-  "kind": "error",
-  "plan": "036",
-  "reason": "want \"1,2\", got render-time error: map filter requires attribute or filter name"
- },
- "fkw-004": {
-  "kind": "output",
-  "plan": "036",
-  "reason": "want \"5\", got \"0\""
- },
- "fkw-005": {
-  "kind": "output",
-  "plan": "036",
-  "reason": "want \"13\", got \"3\""
- },
  "fkw-006": {
   "kind": "error",
   "plan": "039",
-  "reason": "want \"x:2;y:1;\", got render-time error: groupby filter requires attribute name"
- },
- "fkw-007": {
-  "kind": "output",
-  "plan": "036",
-  "reason": "want \"3.1\", got \"3\""
- },
- "fkw-008": {
-  "kind": "output",
-  "plan": "036",
-  "reason": "want \"  a\\n  b\", got \"a\\n  b\""
+  "reason": "want \"x:2;y:1;\", got render-time error: object of type *runtime.Undefined has no len()"
  },
  "fkw-009": {
   "kind": "error",
   "plan": "039",
   "reason": "want \"b,a\", got render-time error: map filter requires a sequence"
  },
- "fkw-010": {
-  "kind": "output",
-  "plan": "036",
-  "reason": "want \"1-2\", got \"12\""
- },
  "fkw-011": {
-  "kind": "error",
-  "plan": "050",
-  "reason": "want \"He...\", got render-time error: truncate filter requires length argument"
- },
- "fkw-012": {
   "kind": "output",
-  "plan": "036",
-  "reason": "want \"oaa\", got \"ooo\""
+  "plan": "050",
+  "reason": "want \"He...\", got \"Hello...\""
  },
  "fsem-001": {
   "kind": "output",

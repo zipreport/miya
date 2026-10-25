@@ -214,7 +214,7 @@ func TestNumericFilters(t *testing.T) {
 		{"int default", IntFilter, "invalid", []interface{}{0}, 0, false},
 		{"float", FloatFilter, "3.14", nil, 3.14, false},
 		{"sum", SumFilter, []interface{}{1, 2, 3, 4}, nil, 10.0, false},
-		{"sum with start", SumFilter, []interface{}{1, 2, 3}, []interface{}{10}, 16.0, false},
+		{"sum with start", SumFilter, []interface{}{1, 2, 3}, []interface{}{nil, 10}, 16.0, false},
 		{"min", MinFilter, []interface{}{3, 1, 4, 1, 5}, nil, 1, false},
 		{"max", MaxFilter, []interface{}{3, 1, 4, 1, 5}, nil, 5, false},
 	}

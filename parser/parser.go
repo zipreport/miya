@@ -1296,6 +1296,7 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 
 			var args []ExpressionNode
 			namedArgs := make(map[string]ExpressionNode)
+			sawKeyword := false
 
 			if p.check(lexer.TokenLeftParen) {
 				p.advance() // consume '('
@@ -1315,7 +1316,11 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 								return nil, err
 							}
 							namedArgs[argName] = argValue
+							sawKeyword = true
 						} else {
+							if sawKeyword {
+								return nil, p.error("positional argument follows keyword argument")
+							}
 							// This is a positional argument, restore position and parse normally
 							p.current = savedPos
 							arg, err := p.parseOr() // Use parseOr to avoid conditional parsing issues
@@ -1325,6 +1330,9 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 							args = append(args, arg)
 						}
 					} else {
+						if sawKeyword {
+							return nil, p.error("positional argument follows keyword argument")
+						}
 						// Regular positional argument
 						arg, err := p.parseOr() // Use parseOr to avoid conditional parsing issues
 						if err != nil {
@@ -2067,6 +2075,7 @@ func (p *Parser) parseFilterBlock() (Node, error) {
 		filterName := p.advance().Value
 		var args []ExpressionNode
 		namedArgs := make(map[string]ExpressionNode)
+		sawKeyword := false
 
 		// Parse filter arguments if present
 		if p.check(lexer.TokenLeftParen) {
@@ -2085,7 +2094,11 @@ func (p *Parser) parseFilterBlock() (Node, error) {
 						return nil, err
 					}
 					namedArgs[name] = expr
+					sawKeyword = true
 				} else {
+					if sawKeyword {
+						return nil, p.error("positional argument follows keyword argument")
+					}
 					expr, err := p.parseExpression()
 					if err != nil {
 						return nil, err

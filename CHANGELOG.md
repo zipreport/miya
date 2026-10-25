@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - `miya.ErrRenderPanic`, wrapped by the error `Render`, `RenderTo` and `Environment.CallMacro` return when they recover from a panic.
+- `Environment.SetFilterParams(name, params...)`, `Environment.AddFilterWithParams(name, fn, params...)` and `filters.Param` declare a custom filter's parameter names so templates can pass them as keyword arguments. Keywords reach the filter as ordinary positional arguments; an unfilled earlier position receives its `Param.Default`, which is `nil` when unset. Also `filters.KwArgs` and `runtime.KwargsFilterApplier`.
 
 ### Fixed
 
@@ -25,6 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A self-import or mutual import fails with `runtime.ErrMaxRecursion` instead of returning a half-built module.
 - `from ... import a as b` works in templates that use `{% extends %}`.
 - `with context` / `without context` parse, including after a trailing comma in `from ... import a, with context`.
+- Filters honour keyword arguments, bound by name to Jinja2's parameters: `sort(reverse=true)`, `map(attribute="name", default="-")`, `sum(attribute="price", start=10)`, `round(precision=1)`, `join(d=", ", attribute="n")`, `int(base=16)`, `truncate(length=…)` and more. They used to be silently ignored.
+- `trim(chars=none)` strips whitespace, as in Jinja2.
 
 ### Changed
 
@@ -41,6 +44,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Within one render, every import of a template *without* context shares one module, as in Jinja2 (an imported `namespace()` counter keeps counting across imports in a loop). Imports with context are built fresh each time. Unlike Jinja2, modules are never shared between renders.
 - `{{ x is defined }}` is false when `x` holds an undefined value (`{% set x = nope %}`), as in Jinja2. In strict mode, printing a name that a `{% from %}` import did not find raises an error.
 - `runtime.ImportSystem.LoadTemplateNamespace` uses the context it is given as the module context, without cloning it, writes to it, and expects the loader to return an error for a missing template (`TemplateExists` is not consulted). An import on an evaluator that has no import system (for example one an extension creates with `runtime.NewEvaluator()`) is an error instead of binding placeholder macros.
+- **Breaking:** a keyword argument a filter cannot honour is an error instead of being ignored: an unknown name, a Jinja2 parameter miya does not implement yet (`truncate(leeway=…)`, `indent(blank=…)`, `groupby(default=…)`), or any keyword on a filter without declared parameters, including custom filters. Declare a custom filter's parameters with `Environment.SetFilterParams` or `Environment.AddFilterWithParams`; the error message says so.
+- **Breaking:** `sum`, `min` and `max` take positional arguments in Jinja2's order: `sum(attribute, start)` and `min/max(case_sensitive, attribute)`. `l|sum(10)` used to mean start=10 and is now an error; write `l|sum(start=10)`. `l|max("n")` used to mean attribute="n"; write `l|max(attribute="n")` (until plan 039 lands, this still returns the attribute's value rather than the item, as before).
+- **Breaking:** a positional filter argument after a keyword argument (`join(d="-", ",")`) is a syntax error, as in Jinja2. A repeated keyword still binds the last value, as in Jinja2.
 
 ### Deprecated
 

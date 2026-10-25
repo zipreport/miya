@@ -264,6 +264,25 @@ func (e *Environment) AddFilterLegacy(name string, filter FilterFunc) error {
 	return e.filterRegistry.Register(name, filters.FilterFunc(filter))
 }
 
+// ApplyFilterKwargs applies a filter with keyword arguments, binding them to
+// the filter's declared parameters.
+func (e *Environment) ApplyFilterKwargs(name string, value interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+	return e.filterRegistry.ApplyKwargs(name, value, args, kwargs)
+}
+
+// SetFilterParams declares the parameter names of a registered filter so that
+// templates can pass them as keyword arguments. Positional calls are unchanged.
+func (e *Environment) SetFilterParams(name string, params ...filters.Param) error {
+	return e.filterRegistry.SetParams(name, params...)
+}
+
+// AddFilterWithParams registers a filter and declares its parameter names in
+// one step. Keyword arguments are bound to these positions; an unfilled
+// position before a bound one receives its Param's Default (nil if unset).
+func (e *Environment) AddFilterWithParams(name string, filter FilterFunc, params ...filters.Param) error {
+	return e.filterRegistry.RegisterWithParams(name, filters.FilterFunc(filter), params...)
+}
+
 func (e *Environment) GetFilter(name string) (FilterFunc, bool) {
 	f, ok := e.filterRegistry.Get(name)
 	if !ok {

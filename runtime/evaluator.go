@@ -169,6 +169,13 @@ type EnvironmentContext interface {
 	ApplyTest(name string, value interface{}, args ...interface{}) (bool, error)
 }
 
+// KwargsFilterApplier is implemented by contexts that can apply a filter with
+// keyword arguments. It is separate from EnvironmentContext so existing
+// implementations of that interface keep compiling.
+type KwargsFilterApplier interface {
+	ApplyFilterKwargs(name string, value interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error)
+}
+
 // Evaluator interface for runtime operations
 type Evaluator interface {
 	EvalNode(node parser.Node, ctx Context) (interface{}, error)
@@ -480,6 +487,26 @@ func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) 
 			return nil, err
 		}
 		args = append(args, argValue)
+	}
+
+	if len(node.NamedArgs) > 0 {
+		names := make([]string, 0, len(node.NamedArgs))
+		for name := range node.NamedArgs {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		kwargs := make(map[string]interface{}, len(names))
+		for _, name := range names {
+			v, err := e.EvalNode(node.NamedArgs[name], ctx)
+			if err != nil {
+				return nil, err
+			}
+			kwargs[name] = v
+		}
+		if applier, ok := ctx.(KwargsFilterApplier); ok {
+			return applier.ApplyFilterKwargs(node.FilterName, value, args, kwargs)
+		}
+		return nil, fmt.Errorf("filter %q: keyword arguments need an environment", node.FilterName)
 	}
 
 	// Try to use environment's filter registry if available

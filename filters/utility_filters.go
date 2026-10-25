@@ -49,6 +49,11 @@ func DefaultFilter(value interface{}, args ...interface{}) (interface{}, error) 
 
 // MapFilter applies an attribute or filter to each item
 func MapFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	if n := len(args); n > 0 {
+		if kw, ok := args[n-1].(KwArgs); ok {
+			return mapWithKwargs(value, args[:n-1], kw)
+		}
+	}
 	if len(args) < 1 {
 		return nil, fmt.Errorf("map filter requires attribute or filter name")
 	}
@@ -73,6 +78,46 @@ func MapFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("map filter requires a sequence")
 	}
+}
+
+func mapWithKwargs(value interface{}, args []interface{}, kw KwArgs) (interface{}, error) {
+	keys := make([]string, 0, len(kw))
+	for k := range kw {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		if k != "attribute" && k != "default" {
+			return nil, fmt.Errorf("filter %q got an unexpected keyword argument %q", "map", k)
+		}
+	}
+
+	attribute, hasAttribute := kw["attribute"]
+	def, hasDefault := kw["default"]
+	if hasDefault && !hasAttribute {
+		return nil, fmt.Errorf("map: default= needs attribute=")
+	}
+	if !hasAttribute {
+		return MapFilter(value, args...)
+	}
+	if len(args) > 0 {
+		return nil, fmt.Errorf("map: attribute= cannot be combined with positional arguments")
+	}
+
+	v, ok := value.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("map filter requires a sequence")
+	}
+	name := ToString(attribute)
+	result := make([]interface{}, len(v))
+	for i, item := range v {
+		attr := extractAttribute(item, name)
+		if attr == nil && hasDefault {
+			attr = def
+		}
+		result[i] = attr
+	}
+	return result, nil
 }
 
 // SelectFilter selects items that pass a test

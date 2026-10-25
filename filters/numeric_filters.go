@@ -195,16 +195,22 @@ func SumFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	start := 0.0
 	attribute := ""
 
-	if len(args) > 0 {
-		s, err := ToFloat(args[0])
+	if len(args) > 0 && args[0] != nil {
+		switch reflect.ValueOf(args[0]).Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+			reflect.Float32, reflect.Float64:
+			return nil, fmt.Errorf("sum: the first positional argument is the attribute; pass a start value as start=%v", args[0])
+		}
+		attribute = ToString(args[0])
+	}
+
+	if len(args) > 1 {
+		s, err := ToFloat(args[1])
 		if err != nil {
 			return nil, fmt.Errorf("sum start value must be number: %v", err)
 		}
 		start = s
-	}
-
-	if len(args) > 1 {
-		attribute = ToString(args[1])
 	}
 
 	sum := start
@@ -262,8 +268,13 @@ func SumFilter(value interface{}, args ...interface{}) (interface{}, error) {
 // MinFilter returns the minimum value in a sequence
 func MinFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	attribute := ""
+	caseSensitive := false
 	if len(args) > 0 {
-		attribute = ToString(args[0])
+		caseSensitive = ToBool(args[0])
+	}
+	_ = caseSensitive // strings are compared in plan 039
+	if len(args) > 1 {
+		attribute = ToString(args[1])
 	}
 
 	var min interface{}
@@ -315,8 +326,13 @@ func MinFilter(value interface{}, args ...interface{}) (interface{}, error) {
 // MaxFilter returns the maximum value in a sequence
 func MaxFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	attribute := ""
+	caseSensitive := false
 	if len(args) > 0 {
-		attribute = ToString(args[0])
+		caseSensitive = ToBool(args[0])
+	}
+	_ = caseSensitive // strings are compared in plan 039
+	if len(args) > 1 {
+		attribute = ToString(args[1])
 	}
 
 	var max interface{}

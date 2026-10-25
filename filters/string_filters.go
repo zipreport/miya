@@ -81,7 +81,7 @@ func TitleFilter(value interface{}, args ...interface{}) (interface{}, error) {
 // TrimFilter removes leading and trailing whitespace
 func TrimFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	s := ToString(value)
-	if len(args) > 0 {
+	if len(args) > 0 && args[0] != nil {
 		// Trim specific characters
 		chars := ToString(args[0])
 		return strings.Trim(s, chars), nil

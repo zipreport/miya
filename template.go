@@ -164,6 +164,10 @@ func (a *TemplateContextAdapter) All() map[string]interface{} {
 	return a.ctx.All()
 }
 
+func (a *TemplateContextAdapter) ApplyFilterKwargs(name string, value interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+	return a.env.ApplyFilterKwargs(name, value, args, kwargs)
+}
+
 func (a *TemplateContextAdapter) ApplyFilter(name string, value interface{}, args ...interface{}) (interface{}, error) {
 	return a.env.ApplyFilter(name, value, args...)
 }
