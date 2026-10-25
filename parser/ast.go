@@ -515,12 +515,21 @@ func (n *SuperNode) String() string {
 func (n *SuperNode) ExpressionNode() {}
 
 // MacroNode represents macro definitions
+// MacroUsage records which special names a macro or call-block body
+// references; Jinja2 only accepts extra arguments or a caller when it does.
+type MacroUsage struct {
+	CatchVarargs bool // body references varargs
+	CatchKwargs  bool // body references kwargs
+	Caller       bool // body references caller
+}
+
 type MacroNode struct {
 	baseNode
 	Name       string
 	Parameters []string
 	Defaults   map[string]ExpressionNode
 	Body       []Node
+	MacroUsage
 }
 
 func NewMacroNode(name string, line, column int) *MacroNode {
@@ -669,8 +678,11 @@ func (n *CallNode) ExpressionNode() {}
 // CallBlockNode represents call blocks {% call macro_name() %}content{% endcall %}
 type CallBlockNode struct {
 	baseNode
-	Call ExpressionNode // The function/macro call
-	Body []Node         // The content between {% call %} and {% endcall %}
+	Call       ExpressionNode            // The function/macro call
+	Body       []Node                    // The content between {% call %} and {% endcall %}
+	Parameters []string                  // caller() parameters from {% call(a, b=1) ... %}
+	Defaults   map[string]ExpressionNode // defaults for Parameters
+	MacroUsage
 }
 
 func NewCallBlockNode(call ExpressionNode, body []Node, line, column int) *CallBlockNode {

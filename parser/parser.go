@@ -651,36 +651,12 @@ func (p *Parser) parseMacroDefinition() (Node, error) {
 
 	// Parse parameters
 	if p.check(lexer.TokenLeftParen) {
-		p.advance() // consume '('
-
-		for !p.check(lexer.TokenRightParen) && !p.isAtEnd() {
-			if !p.check(lexer.TokenIdentifier) {
-				return nil, p.error("expected parameter name")
-			}
-			paramName := p.advance().Value
-			macroNode.Parameters = append(macroNode.Parameters, paramName)
-
-			// Check for default value
-			if p.check(lexer.TokenAssign) {
-				p.advance() // consume '='
-				defaultValue, err := p.parseExpression()
-				if err != nil {
-					return nil, err
-				}
-				macroNode.Defaults[paramName] = defaultValue
-			}
-
-			if p.check(lexer.TokenComma) {
-				p.advance() // consume ','
-			} else if !p.check(lexer.TokenRightParen) {
-				return nil, p.error("expected ',' or ')' in parameter list")
-			}
+		params, defaults, err := p.parseParameterList()
+		if err != nil {
+			return nil, err
 		}
-
-		if !p.check(lexer.TokenRightParen) {
-			return nil, p.error("expected ')' after parameter list")
-		}
-		p.advance() // consume ')'
+		macroNode.Parameters = params
+		macroNode.Defaults = defaults
 	}
 
 	if !p.check(lexer.TokenBlockEnd) && !p.check(lexer.TokenBlockEndTrim) {
@@ -721,7 +697,50 @@ func (p *Parser) parseMacroDefinition() (Node, error) {
 	}
 	p.advance()
 
+	usage, err := findMacroUsage(macroNode.Parameters, macroNode.Defaults, macroNode.Body)
+	if err != nil {
+		return nil, p.error(err.Error())
+	}
+	macroNode.MacroUsage = usage
 	return macroNode, nil
+}
+
+// parseParameterList parses "(a, b=expr)" for macros and call blocks. It
+// consumes the opening parenthesis itself.
+func (p *Parser) parseParameterList() ([]string, map[string]ExpressionNode, error) {
+	p.advance() // consume '('
+	params := []string{}
+	defaults := make(map[string]ExpressionNode)
+
+	for !p.check(lexer.TokenRightParen) && !p.isAtEnd() {
+		if !p.check(lexer.TokenIdentifier) {
+			return nil, nil, p.error("expected parameter name")
+		}
+		paramName := p.advance().Value
+		params = append(params, paramName)
+
+		// Check for default value
+		if p.check(lexer.TokenAssign) {
+			p.advance() // consume '='
+			defaultValue, err := p.parseExpression()
+			if err != nil {
+				return nil, nil, err
+			}
+			defaults[paramName] = defaultValue
+		}
+
+		if p.check(lexer.TokenComma) {
+			p.advance() // consume ','
+		} else if !p.check(lexer.TokenRightParen) {
+			return nil, nil, p.error("expected ',' or ')' in parameter list")
+		}
+	}
+
+	if !p.check(lexer.TokenRightParen) {
+		return nil, nil, p.error("expected ')' after parameter list")
+	}
+	p.advance() // consume ')'
+	return params, defaults, nil
 }
 
 // parseRawBlock parses raw blocks
@@ -1906,10 +1925,24 @@ func (p *Parser) GetErrors() []string {
 func (p *Parser) parseCallBlockStatement() (Node, error) {
 	startToken := p.advance() // consume 'call'
 
+	// Optional caller parameters: {% call(a, b=1) macro() %}
+	var params []string
+	var defaults map[string]ExpressionNode
+	if p.check(lexer.TokenLeftParen) {
+		var err error
+		params, defaults, err = p.parseParameterList()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Parse the call expression (function/macro call)
 	callExpr, err := p.parseExpression()
 	if err != nil {
 		return nil, err
+	}
+	if _, ok := callExpr.(*CallNode); !ok {
+		return nil, p.error("expected call")
 	}
 
 	// Expect {% %}
@@ -1953,7 +1986,15 @@ func (p *Parser) parseCallBlockStatement() (Node, error) {
 	}
 	p.advance() // consume '%}'
 
-	return NewCallBlockNode(callExpr, body, startToken.Line, startToken.Column), nil
+	cb := NewCallBlockNode(callExpr, body, startToken.Line, startToken.Column)
+	cb.Parameters = params
+	cb.Defaults = defaults
+	usage, err := findMacroUsage(params, defaults, body)
+	if err != nil {
+		return nil, p.error(err.Error())
+	}
+	cb.MacroUsage = usage
+	return cb, nil
 }
 
 // parseWithStatement parses {% with var=expr, var2=expr2 %}...{% endwith %} statements
