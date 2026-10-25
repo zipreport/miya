@@ -140,6 +140,7 @@ func TestCollectionFilterSemantics(t *testing.T) {
 	}{
 		{"sort_mixed_error", `{{ [2,'1']|sort|join(',') }}`, "not supported between instances"},
 		{"sort_mixed_attribute_error", `{{ mx|sort(attribute='v')|join }}`, `attribute "v"`},
+		{"slice_count_too_large", `{{ [1,2]|slice(2000000) }}`, "too large"},
 		{"select_unknown_test", `{{ seq|select('nosuchtest')|join(',') }}`, `no test named "nosuchtest"`},
 	}
 	for _, tc := range errorCases {

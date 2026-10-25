@@ -720,6 +720,9 @@ func SliceFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	if err != nil || slices < 1 {
 		return nil, fmt.Errorf("slice filter requires a positive number of slices")
 	}
+	if slices > maxBatchFill {
+		return nil, fmt.Errorf("slice count too large (max %d)", maxBatchFill)
+	}
 	var fill interface{}
 	hasFill := false
 	if len(args) > 1 && args[1] != nil {
