@@ -1721,6 +1721,9 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 	if function == nil {
 		return nil, fmt.Errorf("cannot call nil function")
 	}
+	if fv := reflect.ValueOf(function); fv.Kind() == reflect.Func && fv.IsNil() {
+		return nil, fmt.Errorf("cannot call nil function")
+	}
 
 	// Handle special callable objects
 	switch fn := function.(type) {
@@ -1998,6 +2001,9 @@ func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) 
 
 	// Slow path: Check if obj is a function that should be called to get an iterable
 	if fnValue := reflect.ValueOf(obj); fnValue.Kind() == reflect.Func {
+		if fnValue.IsNil() {
+			return nil, fmt.Errorf("cannot iterate over nil function")
+		}
 		fnType := fnValue.Type()
 
 		// Check if it's a callable function that returns an iterable
@@ -2060,6 +2066,9 @@ func (e *DefaultEvaluator) makeIterableForVariables(obj interface{}, numVariable
 
 	// Check if obj is a function that should be called to get an iterable
 	if fnValue := reflect.ValueOf(obj); fnValue.Kind() == reflect.Func {
+		if fnValue.IsNil() {
+			return nil, fmt.Errorf("cannot iterate over nil function")
+		}
 		fnType := fnValue.Type()
 
 		// Check if it's a callable function that returns an iterable
@@ -2187,6 +2196,9 @@ func (e *DefaultEvaluator) isTruthy(obj interface{}) bool {
 	}
 }
 
+// maxConcatLength bounds the list a single + can build.
+const maxConcatLength = 10000000
+
 // Arithmetic operations
 // Enhanced addition with better error reporting
 func (e *DefaultEvaluator) addWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
@@ -2226,9 +2238,22 @@ func (e *DefaultEvaluator) addWithNode(a, b interface{}, node parser.Node) (inte
 	}
 
 	// Try slice concatenation
-	if reflect.TypeOf(a).Kind() == reflect.Slice && reflect.TypeOf(b).Kind() == reflect.Slice {
+	if a != nil && b != nil && reflect.TypeOf(a).Kind() == reflect.Slice && reflect.TypeOf(b).Kind() == reflect.Slice {
 		av := reflect.ValueOf(a)
 		bv := reflect.ValueOf(b)
+		if av.Len()+bv.Len() > maxConcatLength {
+			return nil, fmt.Errorf("list concatenation too large: %d items (limit %d)", av.Len()+bv.Len(), maxConcatLength)
+		}
+		if av.Type() != bv.Type() {
+			merged := make([]interface{}, 0, av.Len()+bv.Len())
+			for i := 0; i < av.Len(); i++ {
+				merged = append(merged, av.Index(i).Interface())
+			}
+			for i := 0; i < bv.Len(); i++ {
+				merged = append(merged, bv.Index(i).Interface())
+			}
+			return merged, nil
+		}
 		result := reflect.MakeSlice(av.Type(), 0, av.Len()+bv.Len())
 		result = reflect.AppendSlice(result, av)
 		result = reflect.AppendSlice(result, bv)
