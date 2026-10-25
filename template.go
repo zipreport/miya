@@ -55,17 +55,7 @@ func (t *Template) Render(context Context) (output string, err error) {
 	if err != nil {
 		return "", err
 	}
-	output = buf.String()
-
-	// Apply block trimming if enabled
-	if t.env.trimBlocks || t.env.lstripBlocks {
-		output = t.env.applyBlockTrimming(output)
-	}
-
-	// Apply HTML whitespace normalization for option elements
-	output = normalizeHTMLOptionWhitespace(output)
-
-	return output, nil
+	return buf.String(), nil
 }
 
 // RenderTo executes the template with the given context and writes the output to w.

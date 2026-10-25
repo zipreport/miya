@@ -511,27 +511,21 @@ func (e *Environment) registerMacrosFromAST(node parser.Node, templateName strin
 }
 
 func (e *Environment) compile(name, source string) (*Template, error) {
-	// Apply whitespace preprocessing if whitespace control is enabled
-	preprocessedSource := source
-	if e.trimBlocks || e.lstripBlocks || e.hasInlineWhitespaceControl(source) {
-		processor := whitespace.NewAdvancedWhitespaceProcessor(e.trimBlocks, e.lstripBlocks, e.keepTrailingNewline)
-		preprocessedSource = processor.ProcessTemplate(source)
-	}
-
 	// Create lexer configuration from environment settings
 	lexerConfig := &lexer.LexerConfig{
-		VarStartString:     e.varStartString,
-		VarEndString:       e.varEndString,
-		BlockStartString:   e.blockStartString,
-		BlockEndString:     e.blockEndString,
-		CommentStartString: e.commentStartString,
-		CommentEndString:   e.commentEndString,
-		TrimBlocks:         e.trimBlocks,
-		LstripBlocks:       e.lstripBlocks,
+		VarStartString:      e.varStartString,
+		VarEndString:        e.varEndString,
+		BlockStartString:    e.blockStartString,
+		BlockEndString:      e.blockEndString,
+		CommentStartString:  e.commentStartString,
+		CommentEndString:    e.commentEndString,
+		TrimBlocks:          e.trimBlocks,
+		LstripBlocks:        e.lstripBlocks,
+		KeepTrailingNewline: e.keepTrailingNewline,
 	}
 
-	// Tokenize the preprocessed source
-	l := lexer.NewLexer(preprocessedSource, lexerConfig)
+	// Tokenize the source
+	l := lexer.NewLexer(source, lexerConfig)
 	tokens, err := l.Tokenize()
 	if err != nil {
 		return nil, fmt.Errorf("lexer error in template %s: %v", name, err)

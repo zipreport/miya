@@ -752,18 +752,10 @@ func (p *Parser) parseRawBlock() (Node, error) {
 	}
 	p.advance()
 
-	var content strings.Builder
-
-	// Collect everything until {% endraw %}
-	for !p.isAtEnd() {
-		if p.check(lexer.TokenBlockStart) || p.check(lexer.TokenBlockStartTrim) {
-			if p.peekBlockType() == lexer.TokenEndraw {
-				break
-			}
-		}
-
-		token := p.advance()
-		content.WriteString(token.Value)
+	// The lexer delivers the raw content as at most one text token
+	content := ""
+	if p.check(lexer.TokenText) {
+		content = p.advance().Value
 	}
 
 	// Expect endraw
@@ -782,7 +774,7 @@ func (p *Parser) parseRawBlock() (Node, error) {
 	}
 	p.advance()
 
-	return NewRawNode(content.String(), rawToken.Line, rawToken.Column), nil
+	return NewRawNode(content, rawToken.Line, rawToken.Column), nil
 }
 
 // parseAutoescapeBlock parses autoescape blocks

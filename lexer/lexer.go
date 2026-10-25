@@ -16,6 +16,9 @@ type LexerConfig struct {
 	CommentEndString   string
 	TrimBlocks         bool
 	LstripBlocks       bool
+	// KeepTrailingNewline keeps the single newline at the end of the source,
+	// which is otherwise removed as in Jinja2.
+	KeepTrailingNewline bool
 }
 
 func DefaultConfig() *LexerConfig {
@@ -41,6 +44,13 @@ type Lexer struct {
 	ch byte // current char
 
 	state lexerState
+
+	// pending holds tokens already produced by lexRaw.
+	pending []*Token
+	// Whitespace control for the next text, set by the tag that ended before it.
+	stripNext   bool // the tag ended with "-": strip all leading whitespace
+	trimNewline bool // trim_blocks applies: drop one leading newline
+	sawTag      bool // false until the first tag, so the first text starts a line
 }
 
 type lexerState int
@@ -57,6 +67,12 @@ func NewLexer(input string, config *LexerConfig) *Lexer {
 		config = DefaultConfig()
 	}
 
+	input = strings.ReplaceAll(input, "\r\n", "\n")
+	input = strings.ReplaceAll(input, "\r", "\n")
+	if !config.KeepTrailingNewline {
+		input = strings.TrimSuffix(input, "\n")
+	}
+
 	l := &Lexer{
 		input:  input,
 		config: config,
@@ -70,6 +86,11 @@ func NewLexer(input string, config *LexerConfig) *Lexer {
 }
 
 func (l *Lexer) NextToken() (*Token, error) {
+	if len(l.pending) > 0 {
+		tok := l.pending[0]
+		l.pending = l.pending[1:]
+		return tok, nil
+	}
 	switch l.state {
 	case stateText:
 		return l.lexText()
@@ -107,81 +128,88 @@ func (l *Lexer) Tokenize() ([]*Token, error) {
 }
 
 func (l *Lexer) lexText() (*Token, error) {
-	if l.ch == 0 {
-		return l.makeToken(TokenEOF, ""), nil
-	}
+	lineStart := l.skipLeadingWhitespace()
 
 	startPos := l.pos
 	startLine := l.line
 	startColumn := l.column
 
 	for l.ch != 0 {
-		// Check for delimiter starts
-		if l.peekString(l.config.VarStartString) {
-			if l.pos > startPos {
-				// Return accumulated text
-				text := l.input[startPos:l.pos]
-				return &Token{
-					Type:   TokenText,
-					Value:  text,
-					Line:   startLine,
-					Column: startColumn,
-				}, nil
-			}
-			// Switch to variable mode
-			return l.lexVarStart()
+		var next func() (*Token, error)
+		delim, lstrip := "", false
+		switch {
+		case l.peekString(l.config.VarStartString):
+			next, delim = l.lexVarStart, l.config.VarStartString
+		case l.peekString(l.config.BlockStartString):
+			next, delim, lstrip = l.lexBlockStart, l.config.BlockStartString, true
+		case l.peekString(l.config.CommentStartString):
+			next, delim, lstrip = l.lexCommentStart, l.config.CommentStartString, true
 		}
-
-		if l.peekString(l.config.BlockStartString) {
-			if l.pos > startPos {
-				// Return accumulated text
-				text := l.input[startPos:l.pos]
-				return &Token{
-					Type:   TokenText,
-					Value:  text,
-					Line:   startLine,
-					Column: startColumn,
-				}, nil
-			}
-			// Switch to block mode
-			return l.lexBlockStart()
+		if next == nil {
+			l.readChar()
+			continue
 		}
-
-		if l.peekString(l.config.CommentStartString) {
-			if l.pos > startPos {
-				// Return accumulated text
-				text := l.input[startPos:l.pos]
-				return &Token{
-					Type:   TokenText,
-					Value:  text,
-					Line:   startLine,
-					Column: startColumn,
-				}, nil
-			}
-			// Switch to comment mode
-			return l.lexCommentStart()
+		marker := byte(0)
+		if l.pos+len(delim) < len(l.input) {
+			marker = l.input[l.pos+len(delim)]
 		}
-
-		l.readChar()
+		text := l.trimTrailing(l.input[startPos:l.pos], marker, lstrip, lineStart)
+		if text == "" {
+			return next()
+		}
+		return &Token{Type: TokenText, Value: text, Line: startLine, Column: startColumn}, nil
 	}
 
-	// Return any remaining text
 	if l.pos > startPos {
-		text := l.input[startPos:l.pos]
-		return &Token{
-			Type:   TokenText,
-			Value:  text,
-			Line:   startLine,
-			Column: startColumn,
-		}, nil
+		return &Token{Type: TokenText, Value: l.input[startPos:l.pos], Line: startLine, Column: startColumn}, nil
 	}
-
 	return l.makeToken(TokenEOF, ""), nil
+}
+
+// skipLeadingWhitespace applies the previous tag's "-" or trim_blocks to the
+// text that follows it, and reports whether that text starts a line.
+func (l *Lexer) skipLeadingWhitespace() bool {
+	lineStart := !l.sawTag
+	if l.stripNext {
+		for {
+			r, size := utf8.DecodeRuneInString(l.input[l.pos:])
+			if l.ch == 0 || !unicode.IsSpace(r) {
+				break
+			}
+			lineStart = r == '\n'
+			for i := 0; i < size; i++ {
+				l.readChar()
+			}
+		}
+	} else if l.trimNewline && l.ch == '\n' {
+		l.readChar()
+		lineStart = true
+	}
+	l.stripNext, l.trimNewline = false, false
+	return lineStart
+}
+
+// trimTrailing applies the next tag's marker ("-", "+" or none) and
+// lstrip_blocks to the text before it. lstrip is false for {{ tags, which
+// lstrip_blocks does not affect.
+func (l *Lexer) trimTrailing(text string, marker byte, lstrip, lineStart bool) string {
+	if marker == '-' {
+		return strings.TrimRightFunc(text, unicode.IsSpace)
+	}
+	if marker == '+' || !lstrip || !l.config.LstripBlocks {
+		return text
+	}
+	i := strings.LastIndexByte(text, '\n') + 1
+	if (i > 0 || lineStart) && strings.TrimLeftFunc(text[i:], unicode.IsSpace) == "" {
+		return text[:i]
+	}
+	return text
 }
 
 func (l *Lexer) lexVarStart() (*Token, error) {
 	line := l.line
 	column := l.column
+	l.sawTag = true
 
 	// Check for trim variant {{-
 	trimRight := false
@@ -211,6 +239,14 @@ func (l *Lexer) lexVarStart() (*Token, error) {
 func (l *Lexer) lexBlockStart() (*Token, error) {
 	line := l.line
 	column := l.column
+	l.sawTag = true
+
+	if ok, err := l.lexRaw(); ok || err != nil {
+		if err != nil {
+			return nil, err
+		}
+		return l.NextToken()
+	}
 
 	// Check for trim variant {%-
 	trimRight := false
@@ -228,6 +264,9 @@ func (l *Lexer) lexBlockStart() (*Token, error) {
 	}
 
 	l.consumeString(l.config.BlockStartString)
+	if l.ch == '+' {
+		l.readChar()
+	}
 	l.state = stateBlock
 	return &Token{
 		Type:   TokenBlockStart,
@@ -240,8 +279,10 @@ func (l *Lexer) lexBlockStart() (*Token, error) {
 func (l *Lexer) lexCommentStart() (*Token, error) {
 	startLine := l.line
 	startColumn := l.column
+	l.sawTag = true
 
 	l.consumeString(l.config.CommentStartString)
+	bodyStart := l.pos
 
 	// Skip everything until comment end
 	for !l.peekString(l.config.CommentEndString) && l.ch != 0 {
@@ -252,11 +293,22 @@ func (l *Lexer) lexCommentStart() (*Token, error) {
 		return nil, fmt.Errorf("unclosed comment at line %d, column %d", startLine, startColumn)
 	}
 
+	marker := byte(0)
+	if l.pos > bodyStart+1 {
+		marker = l.input[l.pos-1]
+	}
 	l.consumeString(l.config.CommentEndString)
 	l.state = stateText
+	l.setTagEnd(marker, true)
 
 	// Comments are skipped, continue to next token
 	return l.NextToken()
+}
+
+// setTagEnd records how the tag that just ended controls the following text.
+func (l *Lexer) setTagEnd(marker byte, trimmable bool) {
+	l.stripNext = marker == '-'
+	l.trimNewline = marker != '-' && marker != '+' && trimmable && l.config.TrimBlocks
 }
 
 func (l *Lexer) lexVariable() (*Token, error) {
@@ -268,6 +320,7 @@ func (l *Lexer) lexVariable() (*Token, error) {
 		column := l.column
 		l.consumeString("-" + l.config.VarEndString)
 		l.state = stateText
+		l.setTagEnd('-', false)
 		return &Token{
 			Type:     TokenVarEndTrim,
 			Value:    "-" + l.config.VarEndString,
@@ -302,6 +355,7 @@ func (l *Lexer) lexBlock() (*Token, error) {
 		column := l.column
 		l.consumeString("-" + l.config.BlockEndString)
 		l.state = stateText
+		l.setTagEnd('-', true)
 		return &Token{
 			Type:     TokenBlockEndTrim,
 			Value:    "-" + l.config.BlockEndString,
@@ -311,11 +365,26 @@ func (l *Lexer) lexBlock() (*Token, error) {
 		}, nil
 	}
 
+	if l.peekString("+" + l.config.BlockEndString) {
+		line := l.line
+		column := l.column
+		l.consumeString("+" + l.config.BlockEndString)
+		l.state = stateText
+		l.setTagEnd('+', true)
+		return &Token{
+			Type:   TokenBlockEnd,
+			Value:  l.config.BlockEndString,
+			Line:   line,
+			Column: column,
+		}, nil
+	}
+
 	if l.peekString(l.config.BlockEndString) {
 		line := l.line
 		column := l.column
 		l.consumeString(l.config.BlockEndString)
 		l.state = stateText
+		l.setTagEnd(0, true)
 		return &Token{
 			Type:   TokenBlockEnd,
 			Value:  l.config.BlockEndString,
@@ -659,4 +728,100 @@ func isWhitespace(r rune) bool {
 
 func runeLen(s string) int {
 	return utf8.RuneCountInString(s)
+}
+
+// lexRaw lexes {% raw %}...{% endraw %} when the block starting at l.pos is a
+// raw tag. The content becomes one TokenText, verbatim apart from whitespace
+// control, and the tokens are queued in l.pending.
+func (l *Lexer) lexRaw() (bool, error) {
+	bs, be := l.config.BlockStartString, l.config.BlockEndString
+	i := l.pos + len(bs)
+	if i < len(l.input) && (l.input[i] == '-' || l.input[i] == '+') {
+		i++ // the opening marker applies to the text before the tag, handled by lexText
+	}
+	j := skipSpaces(l.input, i)
+	if !strings.HasPrefix(l.input[j:], "raw") {
+		return false, nil
+	}
+	j = skipSpaces(l.input, j+len("raw"))
+	if strings.HasPrefix(l.input[j:], "+"+be) {
+		// Jinja2 rejects {% raw +%}: the raw content's leading whitespace is never lstripped
+		return false, fmt.Errorf("unexpected '+' before %q in raw tag at line %d, column %d", be, l.line, l.column)
+	}
+	closeMarker := byte(0)
+	if strings.HasPrefix(l.input[j:], "-"+be) {
+		closeMarker = '-'
+		j++
+	} else if !strings.HasPrefix(l.input[j:], be) {
+		return false, nil
+	}
+	line, column := l.line, l.column
+	for l.pos < j+len(be) {
+		l.readChar()
+	}
+	l.pending = append(l.pending,
+		&Token{Type: TokenBlockStart, Value: bs, Line: line, Column: column},
+		&Token{Type: TokenRaw, Value: "raw", Line: line, Column: column},
+		&Token{Type: TokenBlockEnd, Value: be, Line: line, Column: column})
+
+	// Find {% endraw %}
+	end, endTag, endMarkerL, endMarkerR := -1, 0, byte(0), byte(0)
+	for k := l.pos; k < len(l.input); k++ {
+		if !strings.HasPrefix(l.input[k:], bs) {
+			continue
+		}
+		m := k + len(bs)
+		ml := byte(0)
+		if m < len(l.input) && (l.input[m] == '-' || l.input[m] == '+') {
+			ml = l.input[m]
+			m++
+		}
+		m = skipSpaces(l.input, m)
+		if !strings.HasPrefix(l.input[m:], "endraw") {
+			continue
+		}
+		m = skipSpaces(l.input, m+len("endraw"))
+		mr := byte(0)
+		if m < len(l.input) && (l.input[m] == '-' || l.input[m] == '+') {
+			mr = l.input[m]
+			m++
+		}
+		if !strings.HasPrefix(l.input[m:], be) {
+			continue
+		}
+		end, endTag, endMarkerL, endMarkerR = k, m+len(be), ml, mr
+		break
+	}
+	if end < 0 {
+		return false, fmt.Errorf("unclosed raw block at line %d, column %d", line, column)
+	}
+
+	l.stripNext, l.trimNewline = closeMarker == '-', false
+	lineStart := l.skipLeadingWhitespace()
+	contentLine, contentColumn := l.line, l.column
+	content := l.trimTrailing(l.input[l.pos:end], endMarkerL, true, lineStart)
+	if content != "" {
+		l.pending = append(l.pending, &Token{Type: TokenText, Value: content, Line: contentLine, Column: contentColumn})
+	}
+	for l.pos < end {
+		l.readChar()
+	}
+	endLine, endColumn := l.line, l.column
+	for l.pos < endTag {
+		l.readChar()
+	}
+	l.pending = append(l.pending,
+		&Token{Type: TokenBlockStart, Value: bs, Line: endLine, Column: endColumn},
+		&Token{Type: TokenEndraw, Value: "endraw", Line: endLine, Column: endColumn},
+		&Token{Type: TokenBlockEnd, Value: be, Line: endLine, Column: endColumn})
+	l.state = stateText
+	l.setTagEnd(endMarkerR, true)
+	return true, nil
+}
+
+func skipSpaces(s string, i int) int {
+	for i < len(s) && (s[i] == ' ' || s[i] == '\t' || s[i] == '\n' || s[i] == '\r') {
+		i++
+	}
+	return i
 }
