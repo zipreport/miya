@@ -165,32 +165,6 @@ func (e *Environment) GetTemplate(name string) (*Template, error) {
 		return nil, fmt.Errorf("no loader configured for environment")
 	}
 
-	// Try to load from advanced loader first if available
-	if advancedLoader, ok := e.loader.(loader.AdvancedLoader); ok {
-		templateNode, err := advancedLoader.LoadTemplate(name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load template %q: %w", name, err)
-		}
-
-		// NOTE: Old inheritance resolution removed - now handled at render-time
-		// This allows templates to preserve their raw AST with ExtendsNode and SuperNode
-		// for processing by the new runtime inheritance system
-
-		tmpl := &Template{
-			name: name,
-			env:  e,
-			ast:  templateNode,
-		}
-
-		tmpl.cacheKey = name
-		e.cacheMutex.Lock()
-		e.cache[name] = tmpl
-		e.cacheMutex.Unlock()
-
-		return tmpl, nil
-	}
-
-	// Fallback to basic loader
 	source, err := e.loader.GetSource(name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load template %q: %w", name, err)
