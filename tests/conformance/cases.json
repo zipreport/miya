@@ -1,0 +1,5345 @@
+{
+ "cases": [
+  {
+   "context": {
+    "name": "World"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "Hello World!"
+   },
+   "id": "basic-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "Hello {{ name }}!"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "3"
+   },
+   "id": "basic-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 1 + 2 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "ab"
+   },
+   "id": "basic-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'a' ~ 'b' }}"
+   }
+  },
+  {
+   "context": {
+    "x": 1
+   },
+   "entry": "main",
+   "expect": {
+    "output": "yes"
+   },
+   "id": "basic-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% if x %}yes{% else %}no{% endif %}"
+   }
+  },
+  {
+   "context": {
+    "x": 0,
+    "y": 1
+   },
+   "entry": "main",
+   "expect": {
+    "output": "maybe"
+   },
+   "id": "basic-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% if x %}yes{% elif y %}maybe{% else %}no{% endif %}"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     1,
+     2,
+     3
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1,2,3,"
+   },
+   "id": "basic-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for i in items %}{{ i }},{% endfor %}"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     "a",
+     "b",
+     "c"
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "123"
+   },
+   "id": "basic-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for i in items %}{{ loop.index }}{% endfor %}"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     1,
+     2
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "truefalse|falsetrue|"
+   },
+   "id": "basic-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for i in items %}{{ loop.first }}{{ loop.last }}|{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "empty"
+   },
+   "id": "basic-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for i in [] %}x{% else %}empty{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "10"
+   },
+   "id": "basic-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set x = 5 %}{{ x * 2 }}"
+   }
+  },
+  {
+   "context": {
+    "name": "ann"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "ANN"
+   },
+   "id": "basic-011",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ name|upper }}"
+   }
+  },
+  {
+   "context": {
+    "name": "ANN"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "ann"
+   },
+   "id": "basic-012",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ name|lower }}"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     1,
+     2,
+     3
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "3"
+   },
+   "id": "basic-013",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ items|length }}"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     "a",
+     "b"
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a, b"
+   },
+   "id": "basic-014",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ items|join(', ') }}"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     1,
+     2,
+     3
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1-3"
+   },
+   "id": "basic-015",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ items|first }}-{{ items|last }}"
+   }
+  },
+  {
+   "context": {
+    "u": {
+     "name": "Ann"
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "Ann"
+   },
+   "id": "basic-016",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ u.name }}"
+   }
+  },
+  {
+   "context": {
+    "u": {
+     "name": "Ann"
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "Ann"
+   },
+   "id": "basic-017",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ u['name'] }}"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     "a",
+     "b"
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "b"
+   },
+   "id": "basic-018",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ items[1] }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "|"
+   },
+   "id": "basic-019",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ nope }}|"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "d"
+   },
+   "id": "basic-020",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ nope|default('d') }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "2.5"
+   },
+   "id": "basic-021",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 10 / 4 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "8"
+   },
+   "id": "basic-022",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 2 ** 3 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "basic-023",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 7 % 3 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "3"
+   },
+   "id": "basic-024",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 7 // 2 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "cba"
+   },
+   "id": "basic-025",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'abc'|reverse }}"
+   }
+  },
+  {
+   "context": {
+    "x": 1
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "basic-026",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x is defined }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "false"
+   },
+   "id": "basic-027",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ y is defined }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "basic-028",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 3 in [1, 2, 3] }}"
+   }
+  },
+  {
+   "context": {
+    "s": "abc"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "basic-029",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'b' in s }}"
+   }
+  },
+  {
+   "context": {
+    "x": 0
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "basic-030",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ not x }}"
+   }
+  },
+  {
+   "context": {
+    "x": ""
+   },
+   "entry": "main",
+   "expect": {
+    "output": "none"
+   },
+   "id": "basic-031",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x if x else 'none' }}"
+   }
+  },
+  {
+   "context": {
+    "s": "hello world"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "Hello World"
+   },
+   "id": "basic-032",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|title }}"
+   }
+  },
+  {
+   "context": {
+    "s": "hello"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "Hello"
+   },
+   "id": "basic-033",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|capitalize }}"
+   }
+  },
+  {
+   "context": {
+    "s": "  x  "
+   },
+   "entry": "main",
+   "expect": {
+    "output": "x"
+   },
+   "id": "basic-034",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|trim }}"
+   }
+  },
+  {
+   "context": {
+    "s": "banana"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "bonono"
+   },
+   "id": "basic-035",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|replace('a', 'o') }}"
+   }
+  },
+  {
+   "context": {
+    "n": -3
+   },
+   "entry": "main",
+   "expect": {
+    "output": "3"
+   },
+   "id": "basic-036",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ n|abs }}"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     1,
+     2,
+     3
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "6"
+   },
+   "id": "basic-037",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ items|sum }}"
+   }
+  },
+  {
+   "context": {
+    "s": "a b c"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "3"
+   },
+   "id": "basic-038",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|wordcount }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "3"
+   },
+   "id": "basic-039",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ range(3)|list|length }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "123"
+   },
+   "id": "basic-040",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for i in range(1, 4) %}{{ i }}{% endfor %}"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     1,
+     2,
+     3
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "basic-041",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ items|batch(2)|list|length }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "6"
+   },
+   "id": "basic-042",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set ns = namespace(c=0) %}{% for i in [1,2,3] %}{% set ns.c = ns.c + i %}{% endfor %}{{ ns.c }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "  x  |"
+   },
+   "id": "basic-043",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'x'|center(5) }}|"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     1,
+     2,
+     3
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "321"
+   },
+   "id": "basic-044",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ items|reverse|join }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<b>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "<b>"
+   },
+   "id": "basic-045",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|safe }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<b>&\"'"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "&lt;b&gt;&amp;&#34;&#39;"
+   },
+   "id": "basic-046",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<b>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "<b>"
+   },
+   "id": "basic-047",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% autoescape false %}{{ s }}{% endautoescape %}"
+   }
+  },
+  {
+   "context": {
+    "n": "a"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a"
+   },
+   "id": "basic-048",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ n|string }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[x]"
+   },
+   "id": "basic-049",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro m(a) %}[{{ a }}]{% endmacro %}{{ m('x')|safe }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "ABC"
+   },
+   "id": "basic-050",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% filter upper %}abc{% endfilter %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "part!"
+   },
+   "id": "basic-051",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% include 'p' %}!",
+    "p": "part"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[child]"
+   },
+   "id": "basic-052",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block b %}base{% endblock %}]",
+    "main": "{% extends 'base' %}{% block b %}child{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[base+c]"
+   },
+   "id": "basic-053",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block b %}base{% endblock %}]",
+    "main": "{% extends 'base' %}{% block b %}{{ super() }}+c{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "basic-054",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% with a = 1 %}{{ a }}{% endwith %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "0.75"
+   },
+   "id": "basic-055",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 0.5 + 0.25 }}"
+   }
+  },
+  {
+   "context": {
+    "a": 1
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "basic-056",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a == 1.0 }}"
+   }
+  },
+  {
+   "context": {
+    "total": 0
+   },
+   "entry": "main",
+   "expect": {
+    "output": "false"
+   },
+   "id": "basic-057",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ total > 0 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "3-1"
+   },
+   "id": "basic-058",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ [1, 2, 3]|max }}-{{ [1, 2, 3]|min }}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "a": 1
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a=1;"
+   },
+   "id": "basic-059",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for k, v in d.items() %}{{ k }}={{ v }};{% endfor %}"
+   }
+  },
+  {
+   "context": {
+    "s": "<b>x</b>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "x"
+   },
+   "id": "basic-060",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|striptags }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "5"
+   },
+   "id": "basic-061",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 15 / 3 }}"
+   }
+  },
+  {
+   "context": {
+    "name": "Ann"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "Ann"
+   },
+   "id": "andor-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ name or 'default' }}"
+   }
+  },
+  {
+   "context": {
+    "name": ""
+   },
+   "entry": "main",
+   "expect": {
+    "output": "default"
+   },
+   "id": "andor-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ name or 'default' }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "x"
+   },
+   "id": "andor-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ '' or 'x' }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "andor-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 0 or 1 and 2 }}"
+   }
+  },
+  {
+   "context": {
+    "a": "x"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "y"
+   },
+   "id": "andor-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a and 'y' }}"
+   }
+  },
+  {
+   "context": {
+    "l": []
+   },
+   "entry": "main",
+   "expect": {
+    "output": "[]"
+   },
+   "id": "andor-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l and l[0] }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "f"
+   },
+   "id": "andor-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% if x is defined and x > 0 %}t{% else %}f{% endif %}"
+   }
+  },
+  {
+   "context": {
+    "n": 0
+   },
+   "entry": "main",
+   "expect": {
+    "output": "6"
+   },
+   "id": "andor-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ (n or 5) + 1 }}"
+   }
+  },
+  {
+   "context": {
+    "s": "hi"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "hi"
+   },
+   "id": "andor-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set v = s or 'dflt' %}{{ v }}"
+   }
+  },
+  {
+   "context": {
+    "n": 0
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "andor-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ n == 0 or 10 / n }}"
+   }
+  },
+  {
+   "context": {
+    "n": 0
+   },
+   "entry": "main",
+   "expect": {
+    "output": "b"
+   },
+   "id": "andor-011",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% if n != 0 and 10 / n > 1 %}a{% else %}b{% endif %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "d"
+   },
+   "id": "andor-012",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ none or 'd' }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<b>&\"q"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "&lt;b&gt;&amp;&#34;q"
+   },
+   "id": "esc-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|e }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<b>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "&lt;b&gt;"
+   },
+   "id": "esc-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|e|e }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<b>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "&lt;b&gt;"
+   },
+   "id": "esc-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set y = s|e %}{{ y }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<script>x</script>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "&lt;script&gt;x&lt;/script&gt;"
+   },
+   "id": "esc-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|urlize }}"
+   }
+  },
+  {
+   "context": {
+    "s": "see http://a.com/<b> now"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "see <a href=\"http://a.com/&lt;b&gt;\" rel=\"noopener\">http://a.com/&lt;b&gt;</a> now"
+   },
+   "id": "esc-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|urlize }}"
+   }
+  },
+  {
+   "context": {
+    "q": "a'b"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "<a title='\"a\\u0027b\"'>"
+   },
+   "id": "esc-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "<a title='{{ q|tojson }}'>"
+   }
+  },
+  {
+   "context": {
+    "q": "<&>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "\"\\u003c\\u0026\\u003e\""
+   },
+   "id": "esc-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ q|tojson }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[&#39;&lt;&#39;]"
+   },
+   "id": "esc-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ ['<'] }}"
+   }
+  },
+  {
+   "context": {
+    "items": [
+     "<i>"
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "[&#39;&lt;i&gt;&#39;]"
+   },
+   "id": "esc-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ items }}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "k": "v"
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "<a k=\"v\">"
+   },
+   "id": "esc-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "<a{{ d|xmlattr }}>"
+   }
+  },
+  {
+   "context": {
+    "s": "<b>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "&lt;b&gt;"
+   },
+   "id": "esc-011",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|forceescape }}"
+   }
+  },
+  {
+   "context": {
+    "s": "&"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "&amp;"
+   },
+   "id": "esc-012",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|escape }}"
+   }
+  },
+  {
+   "context": {
+    "s": "a & b"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a &amp; b"
+   },
+   "id": "esc-013",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|striptags|e }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<b>&"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "<b>&"
+   },
+   "id": "esc-014",
+   "options": {
+    "autoescape": false,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<b>&"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "&lt;b&gt;&amp;"
+   },
+   "id": "esc-015",
+   "options": {
+    "autoescape": false,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|e }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<b> http://a.com"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "&lt;b&gt; <a href=\"http://a.com\" rel=\"noopener\">http://a.com</a>"
+   },
+   "id": "esc-016",
+   "options": {
+    "autoescape": false,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|urlize }}"
+   }
+  },
+  {
+   "context": {
+    "q": "<a'b>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "\"\\u003ca\\u0027b\\u003e\""
+   },
+   "id": "esc-017",
+   "options": {
+    "autoescape": false,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ q|tojson }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "<b>a&amp;</b>"
+   },
+   "id": "macesc-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{{ b('a&') }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "<div><p>c</p></div>"
+   },
+   "id": "macesc-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro w() %}<div>{{ caller() }}</div>{% endmacro %}{% call w() %}<p>c</p>{% endcall %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "<i>"
+   },
+   "id": "macesc-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set s %}<i>{% endset %}{{ s }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "8"
+   },
+   "id": "macesc-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{{ b('x')|length }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "no"
+   },
+   "id": "macesc-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro e() %}{% endmacro %}{% if e() %}yes{% else %}no{% endif %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "<b>&lt;s&gt;</b>"
+   },
+   "id": "macesc-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{{ b('<s>') }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "<b>x</b>"
+   },
+   "id": "macesc-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "m": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}",
+    "main": "{% import 'm' as m %}{{ m.b('x') }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "{{ a }} {% for x in y %}"
+   },
+   "id": "ws-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% raw %}{{ a }} {% for x in y %}{% endraw %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "{{ 'str' }}"
+   },
+   "id": "ws-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% raw %}{{ 'str' }}{% endraw %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "<p>{# keep #}</p>"
+   },
+   "id": "ws-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% raw %}<p>{# keep #}</p>{% endraw %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "x = 1;\ny = 2;"
+   },
+   "id": "ws-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "x = 1;\n{# note #}\ny = 2;"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "<script>\nvar a = 1\nvar b = 2\n</script>"
+   },
+   "id": "ws-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": true,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "<script>\nvar a = 1\n{# note #}\nvar b = 2\n</script>"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "Total  due"
+   },
+   "id": "ws-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "Total {# amount #} due"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "-%}"
+   },
+   "id": "ws-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "{% if true %}{{ '-%}' }}{% endif %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "a {# x #} b"
+   },
+   "id": "ws-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "{{ 'a {# x #} b' }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "a b"
+   },
+   "id": "ws-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "a {#- c #} b"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "a1b"
+   },
+   "id": "ws-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "a  {{- 1 -}}  b"
+   }
+  },
+  {
+   "context": {
+    "a": 1
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "ws-011",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a }}\n"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "x\ny"
+   },
+   "id": "ws-012",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "{% if true %}\nx\n{% endif %}\ny"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "x\n"
+   },
+   "id": "ws-013",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": true,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "  {% if true %}\nx\n  {% endif %}\n"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "<pre>line1\nline2</pre>"
+   },
+   "id": "ws-014",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "<pre>line1\n{# c #}\nline2</pre>"
+   }
+  },
+  {
+   "context": {
+    "d": "x %}\n\ny"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "x %}\n\ny"
+   },
+   "id": "ws-015",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "{{ d }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "<option>  a\n   b </option>"
+   },
+   "id": "ws-016",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "<option>  a\n   b </option>"
+   }
+  },
+  {
+   "context": {
+    "o": "<option>  a\n   b </option>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "<pre><option>  a\n   b </option></pre>"
+   },
+   "id": "ws-017",
+   "options": {
+    "autoescape": false,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "<pre>{{ o }}</pre>"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "x\n  y"
+   },
+   "id": "ws-018",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{%- if true -%}\n  x\n{%- endif %}\n  y"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "a\n1\n2\nb"
+   },
+   "id": "ws-019",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": true,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "a\n{% for i in [1,2] %}\n{{ i }}\n{% endfor %}\nb"
+   }
+  },
+  {
+   "context": {
+    "a": 1
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1\n"
+   },
+   "id": "ws-020",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": true,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a }}\n"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "x\n"
+   },
+   "id": "ws-021",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": true,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": true
+   },
+   "templates": {
+    "main": "{% if true %}\nx\n{% endif %}\n"
+   }
+  },
+  {
+   "context": {
+    "f": true
+   },
+   "entry": "main",
+   "expect": {
+    "output": "[X]"
+   },
+   "id": "inh-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "{% if f %}[{% block x %}d{% endblock %}]{% endif %}",
+    "main": "{% extends 'base' %}{% block x %}X{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[X][X]"
+   },
+   "id": "inh-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "{% for i in [1,2] %}[{% block x %}d{% endblock %}]{% endfor %}",
+    "main": "{% extends 'base' %}{% block x %}X{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "T|T"
+   },
+   "id": "inh-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "{{ title }}|{% block b %}{% endblock %}",
+    "main": "{% extends 'base' %}{% set title = 'T' %}{% block b %}{{ title }}{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[M]"
+   },
+   "id": "inh-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block b %}{% endblock %}]",
+    "main": "{% extends 'base' %}{% macro m() %}M{% endmacro %}{% block b %}{{ m() }}{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[X]"
+   },
+   "id": "inh-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "{% with a = 1 %}[{% block x %}d{% endblock %}]{% endwith %}",
+    "main": "{% extends 'base' %}{% block x %}X{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[C]"
+   },
+   "id": "inh-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block b %}B{% endblock %}]",
+    "main": "{% extends 'mid' %}{% block b %}C{% endblock %}",
+    "mid": "{% extends 'base' %}{% block b %}M{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[BMC]"
+   },
+   "id": "inh-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block b %}B{% endblock %}]",
+    "main": "{% extends 'mid' %}{% block b %}{{ super() }}C{% endblock %}",
+    "mid": "{% extends 'base' %}{% block b %}{{ super() }}M{% endblock %}"
+   }
+  },
+  {
+   "context": {
+    "f": false
+   },
+   "entry": "main",
+   "expect": {
+    "output": "none"
+   },
+   "id": "inh-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "{% if f %}[{% block x %}d{% endblock %}]{% else %}none{% endif %}",
+    "main": "{% extends 'base' %}{% block x %}X{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "T|T"
+   },
+   "id": "inh-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "{% block t %}{% endblock %}|{{ self.t() }}",
+    "main": "{% extends 'base' %}{% block t %}T{% endblock %}"
+   }
+  },
+  {
+   "context": {
+    "v": "SECRET"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "[]"
+   },
+   "id": "imp-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% macro show() %}[{{ v }}]{% endmacro %}",
+    "main": "{% import 'lib' as l %}{{ l.show() }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "A:|B:|"
+   },
+   "id": "imp-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% macro m(a) %}{{ a }}:{{ v }}{% endmacro %}",
+    "main": "{% for v in ['A','B'] %}{% import 'lib' as l %}{{ l.m(v) }}|{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "hi x"
+   },
+   "id": "imp-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% macro hi(n) %}hi {{ n }}{% endmacro %}",
+    "main": "{% from 'lib' import hi %}{{ hi('x') }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "G"
+   },
+   "id": "imp-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% set g = 'G' %}",
+    "main": "{% import 'lib' as l %}{{ l.g }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "G"
+   },
+   "id": "imp-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% set g = 'G' %}{% macro m() %}{{ g }}{% endmacro %}",
+    "main": "{% import 'lib' as l %}{{ l.m() }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateNotFound",
+    "phase": "render"
+   },
+   "id": "imp-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% import 'nope' as l %}x"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "UndefinedError",
+    "phase": "render"
+   },
+   "id": "imp-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% macro hi() %}{% endmacro %}",
+    "main": "{% from 'lib' import nothere %}{{ nothere() }}"
+   }
+  },
+  {
+   "context": {
+    "v": "V"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "[V]"
+   },
+   "id": "imp-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% macro show() %}[{{ v }}]{% endmacro %}",
+    "main": "{% import 'lib' as l with context %}{{ l.show() }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1-2"
+   },
+   "id": "mac-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro m(a, b=2) %}{{ a }}-{{ b }}{% endmacro %}{{ m(a=1) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1-5"
+   },
+   "id": "mac-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro m(a, b=2) %}{{ a }}-{{ b }}{% endmacro %}{{ m(b=5, a=1) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1-9"
+   },
+   "id": "mac-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro m(a, b=2) %}{{ a }}-{{ b }}{% endmacro %}{{ m(1, b=9) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "11x"
+   },
+   "id": "mac-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro m(a, b=a~'x') %}{{ a }}{{ b }}{% endmacro %}{{ m(1) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "nob"
+   },
+   "id": "mac-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro m(a, b) %}{% if b %}B{% else %}nob{% endif %}{% endmacro %}{{ m(1) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TypeError",
+    "phase": "render"
+   },
+   "id": "mac-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro m(a) %}{{ a }}{% endmacro %}{{ m(1, 2) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "3210"
+   },
+   "id": "mac-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% macro r(n) %}{{ n }}{% if n > 0 %}{{ r(n - 1) }}{% endif %}{% endmacro %}",
+    "main": "{% import 'lib' as l %}{{ l.r(3) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "AB"
+   },
+   "id": "mac-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% macro b() %}B{% endmacro %}{% macro a() %}A{{ b() }}{% endmacro %}",
+    "main": "{% import 'lib' as l %}{{ l.a() }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[in]"
+   },
+   "id": "mac-009",
+   "options": {
+    "autoescape": false,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% macro wrap() %}[{{ caller() }}]{% endmacro %}",
+    "main": "{% import 'lib' as l %}{% call l.wrap() %}in{% endcall %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "G N"
+   },
+   "id": "mac-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "lib": "{% macro hi(n, g='Hello') %}{{ g }} {{ n }}{% endmacro %}",
+    "main": "{% import 'lib' as l %}{{ l.hi(g='G', n='N') }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "mac-011",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro m() %}{{ varargs|length }}{% endmacro %}{{ m(1, 2) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TypeError",
+    "phase": "render"
+   },
+   "id": "mac-012",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% macro m(a) %}[{{ a }}]{% endmacro %}{% call(v) m(2) %}{% endcall %}x"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     3,
+     1,
+     2
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "3,2,1"
+   },
+   "id": "fkw-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|sort(reverse=true)|join(',') }}"
+   }
+  },
+  {
+   "context": {
+    "ld": [
+     {
+      "n": "a"
+     },
+     {
+      "n": "b"
+     }
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a,b"
+   },
+   "id": "fkw-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ ld|map(attribute='n')|join(',') }}"
+   }
+  },
+  {
+   "context": {
+    "ld": [
+     {
+      "v": 2
+     },
+     {
+      "v": 1
+     }
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1,2"
+   },
+   "id": "fkw-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ ld|sort(attribute='v')|map(attribute='v')|join(',') }}"
+   }
+  },
+  {
+   "context": {
+    "ld": [
+     {
+      "v": 2
+     },
+     {
+      "v": 3
+     }
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "5"
+   },
+   "id": "fkw-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ ld|sum(attribute='v') }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     1,
+     2
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "13"
+   },
+   "id": "fkw-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|sum(start=10) }}"
+   }
+  },
+  {
+   "context": {
+    "ld": [
+     {
+      "g": "x"
+     },
+     {
+      "g": "x"
+     },
+     {
+      "g": "y"
+     }
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "x:2;y:1;"
+   },
+   "id": "fkw-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for g in ld|groupby(attribute='g') %}{{ g.grouper }}:{{ g.list|length }};{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "3.1"
+   },
+   "id": "fkw-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 3.14159|round(precision=1) }}"
+   }
+  },
+  {
+   "context": {
+    "s": "a\nb"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "  a\n  b"
+   },
+   "id": "fkw-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|indent(2, first=true) }}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "a": 1,
+     "b": 2
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "b,a"
+   },
+   "id": "fkw-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ d|dictsort(reverse=true)|map('first')|join(',') }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     1,
+     2
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1-2"
+   },
+   "id": "fkw-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|join(d='-') }}"
+   }
+  },
+  {
+   "context": {
+    "s": "Hello World Foo"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "He..."
+   },
+   "id": "fkw-011",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|truncate(length=5) }}"
+   }
+  },
+  {
+   "context": {
+    "s": "aaa"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "oaa"
+   },
+   "id": "fkw-012",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|replace('a', 'o', count=1) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "Hello World"
+   },
+   "id": "fsem-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'Hello World'|truncate(8) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "He..."
+   },
+   "id": "fsem-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'Hello World'|truncate(5) }}"
+   }
+  },
+  {
+   "context": {
+    "s": "The quick brown fox jumps over the lazy dog and keeps running"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "The quick brown fox jumps o..."
+   },
+   "id": "fsem-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|truncate(30, true) }}"
+   }
+  },
+  {
+   "context": {
+    "s": "a\n\nb"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a\n\n  b"
+   },
+   "id": "fsem-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|indent(2) }}"
+   }
+  },
+  {
+   "context": {
+    "x": 2.5
+   },
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "fsem-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x|round }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "2.5"
+   },
+   "id": "fsem-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 2.5|round(2) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "2.67"
+   },
+   "id": "fsem-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 2.675|round(2) }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     3,
+     1,
+     2
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "fsem-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|slice(2)|list|length }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     "a",
+     "b"
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "A,B"
+   },
+   "id": "fsem-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|map('upper')|join(',') }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     1,
+     2,
+     3
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1,3"
+   },
+   "id": "fsem-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|select('odd')|join(',') }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     1,
+     2,
+     3
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "fsem-011",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|reject('odd')|join(',') }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     1,
+     2,
+     3
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "2,3"
+   },
+   "id": "fsem-012",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|select('gt', 1)|join(',') }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     "a",
+     "B",
+     "b",
+     "A"
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a,B"
+   },
+   "id": "fsem-013",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|unique|join(',') }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "3"
+   },
+   "id": "fsem-014",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ '3.7'|int }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "7"
+   },
+   "id": "fsem-015",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ ' 7 '|int }}"
+   }
+  },
+  {
+   "context": {
+    "s": "a b/c"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a%20b/c"
+   },
+   "id": "fsem-016",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|urlencode }}"
+   }
+  },
+  {
+   "context": {
+    "s": "<p>a</p>  <p>b</p>"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a b"
+   },
+   "id": "fsem-017",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|striptags }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     10,
+     9,
+     2,
+     33
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "2,9,10,33"
+   },
+   "id": "fsem-018",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|sort|join(',') }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     "3",
+     "10",
+     "2"
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "3"
+   },
+   "id": "fsem-019",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|max }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1.0 kB"
+   },
+   "id": "fsem-020",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 1000|filesizeformat }}"
+   }
+  },
+  {
+   "context": {
+    "s": "abcdefgh ij"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "abc\ndef\ngh\nij"
+   },
+   "id": "fsem-021",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|wordwrap(3) }}"
+   }
+  },
+  {
+   "context": {
+    "s": "x"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "                                       x                                        |"
+   },
+   "id": "fsem-022",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|center }}|"
+   }
+  },
+  {
+   "context": {
+    "ld": [
+     {
+      "a": 1
+     },
+     {
+      "a": 0
+     }
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "fsem-023",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ ld|selectattr('a')|list|length }}"
+   }
+  },
+  {
+   "context": {
+    "ld": [
+     {
+      "a": 1
+     },
+     {
+      "a": 2
+     }
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "fsem-024",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ ld|selectattr('a', 'equalto', 1)|list|length }}"
+   }
+  },
+  {
+   "context": {
+    "ld": [
+     {
+      "a": 1
+     },
+     {
+      "a": 0
+     }
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "fsem-025",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ ld|rejectattr('a')|list|length }}"
+   }
+  },
+  {
+   "context": {
+    "l": [
+     1,
+     2
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "[1, 2]"
+   },
+   "id": "fsem-026",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ l|list }}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "a": 2,
+     "b": 1
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a"
+   },
+   "id": "fsem-027",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ d|dictsort|first|first }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "5"
+   },
+   "id": "fsem-028",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 5|round(2) }}"
+   }
+  },
+  {
+   "context": {
+    "ls": [
+     "apple",
+     "cherry",
+     "banana"
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "cherry"
+   },
+   "id": "fsem-029",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ ls|max }}"
+   }
+  },
+  {
+   "context": {
+    "n": 10023
+   },
+   "entry": "main",
+   "expect": {
+    "output": "10023"
+   },
+   "id": "fsem-030",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ '%d'|format(n) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1-2"
+   },
+   "id": "fsem-031",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ '%s-%s'|format(1, 2) }}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "a": 10
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a,"
+   },
+   "id": "dict-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for k in d %}{{ k }},{% endfor %}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "a": 1
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a=1;"
+   },
+   "id": "dict-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for k in d %}{{ k }}={{ d[k] }};{% endfor %}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "a": 2,
+     "b": 1,
+     "c": 3
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "abc"
+   },
+   "id": "dict-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for k, v in d.items() %}{{ k }}{% endfor %}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "a": 2,
+     "b": 1
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "ab"
+   },
+   "id": "dict-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ d.keys()|list|join }}"
+   }
+  },
+  {
+   "context": {
+    "s": "açúcar"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "ç"
+   },
+   "id": "uni-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s[1] }}"
+   }
+  },
+  {
+   "context": {
+    "s": "açúcar"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "açú"
+   },
+   "id": "uni-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s[0:3] }}"
+   }
+  },
+  {
+   "context": {
+    "s": "açúcar"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "racúça"
+   },
+   "id": "uni-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s[::-1] }}"
+   }
+  },
+  {
+   "context": {
+    "s": "açú"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "a.ç.ú."
+   },
+   "id": "uni-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for c in s %}{{ c }}.{% endfor %}"
+   }
+  },
+  {
+   "context": {
+    "s": "señor ñ"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "ñ"
+   },
+   "id": "uni-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|last }}"
+   }
+  },
+  {
+   "context": {
+    "s": "açúcar"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "6"
+   },
+   "id": "uni-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|length }}"
+   }
+  },
+  {
+   "context": {
+    "s": "ação"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "AÇÃO"
+   },
+   "id": "uni-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ s|upper }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "dlit-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ {'a': 1}|length }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "dlit-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set d = {'a': 1, 'b': 2} %}{{ d.a }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "x"
+   },
+   "id": "dlit-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for k in {'x': 1} %}{{ k }}{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "x"
+   },
+   "id": "undef-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": true,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a|default('x') }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "undef-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": true,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a is undefined }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "UndefinedError",
+    "phase": "render"
+   },
+   "id": "undef-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": true,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "0"
+   },
+   "id": "undef-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a|length }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "|"
+   },
+   "id": "undef-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a|join(',') }}|"
+   }
+  },
+  {
+   "context": {
+    "n": null
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "undef-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ n is defined }}"
+   }
+  },
+  {
+   "context": {
+    "n": null
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "undef-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ n is none }}"
+   }
+  },
+  {
+   "context": {
+    "o": {}
+   },
+   "entry": "main",
+   "expect": {
+    "output": "x"
+   },
+   "id": "undef-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": true,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ o.zz|default('x') }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "n"
+   },
+   "id": "undef-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": true,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% if a is defined %}y{% else %}n{% endif %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "e"
+   },
+   "id": "loop-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for i in [1,2,3] if i > 5 %}a{% else %}e{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "12"
+   },
+   "id": "loop-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for i in [1,2,3] if i > 1 %}{{ loop.index }}{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "11"
+   },
+   "id": "loop-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for a in [[1],[2]] %}{% for b in a %}{{ loop.depth }}{% endfor %}{% endfor %}"
+   }
+  },
+  {
+   "context": {
+    "tree": [
+     {
+      "c": [
+       {
+        "c": []
+       }
+      ]
+     }
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1(2)"
+   },
+   "id": "loop-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for n in tree recursive %}{{ loop.depth }}{% if n.c %}({{ loop(n.c) }}){% endif %}{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "221"
+   },
+   "id": "loop-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set x = 1 %}{% for i in [1,2] %}{% set x = x + 1 %}{{ x }}{% endfor %}{{ x }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[a][][]"
+   },
+   "id": "loop-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for i in [1,2,3] %}{% if i == 1 %}{% set t = 'a' %}{% endif %}[{{ t }}]{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "332313"
+   },
+   "id": "loop-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for i in [1,2,3] %}{{ loop.revindex }}{{ loop.length }}{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "aba"
+   },
+   "id": "loop-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for i in [1,2,3] %}{{ loop.cycle('a','b') }}{% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "10"
+   },
+   "id": "with-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set a = 10 %}{% with a = 1, b = a %}{{ b }}{% endwith %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "-4"
+   },
+   "id": "math-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ -7 // 2 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "math-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ -7 % 3 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1.5"
+   },
+   "id": "math-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 7.5 % 2 }}"
+   }
+  },
+  {
+   "context": {
+    "x": 5.5
+   },
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "math-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x // 2 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "-2"
+   },
+   "id": "math-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 7 % -3 }}"
+   }
+  },
+  {
+   "context": {
+    "x": 10
+   },
+   "entry": "main",
+   "expect": {
+    "output": "33"
+   },
+   "id": "math-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x // 0.3 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "ZeroDivisionError",
+    "phase": "render"
+   },
+   "id": "math-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 1 % 0 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "ZeroDivisionError",
+    "phase": "render"
+   },
+   "id": "inc-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "bad": "{{ 1 // 0 }}",
+    "main": "a{% include 'bad' ignore missing %}b"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[]"
+   },
+   "id": "inc-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% include 'p' %}[{{ z }}]",
+    "p": "{% set z = 1 %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "ab"
+   },
+   "id": "inc-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "a{% include 'nope' ignore missing %}b"
+   }
+  },
+  {
+   "context": {
+    "n": 6
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "parse-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ n is divisibleby 3 }}"
+   }
+  },
+  {
+   "context": {
+    "a": 1
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "parse-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a is eq 1 }}"
+   }
+  },
+  {
+   "context": {
+    "n": 3
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "parse-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ n is gt 2 }}"
+   }
+  },
+  {
+   "context": {
+    "n": 1
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "parse-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ n is in [1, 2] }}"
+   }
+  },
+  {
+   "context": {
+    "x": true
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "parse-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x is true }}"
+   }
+  },
+  {
+   "context": {
+    "x": false
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "parse-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x is false }}"
+   }
+  },
+  {
+   "context": {
+    "msg": {
+     "from": "me"
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "me"
+   },
+   "id": "parse-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ msg.from }}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "if": 1
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "parse-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ d.if }}"
+   }
+  },
+  {
+   "context": {
+    "x": 2
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "parse-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 1 < x < 3 }}"
+   }
+  },
+  {
+   "context": {
+    "a": 1
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "parse-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 1 == a == 1 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "4"
+   },
+   "id": "parse-011",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ -2 ** 2 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "64"
+   },
+   "id": "parse-012",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 2 ** 3 ** 2 }}"
+   }
+  },
+  {
+   "context": {
+    "i": 5
+   },
+   "entry": "main",
+   "expect": {
+    "output": "5"
+   },
+   "id": "parse-013",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ -i|abs }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "parse-014",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ (1, 2)|length }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1-2"
+   },
+   "id": "parse-015",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ '%s-%s' % (1, 2) }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "12"
+   },
+   "id": "parse-016",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set a, b = 1, 2 %}{{ a }}{{ b }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "16"
+   },
+   "id": "parse-017",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 0x10 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "1000"
+   },
+   "id": "parse-018",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 1_000 }}"
+   }
+  },
+  {
+   "context": {
+    "x": 0
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1000"
+   },
+   "id": "parse-019",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 1e3 + x }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "ab"
+   },
+   "id": "parse-020",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'a' 'b' }}"
+   }
+  },
+  {
+   "context": {
+    "b": [
+     1,
+     2
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "parse-021",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ b.0 }}"
+   }
+  },
+  {
+   "context": {
+    "f": "upper"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "true"
+   },
+   "id": "parse-022",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ f is filter }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "a b"
+   },
+   "id": "parse-023",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": true,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "a {%+ if true %}b{% endif %}"
+   }
+  },
+  {
+   "context": {
+    "x": 0
+   },
+   "entry": "main",
+   "expect": {
+    "output": "|"
+   },
+   "id": "parse-024",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x if x }}|"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "ABC"
+   },
+   "id": "parse-025",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'abc'.upper() }}"
+   }
+  },
+  {
+   "context": {
+    "d": {
+     "a": 1
+    }
+   },
+   "entry": "main",
+   "expect": {
+    "output": "1"
+   },
+   "id": "parse-026",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ d.get('a') }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "aaa"
+   },
+   "id": "parse-027",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'a' * 3 }}"
+   }
+  },
+  {
+   "context": {
+    "i": 5
+   },
+   "entry": "main",
+   "expect": {
+    "output": "5"
+   },
+   "id": "parse-028",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ --i }}"
+   }
+  },
+  {
+   "context": {
+    "missing": "m"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "m|"
+   },
+   "id": "parse-029",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ missing }}|"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateSyntaxError",
+    "phase": "compile"
+   },
+   "id": "err-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% if %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateSyntaxError",
+    "phase": "compile"
+   },
+   "id": "err-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateSyntaxError",
+    "phase": "compile"
+   },
+   "id": "err-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateSyntaxError",
+    "phase": "compile"
+   },
+   "id": "err-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% endif %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "ZeroDivisionError",
+    "phase": "render"
+   },
+   "id": "err-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 1 / 0 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateAssertionError",
+    "phase": "compile"
+   },
+   "id": "err-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% block a %}{% block a %}{% endblock %}{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateNotFound",
+    "phase": "render"
+   },
+   "id": "err-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% extends 'nope' %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateNotFound",
+    "phase": "render"
+   },
+   "id": "err-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% include 'nope' %}"
+   }
+  }
+ ],
+ "jinja2": "3.1.6",
+ "markupsafe": "3.0.3"
+}

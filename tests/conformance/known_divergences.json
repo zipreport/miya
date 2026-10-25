@@ -1,0 +1,847 @@
+{
+ "andor-001": {
+  "kind": "output",
+  "plan": "032",
+  "reason": "want \"Ann\", got \"true\""
+ },
+ "andor-002": {
+  "kind": "output",
+  "plan": "032",
+  "reason": "want \"default\", got \"true\""
+ },
+ "andor-003": {
+  "kind": "output",
+  "plan": "032",
+  "reason": "want \"x\", got \"true\""
+ },
+ "andor-004": {
+  "kind": "output",
+  "plan": "032",
+  "reason": "want \"2\", got \"true\""
+ },
+ "andor-005": {
+  "kind": "output",
+  "plan": "032",
+  "reason": "want \"y\", got \"true\""
+ },
+ "andor-006": {
+  "kind": "output",
+  "plan": "032",
+  "reason": "want \"[]\", got \"false\""
+ },
+ "andor-007": {
+  "kind": "error",
+  "plan": "032",
+  "reason": "want \"f\", got render-time error: cannot compare int and *runtime.Undefined"
+ },
+ "andor-008": {
+  "kind": "error",
+  "plan": "032",
+  "reason": "want \"6\", got render-time error: TypeError: cannot perform addition on value of type bool at line 1, column 14"
+ },
+ "andor-009": {
+  "kind": "output",
+  "plan": "032",
+  "reason": "want \"hi\", got \"true\""
+ },
+ "andor-010": {
+  "kind": "error",
+  "plan": "032",
+  "reason": "want \"true\", got render-time error: MathError: math error in division: division by zero at line 1, column 18"
+ },
+ "andor-011": {
+  "kind": "error",
+  "plan": "032",
+  "reason": "want \"b\", got render-time error: MathError: math error in division: division by zero at line 1, column 22"
+ },
+ "andor-012": {
+  "kind": "output",
+  "plan": "032",
+  "reason": "want \"d\", got \"true\""
+ },
+ "dict-001": {
+  "kind": "output",
+  "plan": "035",
+  "reason": "want \"a,\", got \"10,\""
+ },
+ "dict-002": {
+  "kind": "output",
+  "plan": "035",
+  "reason": "want \"a=1;\", got \"1=;\""
+ },
+ "dict-003": {
+  "kind": "output",
+  "plan": "035",
+  "reason": "want \"abc\", got \"bca\""
+ },
+ "dict-004": {
+  "kind": "output",
+  "plan": "035",
+  "reason": "want \"ab\", got \"ba\""
+ },
+ "dlit-001": {
+  "kind": "output",
+  "plan": "046",
+  "reason": "want \"1\", got \"0\""
+ },
+ "dlit-002": {
+  "kind": "output",
+  "plan": "046",
+  "reason": "want \"1\", got \"\""
+ },
+ "dlit-003": {
+  "kind": "output",
+  "plan": "035",
+  "reason": "want \"x\", got \"\""
+ },
+ "err-006": {
+  "kind": "output",
+  "plan": "034",
+  "reason": "want compile-time error TemplateAssertionError, got output \"\""
+ },
+ "esc-001": {
+  "kind": "output",
+  "plan": "027",
+  "reason": "want \"&lt;b&gt;&amp;&#34;q\", got \"&amp;lt;b&amp;gt;&amp;amp;&amp;#34;q\""
+ },
+ "esc-002": {
+  "kind": "output",
+  "plan": "027",
+  "reason": "want \"&lt;b&gt;\", got \"&amp;amp;lt;b&amp;amp;gt;\""
+ },
+ "esc-003": {
+  "kind": "output",
+  "plan": "027",
+  "reason": "want \"&lt;b&gt;\", got \"&amp;lt;b&amp;gt;\""
+ },
+ "esc-004": {
+  "kind": "output",
+  "plan": "031",
+  "reason": "want \"&lt;script&gt;x&lt;/script&gt;\", got \"<script>x</script>\""
+ },
+ "esc-005": {
+  "kind": "output",
+  "plan": "054",
+  "reason": "want \"see <a href=\\\"http://a.com/&lt;b&gt;\\\" rel=\\\"noopener\\\">http://a.com/&lt;b&gt;</a> now\", got \"see <a href=\\\"http://a.com/\\\">http://a.com/</a><b> now\""
+ },
+ "esc-006": {
+  "kind": "output",
+  "plan": "031",
+  "reason": "want \"<a title='\\\"a\\\\u0027b\\\"'>\", got \"<a title='\\\"a'b\\\"'>\""
+ },
+ "esc-008": {
+  "kind": "output",
+  "plan": "048",
+  "reason": "want \"[&#39;&lt;&#39;]\", got \"[<]\""
+ },
+ "esc-009": {
+  "kind": "output",
+  "plan": "048",
+  "reason": "want \"[&#39;&lt;i&gt;&#39;]\", got \"[<i>]\""
+ },
+ "esc-010": {
+  "kind": "output",
+  "plan": "031",
+  "reason": "want \"<a k=\\\"v\\\">\", got \"<a k=&#34;v&#34;>\""
+ },
+ "esc-012": {
+  "kind": "output",
+  "plan": "027",
+  "reason": "want \"&amp;\", got \"&amp;amp;\""
+ },
+ "esc-013": {
+  "kind": "output",
+  "plan": "027",
+  "reason": "want \"a &amp; b\", got \"a &amp;amp; b\""
+ },
+ "esc-016": {
+  "kind": "output",
+  "plan": "054",
+  "reason": "want \"&lt;b&gt; <a href=\\\"http://a.com\\\" rel=\\\"noopener\\\">http://a.com</a>\", got \"<b> <a href=\\\"http://a.com\\\">http://a.com</a>\""
+ },
+ "esc-017": {
+  "kind": "output",
+  "plan": "031",
+  "reason": "want \"\\\"\\\\u003ca\\\\u0027b\\\\u003e\\\"\", got \"\\\"\\\\u003ca'b\\\\u003e\\\"\""
+ },
+ "fkw-001": {
+  "kind": "output",
+  "plan": "036",
+  "reason": "want \"3,2,1\", got \"1,2,3\""
+ },
+ "fkw-002": {
+  "kind": "error",
+  "plan": "036",
+  "reason": "want \"a,b\", got render-time error: map filter requires attribute or filter name"
+ },
+ "fkw-003": {
+  "kind": "error",
+  "plan": "036",
+  "reason": "want \"1,2\", got render-time error: map filter requires attribute or filter name"
+ },
+ "fkw-004": {
+  "kind": "output",
+  "plan": "036",
+  "reason": "want \"5\", got \"0\""
+ },
+ "fkw-005": {
+  "kind": "output",
+  "plan": "036",
+  "reason": "want \"13\", got \"3\""
+ },
+ "fkw-006": {
+  "kind": "error",
+  "plan": "039",
+  "reason": "want \"x:2;y:1;\", got render-time error: groupby filter requires attribute name"
+ },
+ "fkw-007": {
+  "kind": "output",
+  "plan": "036",
+  "reason": "want \"3.1\", got \"3\""
+ },
+ "fkw-008": {
+  "kind": "output",
+  "plan": "036",
+  "reason": "want \"  a\\n  b\", got \"a\\n  b\""
+ },
+ "fkw-009": {
+  "kind": "error",
+  "plan": "039",
+  "reason": "want \"b,a\", got render-time error: map filter requires a sequence"
+ },
+ "fkw-010": {
+  "kind": "output",
+  "plan": "036",
+  "reason": "want \"1-2\", got \"12\""
+ },
+ "fkw-011": {
+  "kind": "error",
+  "plan": "050",
+  "reason": "want \"He...\", got render-time error: truncate filter requires length argument"
+ },
+ "fkw-012": {
+  "kind": "output",
+  "plan": "036",
+  "reason": "want \"oaa\", got \"ooo\""
+ },
+ "fsem-001": {
+  "kind": "output",
+  "plan": "050",
+  "reason": "want \"Hello World\", got \"Hello...\""
+ },
+ "fsem-002": {
+  "kind": "output",
+  "plan": "050",
+  "reason": "want \"He...\", got \"Hello...\""
+ },
+ "fsem-003": {
+  "kind": "output",
+  "plan": "050",
+  "reason": "want \"The quick brown fox jumps o...\", got \"The quick brown fox jumps over...\""
+ },
+ "fsem-004": {
+  "kind": "output",
+  "plan": "050",
+  "reason": "want \"a\\n\\n  b\", got \"a\\n  \\n  b\""
+ },
+ "fsem-005": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want \"2\", got \"3\""
+ },
+ "fsem-006": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want \"2.5\", got \"2.50\""
+ },
+ "fsem-007": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want \"2.67\", got \"2.68\""
+ },
+ "fsem-008": {
+  "kind": "output",
+  "plan": "039",
+  "reason": "want \"2\", got \"1\""
+ },
+ "fsem-009": {
+  "kind": "output",
+  "plan": "039",
+  "reason": "want \"A,B\", got \"a,b\""
+ },
+ "fsem-010": {
+  "kind": "output",
+  "plan": "039",
+  "reason": "want \"1,3\", got \"1,2,3\""
+ },
+ "fsem-011": {
+  "kind": "output",
+  "plan": "039",
+  "reason": "want \"2\", got \"\""
+ },
+ "fsem-012": {
+  "kind": "output",
+  "plan": "039",
+  "reason": "want \"2,3\", got \"1,2,3\""
+ },
+ "fsem-013": {
+  "kind": "output",
+  "plan": "039",
+  "reason": "want \"a,B\", got \"a,B,b,A\""
+ },
+ "fsem-014": {
+  "kind": "output",
+  "plan": "050",
+  "reason": "want \"3\", got \"0\""
+ },
+ "fsem-015": {
+  "kind": "output",
+  "plan": "050",
+  "reason": "want \"7\", got \"0\""
+ },
+ "fsem-016": {
+  "kind": "output",
+  "plan": "054",
+  "reason": "want \"a%20b/c\", got \"a+b%2Fc\""
+ },
+ "fsem-017": {
+  "kind": "output",
+  "plan": "054",
+  "reason": "want \"a b\", got \"a  b\""
+ },
+ "fsem-018": {
+  "kind": "output",
+  "plan": "039",
+  "reason": "want \"2,9,10,33\", got \"10,2,33,9\""
+ },
+ "fsem-019": {
+  "kind": "output",
+  "plan": "039",
+  "reason": "want \"3\", got \"10\""
+ },
+ "fsem-020": {
+  "kind": "output",
+  "plan": "050",
+  "reason": "want \"1.0 kB\", got \"1.0 KB\""
+ },
+ "fsem-021": {
+  "kind": "output",
+  "plan": "052",
+  "reason": "want \"abc\\ndef\\ngh\\nij\", got \"abcdefgh\\nij\""
+ },
+ "fsem-022": {
+  "kind": "error",
+  "plan": "050",
+  "reason": "want \"                                       x                                        |\", got render-time error: center filter requires width argument"
+ },
+ "fsem-024": {
+  "kind": "output",
+  "plan": "039",
+  "reason": "want \"1\", got \"0\""
+ },
+ "fsem-026": {
+  "kind": "output",
+  "plan": "048",
+  "reason": "want \"[1, 2]\", got \"[1 2]\""
+ },
+ "fsem-028": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want \"5\", got \"5.00\""
+ },
+ "fsem-029": {
+  "kind": "error",
+  "plan": "039",
+  "reason": "want \"cherry\", got render-time error: max filter requires non-empty sequence"
+ },
+ "fsem-030": {
+  "kind": "output",
+  "plan": "053",
+  "reason": "want \"10023\", got \"%!d(float64=10023)\""
+ },
+ "fsem-031": {
+  "kind": "output",
+  "plan": "053",
+  "reason": "want \"1-2\", got \"%!s(int=1)-%!s(int=2)\""
+ },
+ "imp-001": {
+  "kind": "output",
+  "plan": "026",
+  "reason": "want \"[]\", got \"[SECRET]\""
+ },
+ "imp-002": {
+  "kind": "output",
+  "plan": "026",
+  "reason": "want \"A:|B:|\", got \"A:A|B:A|\""
+ },
+ "imp-005": {
+  "kind": "output",
+  "plan": "026",
+  "reason": "want \"G\", got \"\""
+ },
+ "imp-006": {
+  "kind": "output",
+  "plan": "026",
+  "reason": "want render-time error TemplateNotFound, got output \"x\""
+ },
+ "imp-007": {
+  "kind": "output",
+  "plan": "026",
+  "reason": "want render-time error UndefinedError, got output \"[Undefined macro nothere from lib]\""
+ },
+ "imp-008": {
+  "kind": "error",
+  "plan": "026",
+  "reason": "want \"[V]\", got compile-time error: parser error in template main: expected '%}' after import statement at line 1, column 23"
+ },
+ "inc-001": {
+  "kind": "output",
+  "plan": "049",
+  "reason": "want render-time error ZeroDivisionError, got output \"ab\""
+ },
+ "inc-002": {
+  "kind": "output",
+  "plan": "049",
+  "reason": "want \"[]\", got \"[1]\""
+ },
+ "inh-001": {
+  "kind": "output",
+  "plan": "034",
+  "reason": "want \"[X]\", got \"[d]\""
+ },
+ "inh-002": {
+  "kind": "output",
+  "plan": "034",
+  "reason": "want \"[X][X]\", got \"[d][d]\""
+ },
+ "inh-003": {
+  "kind": "output",
+  "plan": "034",
+  "reason": "want \"T|T\", got \"|\""
+ },
+ "inh-004": {
+  "kind": "error",
+  "plan": "034",
+  "reason": "want \"[M]\", got render-time error: cannot call non-function value of type *runtime.Undefined"
+ },
+ "inh-005": {
+  "kind": "output",
+  "plan": "034",
+  "reason": "want \"[X]\", got \"[d]\""
+ },
+ "inh-009": {
+  "kind": "error",
+  "plan": "unplanned",
+  "reason": "want \"T|T\", got render-time error: cannot call non-function value of type *runtime.Undefined"
+ },
+ "loop-001": {
+  "kind": "output",
+  "plan": "037",
+  "reason": "want \"e\", got \"\""
+ },
+ "loop-003": {
+  "kind": "output",
+  "plan": "037",
+  "reason": "want \"11\", got \"22\""
+ },
+ "loop-004": {
+  "kind": "output",
+  "plan": "037",
+  "reason": "want \"1(2)\", got \"1(1)\""
+ },
+ "loop-005": {
+  "kind": "output",
+  "plan": "037",
+  "reason": "want \"221\", got \"231\""
+ },
+ "loop-006": {
+  "kind": "output",
+  "plan": "037",
+  "reason": "want \"[a][][]\", got \"[a][a][a]\""
+ },
+ "mac-001": {
+  "kind": "error",
+  "plan": "028",
+  "reason": "want \"1-2\", got render-time error: missing required macro parameter: a"
+ },
+ "mac-002": {
+  "kind": "error",
+  "plan": "028",
+  "reason": "want \"1-5\", got render-time error: missing required macro parameter: a"
+ },
+ "mac-003": {
+  "kind": "output",
+  "plan": "028",
+  "reason": "want \"1-9\", got \"1-2\""
+ },
+ "mac-004": {
+  "kind": "output",
+  "plan": "028",
+  "reason": "want \"11x\", got \"1x\""
+ },
+ "mac-005": {
+  "kind": "error",
+  "plan": "028",
+  "reason": "want \"nob\", got render-time error: missing required macro parameter: b"
+ },
+ "mac-006": {
+  "kind": "output",
+  "plan": "028",
+  "reason": "want render-time error TypeError, got output \"1\""
+ },
+ "mac-007": {
+  "kind": "error",
+  "plan": "028",
+  "reason": "want \"3210\", got render-time error: error executing macro r: cannot call non-function value of type *runtime.Undefined"
+ },
+ "mac-008": {
+  "kind": "error",
+  "plan": "028",
+  "reason": "want \"AB\", got render-time error: error executing macro a: cannot call non-function value of type *runtime.Undefined"
+ },
+ "mac-009": {
+  "kind": "error",
+  "plan": "028",
+  "reason": "want \"[in]\", got render-time error: error executing macro wrap: cannot call non-function value of type *runtime.Undefined"
+ },
+ "mac-010": {
+  "kind": "error",
+  "plan": "028",
+  "reason": "want \"G N\", got render-time error: missing required macro parameter: n"
+ },
+ "mac-011": {
+  "kind": "error",
+  "plan": "028",
+  "reason": "want \"2\", got render-time error: object of type *runtime.Undefined has no len()"
+ },
+ "mac-012": {
+  "kind": "error",
+  "plan": "028",
+  "reason": "want render-time error TypeError, got compile-time error: parser error in template main: expected '%}' after call expression at line 1, column 52"
+ },
+ "macesc-001": {
+  "kind": "output",
+  "plan": "027",
+  "reason": "want \"<b>a&amp;</b>\", got \"&lt;b&gt;a&amp;amp;&lt;/b&gt;\""
+ },
+ "macesc-002": {
+  "kind": "output",
+  "plan": "027",
+  "reason": "want \"<div><p>c</p></div>\", got \"<div>&lt;p&gt;c&lt;/p&gt;</div>\""
+ },
+ "macesc-003": {
+  "kind": "output",
+  "plan": "027",
+  "reason": "want \"<i>\", got \"&lt;i&gt;\""
+ },
+ "macesc-006": {
+  "kind": "output",
+  "plan": "027",
+  "reason": "want \"<b>&lt;s&gt;</b>\", got \"&lt;b&gt;&amp;lt;s&amp;gt;&lt;/b&gt;\""
+ },
+ "macesc-007": {
+  "kind": "output",
+  "plan": "027",
+  "reason": "want \"<b>x</b>\", got \"&lt;b&gt;x&lt;/b&gt;\""
+ },
+ "math-001": {
+  "kind": "output",
+  "plan": "037",
+  "reason": "want \"-4\", got \"-3\""
+ },
+ "math-002": {
+  "kind": "output",
+  "plan": "037",
+  "reason": "want \"2\", got \"-1\""
+ },
+ "math-003": {
+  "kind": "output",
+  "plan": "037",
+  "reason": "want \"1.5\", got \"1\""
+ },
+ "math-005": {
+  "kind": "output",
+  "plan": "037",
+  "reason": "want \"-2\", got \"1\""
+ },
+ "math-006": {
+  "kind": "error",
+  "plan": "037",
+  "reason": "want \"33\", got render-time error: MathError: math error in floor division: division by zero at line 1, column 7"
+ },
+ "parse-001": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"true\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 22"
+ },
+ "parse-002": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"true\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 13"
+ },
+ "parse-003": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"true\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 13"
+ },
+ "parse-004": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"true\", got compile-time error: parser error in template main: expected test name after 'is' at line 1, column 10"
+ },
+ "parse-005": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"true\", got compile-time error: parser error in template main: expected test name after 'is' at line 1, column 10"
+ },
+ "parse-006": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"true\", got compile-time error: parser error in template main: expected test name after 'is' at line 1, column 10"
+ },
+ "parse-007": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"me\", got compile-time error: parser error in template main: expected attribute name after '.' at line 1, column 9"
+ },
+ "parse-008": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"1\", got compile-time error: parser error in template main: expected attribute name after '.' at line 1, column 7"
+ },
+ "parse-009": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"true\", got render-time error: cannot compare bool and int"
+ },
+ "parse-010": {
+  "kind": "output",
+  "plan": "038",
+  "reason": "want \"true\", got \"false\""
+ },
+ "parse-011": {
+  "kind": "output",
+  "plan": "038",
+  "reason": "want \"4\", got \"-4\""
+ },
+ "parse-012": {
+  "kind": "output",
+  "plan": "038",
+  "reason": "want \"64\", got \"512\""
+ },
+ "parse-013": {
+  "kind": "output",
+  "plan": "038",
+  "reason": "want \"5\", got \"-5\""
+ },
+ "parse-014": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"2\", got compile-time error: parser error in template main: expected ')' after expression at line 1, column 7"
+ },
+ "parse-015": {
+  "kind": "error",
+  "plan": "unplanned",
+  "reason": "want \"1-2\", got compile-time error: parser error in template main: expected ')' after expression at line 1, column 17"
+ },
+ "parse-016": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"12\", got compile-time error: parser error in template main: expected '%}' after set statement at line 1, column 17"
+ },
+ "parse-017": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"16\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 6"
+ },
+ "parse-018": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"1000\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 6"
+ },
+ "parse-019": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"1000\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 6"
+ },
+ "parse-020": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"ab\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 9"
+ },
+ "parse-021": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"1\", got compile-time error: parser error in template main: expected attribute name after '.' at line 1, column 7"
+ },
+ "parse-022": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"true\", got compile-time error: parser error in template main: expected test name after 'is' at line 1, column 10"
+ },
+ "parse-023": {
+  "kind": "error",
+  "plan": "033",
+  "reason": "want \"a b\", got compile-time error: parser error in template main: unexpected block statement: PLUS at line 1, column 6"
+ },
+ "parse-024": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"|\", got compile-time error: parser error in template main: expected 'else' in conditional expression at line 1, column 12"
+ },
+ "parse-025": {
+  "kind": "error",
+  "plan": "048",
+  "reason": "want \"ABC\", got render-time error: cannot call non-function value of type *runtime.Undefined"
+ },
+ "parse-026": {
+  "kind": "error",
+  "plan": "048",
+  "reason": "want \"1\", got render-time error: cannot call non-function value of type *runtime.Undefined"
+ },
+ "parse-027": {
+  "kind": "error",
+  "plan": "048",
+  "reason": "want \"aaa\", got render-time error: cannot multiply string and int"
+ },
+ "parse-028": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"5\", got compile-time error: parser error in template main: unexpected token in expression: MINUS at line 1, column 6"
+ },
+ "parse-029": {
+  "kind": "error",
+  "plan": "038",
+  "reason": "want \"m|\", got compile-time error: parser error in template main: unexpected token in expression: MISSING at line 1, column 5"
+ },
+ "undef-001": {
+  "kind": "error",
+  "plan": "049",
+  "reason": "want \"x\", got render-time error: UndefinedError: undefined variable: a at line 1, column 5"
+ },
+ "undef-002": {
+  "kind": "error",
+  "plan": "049",
+  "reason": "want \"true\", got render-time error: UndefinedError: undefined variable: a at line 1, column 5"
+ },
+ "undef-004": {
+  "kind": "error",
+  "plan": "049",
+  "reason": "want \"0\", got render-time error: object of type *runtime.Undefined has no len()"
+ },
+ "undef-005": {
+  "kind": "error",
+  "plan": "049",
+  "reason": "want \"|\", got render-time error: join filter requires a sequence"
+ },
+ "undef-008": {
+  "kind": "error",
+  "plan": "049",
+  "reason": "want \"x\", got render-time error: UndefinedError: undefined variable: object.zz at line 1, column 7"
+ },
+ "uni-001": {
+  "kind": "output",
+  "plan": "035",
+  "reason": "want \"ç\", got \"Ã\""
+ },
+ "uni-002": {
+  "kind": "output",
+  "plan": "035",
+  "reason": "want \"açú\", got \"aç\""
+ },
+ "uni-003": {
+  "kind": "output",
+  "plan": "035",
+  "reason": "want \"racúça\", got \"rac\\xbaç\\xc3a\""
+ },
+ "uni-004": {
+  "kind": "output",
+  "plan": "035",
+  "reason": "want \"a.ç.ú.\", got \"a.ç..ú..\""
+ },
+ "uni-005": {
+  "kind": "output",
+  "plan": "035",
+  "reason": "want \"ñ\", got \"±\""
+ },
+ "with-001": {
+  "kind": "output",
+  "plan": "049",
+  "reason": "want \"10\", got \"1\""
+ },
+ "ws-001": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"{{ a }} {% for x in y %}\", got \"{{a}} {%forxiny%}\""
+ },
+ "ws-002": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"{{ 'str' }}\", got \"{{str}}\""
+ },
+ "ws-003": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"<p>{# keep #}</p>\", got \"<p></p>\""
+ },
+ "ws-004": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"x = 1;\\ny = 2;\", got \"x = 1;y = 2;\""
+ },
+ "ws-005": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"<script>\\nvar a = 1\\nvar b = 2\\n</script>\", got \"<script>\\nvar a = 1var b = 2\\n</script>\""
+ },
+ "ws-006": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"Total  due\", got \"Totaldue\""
+ },
+ "ws-007": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"-%}\", got \" %}\""
+ },
+ "ws-008": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"a {# x #} b\", got \"ab\""
+ },
+ "ws-009": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"a b\", got \"ab\""
+ },
+ "ws-011": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"1\", got \"1\\n\""
+ },
+ "ws-013": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"x\\n\", got \"  x\\n\""
+ },
+ "ws-014": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"<pre>line1\\nline2</pre>\", got \"<pre>line1line2</pre>\""
+ },
+ "ws-015": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"x %}\\n\\ny\", got \"x %}\\ny\""
+ },
+ "ws-016": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"<option>  a\\n   b </option>\", got \"<option>a b</option>\""
+ },
+ "ws-017": {
+  "kind": "output",
+  "plan": "033",
+  "reason": "want \"<pre><option>  a\\n   b </option></pre>\", got \"<pre><option>a b</option></pre>\""
+ }
+}
