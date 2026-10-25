@@ -1029,8 +1029,10 @@ func (r *FilterRegistry) mapFilter(value interface{}, args ...interface{}) (inte
 	fn, isFilter := r.Get(name)
 	if len(kw) > 0 {
 		if !isFilter {
-			_, err := MapFilter(seq, args...)
-			return nil, fmt.Errorf("no filter named %q (%w)", name, err)
+			if _, err := MapFilter(seq, args...); err != nil {
+				return nil, fmt.Errorf("no filter named %q (%w)", name, err)
+			}
+			return nil, fmt.Errorf("no filter named %q", name)
 		}
 		result := make([]interface{}, len(seq))
 		for i, item := range seq {
