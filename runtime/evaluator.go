@@ -290,6 +290,11 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 		return e.EvalForNode(n, ctx)
 	case *parser.BlockNode:
 		return e.EvalBlockNode(n, ctx)
+	case *parser.DiscardNode:
+		if _, err := e.evalNodeList(n.Body, ctx); err != nil {
+			return nil, err
+		}
+		return "", nil
 	case *parser.SetNode:
 		return e.EvalSetNode(n, ctx)
 	case *parser.BlockSetNode:

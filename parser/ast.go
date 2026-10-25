@@ -1206,3 +1206,24 @@ func (n *DoNode) String() string {
 }
 
 func (n *DoNode) StatementNode() {}
+
+// DiscardNode runs its body for its effects and produces no output. Template
+// inheritance uses it for an extension tag in a child template's code after
+// {% extends %}.
+type DiscardNode struct {
+	baseNode
+	Body []Node
+}
+
+func NewDiscardNode(body []Node, line, column int) *DiscardNode {
+	return &DiscardNode{
+		baseNode: baseNode{line: line, column: column},
+		Body:     body,
+	}
+}
+
+func (n *DiscardNode) String() string {
+	return fmt.Sprintf("Discard(%d nodes)", len(n.Body))
+}
+
+func (n *DiscardNode) StatementNode() {}
