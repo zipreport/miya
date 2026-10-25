@@ -114,7 +114,7 @@
     {% endfor %}
     </table>
 
-    {#- Nested loops with loop depth -#}
+    {#- Nested loops: loop.depth is 1 in each; it counts recursion levels -#}
     <h3>Nested Loops</h3>
     {% for i in range(1, 4) %}
         <div>Outer {{ i }} (depth: {{ loop.depth }})

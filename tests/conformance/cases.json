@@ -2538,6 +2538,77 @@
    }
   },
   {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[23]"
+   },
+   "id": "inh-101",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block b %}{% endblock %}]",
+    "main": "{% extends 'base' %}{% block b %}{% for i in [1,2,3] if i > 1 %}{{ i }}{% endfor %}{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[e]"
+   },
+   "id": "inh-102",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block b %}{% endblock %}]",
+    "main": "{% extends 'base' %}{% block b %}{% for i in [1,2,3] if i > 5 %}a{% else %}e{% endfor %}{% endblock %}"
+   }
+  },
+  {
+   "context": {
+    "tree": [
+     {
+      "c": [
+       {
+        "c": [
+         {
+          "c": []
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "entry": "main",
+   "expect": {
+    "output": "[1(2(3))]"
+   },
+   "id": "inh-103",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block b %}{% endblock %}]",
+    "main": "{% extends 'base' %}{% block b %}{% for n in tree recursive %}{{ loop.depth }}{% if n.c %}({{ loop(n.c) }}){% endif %}{% endfor %}{% endblock %}"
+   }
+  },
+  {
    "context": {
     "v": "SECRET"
    },

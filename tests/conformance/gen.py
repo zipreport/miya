@@ -202,6 +202,9 @@ case("inh-006", templates={"main": "{% extends 'mid' %}{% block b %}C{% endblock
 case("inh-007", templates={"main": "{% extends 'mid' %}{% block b %}{{ super() }}C{% endblock %}", "mid": "{% extends 'base' %}{% block b %}{{ super() }}M{% endblock %}", "base": "[{% block b %}B{% endblock %}]"})
 case("inh-008", templates={"main": "{% extends 'base' %}{% block x %}X{% endblock %}", "base": "{% if f %}[{% block x %}d{% endblock %}]{% else %}none{% endif %}"}, ctx={"f": False})
 case("inh-009", templates={"main": "{% extends 'base' %}{% block t %}T{% endblock %}", "base": "{% block t %}{% endblock %}|{{ self.t() }}"})
+case("inh-101", templates={"main": "{% extends 'base' %}{% block b %}{% for i in [1,2,3] if i > 1 %}{{ i }}{% endfor %}{% endblock %}", "base": "[{% block b %}{% endblock %}]"})
+case("inh-102", templates={"main": "{% extends 'base' %}{% block b %}{% for i in [1,2,3] if i > 5 %}a{% else %}e{% endfor %}{% endblock %}", "base": "[{% block b %}{% endblock %}]"})
+case("inh-103", templates={"main": "{% extends 'base' %}{% block b %}{% for n in tree recursive %}{{ loop.depth }}{% if n.c %}({{ loop(n.c) }}){% endif %}{% endfor %}{% endblock %}", "base": "[{% block b %}{% endblock %}]"}, ctx={"tree": [{"c": [{"c": [{"c": []}]}]}]})
 
 # --- imports (plan 026) -----------------------------------------------------
 case("imp-001", templates={"main": "{% import 'lib' as l %}{{ l.show() }}", "lib": "{% macro show() %}[{{ v }}]{% endmacro %}"}, ctx={"v": "SECRET"})

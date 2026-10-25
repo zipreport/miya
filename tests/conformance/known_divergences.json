@@ -204,11 +204,6 @@
   "plan": "039",
   "reason": "want \"cherry\", got render-time error: max filter requires non-empty sequence"
  },
- "fsem-030": {
-  "kind": "output",
-  "plan": "053",
-  "reason": "want \"10023\", got \"%!d(float64=10023)\""
- },
  "fsem-031": {
   "kind": "output",
   "plan": "053",
@@ -254,30 +249,20 @@
   "plan": "unplanned",
   "reason": "want \"T|T\", got render-time error: cannot call non-function value of type *runtime.Undefined"
  },
- "loop-001": {
+ "inh-101": {
   "kind": "output",
-  "plan": "037",
-  "reason": "want \"e\", got \"\""
+  "plan": "034",
+  "reason": "want \"[23]\", got \"[123]\""
  },
- "loop-003": {
+ "inh-102": {
   "kind": "output",
-  "plan": "037",
-  "reason": "want \"11\", got \"22\""
+  "plan": "034",
+  "reason": "want \"[e]\", got \"[aaa]\""
  },
- "loop-004": {
-  "kind": "output",
-  "plan": "037",
-  "reason": "want \"1(2)\", got \"1(1)\""
- },
- "loop-005": {
-  "kind": "output",
-  "plan": "037",
-  "reason": "want \"221\", got \"231\""
- },
- "loop-006": {
-  "kind": "output",
-  "plan": "037",
-  "reason": "want \"[a][][]\", got \"[a][a][a]\""
+ "inh-103": {
+  "kind": "error",
+  "plan": "034",
+  "reason": "want \"[1(2(3))]\", got render-time error: cannot call non-function value of type map[string]interface {}"
  },
  "mac-001": {
   "kind": "error",
@@ -363,31 +348,6 @@
   "kind": "output",
   "plan": "027",
   "reason": "want \"<b>x</b>\", got \"&lt;b&gt;x&lt;/b&gt;\""
- },
- "math-001": {
-  "kind": "output",
-  "plan": "037",
-  "reason": "want \"-4\", got \"-3\""
- },
- "math-002": {
-  "kind": "output",
-  "plan": "037",
-  "reason": "want \"2\", got \"-1\""
- },
- "math-003": {
-  "kind": "output",
-  "plan": "037",
-  "reason": "want \"1.5\", got \"1\""
- },
- "math-005": {
-  "kind": "output",
-  "plan": "037",
-  "reason": "want \"-2\", got \"1\""
- },
- "math-006": {
-  "kind": "error",
-  "plan": "037",
-  "reason": "want \"33\", got render-time error: MathError: math error in floor division: division by zero at line 1, column 7"
  },
  "nopanic-002": {
   "kind": "output",

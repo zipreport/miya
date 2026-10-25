@@ -29,6 +29,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Filters honour keyword arguments, bound by name to Jinja2's parameters: `sort(reverse=true)`, `map(attribute="name", default="-")`, `sum(attribute="price", start=10)`, `round(precision=1)`, `join(d=", ", attribute="n")`, `int(base=16)`, `truncate(length=…)` and more. They used to be silently ignored.
 - `trim(chars=none)` strips whitespace, as in Jinja2.
 - Custom filters and tests, and keyword arguments to filters, work inside `{% autoescape %}` blocks. A custom filter or test used there failed with `unknown filter` / `unknown test`.
+- `'%d'|format(x)` and `'%i'|format(x)` accept float operands, such as JSON numbers, truncating them as Python does.
+- `{% for … if … %}…{% else %}` runs the else block when the filter leaves no items.
+- `loop.depth` counts recursion levels only (nested ordinary loops are each depth 1; recursive calls go 1, 2, 3…), and `loop.depth0` exists.
+- Recursive loops apply their `if` filter at every level.
+- A `for` loop in a template without a parent that calls `super()` keeps its `if` filter and `recursive` flag. (Under `{% extends %}`, the same needs plan 034's inheritance fixes.)
 
 ### Changed
 
@@ -48,6 +53,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** a keyword argument a filter cannot honour is an error instead of being ignored: an unknown name, a Jinja2 parameter miya does not implement yet (`truncate(leeway=…)`, `indent(blank=…)`, `groupby(default=…)`), or any keyword on a filter without declared parameters, including custom filters. Declare a custom filter's parameters with `Environment.SetFilterParams` or `Environment.AddFilterWithParams`; the error message says so.
 - **Breaking:** `sum`, `min` and `max` take positional arguments in Jinja2's order: `sum(attribute, start)` and `min/max(case_sensitive, attribute)`. `l|sum(10)` used to mean start=10 and is now an error; write `l|sum(start=10)`. `l|max("n")` used to mean attribute="n"; write `l|max(attribute="n")` (until plan 039 lands, this still returns the attribute's value rather than the item, as before).
 - **Breaking:** a positional filter argument after a keyword argument (`join(d="-", ",")`) is a syntax error, as in Jinja2. A repeated keyword still binds the last value, as in Jinja2.
+- **Breaking:** `//` and `%` follow Python: they floor instead of truncating (`-7 // 2` is `-4`, `-7 % 3` is `2`), keep float operands (`7.5 % 2` is `1.5`, `10 // 0.3` is `33`), accept every Go numeric type, and reject strings (`"10" // 3` used to be `3`). With JSON data, where every number is a float, `n // 2` is now a float, so `(n // 2) is integer` is false, as in Jinja2.
+- **Breaking:** each for-loop iteration starts from the scope outside the loop, as in Jinja2: a `{% set %}` in the loop body no longer carries over to the next iteration, and a recursive `loop(...)` call no longer sees the calling iteration's `set`s. Use `namespace()` to accumulate across iterations.
 
 ### Deprecated
 

@@ -111,7 +111,7 @@ func demoComplexFeatures(env *miya.Environment) {
 	fmt.Println("\n2. Loop variables (index, first, last, revindex):")
 	fmt.Println(output2)
 
-	// Demo 3: Nested loops with depth
+	// Demo 3: Nested loops (loop.depth counts recursion levels, so each ordinary loop is depth 1)
 	nestedTemplate := `
 {% for i in range(1, 3) -%}
 Outer {{ i }} (depth {{ loop.depth }}):
@@ -121,7 +121,7 @@ Outer {{ i }} (depth {{ loop.depth }}):
 {%- endfor %}`
 	tmpl3, _ := env.FromString(nestedTemplate)
 	output3, _ := tmpl3.Render(miya.NewContext())
-	fmt.Println("\n3. Nested loops with depth:")
+	fmt.Println("\n3. Nested loops (each ordinary loop is depth 1):")
 	fmt.Println(output3)
 
 	// Demo 4: Tests
