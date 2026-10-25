@@ -44,3 +44,11 @@ is not compared. Entries are never added to hide a regression.
 runs `Environment.compile`, so `trim_blocks`, `lstrip_blocks` and `{{-`/`-}}`
 are silently ignored. The test uses `mapLoader` (GetSource only), the path
 zipreport-go's loader takes, so whitespace options are exercised for real.
+
+## Whitespace matrix
+
+`gen_whitespace.py` generates `whitespace_cases.json` (every whitespace option
+against every tag kind) and `TestWhitespaceMatrix` checks it. It has no
+allow-list. Regenerate it with:
+
+    REPO=$(pwd); (cd / && python3 -P "$REPO/tests/conformance/gen_whitespace.py") > tests/conformance/whitespace_cases.json
