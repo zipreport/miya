@@ -88,6 +88,12 @@ type TemplateMacro struct {
 
 // Call executes the macro with the given arguments
 func (tm *TemplateMacro) Call(evaluator *DefaultEvaluator, callCtx Context, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+	leave, err := evaluator.enter("macro " + tm.Name)
+	if err != nil {
+		return nil, err
+	}
+	defer leave()
+
 	// Create a new context for macro execution
 	macroCtx := tm.Context.Clone()
 

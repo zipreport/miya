@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 	"html"
 	"math"
@@ -8,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"unicode"
 	"unicode/utf8"
 
@@ -172,10 +174,28 @@ type Evaluator interface {
 	EvalNode(node parser.Node, ctx Context) (interface{}, error)
 }
 
+// ErrMaxRecursion is returned when includes, macro calls and recursive loops
+// nest deeper than maxRecursionDepth.
+var ErrMaxRecursion = errors.New("maximum template recursion depth exceeded")
+
+const maxRecursionDepth = 200
+
 type DefaultEvaluator struct {
 	env              Context
 	importSystem     *ImportSystem
 	undefinedHandler *UndefinedHandler
+	depth            atomic.Int32
+}
+
+// enter counts one level of template recursion; call the returned func when leaving.
+// The counter is atomic because cached macro closures can run on another render's
+// evaluator, so their depth is added to that render's count while they run.
+func (e *DefaultEvaluator) enter(what string) (func(), error) {
+	if e.depth.Add(1) > maxRecursionDepth {
+		e.depth.Add(-1)
+		return func() {}, fmt.Errorf("%w (%d levels) at %s", ErrMaxRecursion, maxRecursionDepth, what)
+	}
+	return func() { e.depth.Add(-1) }, nil
 }
 
 func NewEvaluator() *DefaultEvaluator {
@@ -673,6 +693,12 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 		// Add recursive loop function if this is a recursive loop
 		if node.Recursive {
 			recursiveFunc := func(newIterable interface{}) (interface{}, error) {
+				leave, err := e.enter("recursive loop")
+				if err != nil {
+					return nil, err
+				}
+				defer leave()
+
 				// Handle undefined or nil iterables - just return empty string
 				if IsUndefined(newIterable) || newIterable == nil {
 					return "", nil
@@ -925,10 +951,16 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 		}
 	}
 
+	leave, err := e.enter("include " + strconv.Quote(templateName))
+	if err != nil {
+		return nil, err
+	}
+	defer leave()
+
 	// Execute the included template with the appropriate context
 	result, err := e.EvalNode(templateAST, includeCtx)
 	if err != nil {
-		if node.IgnoreMissing {
+		if node.IgnoreMissing && !errors.Is(err, ErrMaxRecursion) {
 			return "", nil
 		}
 		return nil, fmt.Errorf("error executing included template %q: %w", templateName, err)
@@ -947,6 +979,12 @@ func (e *DefaultEvaluator) EvalSuperNode(node *parser.SuperNode, ctx Context) (i
 func (e *DefaultEvaluator) EvalMacroNode(node *parser.MacroNode, ctx Context) (interface{}, error) {
 	// Create a macro function that can be called with a context parameter
 	macroFunc := func(callCtx Context, args ...interface{}) (interface{}, error) {
+		leave, err := e.enter("macro " + node.Name)
+		if err != nil {
+			return nil, err
+		}
+		defer leave()
+
 		// Create a new context for macro execution, inherit from the call context
 		// to get access to variables like 'caller' that might be set by call blocks
 		macroCtx := callCtx.Clone()
@@ -3214,7 +3252,7 @@ func (e *DefaultEvaluator) EvalWithNode(node *parser.WithNode, ctx Context) (int
 	for varName, expr := range node.Assignments {
 		value, err := e.EvalNode(expr, withCtx) // Use with context so assignments can reference each other
 		if err != nil {
-			return nil, fmt.Errorf("error evaluating with assignment %s: %v", varName, err)
+			return nil, fmt.Errorf("error evaluating with assignment %s: %w", varName, err)
 		}
 		withCtx.SetVariable(varName, value)
 	}
