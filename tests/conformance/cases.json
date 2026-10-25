@@ -4153,6 +4153,78 @@
    "context": {},
    "entry": "main",
    "expect": {
+    "output": "2"
+   },
+   "id": "dlit-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ {'a': {'b': 2}}.a.b }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "dlit-005",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ {'a': 1, 'b': 2}.b }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "one"
+   },
+   "id": "dlit-006",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ {1: 'one'}[1] }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "dlit-007",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ {'a': 1, 'a': 2}.a }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
     "output": "x"
    },
    "id": "undef-001",

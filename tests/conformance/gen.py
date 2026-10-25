@@ -291,6 +291,10 @@ case("uni-007", "{{ s|upper }}", {"s": "ação"})
 case("dlit-001", "{{ {'a': 1}|length }}")
 case("dlit-002", "{% set d = {'a': 1, 'b': 2} %}{{ d.a }}")
 case("dlit-003", "{% for k in {'x': 1} %}{{ k }}{% endfor %}")
+case("dlit-004", "{{ {'a': {'b': 2}}.a.b }}")
+case("dlit-005", "{{ {'a': 1, 'b': 2}.b }}")
+case("dlit-006", "{{ {1: 'one'}[1] }}")
+case("dlit-007", "{{ {'a': 1, 'a': 2}.a }}")
 
 # --- undefined / None (plan 049) --------------------------------------------
 case("undef-001", "{{ a|default('x') }}", strict=True)

@@ -19,20 +19,15 @@
   "plan": "035",
   "reason": "want \"ab\", got \"ba\""
  },
- "dlit-001": {
-  "kind": "output",
-  "plan": "046",
-  "reason": "want \"1\", got \"0\""
- },
- "dlit-002": {
-  "kind": "output",
-  "plan": "046",
-  "reason": "want \"1\", got \"\""
- },
  "dlit-003": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"x\", got \"\""
+  "reason": "want \"x\", got \"1\""
+ },
+ "dlit-004": {
+  "kind": "error",
+  "plan": "051",
+  "reason": "want \"2\", got compile-time error: parser error in template main: expected '}' after dictionary elements at line 1, column 18"
  },
  "err-006": {
   "kind": "output",
