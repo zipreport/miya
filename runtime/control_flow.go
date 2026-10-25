@@ -106,20 +106,10 @@ func (cf *ControlFlowEvaluator) EvalForLoop(node *parser.ForNode, ctx Context) (
 	loopBroken := false
 	length := len(items)
 
-	// Get pooled loop info map to reduce allocations
-	loopInfoMap, _ := loopInfoPool.Get().(map[string]interface{})
-	if loopInfoMap == nil {
-		loopInfoMap = make(map[string]interface{}, 8)
-	}
+	// The loop map is never pooled: a template can keep a reference to it
+	loopInfoMap := make(map[string]interface{}, 8)
 	// Pre-set the length which doesn't change
 	loopInfoMap["length"] = length
-	defer func() {
-		// Clear and return to pool
-		for k := range loopInfoMap {
-			delete(loopInfoMap, k)
-		}
-		loopInfoPool.Put(loopInfoMap)
-	}()
 
 	for i, item := range items {
 		// Set loop variable(s)

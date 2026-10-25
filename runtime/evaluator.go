@@ -8,7 +8,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"unicode"
 	"unicode/utf8"
@@ -28,13 +27,6 @@ func capitalizeFirst(s string) string {
 		return s
 	}
 	return string(unicode.ToUpper(r)) + s[size:]
-}
-
-// Phase 4b optimization: Pool for loop info maps to reduce allocations
-var loopInfoPool = sync.Pool{
-	New: func() interface{} {
-		return make(map[string]interface{}, 12) // Pre-size for typical loop info
-	},
 }
 
 // Context interface for runtime package - matches main package interface
@@ -753,19 +745,11 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 			return hasChanged, nil
 		}
 
-		// Phase 4b optimization: Get loop info map from pool and reuse it
-		var loopInfo map[string]interface{}
-		if pooled, ok := loopInfoPool.Get().(map[string]interface{}); ok {
-			loopInfo = pooled
-			// Clear any stale keys from previous use
-			for k := range loopInfo {
-				delete(loopInfo, k)
-			}
-		} else {
-			loopInfo = make(map[string]interface{}, 12)
-		}
+		// Every iteration gets its own map: a template can keep a reference to
+		// `loop`, so it must never be shared or recycled.
+		loopInfo := make(map[string]interface{}, 12)
 
-		// Update values (reuse map, don't allocate new one)
+		// Fill in the loop values
 		loopInfo["index"] = i + 1
 		loopInfo["index0"] = i
 		loopInfo["revindex"] = len(filteredItems) - i
@@ -821,12 +805,6 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 		}
 
 		result, err := e.evalNodeList(node.Body, loopCtx)
-
-		// Phase 4b optimization: Clear closure references and return map to pool
-		// Clear closures to prevent memory leaks
-		delete(loopInfo, "cycle")
-		delete(loopInfo, "changed")
-		loopInfoPool.Put(loopInfo)
 
 		if err != nil {
 			// Check if it's a loop control error
