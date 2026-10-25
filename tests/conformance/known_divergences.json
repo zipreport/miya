@@ -57,12 +57,12 @@
  "esc-008": {
   "kind": "output",
   "plan": "048",
-  "reason": "want \"[&#39;&lt;&#39;]\", got \"[<]\""
+  "reason": "want \"[&#39;&lt;&#39;]\", got \"[&lt;]\""
  },
  "esc-009": {
   "kind": "output",
   "plan": "048",
-  "reason": "want \"[&#39;&lt;i&gt;&#39;]\", got \"[<i>]\""
+  "reason": "want \"[&#39;&lt;i&gt;&#39;]\", got \"[&lt;i&gt;]\""
  },
  "esc-012": {
   "kind": "output",
@@ -492,7 +492,7 @@
  "nopanic-002": {
   "kind": "output",
   "plan": "048",
-  "reason": "want \"[[1, 2], [3]]\", got \"[[1 2] [3]]\" (list repr)"
+  "reason": "want \"[[1, 2], [3]]\", got \"[[1 2] [3]]\""
  },
  "parse-001": {
   "kind": "error",
@@ -667,27 +667,27 @@
  "uni-001": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"\u00e7\", got \"\u00c3\""
+  "reason": "want \"ç\", got \"Ã\""
  },
  "uni-002": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"a\u00e7\u00fa\", got \"a\u00e7\""
+  "reason": "want \"açú\", got \"aç\""
  },
  "uni-003": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"rac\u00fa\u00e7a\", got \"rac\\xba\u00e7\\xc3a\""
+  "reason": "want \"racúça\", got \"rac\\xbaç\\xc3a\""
  },
  "uni-004": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"a.\u00e7.\u00fa.\", got \"a.\u00e7..\u00fa..\""
+  "reason": "want \"a.ç.ú.\", got \"a.ç..ú..\""
  },
  "uni-005": {
   "kind": "output",
   "plan": "035",
-  "reason": "want \"\u00f1\", got \"\u00b1\""
+  "reason": "want \"ñ\", got \"±\""
  },
  "with-001": {
   "kind": "output",

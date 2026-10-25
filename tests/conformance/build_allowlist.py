@@ -19,9 +19,9 @@ PLAN_BY_ID = {
     # |e / |escape double-escaping: plan 031 keeps |e's type, 027 makes it Markup.
     "esc-001": "027", "esc-002": "027", "esc-003": "027", "esc-012": "027", "esc-013": "027",
     # urlize output also needs rel="noopener" (054, after 031's escaping).
-    "esc-005": "054", "esc-016": "054",
+    "esc-005": "054", "esc-016": "054", "esc-020": "054",
     # Python repr of containers, value methods, string repetition.
-    "esc-008": "048", "esc-009": "048", "fsem-026": "048",
+    "esc-008": "048", "esc-009": "048", "fsem-026": "048", "nopanic-002": "048",
     "parse-025": "048", "parse-026": "048", "parse-027": "048",
     # collection filters
     "fsem-008": "039", "fsem-009": "039", "fsem-010": "039", "fsem-011": "039",
