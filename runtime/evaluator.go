@@ -2222,7 +2222,7 @@ func (e *DefaultEvaluator) powerWithNode(a, b interface{}, node parser.Node) (in
 }
 
 func (e *DefaultEvaluator) concatenateWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
-	return fmt.Sprintf("%v%v", a, b), nil
+	return ToString(a) + ToString(b), nil
 }
 
 // Legacy method for existing code
@@ -2381,16 +2381,113 @@ func (e *DefaultEvaluator) negate(a interface{}) (interface{}, error) {
 	return nil, fmt.Errorf("cannot negate %T", a)
 }
 
+// numericValue reports a value of any Go numeric kind (named types included).
+// Signed integers return kind 'i', unsigned integers 'u' and floats 'f', so
+// integers can be compared exactly and only floats lose precision. Bool,
+// string, nil and every other kind return ok=false.
+func numericValue(v interface{}) (i int64, u uint64, f float64, kind byte, ok bool) {
+	if v == nil {
+		return
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return rv.Int(), 0, 0, 'i', true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return 0, rv.Uint(), 0, 'u', true
+	case reflect.Float32, reflect.Float64:
+		return 0, 0, rv.Float(), 'f', true
+	}
+	return
+}
+
+// compareNumbers orders two numbers of any Go numeric type. ok is false unless
+// both values are numbers.
+func compareNumbers(a, b interface{}) (cmp int, ok bool) {
+	ai, au, af, ak, aok := numericValue(a)
+	bi, bu, bf, bk, bok := numericValue(b)
+	if !aok || !bok {
+		return 0, false
+	}
+	switch {
+	case ak == 'i' && bk == 'i':
+		switch {
+		case ai < bi:
+			return -1, true
+		case ai > bi:
+			return 1, true
+		}
+		return 0, true
+	case ak == 'u' && bk == 'u':
+		switch {
+		case au < bu:
+			return -1, true
+		case au > bu:
+			return 1, true
+		}
+		return 0, true
+	case ak == 'i' && bk == 'u':
+		if ai < 0 {
+			return -1, true
+		}
+		return compareNumbers(uint64(ai), bu)
+	case ak == 'u' && bk == 'i':
+		if bi < 0 {
+			return 1, true
+		}
+		return compareNumbers(au, uint64(bi))
+	}
+	if ak == 'i' {
+		af = float64(ai)
+	} else if ak == 'u' {
+		af = float64(au)
+	}
+	if bk == 'i' {
+		bf = float64(bi)
+	} else if bk == 'u' {
+		bf = float64(bu)
+	}
+	switch {
+	case af < bf:
+		return -1, true
+	case af > bf:
+		return 1, true
+	case af == bf:
+		return 0, true
+	}
+	// NaN is unordered: report it as neither less nor equal.
+	return 2, true
+}
+
 // Comparison operations
 func (e *DefaultEvaluator) equal(a, b interface{}) bool {
+	if cmp, ok := compareNumbers(a, b); ok {
+		return cmp == 0
+	}
+	if a != nil && b != nil {
+		av, bv := reflect.ValueOf(a), reflect.ValueOf(b)
+		ak, bk := av.Kind(), bv.Kind()
+		if (ak == reflect.Slice || ak == reflect.Array) && (bk == reflect.Slice || bk == reflect.Array) {
+			if av.Len() != bv.Len() {
+				return false
+			}
+			if ak == reflect.Slice && bk == reflect.Slice && av.Len() > 0 && av.Pointer() == bv.Pointer() {
+				return true
+			}
+			for i := 0; i < av.Len(); i++ {
+				if !e.equal(av.Index(i).Interface(), bv.Index(i).Interface()) {
+					return false
+				}
+			}
+			return true
+		}
+	}
 	return reflect.DeepEqual(a, b)
 }
 
 func (e *DefaultEvaluator) less(a, b interface{}) (bool, error) {
-	aFloat, aErr := e.toFloat(a)
-	bFloat, bErr := e.toFloat(b)
-	if aErr == nil && bErr == nil {
-		return aFloat < bFloat, nil
+	if cmp, ok := compareNumbers(a, b); ok {
+		return cmp < 0, nil
 	}
 
 	// String comparison
@@ -2412,19 +2509,15 @@ func (e *DefaultEvaluator) lessEqual(a, b interface{}) (bool, error) {
 }
 
 func (e *DefaultEvaluator) greater(a, b interface{}) (bool, error) {
-	lessEq, err := e.lessEqual(a, b)
-	if err != nil {
-		return false, err
-	}
-	return !lessEq, nil
+	return e.less(b, a)
 }
 
 func (e *DefaultEvaluator) greaterEqual(a, b interface{}) (bool, error) {
-	less, err := e.less(a, b)
+	greater, err := e.less(b, a)
 	if err != nil {
 		return false, err
 	}
-	return !less, nil
+	return greater || e.equal(a, b), nil
 }
 
 func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
@@ -2460,7 +2553,7 @@ func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
 			keys := rv.MapKeys()
 			itemValue := reflect.ValueOf(item)
 			for _, key := range keys {
-				if reflect.DeepEqual(key.Interface(), item) {
+				if e.equal(key.Interface(), item) {
 					return true, nil
 				}
 			}

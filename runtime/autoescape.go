@@ -3,9 +3,11 @@ package runtime
 import (
 	"fmt"
 	"html"
+	"math"
 	"net/url"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -231,79 +233,23 @@ func ToString(value interface{}) string {
 		return ToString(sv.Value)
 	}
 
-	// Special formatting for float numbers
 	switch v := value.(type) {
 	case float64:
-		// If the number looks like a currency amount (has decimals or is > 999),
-		// format with comma separators
-		if v >= 999.95 || (v > 0 && v != float64(int64(v))) {
-			return formatCurrencyNumber(v)
-		}
-		// For other floats, if they're whole numbers, format as integers
-		if v == float64(int64(v)) {
-			return fmt.Sprintf("%.0f", v)
-		}
+		return FormatFloat(v, 64)
 	case float32:
-		f64 := float64(v)
-		if f64 >= 999.95 || (f64 > 0 && f64 != float64(int64(f64))) {
-			return formatCurrencyNumber(f64)
-		}
-		// For other floats, if they're whole numbers, format as integers
-		if f64 == float64(int64(f64)) {
-			return fmt.Sprintf("%.0f", f64)
-		}
+		return FormatFloat(float64(v), 32)
 	}
 
 	return fmt.Sprintf("%v", value)
 }
 
-// formatCurrencyNumber formats a float with comma thousands separators
-func formatCurrencyNumber(value float64) string {
-	// Check if it's a whole number
-	if value == float64(int64(value)) {
-		// Format as integer with commas
-		intVal := int64(value)
-		return formatIntegerWithCommas(intVal)
+// FormatFloat prints a float like Python's repr, except that whole numbers
+// print without ".0" (JSON integers arrive as float64 in Go).
+func FormatFloat(v float64, bits int) string {
+	if a := math.Abs(v); v == 0 || (a >= 1e-4 && a < 1e16) {
+		return strconv.FormatFloat(v, 'f', -1, bits)
 	}
-
-	// Format as decimal with commas
-	str := fmt.Sprintf("%.2f", value)
-	parts := strings.Split(str, ".")
-	integerPart := parts[0]
-	decimalPart := parts[1]
-
-	// Add commas to integer part
-	formattedInteger := formatIntegerPartWithCommas(integerPart)
-
-	// Remove trailing zeros from decimal part, but keep at least original precision
-	decimalPart = strings.TrimRight(decimalPart, "0")
-	if decimalPart == "" {
-		return formattedInteger
-	}
-
-	return formattedInteger + "." + decimalPart
-}
-
-// formatIntegerWithCommas formats an integer with comma separators
-func formatIntegerWithCommas(value int64) string {
-	str := fmt.Sprintf("%d", value)
-	return formatIntegerPartWithCommas(str)
-}
-
-// formatIntegerPartWithCommas adds commas to an integer string
-func formatIntegerPartWithCommas(str string) string {
-	if len(str) <= 3 {
-		return str
-	}
-
-	var result strings.Builder
-	for i, digit := range str {
-		if i > 0 && (len(str)-i)%3 == 0 {
-			result.WriteString(",")
-		}
-		result.WriteRune(digit)
-	}
-	return result.String()
+	return strconv.FormatFloat(v, 'g', -1, bits)
 }
 
 // ContextAwareContext extends Context with escape context awareness

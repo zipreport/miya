@@ -184,48 +184,6 @@ func TestEvaluatorHtmlEscape(t *testing.T) {
 	}
 }
 
-// TestFormatIntegerWithCommas tests integer formatting with commas
-func TestFormatIntegerWithCommas(t *testing.T) {
-	tests := []struct {
-		input    int64
-		expected string
-	}{
-		{0, "0"},
-		{100, "100"},
-		{1000, "1,000"},
-		{1000000, "1,000,000"},
-		{-1000, "-1,000"},
-	}
-
-	for _, tt := range tests {
-		result := formatIntegerWithCommas(tt.input)
-		if result != tt.expected {
-			t.Errorf("formatIntegerWithCommas(%d) = %q, want %q", tt.input, result, tt.expected)
-		}
-	}
-}
-
-// TestFormatIntegerPartWithCommas tests integer part formatting
-func TestFormatIntegerPartWithCommas(t *testing.T) {
-	tests := []struct {
-		input    string
-		expected string
-	}{
-		{"1000", "1,000"},
-		{"100", "100"},
-		{"1234567", "1,234,567"},
-		{"12", "12"},
-		{"1", "1"},
-	}
-
-	for _, tt := range tests {
-		result := formatIntegerPartWithCommas(tt.input)
-		if result != tt.expected {
-			t.Errorf("formatIntegerPartWithCommas(%q) = %q, want %q", tt.input, result, tt.expected)
-		}
-	}
-}
-
 // TestApplyBinaryOp tests binary operations
 func TestApplyBinaryOp(t *testing.T) {
 	e := NewEvaluator()

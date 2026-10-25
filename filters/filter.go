@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"reflect"
 	"sync"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 type FilterFunc func(value interface{}, args ...interface{}) (interface{}, error)
@@ -191,6 +193,10 @@ func ToString(value interface{}) string {
 		return v
 	case []byte:
 		return string(v)
+	case float64:
+		return runtime.FormatFloat(v, 64)
+	case float32:
+		return runtime.FormatFloat(float64(v), 32)
 	case fmt.Stringer:
 		return v.String()
 	default:
