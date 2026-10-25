@@ -62,6 +62,9 @@ func XMLAttrFilter(value interface{}, args ...interface{}) (interface{}, error) 
 		sort.Strings(keys)
 
 		for _, key := range keys {
+			if strings.ContainsAny(key, " \t\n\r\f\v/>=") {
+				return nil, fmt.Errorf("invalid character in attribute name: %q", key)
+			}
 			val := v[key]
 			if val == nil {
 				continue
@@ -101,6 +104,9 @@ func XMLAttrFilter(value interface{}, args ...interface{}) (interface{}, error) 
 		sort.Strings(keys)
 
 		for _, key := range keys {
+			if strings.ContainsAny(key, " \t\n\r\f\v/>=") {
+				return nil, fmt.Errorf("invalid character in attribute name: %q", key)
+			}
 			val := v[key]
 			if val != "" {
 				if attrCount > 0 {
@@ -121,7 +127,7 @@ func XMLAttrFilter(value interface{}, args ...interface{}) (interface{}, error) 
 		return "", nil
 	}
 
-	return " " + result.String(), nil
+	return SafeValue{Value: " " + result.String()}, nil
 }
 
 // StripTagsFilter removes HTML/XML tags
@@ -135,6 +141,33 @@ func StripTagsFilter(value interface{}, args ...interface{}) (interface{}, error
 	result = html.UnescapeString(result)
 
 	return result, nil
+}
+
+// isSafe reports whether value is already marked safe.
+func isSafe(value interface{}) bool {
+	_, ok := value.(SafeValue)
+	return ok
+}
+
+// linkify replaces URLs in s with link(url); the text between URLs is
+// HTML-escaped unless it is already safe.
+func linkify(s string, safe bool, link func(string) string) string {
+	var b strings.Builder
+	last := 0
+	gap := func(g string) {
+		if safe {
+			b.WriteString(g)
+		} else {
+			b.WriteString(html.EscapeString(g))
+		}
+	}
+	for _, m := range reURLs.FindAllStringIndex(s, -1) {
+		gap(s[last:m[0]])
+		b.WriteString(link(s[m[0]:m[1]]))
+		last = m[1]
+	}
+	gap(s[last:])
+	return b.String()
 }
 
 // UrlizeFilter converts URLs in text to clickable links
@@ -159,8 +192,16 @@ func UrlizeFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		rel = ToString(args[3])
 	}
 
+	if nofollow {
+		if rel != "" {
+			rel = "nofollow " + rel
+		} else {
+			rel = "nofollow"
+		}
+	}
+
 	// Use pre-compiled URL regex
-	result := reURLs.ReplaceAllStringFunc(s, func(match string) string {
+	link := func(match string) string {
 		displayURL := match
 
 		// Trim long URLs
@@ -176,22 +217,14 @@ func UrlizeFilter(value interface{}, args ...interface{}) (interface{}, error) {
 			attrs = append(attrs, fmt.Sprintf(`target="%s"`, html.EscapeString(target)))
 		}
 
-		if nofollow {
-			if rel != "" {
-				rel = "nofollow " + rel
-			} else {
-				rel = "nofollow"
-			}
-		}
-
 		if rel != "" {
 			attrs = append(attrs, fmt.Sprintf(`rel="%s"`, html.EscapeString(rel)))
 		}
 
 		return fmt.Sprintf(`<a %s>%s</a>`, strings.Join(attrs, " "), html.EscapeString(displayURL))
-	})
+	}
 
-	return SafeValue{Value: result}, nil
+	return SafeValue{Value: linkify(s, isSafe(value), link)}, nil
 }
 
 // UrlizeTargetFilter is like urlize but with a specific target
@@ -240,7 +273,10 @@ func TruncateHTMLFilter(value interface{}, args ...interface{}) (interface{}, er
 	stripped := ToString(strippedResult)
 
 	if len([]rune(stripped)) <= length {
-		return SafeValue{Value: s}, nil
+		if isSafe(value) {
+			return value, nil
+		}
+		return s, nil
 	}
 
 	// This is a simplified version - a full implementation would
@@ -255,7 +291,7 @@ func TruncateHTMLFilter(value interface{}, args ...interface{}) (interface{}, er
 		}
 	}
 
-	return SafeValue{Value: truncated + end}, nil
+	return SafeValue{Value: html.EscapeString(truncated) + html.EscapeString(end)}, nil
 }
 
 // FileSizeFormatFilter formats file sizes in human-readable format
@@ -322,6 +358,9 @@ func ForceEscapeFilter(value interface{}, args ...interface{}) (interface{}, err
 // NL2BRFilter converts newlines to HTML <br> tags
 func NL2BRFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	s := ToString(value)
+	if !isSafe(value) {
+		s = html.EscapeString(s)
+	}
 
 	// Replace different types of line breaks
 	result := strings.ReplaceAll(s, "\r\n", "<br>")   // Windows
@@ -358,7 +397,7 @@ func UrlizeTruncateFilter(value interface{}, args ...interface{}) (interface{}, 
 	s := ToString(value)
 
 	// Use pre-compiled URL regex (same as urlize)
-	result := reURLs.ReplaceAllStringFunc(s, func(match string) string {
+	link := func(match string) string {
 		displayURL := match
 
 		// Truncate the display URL
@@ -409,7 +448,7 @@ func UrlizeTruncateFilter(value interface{}, args ...interface{}) (interface{}, 
 		}
 
 		return fmt.Sprintf(`<a %s>%s</a>`, strings.Join(attrs, " "), html.EscapeString(displayURL))
-	})
+	}
 
-	return SafeValue{Value: result}, nil
+	return SafeValue{Value: linkify(s, isSafe(value), link)}, nil
 }

@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -290,6 +291,8 @@ func ToJSONFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to JSON: %v", err)
 	}
+
+	data = bytes.ReplaceAll(data, []byte("'"), []byte(`\u0027`))
 
 	return runtime.SafeValue{Value: string(data)}, nil
 }

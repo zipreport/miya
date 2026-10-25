@@ -374,6 +374,9 @@ func TestXMLAttrFilter(t *testing.T) {
 				return
 			}
 
+			if sv, ok := result.(SafeValue); ok {
+				result = sv.Value
+			}
 			if result != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, result)
 			}

@@ -216,42 +216,28 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 		html := "<p>This is a long HTML content that should be truncated</p>"
 		result, err := TruncateHTMLFilter(html, 20)
 		if err != nil {
-			t.Errorf("TruncateHTMLFilter failed: %v", err)
+			t.Fatalf("TruncateHTMLFilter failed: %v", err)
 		}
-
-		// Result may be SafeValue or string
-		var resultStr string
-		if safeVal, ok := result.(SafeValue); ok {
-			resultStr = safeVal.String()
-		} else if str, ok := result.(string); ok {
-			resultStr = str
-		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
-			return
-		}
-
-		// Should be some result
-		if len(resultStr) == 0 {
-			t.Logf("TruncateHTMLFilter returned empty result")
+		if _, ok := result.(SafeValue); !ok {
+			t.Errorf("truncated result: expected SafeValue, got %T", result)
 		}
 
 		// Test with ellipsis
 		result, err = TruncateHTMLFilter(html, 20, "...")
 		if err != nil {
-			t.Errorf("TruncateHTMLFilter with ellipsis failed: %v", err)
+			t.Fatalf("TruncateHTMLFilter with ellipsis failed: %v", err)
+		}
+		if _, ok := result.(SafeValue); !ok {
+			t.Errorf("truncated result with ellipsis: expected SafeValue, got %T", result)
 		}
 
-		if safeVal, ok := result.(SafeValue); ok {
-			resultStr = safeVal.String()
-		} else if str, ok := result.(string); ok {
-			resultStr = str
-		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
-			return
+		// A short non-safe input comes back as a plain string for autoescape to escape
+		result, err = TruncateHTMLFilter(html, 100)
+		if err != nil {
+			t.Fatalf("TruncateHTMLFilter short failed: %v", err)
 		}
-
-		if len(resultStr) == 0 {
-			t.Logf("TruncateHTMLFilter with ellipsis returned empty result")
+		if str, ok := result.(string); !ok || str != html {
+			t.Errorf("short result: expected plain string %q, got %T %v", html, result, result)
 		}
 	})
 
