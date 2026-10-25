@@ -229,6 +229,9 @@ func ToString(value interface{}) string {
 	if str, ok := value.(string); ok {
 		return str
 	}
+	if b, ok := value.([]byte); ok {
+		return string(b)
+	}
 	if sv, ok := value.(SafeValue); ok {
 		return ToString(sv.Value)
 	}
@@ -241,6 +244,21 @@ func ToString(value interface{}) string {
 	}
 
 	return fmt.Sprintf("%v", value)
+}
+
+// escapeOutput is what {{ }} writes under autoescape: safe values unchanged,
+// anything else converted with ToString and HTML-escaped.
+func escapeOutput(value interface{}) interface{} {
+	switch sv := value.(type) {
+	case SafeValue:
+		return sv
+	case *SafeValue:
+		if sv == nil {
+			return ""
+		}
+		return *sv
+	}
+	return html.EscapeString(ToString(value))
 }
 
 // FormatFloat prints a float like Python's repr, except that whole numbers

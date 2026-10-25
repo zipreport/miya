@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 // Pre-compiled regex patterns for HTML filters (performance optimization)
@@ -15,15 +17,9 @@ var (
 	reURLs     = regexp.MustCompile(`https?://[^\s<>"']+`)
 )
 
-// SafeValue represents a value that should not be escaped
-type SafeValue struct {
-	Value interface{}
-}
-
-// String returns the string representation of the safe value
-func (s SafeValue) String() string {
-	return ToString(s.Value)
-}
+// SafeValue marks a value that must not be escaped. It is runtime.SafeValue,
+// so the output path recognises values from either package.
+type SafeValue = runtime.SafeValue
 
 // EscapeFilter escapes HTML characters
 func EscapeFilter(value interface{}, args ...interface{}) (interface{}, error) {
