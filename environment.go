@@ -177,6 +177,7 @@ func (e *Environment) GetTemplate(name string) (*Template, error) {
 			ast:  templateNode,
 		}
 
+		tmpl.cacheKey = name
 		e.cacheMutex.Lock()
 		e.cache[name] = tmpl
 		e.cacheMutex.Unlock()
@@ -195,6 +196,7 @@ func (e *Environment) GetTemplate(name string) (*Template, error) {
 		return nil, err
 	}
 
+	tmpl.cacheKey = name
 	e.cacheMutex.Lock()
 	e.cache[name] = tmpl
 	e.cacheMutex.Unlock()
@@ -238,6 +240,7 @@ func (e *Environment) FromString(source string) (*Template, error) {
 	}
 
 	// Store in cache with hash key
+	tmpl.cacheKey = cacheKey
 	e.cacheMutex.Lock()
 	e.cache[cacheKey] = tmpl
 	e.cacheMutex.Unlock()
