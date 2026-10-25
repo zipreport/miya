@@ -584,7 +584,17 @@ func (e *DefaultEvaluator) EvalIfNode(node *parser.IfNode, ctx Context) (interfa
 	return "", nil
 }
 
+// childScoper is implemented by contexts that can create a cheap child
+// scope (reads fall through to the parent, writes stay in the child).
+type childScoper interface {
+	Child() Context
+}
+
 func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (interface{}, error) {
+	return e.evalFor(node, ctx, 1)
+}
+
+func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int) (interface{}, error) {
 	iterable, err := e.EvalNode(node.Iterable, ctx)
 	if err != nil {
 		return nil, err
@@ -595,24 +605,8 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 		return nil, err
 	}
 
-	if len(items) == 0 && len(node.Else) > 0 {
-		// Execute else clause if no items
-		return e.evalNodeList(node.Else, ctx)
-	}
-
 	var results []string
-	loopCtx := ctx.Clone()
 	loopBroken := false
-
-	// Determine loop depth once for the entire loop
-	depth := 1
-	if parentLoop, exists := ctx.GetVariable("loop"); exists {
-		if parentLoopMap, ok := parentLoop.(map[string]interface{}); ok {
-			if parentDepth, ok := parentLoopMap["depth"].(int); ok {
-				depth = parentDepth + 1
-			}
-		}
-	}
 
 	// Track previous values for loop.changed() functionality
 	var previousChanged map[string]interface{}
@@ -657,7 +651,19 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 		filteredItems = items
 	}
 
+	if len(filteredItems) == 0 && len(node.Else) > 0 {
+		// Jinja2 runs else when the loop body never ran, after the if-filter.
+		return e.evalNodeList(node.Else, ctx)
+	}
+
 	for i, item := range filteredItems {
+		var loopCtx Context
+		if c, ok := ctx.(childScoper); ok {
+			loopCtx = c.Child()
+		} else {
+			loopCtx = ctx.Clone()
+		}
+
 		// Set loop variable(s)
 		if len(node.Variables) == 1 {
 			// Single variable assignment
@@ -756,6 +762,7 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 		loopInfo["last"] = i == len(filteredItems)-1
 		loopInfo["length"] = len(filteredItems)
 		loopInfo["depth"] = depth
+		loopInfo["depth0"] = depth - 1
 		loopInfo["previtem"] = previtem
 		loopInfo["nextitem"] = nextitem
 		loopInfo["cycle"] = cycleFunc
@@ -786,8 +793,9 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 					Body:      node.Body,
 					Else:      node.Else,
 					Recursive: true,
+					Condition: node.Condition,
 				}
-				return e.EvalForNode(recursiveNode, loopCtx)
+				return e.evalFor(recursiveNode, ctx, depth+1)
 			}
 
 			// Create a callable loop object that supports both property access and function calls

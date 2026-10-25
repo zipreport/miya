@@ -154,6 +154,13 @@ func (a *TemplateContextAdapter) Clone() runtime.Context {
 	return &TemplateContextAdapter{ctx: a.ctx.Clone(), env: a.env}
 }
 
+// Child returns a scope whose writes stay local and whose reads fall through
+// to a; for-loops use it to start each iteration afresh without copying every
+// variable.
+func (a *TemplateContextAdapter) Child() runtime.Context {
+	return &TemplateContextAdapter{ctx: a.ctx.Push(), env: a.env}
+}
+
 // NewModuleContext returns an empty context that shares the environment, for
 // templates imported without context.
 func (a *TemplateContextAdapter) NewModuleContext() runtime.Context {
