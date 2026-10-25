@@ -2,6 +2,7 @@ package extensions
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/zipreport/miya/lexer"
 	"github.com/zipreport/miya/parser"
@@ -198,13 +199,24 @@ type ExtensionEnvironment interface {
 	SetConfig(key string, value interface{})
 }
 
-// Registry manages all registered extensions
+// Registry manages all registered extensions.
+//
+// A Registry is safe for concurrent use. No extension-supplied method (Name,
+// Dependencies, Tags, OnLoad, OnUnload, BeforeRender, AfterRender) is ever
+// called while the registry lock is held, so hooks may call back into the
+// registry. An extension becomes visible to the getters only after its OnLoad
+// hook has succeeded.
 type Registry struct {
+	mu           sync.RWMutex
 	extensions   map[string]Extension
 	tagMap       map[string]Extension // Maps tag names to extensions
 	loadOrder    []string             // Order in which extensions were loaded
 	dependencies map[string][]string  // Extension dependencies
 	environment  ExtensionEnvironment // Reference to environment
+
+	pending     map[string][]string // extensions whose OnLoad is running: name -> dependencies
+	pendingTags map[string]string   // tags reserved by pending extensions: tag -> name
+	unloading   map[string]bool     // extensions whose OnUnload is running
 }
 
 // NewRegistry creates a new extension registry
@@ -214,62 +226,92 @@ func NewRegistry() *Registry {
 		tagMap:       make(map[string]Extension),
 		loadOrder:    make([]string, 0),
 		dependencies: make(map[string][]string),
+		pending:      make(map[string][]string),
+		pendingTags:  make(map[string]string),
+		unloading:    make(map[string]bool),
 	}
 }
 
 // SetEnvironment sets the environment reference for the registry
 func (r *Registry) SetEnvironment(env ExtensionEnvironment) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	r.environment = env
 }
 
-// Register registers an extension with dependency checking and lifecycle hooks
+// Register registers an extension with dependency checking and lifecycle hooks.
+// The extension is reserved while OnLoad runs and published only if it succeeds.
 func (r *Registry) Register(extension Extension) error {
 	name := extension.Name()
+	deps := extension.Dependencies()
+	tags := extension.Tags()
+
+	r.mu.Lock()
 	if _, exists := r.extensions[name]; exists {
+		r.mu.Unlock()
+		return NewExtensionError(name, "extension is already registered", nil)
+	}
+	if _, exists := r.pending[name]; exists {
+		r.mu.Unlock()
 		return NewExtensionError(name, "extension is already registered", nil)
 	}
 
 	// Check dependencies first
-	deps := extension.Dependencies()
 	for _, dep := range deps {
-		if _, exists := r.extensions[dep]; !exists {
+		if _, exists := r.extensions[dep]; !exists || r.unloading[dep] {
+			r.mu.Unlock()
 			return NewExtensionError(name, fmt.Sprintf("depends on '%s' which is not registered", dep), nil)
 		}
 	}
 
 	// Check for tag name conflicts
-	for _, tag := range extension.Tags() {
-		if existingExt, exists := r.tagMap[tag]; exists {
-			return NewExtensionTagError(name, tag, fmt.Sprintf("tag is already handled by extension '%s'", existingExt.Name()), nil)
+	for _, tag := range tags {
+		existingExt, inMap := r.tagMap[tag]
+		pendingOwner, inPending := r.pendingTags[tag]
+		if inMap || inPending {
+			r.mu.Unlock()
+			owner := pendingOwner
+			if inMap {
+				owner = existingExt.Name()
+			}
+			return NewExtensionTagError(name, tag, fmt.Sprintf("tag is already handled by extension '%s'", owner), nil)
 		}
 	}
 
 	// Check for circular dependencies
 	if err := r.checkCircularDependencies(name, deps); err != nil {
+		r.mu.Unlock()
 		return NewExtensionError(name, "circular dependency detected", err)
 	}
 
-	// Register the extension
+	r.pending[name] = deps
+	for _, tag := range tags {
+		r.pendingTags[tag] = name
+	}
+	env := r.environment
+	r.mu.Unlock()
+
+	// Call OnLoad lifecycle hook without holding the lock
+	var loadErr error
+	if env != nil {
+		loadErr = extension.OnLoad(env)
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.pending, name)
+	for _, tag := range tags {
+		delete(r.pendingTags, tag)
+	}
+	if loadErr != nil {
+		return NewExtensionError(name, "OnLoad lifecycle hook failed", loadErr)
+	}
+
 	r.extensions[name] = extension
 	r.dependencies[name] = deps
 	r.loadOrder = append(r.loadOrder, name)
-
-	for _, tag := range extension.Tags() {
+	for _, tag := range tags {
 		r.tagMap[tag] = extension
-	}
-
-	// Call OnLoad lifecycle hook
-	if r.environment != nil {
-		if err := extension.OnLoad(r.environment); err != nil {
-			// Rollback registration on error
-			delete(r.extensions, name)
-			delete(r.dependencies, name)
-			r.loadOrder = r.loadOrder[:len(r.loadOrder)-1]
-			for _, tag := range extension.Tags() {
-				delete(r.tagMap, tag)
-			}
-			return NewExtensionError(name, "OnLoad lifecycle hook failed", err)
-		}
 	}
 
 	return nil
@@ -316,18 +358,24 @@ func (r *Registry) checkCircularDependencies(newExtName string, newDeps []string
 
 // GetExtensionForTag returns the extension that handles the given tag
 func (r *Registry) GetExtensionForTag(tagName string) (Extension, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	ext, ok := r.tagMap[tagName]
 	return ext, ok
 }
 
 // GetExtension returns the extension with the given name
 func (r *Registry) GetExtension(name string) (Extension, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	ext, ok := r.extensions[name]
 	return ext, ok
 }
 
 // GetAllExtensions returns all registered extensions
 func (r *Registry) GetAllExtensions() []Extension {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	extensions := make([]Extension, 0, len(r.extensions))
 	for _, ext := range r.extensions {
 		extensions = append(extensions, ext)
@@ -337,29 +385,44 @@ func (r *Registry) GetAllExtensions() []Extension {
 
 // IsCustomTag returns true if the tag is handled by an extension
 func (r *Registry) IsCustomTag(tagName string) bool {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	_, ok := r.tagMap[tagName]
 	return ok
 }
 
 // Unregister removes an extension and calls its OnUnload hook
 func (r *Registry) Unregister(name string) error {
+	r.mu.Lock()
 	ext, exists := r.extensions[name]
-	if !exists {
+	if !exists || r.unloading[name] {
+		r.mu.Unlock()
 		return NewExtensionError(name, "extension is not registered", nil)
 	}
 
 	// Check if other extensions depend on this one
-	for extName, deps := range r.dependencies {
-		for _, dep := range deps {
-			if dep == name {
-				return NewExtensionError(name, fmt.Sprintf("cannot unregister: extension '%s' depends on it", extName), nil)
+	for _, depMap := range []map[string][]string{r.dependencies, r.pending} {
+		for extName, deps := range depMap {
+			for _, dep := range deps {
+				if dep == name {
+					r.mu.Unlock()
+					return NewExtensionError(name, fmt.Sprintf("cannot unregister: extension '%s' depends on it", extName), nil)
+				}
 			}
 		}
 	}
+	r.unloading[name] = true
+	r.mu.Unlock()
 
-	// Call OnUnload lifecycle hook
-	if err := ext.OnUnload(); err != nil {
-		return NewExtensionError(name, "OnUnload lifecycle hook failed", err)
+	// Call OnUnload lifecycle hook without holding the lock
+	unloadErr := ext.OnUnload()
+	tags := ext.Tags()
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	delete(r.unloading, name)
+	if unloadErr != nil {
+		return NewExtensionError(name, "OnUnload lifecycle hook failed", unloadErr)
 	}
 
 	// Remove from registry
@@ -375,25 +438,39 @@ func (r *Registry) Unregister(name string) error {
 	}
 
 	// Remove tag mappings
-	for _, tag := range ext.Tags() {
+	for _, tag := range tags {
 		delete(r.tagMap, tag)
 	}
 
 	return nil
 }
 
+// loadOrderSnapshot returns the published extensions in load order.
+func (r *Registry) loadOrderSnapshot() ([]string, []Extension) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	names := make([]string, 0, len(r.loadOrder))
+	exts := make([]Extension, 0, len(r.loadOrder))
+	for _, extName := range r.loadOrder {
+		if ext, exists := r.extensions[extName]; exists {
+			names = append(names, extName)
+			exts = append(exts, ext)
+		}
+	}
+	return names, exts
+}
+
 // BeforeRender calls BeforeRender on all registered extensions
 func (r *Registry) BeforeRender(ctx ExtensionContext, templateName string) error {
 	// Call hooks in load order to respect dependencies
-	for _, extName := range r.loadOrder {
-		if ext, exists := r.extensions[extName]; exists {
-			if err := ext.BeforeRender(ctx, templateName); err != nil {
-				return &ExtensionError{
-					ExtensionName: extName,
-					TemplateName:  templateName,
-					Message:       "BeforeRender lifecycle hook failed",
-					Cause:         err,
-				}
+	names, exts := r.loadOrderSnapshot()
+	for i, ext := range exts {
+		if err := ext.BeforeRender(ctx, templateName); err != nil {
+			return &ExtensionError{
+				ExtensionName: names[i],
+				TemplateName:  templateName,
+				Message:       "BeforeRender lifecycle hook failed",
+				Cause:         err,
 			}
 		}
 	}
@@ -403,16 +480,14 @@ func (r *Registry) BeforeRender(ctx ExtensionContext, templateName string) error
 // AfterRender calls AfterRender on all registered extensions
 func (r *Registry) AfterRender(ctx ExtensionContext, templateName string, result interface{}, renderErr error) error {
 	// Call hooks in reverse load order for cleanup
-	for i := len(r.loadOrder) - 1; i >= 0; i-- {
-		extName := r.loadOrder[i]
-		if ext, exists := r.extensions[extName]; exists {
-			if err := ext.AfterRender(ctx, templateName, result, renderErr); err != nil {
-				return &ExtensionError{
-					ExtensionName: extName,
-					TemplateName:  templateName,
-					Message:       "AfterRender lifecycle hook failed",
-					Cause:         err,
-				}
+	names, exts := r.loadOrderSnapshot()
+	for i := len(exts) - 1; i >= 0; i-- {
+		if err := exts[i].AfterRender(ctx, templateName, result, renderErr); err != nil {
+			return &ExtensionError{
+				ExtensionName: names[i],
+				TemplateName:  templateName,
+				Message:       "AfterRender lifecycle hook failed",
+				Cause:         err,
 			}
 		}
 	}
@@ -421,6 +496,8 @@ func (r *Registry) AfterRender(ctx ExtensionContext, templateName string, result
 
 // GetLoadOrder returns the order in which extensions were loaded
 func (r *Registry) GetLoadOrder() []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	result := make([]string, len(r.loadOrder))
 	copy(result, r.loadOrder)
 	return result
@@ -428,6 +505,8 @@ func (r *Registry) GetLoadOrder() []string {
 
 // GetDependencies returns the dependencies for a given extension
 func (r *Registry) GetDependencies(name string) []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 	if deps, exists := r.dependencies[name]; exists {
 		result := make([]string, len(deps))
 		copy(result, deps)
