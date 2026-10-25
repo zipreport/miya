@@ -108,13 +108,15 @@ Compare values:
 
 ### Logical Operators
 
-Combine boolean expressions:
+`and` and `or` return one of their operands and skip the right side when the left decides, as in Jinja2.
 
 | Operator | Description | Example | Result |
 |----------|-------------|---------|--------|
 | `and` | Logical AND | `{{ true and true }}` | `true` |
 | `or` | Logical OR | `{{ true or false }}` | `true` |
 | `not` | Logical NOT | `{{ not false }}` | `true` |
+| `or` | Default value | `{{ name or 'Anonymous' }}` | the value of `name`, or `Anonymous` when it is empty or undefined |
+| `and` | Returns falsy left | `{{ 0 and 'x' }}` | `0` |
 
 **Examples:**
 

@@ -571,7 +571,7 @@ func TestAdvancedFeatureEdgeCases(t *testing.T) {
 			Name:     "Complex boolean logic",
 			Template: `{{ (true and false) or (not false and true) }}, {{ 0 or 1 and 2 }}`,
 			Context:  map[string]interface{}{},
-			Expected: "true, true",
+			Expected: "true, 2",
 		},
 		{
 			Name:     "Extreme nesting levels",
