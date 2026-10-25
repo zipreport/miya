@@ -115,6 +115,8 @@ func (r *TestRegistry) registerBuiltinTests() {
 	// Identity and comparison tests
 	r.tests["sameas"] = testSameAs
 	r.tests["escaped"] = testEscaped
+	r.tests["true"] = testTrue
+	r.tests["false"] = testFalse
 
 	// Comparison operators
 	r.tests["eq"] = testEqual
@@ -124,6 +126,14 @@ func (r *TestRegistry) registerBuiltinTests() {
 	r.tests["gt"] = testGreaterThan
 	r.tests["ge"] = testGreaterThanOrEqual
 	r.tests["equalto"] = testEqual // alias
+	r.tests["=="] = testEqual
+	r.tests["!="] = testNotEqual
+	r.tests["<"] = testLessThan
+	r.tests["lessthan"] = testLessThan
+	r.tests["<="] = testLessThanOrEqual
+	r.tests[">"] = testGreaterThan
+	r.tests["greaterthan"] = testGreaterThan
+	r.tests[">="] = testGreaterThanOrEqual
 }
 
 // Built-in test implementations
@@ -511,14 +521,25 @@ func testEscaped(value interface{}, args ...interface{}) (bool, error) {
 	return false, nil
 }
 
+// testTrue checks if a value is the boolean true
+func testTrue(value interface{}, args ...interface{}) (bool, error) {
+	b, ok := value.(bool)
+	return ok && b, nil
+}
+
+// testFalse checks if a value is the boolean false
+func testFalse(value interface{}, args ...interface{}) (bool, error) {
+	b, ok := value.(bool)
+	return ok && !b, nil
+}
+
 // testEqual checks if two values are equal
 func testEqual(value interface{}, args ...interface{}) (bool, error) {
 	if len(args) != 1 {
 		return false, fmt.Errorf("eq test requires exactly one argument")
 	}
 
-	other := args[0]
-	return reflect.DeepEqual(value, other), nil
+	return runtime.Equal(value, args[0]), nil
 }
 
 // testNotEqual checks if two values are not equal
@@ -527,8 +548,7 @@ func testNotEqual(value interface{}, args ...interface{}) (bool, error) {
 		return false, fmt.Errorf("ne test requires exactly one argument")
 	}
 
-	other := args[0]
-	return !reflect.DeepEqual(value, other), nil
+	return !runtime.Equal(value, args[0]), nil
 }
 
 // testLessThan checks if value < other
@@ -615,7 +635,7 @@ func contains(container, item interface{}) (bool, error) {
 		return strings.Contains(v, itemStr), nil
 	case []interface{}:
 		for _, elem := range v {
-			if reflect.DeepEqual(elem, item) {
+			if runtime.Equal(elem, item) {
 				return true, nil
 			}
 		}
@@ -630,7 +650,7 @@ func contains(container, item interface{}) (bool, error) {
 		switch rv.Kind() {
 		case reflect.Slice, reflect.Array:
 			for i := 0; i < rv.Len(); i++ {
-				if reflect.DeepEqual(rv.Index(i).Interface(), item) {
+				if runtime.Equal(rv.Index(i).Interface(), item) {
 					return true, nil
 				}
 			}

@@ -111,6 +111,11 @@ func NewEnvironment(opts ...EnvironmentOption) *Environment {
 		opt(env)
 	}
 
+	env.filterRegistry.SetTestLookup(func(name string) (func(interface{}, ...interface{}) (bool, error), bool) {
+		t, ok := env.testRegistry.Get(name)
+		return t, ok
+	})
+
 	// Initialize evaluator pool for performance
 	env.evaluatorPool = sync.Pool{
 		New: func() interface{} {

@@ -1412,6 +1412,8 @@ func (e *DefaultEvaluator) attributeExists(obj interface{}, attr string) bool {
 	case map[string]string:
 		_, ok := v[attr]
 		return ok
+	case GroupTuple:
+		return attr == "grouper" || attr == "list"
 	default:
 		// Use reflection for struct fields and other complex types
 		rv := reflect.ValueOf(obj)
@@ -1589,6 +1591,14 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 		}
 	case map[string]string:
 		return v[attr]
+	case GroupTuple:
+		switch attr {
+		case "grouper":
+			return v[0]
+		case "list":
+			return v[1]
+		}
+		return nil
 	default:
 		// Use reflection for struct fields and methods
 		rv := reflect.ValueOf(obj)
@@ -2685,6 +2695,15 @@ func compareNumbers(a, b interface{}) (cmp int, ok bool) {
 	// NaN is unordered: report it as neither less nor equal.
 	return 2, true
 }
+
+// CompareNumbers orders two numbers of any Go numeric type; ok is false
+// unless both are numbers. cmp is 2 when either side is NaN. Filters use it
+// to sort and compare like Jinja2.
+func CompareNumbers(a, b interface{}) (cmp int, ok bool) { return compareNumbers(a, b) }
+
+// Equal reports whether a == b holds in a template: numbers by value, lists
+// element by element. Tests such as eq and in use it so they agree with ==.
+func Equal(a, b interface{}) bool { var e DefaultEvaluator; return e.equal(a, b) }
 
 // Comparison operations
 func (e *DefaultEvaluator) equal(a, b interface{}) bool {

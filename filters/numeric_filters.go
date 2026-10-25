@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 // AbsFilter returns the absolute value of a number
@@ -265,120 +267,59 @@ func SumFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	}
 }
 
-// MinFilter returns the minimum value in a sequence
+// MinFilter returns the smallest item of a sequence, like Jinja2's min. With
+// attribute it still returns the item. None and missing keys are skipped; an
+// empty sequence (or only None keys) gives undefined.
 func MinFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	attribute := ""
-	caseSensitive := false
-	if len(args) > 0 {
-		caseSensitive = ToBool(args[0])
-	}
-	_ = caseSensitive // strings are compared in plan 039
-	if len(args) > 1 {
-		attribute = ToString(args[1])
-	}
-
-	var min interface{}
-	var minFloat float64
-	first := true
-
-	switch v := value.(type) {
-	case []interface{}:
-		for _, item := range v {
-			if attribute != "" {
-				item = extractAttribute(item, attribute)
-			}
-
-			if item != nil {
-				f, err := ToFloat(item)
-				if err == nil {
-					if first || f < minFloat {
-						min = item
-						minFloat = f
-						first = false
-					}
-				}
-			}
-		}
-
-	case []string:
-		for _, item := range v {
-			f, err := ToFloat(item)
-			if err == nil {
-				if first || f < minFloat {
-					min = item
-					minFloat = f
-					first = false
-				}
-			}
-		}
-
-	default:
-		return nil, fmt.Errorf("min filter requires a sequence")
-	}
-
-	if first {
-		return nil, fmt.Errorf("min filter requires non-empty sequence")
-	}
-
-	return min, nil
+	return extremum("min", -1, value, args)
 }
 
-// MaxFilter returns the maximum value in a sequence
+// MaxFilter returns the largest item of a sequence; see MinFilter.
 func MaxFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	attribute := ""
+	return extremum("max", 1, value, args)
+}
+
+func extremum(name string, want int, value interface{}, args []interface{}) (interface{}, error) {
 	caseSensitive := false
+	attribute := ""
 	if len(args) > 0 {
 		caseSensitive = ToBool(args[0])
 	}
-	_ = caseSensitive // strings are compared in plan 039
 	if len(args) > 1 {
 		attribute = ToString(args[1])
 	}
 
-	var max interface{}
-	var maxFloat float64
-	first := true
-
-	switch v := value.(type) {
-	case []interface{}:
-		for _, item := range v {
-			if attribute != "" {
-				item = extractAttribute(item, attribute)
-			}
-
-			if item != nil {
-				f, err := ToFloat(item)
-				if err == nil {
-					if first || f > maxFloat {
-						max = item
-						maxFloat = f
-						first = false
-					}
-				}
-			}
-		}
-
-	case []string:
-		for _, item := range v {
-			f, err := ToFloat(item)
-			if err == nil {
-				if first || f > maxFloat {
-					max = item
-					maxFloat = f
-					first = false
-				}
-			}
-		}
-
-	default:
-		return nil, fmt.Errorf("max filter requires a sequence")
+	seq, err := toInterfaceSlice(value)
+	if err != nil {
+		return nil, fmt.Errorf("%s filter requires a sequence", name)
 	}
 
-	if first {
-		return nil, fmt.Errorf("max filter requires non-empty sequence")
+	var best, bestKey interface{}
+	found := false
+	for _, item := range seq {
+		key := item
+		if attribute != "" {
+			key = extractAttribute(item, attribute)
+		}
+		if key == nil {
+			continue
+		}
+		if !found {
+			best, bestKey, found = item, key, true
+			continue
+		}
+		c, err := compareItems(key, bestKey, caseSensitive)
+		if err != nil {
+			return nil, wrapAttributeError(name, attribute, err)
+		}
+		if c == want {
+			best, bestKey = item, key
+		}
 	}
-
-	return max, nil
+	if !found {
+		return runtime.NewUndefined("", runtime.UndefinedSilent, nil), nil
+	}
+	return best, nil
 }
 
 // RandomFilter returns a random item from sequence (simplified - not truly random)

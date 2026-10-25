@@ -10,11 +10,36 @@ import (
 
 type FilterFunc func(value interface{}, args ...interface{}) (interface{}, error)
 
+// TestLookup finds an `is` test by name. Environment wires it to its test
+// registry so that select, reject, selectattr and rejectattr can use tests.
+type TestLookup func(name string) (func(value interface{}, args ...interface{}) (bool, error), bool)
+
 type FilterRegistry struct {
 	filters     map[string]FilterFunc
 	params      map[string][]Param
 	kwargsNames map[string]bool
+	testLookup  TestLookup
 	mutex       sync.RWMutex
+}
+
+// SetTestLookup sets how select, reject, selectattr and rejectattr find tests.
+func (r *FilterRegistry) SetTestLookup(fn TestLookup) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	r.testLookup = fn
+}
+
+// test finds a test by name; the lookup runs without the lock held.
+func (r *FilterRegistry) test(name string) (func(value interface{}, args ...interface{}) (bool, error), error) {
+	r.mutex.RLock()
+	lookup := r.testLookup
+	r.mutex.RUnlock()
+	if lookup != nil {
+		if t, ok := lookup(name); ok {
+			return t, nil
+		}
+	}
+	return nil, fmt.Errorf("no test named %q", name)
 }
 
 func NewRegistry() *FilterRegistry {
@@ -202,8 +227,8 @@ func (r *FilterRegistry) registerBuiltinFilters() {
 	r.filters["slice"] = SliceFilter
 	r.filters["batch"] = BatchFilter
 	r.filters["list"] = ListFilter
-	r.filters["selectattr"] = SelectAttrFilter
-	r.filters["rejectattr"] = RejectAttrFilter
+	r.filters["selectattr"] = r.selectAttrFilter
+	r.filters["rejectattr"] = r.rejectAttrFilter
 	r.filters["items"] = ItemsFilter
 	r.filters["keys"] = KeysFilter
 	r.filters["values"] = ValuesFilter
@@ -227,9 +252,9 @@ func (r *FilterRegistry) registerBuiltinFilters() {
 	// Utility filters
 	r.filters["default"] = DefaultFilter
 	r.filters["d"] = DefaultFilter // alias
-	r.filters["map"] = MapFilter
-	r.filters["select"] = SelectFilter
-	r.filters["reject"] = RejectFilter
+	r.filters["map"] = r.mapFilter
+	r.filters["select"] = r.selectFilter
+	r.filters["reject"] = r.rejectFilter
 	r.filters["attr"] = AttrFilter
 	r.filters["format"] = FormatFilter
 	r.filters["filesizeformat"] = FileSizeFormatFilter

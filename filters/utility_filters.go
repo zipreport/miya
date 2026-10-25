@@ -48,6 +48,8 @@ func DefaultFilter(value interface{}, args ...interface{}) (interface{}, error) 
 }
 
 // MapFilter applies an attribute or filter to each item
+//
+// The registered map filter also applies filters by name; this function maps attributes only.
 func MapFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	if n := len(args); n > 0 {
 		if kw, ok := args[n-1].(KwArgs); ok {
@@ -121,6 +123,8 @@ func mapWithKwargs(value interface{}, args []interface{}, kw KwArgs) (interface{
 }
 
 // SelectFilter selects items that pass a test
+//
+// Deprecated: templates use the registry-bound select/reject/selectattr/rejectattr, which apply tests; this function compares values and is kept for direct Go callers.
 func SelectFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	// This is a simplified version - full implementation would support test functions
 	switch v := value.(type) {
@@ -139,6 +143,8 @@ func SelectFilter(value interface{}, args ...interface{}) (interface{}, error) {
 }
 
 // RejectFilter rejects items that pass a test
+//
+// Deprecated: templates use the registry-bound select/reject/selectattr/rejectattr, which apply tests; this function compares values and is kept for direct Go callers.
 func RejectFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	// This is a simplified version - full implementation would support test functions
 	switch v := value.(type) {
@@ -281,40 +287,78 @@ func DictSortFilter(value interface{}, args ...interface{}) (interface{}, error)
 	}
 }
 
-// GroupByFilter groups sequence items by attribute
+// GroupByFilter groups sequence items by attribute, like Jinja2's groupby:
+// the input is sorted by the attribute and each group is a runtime.GroupTuple
+// of (grouper, items). None and missing values form one group, first.
 func GroupByFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("groupby filter requires attribute name")
 	}
-
 	attrName := ToString(args[0])
+	var def interface{}
+	if len(args) > 1 {
+		def = args[1]
+	}
+	caseSensitive := len(args) > 2 && ToBool(args[2])
 
-	switch v := value.(type) {
-	case []interface{}:
-		groups := make(map[string][]interface{})
-
-		for _, item := range v {
-			key := ToString(extractAttribute(item, attrName))
-			groups[key] = append(groups[key], item)
-		}
-
-		// Convert to list of [key, items] pairs
-		var result [][]interface{}
-		keys := make([]string, 0, len(groups))
-		for k := range groups {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-
-		for _, key := range keys {
-			result = append(result, []interface{}{key, groups[key]})
-		}
-
-		return result, nil
-
-	default:
+	seq, err := toInterfaceSlice(value)
+	if err != nil {
 		return nil, fmt.Errorf("groupby filter requires a sequence")
 	}
+
+	keys := make([]interface{}, len(seq))
+	for i, item := range seq {
+		v, found := lookupAttribute(item, attrName)
+		if !found && def != nil {
+			v = def
+		}
+		keys[i] = v
+	}
+
+	order := make([]int, len(seq))
+	for i := range order {
+		order[i] = i
+	}
+	var firstErr error
+	sort.SliceStable(order, func(i, j int) bool {
+		if firstErr != nil {
+			return false
+		}
+		c, err := compareItems(keys[order[i]], keys[order[j]], caseSensitive)
+		if err != nil {
+			firstErr = err
+			return false
+		}
+		return c < 0
+	})
+	if firstErr != nil {
+		return nil, fmt.Errorf("groupby: attribute %q: %w", attrName, firstErr)
+	}
+
+	result := make([]interface{}, 0)
+	var current interface{}
+	var items []interface{}
+	for n, idx := range order {
+		key := keys[idx]
+		if n > 0 {
+			c, err := compareItems(key, current, caseSensitive)
+			if err != nil {
+				return nil, fmt.Errorf("groupby: attribute %q: %w", attrName, err)
+			}
+			if c != 0 {
+				result = append(result, runtime.GroupTuple{current, items})
+				items = nil
+			}
+		}
+		if len(items) == 0 {
+			current = key
+		}
+		items = append(items, seq[idx])
+	}
+	if len(items) > 0 {
+		result = append(result, runtime.GroupTuple{current, items})
+	}
+	return result, nil
 }
 
 // ToJSONFilter converts value to JSON string.

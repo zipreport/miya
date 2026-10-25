@@ -32,6 +32,7 @@ var builtinParams = map[string][]Param{
 	"sort":    {{Name: "reverse", Default: false}, {Name: "case_sensitive", Default: false}, {Name: "attribute"}},
 	"unique":  {{Name: "case_sensitive", Default: false}, {Name: "attribute"}},
 	"batch":   {{Name: "linecount", Required: true}, {Name: "fill_with"}},
+	"slice":   {{Name: "slices", Required: true}, {Name: "fill_with"}},
 	"truncate": {
 		{Name: "length", Default: 255}, {Name: "killwords", Default: false},
 		{Name: "end", Default: "..."}, {Name: "leeway", Unsupported: true},
@@ -49,8 +50,8 @@ var builtinParams = map[string][]Param{
 	"tojson":         {{Name: "indent"}},
 	"dictsort":       {{Name: "case_sensitive", Default: false}, {Name: "by", Default: "key"}, {Name: "reverse", Default: false}},
 	"groupby": {
-		{Name: "attribute", Required: true}, {Name: "default", Unsupported: true},
-		{Name: "case_sensitive", Unsupported: true},
+		{Name: "attribute", Required: true}, {Name: "default"},
+		{Name: "case_sensitive", Default: false},
 	},
 	"trim":  {{Name: "chars"}},
 	"strip": {{Name: "chars"}},
