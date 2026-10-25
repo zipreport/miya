@@ -330,13 +330,13 @@ func TestImportSystemEvaluatorParameter(t *testing.T) {
 		}
 
 		// Cast to callable function
-		fn, ok := macroFunc.(func(...interface{}) (interface{}, error))
+		fn, ok := macroFunc.(*Macro)
 		if !ok {
 			t.Fatalf("expected macro to be callable, got %T", macroFunc)
 		}
 
 		// Call the macro
-		result, err := fn("World")
+		result, err := fn.Call([]interface{}{"World"}, nil)
 		if err != nil {
 			t.Fatalf("macro call failed: %v", err)
 		}

@@ -1214,11 +1214,8 @@ func TestTemplateMacro(t *testing.T) {
 
 		// Call without required parameter
 		_, err := macro.Call(evaluator, ctx, []interface{}{}, nil)
-		if err == nil {
-			t.Error("Expected error for missing required parameter")
-		}
-		if !strings.Contains(err.Error(), "missing required macro parameter") {
-			t.Errorf("Expected missing parameter error, got: %v", err)
+		if err != nil {
+			t.Fatalf("missing parameter must bind to undefined, got error: %v", err)
 		}
 	})
 
@@ -1237,12 +1234,9 @@ func TestTemplateMacro(t *testing.T) {
 			"extra": "value",
 		}
 
-		result, err := macro.Call(evaluator, ctx, []interface{}{"Charlie"}, kwargs)
-		if err != nil {
-			t.Fatalf("Unexpected error with kwargs: %v", err)
-		}
-		if result == nil {
-			t.Error("Expected result from macro call with kwargs")
+		_, err := macro.Call(evaluator, ctx, []interface{}{"Charlie"}, kwargs)
+		if err == nil || !strings.Contains(err.Error(), `takes no keyword argument "extra"`) {
+			t.Fatalf("Expected unknown keyword argument error, got: %v", err)
 		}
 	})
 }
@@ -2188,12 +2182,8 @@ func TestTemplateMacroCall(t *testing.T) {
 
 		// Test with missing required parameter
 		_, err = macro.Call(evaluator, ctx, []interface{}{}, nil)
-		if err == nil {
-			t.Error("Expected error for missing required parameter")
-		}
-
-		if !stringContains(err.Error(), "missing required macro parameter") {
-			t.Errorf("Expected missing parameter error, got: %v", err)
+		if err != nil {
+			t.Fatalf("missing parameter must bind to undefined, got error: %v", err)
 		}
 	})
 
@@ -2202,34 +2192,21 @@ func TestTemplateMacroCall(t *testing.T) {
 			Name:       "render_button",
 			Parameters: []string{"text", "class"},
 			Defaults:   map[string]interface{}{"class": "btn"},
-			Body:       []parser.Node{},
-			Context:    ctx,
+			Body: []parser.Node{
+				parser.NewVariableNode(parser.NewIdentifierNode("text", 1, 1), 1, 1),
+				&parser.TextNode{Content: "|"},
+				parser.NewVariableNode(parser.NewIdentifierNode("class", 1, 1), 1, 1),
+			},
+			Context: ctx,
 		}
 
-		kwargs := map[string]interface{}{
-			"class": "btn-primary",
-			"extra": "additional",
-		}
-
-		result, err := macro.Call(evaluator, ctx, []interface{}{"Click me"}, kwargs)
+		// class is bound by name, not position.
+		result, err := macro.Call(evaluator, ctx, nil, map[string]interface{}{"class": "btn-primary", "text": "Click me"})
 		if err != nil {
 			t.Fatalf("Unexpected error with kwargs: %v", err)
 		}
-
-		if result == nil {
-			t.Error("Expected non-nil result with kwargs")
-		}
-
-		// Check that the built-in render_button works
-		if stringContains(fmt.Sprintf("%v", result), "<button") {
-			// Verify it contains expected elements
-			resultStr := fmt.Sprintf("%v", result)
-			if !stringContains(resultStr, "Click me") {
-				t.Errorf("Expected button text in result, got: %v", result)
-			}
-			if !stringContains(resultStr, "btn-primary") {
-				t.Errorf("Expected class in result, got: %v", result)
-			}
+		if result != "Click me|btn-primary" {
+			t.Errorf("Expected %q, got %v", "Click me|btn-primary", result)
 		}
 	})
 
@@ -2238,22 +2215,31 @@ func TestTemplateMacroCall(t *testing.T) {
 			Name:       "test_macro",
 			Parameters: []string{},
 			Defaults:   map[string]interface{}{},
-			Body:       []parser.Node{},
+			Body: []parser.Node{
+				parser.NewVariableNode(parser.NewIdentifierNode("caller", 1, 1), 1, 1),
+			},
+			MacroUsage: parser.MacroUsage{Caller: true},
 			Context:    ctx,
 		}
 
-		// Set caller in call context
+		// A caller in the call context is ignored: the body runs in the
+		// definition context, and a caller is passed in kwargs.
 		callCtx := &simpleContext{variables: make(map[string]interface{})}
-		callCtx.SetVariable("caller", "caller_function")
-
-		result, err := macro.Call(evaluator, callCtx, []interface{}{}, nil)
+		callCtx.SetVariable("caller", "from_call_context")
+		result, err := macro.Call(evaluator, callCtx, nil, nil)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
+		if result != "" {
+			t.Errorf("caller must not come from callCtx, got %v", result)
+		}
 
-		// Should work without error
-		if result == nil {
-			t.Error("Expected non-nil result")
+		result, err = macro.Call(evaluator, callCtx, nil, map[string]interface{}{"caller": "from_kwargs"})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if result != "from_kwargs" {
+			t.Errorf("Expected %q, got %v", "from_kwargs", result)
 		}
 	})
 }
