@@ -254,6 +254,8 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 		return e.EvalLiteralNode(n, ctx)
 	case *parser.ListNode:
 		return e.EvalListNode(n, ctx)
+	case *parser.DictNode:
+		return e.EvalDictNode(n, ctx)
 	case *parser.AttributeNode:
 		return e.EvalAttributeNode(n, ctx)
 	case *parser.GetItemNode:
@@ -387,6 +389,22 @@ func (e *DefaultEvaluator) EvalListNode(node *parser.ListNode, ctx Context) (int
 			return nil, err
 		}
 		result[i] = value
+	}
+	return result, nil
+}
+
+func (e *DefaultEvaluator) EvalDictNode(node *parser.DictNode, ctx Context) (interface{}, error) {
+	result := make(map[string]interface{}, len(node.Keys))
+	for i, keyNode := range node.Keys {
+		key, err := e.EvalNode(keyNode, ctx)
+		if err != nil {
+			return nil, err
+		}
+		value, err := e.EvalNode(node.Values[i], ctx)
+		if err != nil {
+			return nil, err
+		}
+		result[fmt.Sprintf("%v", key)] = value
 	}
 	return result, nil
 }

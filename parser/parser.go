@@ -1572,7 +1572,7 @@ func (p *Parser) parseDictLiteral() (ExpressionNode, error) {
 
 	if p.check(lexer.TokenRightBrace) {
 		p.advance() // consume '}'
-		return AcquireLiteralNode(map[string]interface{}{}, "{}", startToken.Line, startToken.Column), nil
+		return NewDictNode(nil, nil, startToken.Line, startToken.Column), nil
 	}
 
 	// Parse first key-value pair
@@ -1632,9 +1632,9 @@ func (p *Parser) parseDictLiteral() (ExpressionNode, error) {
 		return compNode, nil
 	}
 
-	// Regular dictionary literal - for now return empty dict
-	// In a full implementation, we'd build the actual dictionary
-	pairs := make(map[string]interface{})
+	// Regular dictionary literal
+	keys := []ExpressionNode{key}
+	values := []ExpressionNode{value}
 
 	if p.check(lexer.TokenComma) {
 		p.advance() // consume ','
@@ -1655,9 +1655,8 @@ func (p *Parser) parseDictLiteral() (ExpressionNode, error) {
 				return nil, err
 			}
 
-			// Store key-value pair (simplified)
-			_ = key
-			_ = value
+			keys = append(keys, key)
+			values = append(values, value)
 
 			if p.check(lexer.TokenComma) {
 				p.advance() // consume ','
@@ -1672,7 +1671,7 @@ func (p *Parser) parseDictLiteral() (ExpressionNode, error) {
 	}
 	p.advance() // consume '}'
 
-	return AcquireLiteralNode(pairs, "", startToken.Line, startToken.Column), nil
+	return NewDictNode(keys, values, startToken.Line, startToken.Column), nil
 }
 
 // Helper methods

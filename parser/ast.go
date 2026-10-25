@@ -158,6 +158,31 @@ func (n *ListNode) String() string {
 
 func (n *ListNode) ExpressionNode() {}
 
+// DictNode represents dict literals {'a': 1, 'b': 2}
+type DictNode struct {
+	baseNode
+	Keys   []ExpressionNode
+	Values []ExpressionNode
+}
+
+func NewDictNode(keys, values []ExpressionNode, line, column int) *DictNode {
+	return &DictNode{
+		baseNode: baseNode{line: line, column: column},
+		Keys:     keys,
+		Values:   values,
+	}
+}
+
+func (n *DictNode) String() string {
+	var pairs []string
+	for i := range n.Keys {
+		pairs = append(pairs, n.Keys[i].String()+": "+n.Values[i].String())
+	}
+	return fmt.Sprintf("Dict({%s})", strings.Join(pairs, ", "))
+}
+
+func (n *DictNode) ExpressionNode() {}
+
 // AttributeNode represents attribute access (obj.attr)
 type AttributeNode struct {
 	baseNode
