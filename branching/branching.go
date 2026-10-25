@@ -164,25 +164,35 @@ func testUndefined(value interface{}, args ...interface{}) (bool, error) {
 
 // testNone checks if a value is None/nil
 func testNone(value interface{}, args ...interface{}) (bool, error) {
-	return value == nil, nil
+	return runtime.Indirect(value) == nil, nil
+}
+
+// valueKind is the reflect kind of value after following pointers; nil gives
+// reflect.Invalid.
+func valueKind(value interface{}) reflect.Kind {
+	v := runtime.Indirect(value)
+	if v == nil {
+		return reflect.Invalid
+	}
+	return reflect.TypeOf(v).Kind()
 }
 
 // testBoolean checks if a value is a boolean
 func testBoolean(value interface{}, args ...interface{}) (bool, error) {
-	_, ok := value.(bool)
-	return ok, nil
+	return valueKind(value) == reflect.Bool, nil
 }
 
 // testString checks if a value is a string
 func testString(value interface{}, args ...interface{}) (bool, error) {
-	_, ok := value.(string)
-	return ok, nil
+	return valueKind(value) == reflect.String, nil
 }
 
 // testNumber checks if a value is a number (int or float)
 func testNumber(value interface{}, args ...interface{}) (bool, error) {
-	switch value.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+	switch valueKind(value) {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
 		return true, nil
 	default:
 		return false, nil
@@ -191,8 +201,9 @@ func testNumber(value interface{}, args ...interface{}) (bool, error) {
 
 // testInteger checks if a value is an integer
 func testInteger(value interface{}, args ...interface{}) (bool, error) {
-	switch value.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+	switch valueKind(value) {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return true, nil
 	default:
 		return false, nil
@@ -201,8 +212,8 @@ func testInteger(value interface{}, args ...interface{}) (bool, error) {
 
 // testFloat checks if a value is a float
 func testFloat(value interface{}, args ...interface{}) (bool, error) {
-	switch value.(type) {
-	case float32, float64:
+	switch valueKind(value) {
+	case reflect.Float32, reflect.Float64:
 		return true, nil
 	default:
 		return false, nil

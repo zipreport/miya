@@ -283,6 +283,10 @@ func ToString(value interface{}) string {
 	if value == nil {
 		return ""
 	}
+	value = runtime.Indirect(value)
+	if value == nil {
+		return ""
+	}
 
 	switch v := value.(type) {
 	case string:
@@ -336,6 +340,7 @@ func ToInt(value interface{}) (int, error) {
 }
 
 func ToBool(value interface{}) bool {
+	value = runtime.Indirect(value)
 	if value == nil {
 		return false
 	}
@@ -355,6 +360,16 @@ func ToBool(value interface{}) bool {
 		// Check if it's a slice, map, or array
 		rv := reflect.ValueOf(value)
 		switch rv.Kind() {
+		case reflect.Bool:
+			return rv.Bool()
+		case reflect.String:
+			return rv.Len() > 0
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return rv.Int() != 0
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			return rv.Uint() != 0
+		case reflect.Float32, reflect.Float64:
+			return rv.Float() != 0
 		case reflect.Slice, reflect.Map, reflect.Array:
 			return rv.Len() > 0
 		default:

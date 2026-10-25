@@ -236,6 +236,14 @@ func ToString(value interface{}) string {
 		return ToString(sv.Value)
 	}
 
+	value = Indirect(value)
+	if value == nil {
+		return ""
+	}
+	if str, ok := value.(string); ok {
+		return str
+	}
+
 	switch v := value.(type) {
 	case float64:
 		return FormatFloat(v, 64)

@@ -151,8 +151,40 @@ func LengthFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	return 0, fmt.Errorf("object of type %T has no len()", value)
 }
 
+// typedSeq converts typed Go slices and arrays ([]int, [3]string, []T) to
+// []interface{} so filters written for []interface{} accept them. Pointers are
+// followed; any other value is returned unchanged.
+func typedSeq(value interface{}) interface{} {
+	switch value.(type) {
+	case nil, []interface{}, []string, string:
+		return value
+	}
+	value = runtime.Indirect(value)
+	switch reflect.ValueOf(value).Kind() {
+	case reflect.Slice, reflect.Array:
+		if seq, err := toInterfaceSlice(value); err == nil {
+			return seq
+		}
+	}
+	return value
+}
+
+// dictInput converts a map whose keys are all strings to map[string]interface{}
+// so the dict filters accept typed maps; other values are returned unchanged.
+func dictInput(value interface{}) interface{} {
+	switch value.(type) {
+	case nil, map[string]interface{}, map[string]string:
+		return value
+	}
+	if m, ok := runtime.StringKeyMap(value); ok {
+		return m
+	}
+	return value
+}
+
 // JoinFilter joins sequence elements with separator
 func JoinFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = typedSeq(value)
 	separator := ""
 	if len(args) > 0 {
 		separator = ToString(args[0])
@@ -173,6 +205,7 @@ func JoinFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // ReverseFilter reverses a sequence
 func ReverseFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = typedSeq(value)
 	switch v := value.(type) {
 	case []interface{}:
 		reversed := make([]interface{}, len(v))
@@ -205,6 +238,7 @@ const maxBatchFill = 1000000
 
 // BatchFilter creates batches of items
 func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = typedSeq(value)
 	if len(args) < 1 {
 		return nil, fmt.Errorf("batch filter requires size argument")
 	}
@@ -415,6 +449,7 @@ func makeStringSlice(value interface{}, attribute string) ([]string, error) {
 
 // ItemsFilter returns (key, value) pairs for dictionaries
 func ItemsFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = dictInput(value)
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -449,6 +484,7 @@ func ItemsFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // KeysFilter returns keys from a dictionary
 func KeysFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = dictInput(value)
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -483,6 +519,7 @@ func KeysFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // ValuesFilter returns values from a dictionary
 func ValuesFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = dictInput(value)
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -969,14 +1006,18 @@ func lookupSegment(obj interface{}, seg string) (interface{}, bool) {
 		return val, ok
 	}
 
-	rv := reflect.ValueOf(obj)
-	if rv.Kind() == reflect.Ptr {
-		if rv.IsNil() {
-			return nil, false
-		}
-		rv = rv.Elem()
+	obj = runtime.Indirect(obj)
+	if obj == nil {
+		return nil, false
 	}
+	rv := reflect.ValueOf(obj)
 	switch rv.Kind() {
+	case reflect.Map:
+		if kt := rv.Type().Key(); kt.Kind() == reflect.String {
+			if val := rv.MapIndex(reflect.ValueOf(seg).Convert(kt)); val.IsValid() {
+				return val.Interface(), true
+			}
+		}
 	case reflect.Slice, reflect.Array:
 		idx, err := strconv.Atoi(seg)
 		if err != nil || idx < 0 || idx >= rv.Len() || strings.TrimLeft(seg, "0123456789") != "" {
@@ -984,16 +1025,29 @@ func lookupSegment(obj interface{}, seg string) (interface{}, bool) {
 		}
 		return rv.Index(idx).Interface(), true
 	case reflect.Struct:
-		field := rv.FieldByName(seg)
-		if field.IsValid() && field.CanInterface() {
-			return field.Interface(), true
+		if v, ok := structField(rv, seg, false); ok {
+			return v, true
 		}
-		field = rv.FieldByName(capitalizeFirst(seg))
-		if field.IsValid() && field.CanInterface() {
-			return field.Interface(), true
+		if capital := capitalizeFirst(seg); capital != seg {
+			return structField(rv, capital, true)
 		}
 	}
 	return nil, false
+}
+
+// structField reads the exported field name of the struct rv. Fields promoted
+// through a nil embedded pointer are not found, and with fallback set (the
+// capitalised name) embedded fields are not found either.
+func structField(rv reflect.Value, name string, fallback bool) (interface{}, bool) {
+	sf, ok := rv.Type().FieldByName(name)
+	if !ok || sf.PkgPath != "" || (fallback && sf.Anonymous) {
+		return nil, false
+	}
+	f, err := rv.FieldByIndexErr(sf.Index)
+	if err != nil || !f.CanInterface() {
+		return nil, false
+	}
+	return f.Interface(), true
 }
 
 // extractAttribute returns the value at an attribute path, or nil when it is

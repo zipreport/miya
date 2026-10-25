@@ -12,6 +12,7 @@ import (
 
 // DefaultFilter returns default value if input is falsy
 func DefaultFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = runtime.Indirect(value)
 	if len(args) == 0 {
 		return value, nil
 	}
@@ -225,6 +226,7 @@ func PPrintFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // DictSortFilter sorts a dictionary by keys or values
 func DictSortFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = dictInput(value)
 	caseSensitive := false
 	byKey := true
 	reverse := false

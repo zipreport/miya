@@ -460,6 +460,15 @@ func (e *DefaultEvaluator) EvalAttributeNode(node *parser.AttributeNode, ctx Con
 		return e.undefinedHandler.HandleAttributeAccess(undefined, node.Attribute, node)
 	}
 
+	if usesReflectLookup(obj) {
+		value, ok := e.lookupReflect(obj, node.Attribute)
+		if !ok && e.undefinedHandler != nil {
+			attrName := fmt.Sprintf("%s.%s", e.getObjectName(obj), node.Attribute)
+			return e.undefinedHandler.Handle(attrName, node)
+		}
+		return value, nil
+	}
+
 	// Check if attribute exists first, then get value
 	if e.undefinedHandler != nil && !e.attributeExists(obj, node.Attribute) {
 		attrName := fmt.Sprintf("%s.%s", e.getObjectName(obj), node.Attribute)
@@ -1415,50 +1424,8 @@ func (e *DefaultEvaluator) attributeExists(obj interface{}, attr string) bool {
 	case GroupTuple:
 		return attr == "grouper" || attr == "list"
 	default:
-		// Use reflection for struct fields and other complex types
-		rv := reflect.ValueOf(obj)
-		if !rv.IsValid() {
-			return false
-		}
-
-		// Handle pointers
-		for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
-			if rv.IsNil() {
-				return false
-			}
-			rv = rv.Elem()
-		}
-
-		switch rv.Kind() {
-		case reflect.Struct:
-			// Check if field exists and is accessible
-			field := rv.FieldByName(attr)
-			if !field.IsValid() {
-				return false
-			}
-			// Check if field is exported (accessible)
-			structType := rv.Type()
-			if structField, found := structType.FieldByName(attr); found {
-				return structField.PkgPath == "" // Empty PkgPath means exported
-			}
-			return false
-		case reflect.Map:
-			// Handle map types we might not have covered
-			if rv.Type().Key().Kind() == reflect.String {
-				key := reflect.ValueOf(attr)
-				return rv.MapIndex(key).IsValid()
-			}
-			return false
-		case reflect.Slice, reflect.Array:
-			// For slices/arrays, check if attr is a valid numeric index
-			if index, err := strconv.Atoi(attr); err == nil {
-				return index >= 0 && index < rv.Len()
-			}
-			return false
-		}
-
-		// For other types, assume attribute doesn't exist
-		return false
+		_, ok := e.lookupReflect(obj, attr)
+		return ok
 	}
 }
 
@@ -1478,8 +1445,8 @@ func (e *DefaultEvaluator) getObjectName(obj interface{}) string {
 		}
 
 		// Handle pointers and interfaces
-		for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
-			if rv.IsNil() {
+		for i := 0; rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface; i++ {
+			if rv.IsNil() || i >= maxDeref {
 				return "nil"
 			}
 			rv = rv.Elem()
@@ -1600,34 +1567,94 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 		}
 		return nil
 	default:
-		// Use reflection for struct fields and methods
-		rv := reflect.ValueOf(obj)
-		if rv.Kind() == reflect.Ptr {
-			rv = rv.Elem()
-		}
-
-		if rv.Kind() == reflect.Struct {
-			field := rv.FieldByName(attr)
-			if field.IsValid() && field.CanInterface() {
-				return field.Interface()
-			}
-
-			// Try with capitalized field name
-			field = rv.FieldByName(capitalizeFirst(attr))
-			if field.IsValid() && field.CanInterface() {
-				return field.Interface()
-			}
-		}
-
-		// Try methods on the original value (including pointer receiver methods)
-		origValue := reflect.ValueOf(obj)
-		method := origValue.MethodByName(capitalizeFirst(attr))
-		if method.IsValid() {
-			return method.Interface()
-		}
-
-		return nil
+		val, _ := e.lookupReflect(obj, attr)
+		return val
 	}
+}
+
+// lookupReflect finds attr on a Go value that is not one of the runtime's own
+// types: a struct field (exact name; then, for non-embedded exported fields
+// that do not hold a func, the capitalised name), an entry of a map with
+// string-kind or interface keys (never a func-valued entry), a dict method of
+// a map whose keys are all strings (keys/values/items), or a slice element by
+// numeric attr. It never returns a Go method.
+func (e *DefaultEvaluator) lookupReflect(obj interface{}, attr string) (interface{}, bool) {
+	rv := reflect.ValueOf(obj)
+	for i := 0; ; i++ {
+		if !rv.IsValid() {
+			return nil, false
+		}
+		if rv.Kind() != reflect.Ptr && rv.Kind() != reflect.Interface {
+			break
+		}
+		if i >= maxDeref || rv.IsNil() {
+			return nil, false
+		}
+		rv = rv.Elem()
+	}
+
+	switch rv.Kind() {
+	case reflect.Struct:
+		if v, ok := structField(rv, attr, false); ok {
+			return v, true
+		}
+		if capital := capitalizeFirst(attr); capital != attr {
+			return structField(rv, capital, true)
+		}
+	case reflect.Map:
+		kt := rv.Type().Key()
+		var key reflect.Value
+		switch kt.Kind() {
+		case reflect.String:
+			key = reflect.ValueOf(attr).Convert(kt)
+		case reflect.Interface:
+			key = reflect.ValueOf(attr)
+			if !key.Type().AssignableTo(kt) {
+				return nil, false
+			}
+		default:
+			return nil, false
+		}
+		if val := rv.MapIndex(key); val.IsValid() {
+			inner := val
+			if inner.Kind() == reflect.Interface {
+				inner = inner.Elem()
+			}
+			if inner.Kind() == reflect.Func {
+				return nil, false
+			}
+			return val.Interface(), true
+		}
+		if isDictMethodName(attr) {
+			if m, ok := StringKeyMap(obj); ok && e.attributeExists(m, attr) {
+				return e.getAttribute(m, attr), true
+			}
+		}
+	case reflect.Slice, reflect.Array:
+		if index, err := strconv.Atoi(attr); err == nil && index >= 0 && index < rv.Len() {
+			return rv.Index(index).Interface(), true
+		}
+	}
+	return nil, false
+}
+
+// structField reads the exported field name of the struct rv. Fields promoted
+// through a nil embedded pointer are not found. With fallback set (the
+// capitalised name for a lower-case attribute), embedded fields and func
+// fields are not found: those are reachable only by their exact name.
+func structField(rv reflect.Value, name string, fallback bool) (interface{}, bool) {
+	sf, ok := rv.Type().FieldByName(name)
+	if !ok || sf.PkgPath != "" {
+		return nil, false
+	}
+	if fallback && (sf.Anonymous || sf.Type.Kind() == reflect.Func) {
+		return nil, false
+	}
+	f, err := rv.FieldByIndexErr(sf.Index)
+	if err != nil || !f.CanInterface() {
+		return nil, false
+	}
+	return f.Interface(), true
 }
 
 func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
@@ -1674,18 +1701,37 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 		// Return undefined for out of bounds access (Jinja2 behavior)
 		return NewUndefined(fmt.Sprintf("index[%d]", keyInt), UndefinedSilent, nil), nil
 	default:
-		// Try reflection for slice/array access
+		// Try reflection for slice, array and map access
+		obj = Indirect(obj)
+		if obj == nil {
+			return nil, fmt.Errorf("cannot get item from nil")
+		}
 		rv := reflect.ValueOf(obj)
-		if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
+		switch rv.Kind() {
+		case reflect.Slice, reflect.Array:
 			keyInt, err := e.toInt(key)
 			if err != nil {
 				return nil, fmt.Errorf("index must be integer, got %T", key)
+			}
+			// Support negative indexing like Python
+			if keyInt < 0 {
+				keyInt += rv.Len()
 			}
 			if keyInt < 0 || keyInt >= rv.Len() {
 				// Return undefined for out of bounds access (Jinja2 behavior)
 				return NewUndefined(fmt.Sprintf("index[%d]", keyInt), UndefinedSilent, nil), nil
 			}
 			return rv.Index(keyInt).Interface(), nil
+		case reflect.Map:
+			k, ok := mapKey(key, rv.Type().Key())
+			if !ok {
+				return nil, nil
+			}
+			val := rv.MapIndex(k)
+			if !val.IsValid() {
+				return nil, nil
+			}
+			return val.Interface(), nil
 		}
 
 		return nil, fmt.Errorf("object is not subscriptable: %T", obj)
@@ -2042,6 +2088,10 @@ func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) 
 	if obj == nil {
 		return nil, nil
 	}
+	obj = Indirect(obj)
+	if obj == nil {
+		return nil, nil
+	}
 
 	// Handle undefined variables as empty iterables
 	if _, ok := obj.(*Undefined); ok {
@@ -2141,8 +2191,16 @@ func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) 
 		// If we can't call the function or it doesn't fit our pattern, fall through to error
 	}
 
-	// Fallback to reflection for uncommon slice/array types
+	// Typed maps: string keys iterate like a dict, other keys in a fixed order
+	if m, ok := StringKeyMap(obj); ok {
+		return e.makeIterable(m)
+	}
 	rv := reflect.ValueOf(obj)
+	if rv.Kind() == reflect.Map {
+		return sortedMapKeys(rv), nil
+	}
+
+	// Fallback to reflection for uncommon slice/array types
 	if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
 		result := make([]interface{}, rv.Len())
 		for i := 0; i < rv.Len(); i++ {
@@ -2237,6 +2295,18 @@ func (e *DefaultEvaluator) makeIterableForVariables(obj interface{}, numVariable
 			return nil, fmt.Errorf("cannot unpack map into %d variables (expected 1 or 2)", numVariables)
 		}
 	default:
+		if m, ok := StringKeyMap(obj); ok {
+			return e.makeIterableForVariables(m, numVariables)
+		}
+		if rv := reflect.ValueOf(Indirect(obj)); rv.Kind() == reflect.Map {
+			switch numVariables {
+			case 1:
+				return sortedMapKeys(rv), nil
+			case 2:
+				return sortedMapPairs(rv), nil
+			}
+			return nil, fmt.Errorf("cannot unpack map into %d variables (expected 1 or 2)", numVariables)
+		}
 		// For non-maps, use the standard makeIterable method
 		return e.makeIterable(obj)
 	}
@@ -2289,7 +2359,27 @@ func (e *DefaultEvaluator) isTruthy(obj interface{}) bool {
 	default:
 		// Fallback to reflection for other types
 		rv := reflect.ValueOf(obj)
+		if rv.Kind() == reflect.Ptr {
+			inner := Indirect(obj)
+			if inner == nil {
+				return false
+			}
+			if reflect.ValueOf(inner).Kind() != reflect.Ptr {
+				return e.isTruthy(inner)
+			}
+			return true
+		}
 		switch rv.Kind() {
+		case reflect.Bool:
+			return rv.Bool()
+		case reflect.String:
+			return rv.Len() > 0
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return rv.Int() != 0
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			return rv.Uint() != 0
+		case reflect.Float32, reflect.Float64:
+			return rv.Float() != 0
 		case reflect.Slice, reflect.Map, reflect.Array:
 			return rv.Len() > 0
 		default:
@@ -2320,8 +2410,8 @@ func (e *DefaultEvaluator) addWithNode(a, b interface{}, node parser.Node) (inte
 	}
 
 	// Try string concatenation
-	aStr, aStrOk := a.(string)
-	bStr, bStrOk := b.(string)
+	aStr, aStrOk := basicValue(a).(string)
+	bStr, bStrOk := basicValue(b).(string)
 	if aStrOk && bStrOk {
 		return aStr + bStr, nil
 	}
@@ -2562,14 +2652,24 @@ func (e *DefaultEvaluator) negate(a interface{}) (interface{}, error) {
 
 // numericValue reports a value of any Go numeric kind (named types included).
 // Signed integers return kind 'i', unsigned integers 'u' and floats 'f', so
-// integers can be compared exactly and only floats lose precision. Bool,
-// string, nil and every other kind return ok=false.
+// integers can be compared exactly and only floats lose precision. Pointers
+// are followed, and bools count as 0 and 1 as in Python. String, nil and
+// every other kind return ok=false.
 func numericValue(v interface{}) (i int64, u uint64, f float64, kind byte, ok bool) {
+	if v == nil {
+		return
+	}
+	v = Indirect(v)
 	if v == nil {
 		return
 	}
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
+	case reflect.Bool:
+		if rv.Bool() {
+			return 1, 0, 0, 'i', true
+		}
+		return 0, 0, 0, 'i', true
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return rv.Int(), 0, 0, 'i', true
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -2710,6 +2810,7 @@ func (e *DefaultEvaluator) equal(a, b interface{}) bool {
 	if cmp, ok := compareNumbers(a, b); ok {
 		return cmp == 0
 	}
+	a, b = basicValue(a), basicValue(b)
 	if a != nil && b != nil {
 		av, bv := reflect.ValueOf(a), reflect.ValueOf(b)
 		ak, bk := av.Kind(), bv.Kind()
@@ -2737,8 +2838,8 @@ func (e *DefaultEvaluator) less(a, b interface{}) (bool, error) {
 	}
 
 	// String comparison
-	if aStr, ok := a.(string); ok {
-		if bStr, ok := b.(string); ok {
+	if aStr, ok := basicValue(a).(string); ok {
+		if bStr, ok := basicValue(b).(string); ok {
 			return aStr < bStr, nil
 		}
 	}
@@ -2767,6 +2868,7 @@ func (e *DefaultEvaluator) greaterEqual(a, b interface{}) (bool, error) {
 }
 
 func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
+	container, item = basicValue(Indirect(container)), basicValue(Indirect(item))
 	switch v := container.(type) {
 	case string:
 		itemStr := e.fastToString(item)
@@ -2804,7 +2906,7 @@ func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
 				}
 			}
 			// Also check if item can be used as a key directly
-			if itemValue.IsValid() && itemValue.Type().AssignableTo(rv.Type().Key()) {
+			if itemValue.IsValid() && itemValue.Comparable() && itemValue.Type().AssignableTo(rv.Type().Key()) {
 				return rv.MapIndex(itemValue).IsValid(), nil
 			}
 			return false, nil
@@ -2954,6 +3056,19 @@ func (e *DefaultEvaluator) toInt(obj interface{}) (int, error) {
 	case string:
 		return strconv.Atoi(v)
 	default:
+		i, u, f, kind, ok := numericValue(obj)
+		if ok {
+			switch kind {
+			case 'i':
+				return int(i), nil
+			case 'u':
+				if u <= math.MaxInt {
+					return int(u), nil
+				}
+			case 'f':
+				return int(f), nil
+			}
+		}
 		return 0, fmt.Errorf("cannot convert %T to int", obj)
 	}
 }
@@ -2969,6 +3084,17 @@ func (e *DefaultEvaluator) toFloat(obj interface{}) (float64, error) {
 	case string:
 		return strconv.ParseFloat(v, 64)
 	default:
+		i, u, f, kind, ok := numericValue(obj)
+		if ok {
+			switch kind {
+			case 'i':
+				return float64(i), nil
+			case 'u':
+				return float64(u), nil
+			case 'f':
+				return f, nil
+			}
+		}
 		return 0, fmt.Errorf("cannot convert %T to float", obj)
 	}
 }
