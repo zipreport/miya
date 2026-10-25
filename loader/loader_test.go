@@ -593,7 +593,6 @@ func TestSecurityFeatures(t *testing.T) {
 		maliciousPaths := []string{
 			"../../../etc/passwd",
 			"..\\..\\..\\windows\\system32\\config\\sam",
-			"....//....//etc/passwd",
 			"/etc/passwd",
 			"./../../etc/passwd",
 		}
@@ -606,8 +605,15 @@ func TestSecurityFeatures(t *testing.T) {
 		}
 	})
 
+	t.Run("FourDotsIsOrdinaryName", func(t *testing.T) {
+		// "...." is an ordinary file name, not a traversal; it is rejected because it is not found
+		if _, err := loader.LoadTemplate("....//....//etc/passwd"); err == nil {
+			t.Error("Expected not-found error for four-dot path")
+		}
+	})
+
 	t.Run("SymlinkHandling", func(t *testing.T) {
-		// Test that symlinks are not followed by default
+		// An absolute symlink is rejected with followLinks=false, even when it points inside the folder
 		loader.SetFollowLinks(false)
 
 		// Create a symlink to a file within the template directory
@@ -620,7 +626,7 @@ func TestSecurityFeatures(t *testing.T) {
 		}
 
 		_, err := loader.LoadTemplate("symlink.html")
-		// Should fail because symlinks aren't followed by default
+		// Should fail: os.Root rejects absolute links
 		if err == nil {
 			t.Error("Expected error when accessing symlink with followLinks=false")
 		}

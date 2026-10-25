@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	"github.com/zipreport/miya/loader"
-	"github.com/zipreport/miya/parser"
 )
 
 func TestEnvironmentCreation(t *testing.T) {
@@ -36,7 +35,7 @@ func TestEnvironmentCreation(t *testing.T) {
 	})
 
 	t.Run("EnvironmentWithOptions", func(t *testing.T) {
-		stringLoader := loader.NewStringLoader(&mockParser{})
+		stringLoader := loader.NewStringLoader(nil)
 		env := NewEnvironment(
 			WithLoader(stringLoader),
 			WithAutoEscape(false),
@@ -190,7 +189,7 @@ func TestEnvironmentWithLoader(t *testing.T) {
 	}
 
 	// Create environment with filesystem loader
-	fsLoader := loader.NewFileSystemLoader([]string{tempDir}, &mockParser{})
+	fsLoader := loader.NewFileSystemLoader([]string{tempDir}, nil)
 	env := NewEnvironment(WithLoader(fsLoader))
 
 	t.Run("GetTemplate", func(t *testing.T) {
@@ -291,7 +290,7 @@ func TestEnvironmentRenderTemplate(t *testing.T) {
 	}
 
 	// Create environment with filesystem loader
-	fsLoader := loader.NewFileSystemLoader([]string{tempDir}, &mockParser{})
+	fsLoader := loader.NewFileSystemLoader([]string{tempDir}, nil)
 	env := NewEnvironment(WithLoader(fsLoader))
 
 	ctx := NewContextFrom(map[string]interface{}{
@@ -310,7 +309,7 @@ func TestEnvironmentRenderTemplate(t *testing.T) {
 
 func TestGlobalFunctions(t *testing.T) {
 	// Test global convenience functions
-	stringLoader := loader.NewStringLoader(&mockParser{})
+	stringLoader := loader.NewStringLoader(nil)
 	stringLoader.AddTemplate("global_test.html", "Hello Global")
 
 	SetDefaultLoader(stringLoader)
@@ -394,16 +393,6 @@ func TestEnvironmentAutoEscape(t *testing.T) {
 	if result != "<script>alert('xss')</script>" {
 		t.Errorf("Expected unescaped output, got '%s'", result)
 	}
-}
-
-// Mock parser for testing
-type mockParser struct{}
-
-func (m *mockParser) ParseTemplate(name, content string) (*parser.TemplateNode, error) {
-	return &parser.TemplateNode{
-		Name:     name,
-		Children: []parser.Node{&parser.TextNode{Content: content}},
-	}, nil
 }
 
 // Mock template parser implementation

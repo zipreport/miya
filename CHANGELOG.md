@@ -35,6 +35,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Recursive loops apply their `if` filter at every level.
 - A `for` loop in a template without a parent that calls `super()` keeps its `if` filter and `recursive` flag. (Under `{% extends %}`, the same needs plan 034's inheritance fixes.)
 - The `loop` object is no longer reused across loops and renders (a stored `loop` showed another loop's values, and concurrent renders raced on it); `AddGlobal`, `AddExtension` and `ConfigureInheritanceCache` no longer race with renders; an extension is visible only after its `OnLoad` succeeds; inheritance-cache cleanup and loader statistics are race-free; `NewTemplateCache` with a negative size no longer panics; `ConcurrentTemplateRenderer` no longer panics on a second `Stop`, rejects `RenderAsync` before `Start`, and answers jobs pending at `Stop`.
+- Templates from miya's loaders (`FileSystemLoader`, `EmbedLoader`, `StringLoader`, `ChainLoader`, `LRUFileSystemLoader`) are compiled with the environment's settings: `trim_blocks`, `lstrip_blocks`, `{{-`/`-}}`, custom delimiters and extensions used to be ignored for them (they were, and still are, honoured for GetSource-only loaders).
+- **Security:** `FileSystemLoader` with `followLinks` false (the default) reads templates through `os.Root`, so no path or symlink can leave the search path. Before, only a symlink in the last path component was rejected, so `linkdir/x.html` could read files outside the template folder (on Windows a directory junction was not detected at all).
+- Template names are checked per segment, like Jinja2's `split_template_path`: `a..b.html` is a valid name, any `..` segment is rejected (`a/../b` used to be accepted), and on POSIX a backslash is an ordinary character.
+- `LoadTemplate` on a loader without a parser returns an error instead of panicking.
+- `FileSystemLoader.LoadTemplate` re-parses a template whose file modification time changed. This affects direct `LoadTemplate` callers only: an `Environment` caches compiled templates itself and does not re-read files (use `ClearCache`/`InvalidateTemplate`).
 
 ### Changed
 
@@ -57,6 +62,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** `//` and `%` follow Python: they floor instead of truncating (`-7 // 2` is `-4`, `-7 % 3` is `2`), keep float operands (`7.5 % 2` is `1.5`, `10 // 0.3` is `33`), accept every Go numeric type, and reject strings (`"10" // 3` used to be `3`). With JSON data, where every number is a float, `n // 2` is now a float, so `(n // 2) is integer` is false, as in Jinja2.
 - **Breaking:** each for-loop iteration starts from the scope outside the loop, as in Jinja2: a `{% set %}` in the loop body no longer carries over to the next iteration, and a recursive `loop(...)` call no longer sees the calling iteration's `set`s. Use `namespace()` to accumulate across iterations.
 - **Breaking:** assigning an attribute (`{% set x.y = ... %}`) works only on `namespace()` objects, and item assignment (`{% set x[k] = ... %}`) is an error, as in Jinja2; templates can no longer modify the caller's maps, slices, structs, or Go values that merely have `Get`/`Set` methods (embed `runtime.NamespaceMarker` to opt a type in). `NewTemplateCache(0)` disables the cache and a negative size means unbounded.
+- **Breaking:** `Environment.GetTemplate` reads every template through `GetSource` and compiles it itself; an `AdvancedLoader`'s `LoadTemplate` is no longer used by the environment. Custom `AdvancedLoader`s must return the template text from `GetSource` for every name `LoadTemplate` accepts.
+- **Breaking:** a lexer configuration set on a loader's parser (`loader.NewDirectTemplateParserWithConfig`, `SetLexerConfig`) no longer affects rendering through an `Environment`. Set delimiters and whitespace options on the `Environment` instead.
+- **Breaking:** with `followLinks` false, a symlink inside the search path is followed only if it is relative and resolves inside the search path. An absolute symlink, or one that leaves the folder, is "template not found" (set `SetFollowLinks(true)` to follow every link, as before for directories). A relative symlinked *file* inside the folder is now accepted; it used to be rejected.
+- **Breaking:** in a `ChainLoader`, a template that exists in an earlier loader but does not compile is an error; it used to fall through to a later loader's copy.
+- `LRUFileSystemLoader`'s size and TTL bound only its own `LoadTemplate` cache; they do not bound what an `Environment` caches.
 
 ### Deprecated
 
