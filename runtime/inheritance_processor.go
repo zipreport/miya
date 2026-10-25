@@ -123,66 +123,19 @@ func (p *InheritanceProcessor) ResolveInheritance(template TemplateInterface, co
 
 // hasInheritanceDirectives checks if template contains {% extends %} directives or {{ super() }} calls
 func (p *InheritanceProcessor) hasInheritanceDirectives(node parser.Node) bool {
-	if node == nil {
-		return false
-	}
-
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		for _, child := range n.Children {
-			if p.hasInheritanceDirectives(child) {
-				return true
+	found := false
+	parser.WalkStatements([]parser.Node{node}, func(n parser.Node) bool {
+		switch n := n.(type) {
+		case *parser.ExtendsNode, *parser.SuperNode:
+			found = true
+		case *parser.VariableNode:
+			if _, isSuper := n.Expression.(*parser.SuperNode); isSuper {
+				found = true
 			}
 		}
-
-	case *parser.ExtendsNode:
-		return true
-
-	case *parser.SuperNode:
-		return true
-
-	case *parser.VariableNode:
-		// Check if this is {{ super() }} wrapped in VariableNode
-		if _, isSuperNode := n.Expression.(*parser.SuperNode); isSuperNode {
-			return true
-		}
-		// Recursively check the expression
-		if p.hasInheritanceDirectives(n.Expression) {
-			return true
-		}
-
-	case *parser.BlockNode:
-		for _, child := range n.Body {
-			if p.hasInheritanceDirectives(child) {
-				return true
-			}
-		}
-
-	case *parser.ForNode:
-		for _, child := range n.Body {
-			if p.hasInheritanceDirectives(child) {
-				return true
-			}
-		}
-
-	case *parser.IfNode:
-		for _, child := range n.Body {
-			if p.hasInheritanceDirectives(child) {
-				return true
-			}
-		}
-		for _, child := range n.Else {
-			if p.hasInheritanceDirectives(child) {
-				return true
-			}
-		}
-		for _, elseIf := range n.ElseIfs {
-			if p.hasInheritanceDirectives(elseIf) {
-				return true
-			}
-		}
-	}
-	return false
+		return !found
+	})
+	return found
 }
 
 // isSelfReferencingBlock checks if this is the same block (no real inheritance)
@@ -423,70 +376,19 @@ func (p *InheritanceProcessor) findExtendsTemplateWithContext(node parser.Node, 
 
 // extractBlocks extracts all block definitions from a template
 func (p *InheritanceProcessor) extractBlocks(node parser.Node, blockMap map[string]*parser.BlockNode) {
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		for _, child := range n.Children {
-			p.extractBlocks(child, blockMap)
+	parser.WalkStatements([]parser.Node{node}, func(n parser.Node) bool {
+		if block, ok := n.(*parser.BlockNode); ok {
+			if _, exists := blockMap[block.Name]; !exists {
+				blockMap[block.Name] = block
+			}
 		}
-	case *parser.BlockNode:
-		// Child blocks override parent blocks (first encountered wins)
-		if _, exists := blockMap[n.Name]; !exists {
-			blockMap[n.Name] = n
-		} else {
-		}
-		// Also recursively extract nested blocks within this block
-		for _, child := range n.Body {
-			p.extractBlocks(child, blockMap)
-		}
-	case *parser.IfNode:
-		for _, child := range n.Body {
-			p.extractBlocks(child, blockMap)
-		}
-		for _, child := range n.Else {
-			p.extractBlocks(child, blockMap)
-		}
-	case *parser.ForNode:
-		for _, child := range n.Body {
-			p.extractBlocks(child, blockMap)
-		}
-		for _, child := range n.Else {
-			p.extractBlocks(child, blockMap)
-		}
-	}
+		return true
+	})
 }
 
 // extractParentBlocks extracts blocks from parent templates, but only adds them if they don't override child blocks
 func (p *InheritanceProcessor) extractParentBlocks(node parser.Node, blockMap map[string]*parser.BlockNode) {
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		for _, child := range n.Children {
-			p.extractParentBlocks(child, blockMap)
-		}
-	case *parser.BlockNode:
-		// For parent templates, don't add blocks that already exist (child overrides take precedence)
-		if _, exists := blockMap[n.Name]; !exists {
-			blockMap[n.Name] = n
-		} else {
-		}
-		// Still process nested blocks
-		for _, child := range n.Body {
-			p.extractParentBlocks(child, blockMap)
-		}
-	case *parser.IfNode:
-		for _, child := range n.Body {
-			p.extractParentBlocks(child, blockMap)
-		}
-		for _, child := range n.Else {
-			p.extractParentBlocks(child, blockMap)
-		}
-	case *parser.ForNode:
-		for _, child := range n.Body {
-			p.extractParentBlocks(child, blockMap)
-		}
-		for _, child := range n.Else {
-			p.extractParentBlocks(child, blockMap)
-		}
-	}
+	p.extractBlocks(node, blockMap)
 }
 
 // buildFinalTemplate builds the final template by merging the inheritance hierarchy
@@ -549,144 +451,17 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 
 // cloneTemplateNode creates a deep copy of a template node
 func (p *InheritanceProcessor) cloneTemplateNode(template *parser.TemplateNode) *parser.TemplateNode {
-	clone := &parser.TemplateNode{
-		Name:     template.Name,
-		Children: make([]parser.Node, len(template.Children)),
-	}
-
-	for i, child := range template.Children {
-		clone.Children[i] = p.cloneNode(child)
-	}
-
-	return clone
+	return parser.CloneStatement(template).(*parser.TemplateNode)
 }
 
 // cloneNode creates a deep copy of any parser node
 func (p *InheritanceProcessor) cloneNode(node parser.Node) parser.Node {
-	switch n := node.(type) {
-	case *parser.TextNode:
-		return &parser.TextNode{Content: n.Content}
-	case *parser.VariableNode:
-		return &parser.VariableNode{Expression: n.Expression}
-	case *parser.BlockNode:
-		clone := &parser.BlockNode{
-			Name: n.Name,
-			Body: make([]parser.Node, len(n.Body)),
-		}
-		for i, child := range n.Body {
-			clone.Body[i] = p.cloneNode(child)
-		}
-		return clone
-	case *parser.ExtendsNode:
-		return &parser.ExtendsNode{Template: n.Template}
-	case *parser.FromNode:
-		return &parser.FromNode{Template: n.Template, Names: n.Names, Aliases: n.Aliases, WithContext: n.WithContext}
-	case *parser.ImportNode:
-		return &parser.ImportNode{Template: n.Template, Alias: n.Alias, WithContext: n.WithContext}
-	case *parser.IfNode:
-		clone := &parser.IfNode{
-			Condition: n.Condition,
-			Body:      make([]parser.Node, len(n.Body)),
-			Else:      make([]parser.Node, len(n.Else)),
-		}
-		for i, child := range n.Body {
-			clone.Body[i] = p.cloneNode(child)
-		}
-		for i, child := range n.Else {
-			clone.Else[i] = p.cloneNode(child)
-		}
-		return clone
-	case *parser.ForNode:
-		clone := &parser.ForNode{
-			Variables: n.Variables,
-			Iterable:  n.Iterable,
-			Body:      make([]parser.Node, len(n.Body)),
-			Else:      make([]parser.Node, len(n.Else)),
-		}
-		for i, child := range n.Body {
-			clone.Body[i] = p.cloneNode(child)
-		}
-		for i, child := range n.Else {
-			clone.Else[i] = p.cloneNode(child)
-		}
-		return clone
-	default:
-		// For unknown node types, return as-is (risky but functional)
-		return node
-	}
+	return parser.CloneStatement(node)
 }
 
 // replaceBlocks recursively replaces block nodes with their overridden versions
 func (p *InheritanceProcessor) replaceBlocks(node parser.Node, blockMap map[string]*parser.BlockNode, context Context) error {
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		for i, child := range n.Children {
-			if blockNode, ok := child.(*parser.BlockNode); ok {
-
-				// Check if this block has an override
-				if overriddenBlock, exists := blockMap[blockNode.Name]; exists {
-					n.Children[i] = p.cloneNode(overriddenBlock)
-				} else {
-					// Process this block's contents recursively to handle nested overrides
-					err := p.replaceBlocks(blockNode, blockMap, context)
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				// Recursively process child nodes
-				err := p.replaceBlocks(child, blockMap, context)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	case *parser.IfNode:
-		for _, child := range n.Body {
-			if err := p.replaceBlocks(child, blockMap, context); err != nil {
-				return err
-			}
-		}
-		for _, child := range n.Else {
-			if err := p.replaceBlocks(child, blockMap, context); err != nil {
-				return err
-			}
-		}
-	case *parser.ForNode:
-		for _, child := range n.Body {
-			if err := p.replaceBlocks(child, blockMap, context); err != nil {
-				return err
-			}
-		}
-		for _, child := range n.Else {
-			if err := p.replaceBlocks(child, blockMap, context); err != nil {
-				return err
-			}
-		}
-	case *parser.BlockNode:
-		// Process block contents recursively for nested block replacements
-		for i, child := range n.Body {
-			if blockNode, ok := child.(*parser.BlockNode); ok {
-				// Check if this nested block has an override
-				if overriddenBlock, exists := blockMap[blockNode.Name]; exists {
-					n.Body[i] = p.cloneNode(overriddenBlock)
-				} else {
-					// Recursively process this nested block
-					err := p.replaceBlocks(blockNode, blockMap, context)
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				// Recursively process other child nodes
-				err := p.replaceBlocks(child, blockMap, context)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	}
-	return nil
+	return p.applyOverridesRecursive(node, blockMap)
 }
 
 // applyBlockOverrides applies child template block overrides to the base template structure
@@ -718,29 +493,15 @@ func (p *InheritanceProcessor) collectChildOverrides(template *parser.TemplateNo
 
 // collectOverridesRecursive recursively collects block overrides
 func (p *InheritanceProcessor) collectOverridesRecursive(node parser.Node, overrides map[string]*parser.BlockNode) {
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		for _, child := range n.Children {
-			p.collectOverridesRecursive(child, overrides)
+	parser.WalkStatements([]parser.Node{node}, func(n parser.Node) bool {
+		if block, ok := n.(*parser.BlockNode); ok {
+			// Every block of a child is an override, nested ones included,
+			// as in Jinja2
+			overrides[block.Name] = block
+			return true
 		}
-	case *parser.BlockNode:
-		overrides[n.Name] = n
-		// Don't recurse into block body - we want the block as a complete override
-	case *parser.IfNode:
-		for _, child := range n.Body {
-			p.collectOverridesRecursive(child, overrides)
-		}
-		for _, child := range n.Else {
-			p.collectOverridesRecursive(child, overrides)
-		}
-	case *parser.ForNode:
-		for _, child := range n.Body {
-			p.collectOverridesRecursive(child, overrides)
-		}
-		for _, child := range n.Else {
-			p.collectOverridesRecursive(child, overrides)
-		}
-	}
+		return true
+	})
 }
 
 // applyOverridesToTemplate applies block overrides to template structure
@@ -750,67 +511,15 @@ func (p *InheritanceProcessor) applyOverridesToTemplate(template *parser.Templat
 
 // applyOverridesRecursive recursively applies block overrides
 func (p *InheritanceProcessor) applyOverridesRecursive(node parser.Node, overrides map[string]*parser.BlockNode) error {
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		for i, child := range n.Children {
-			if blockNode, ok := child.(*parser.BlockNode); ok {
-				if override, exists := overrides[blockNode.Name]; exists {
-					n.Children[i] = p.cloneNode(override)
-				} else {
-					// No override, recurse into block to handle nested blocks
-					err := p.applyOverridesRecursive(blockNode, overrides)
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				err := p.applyOverridesRecursive(child, overrides)
-				if err != nil {
-					return err
+	for _, body := range parser.ChildBodies(node) {
+		for i, child := range *body {
+			if block, ok := child.(*parser.BlockNode); ok {
+				if override, exists := overrides[block.Name]; exists {
+					(*body)[i] = parser.CloneStatement(override)
+					continue
 				}
 			}
-		}
-	case *parser.BlockNode:
-		for i, child := range n.Body {
-			if blockNode, ok := child.(*parser.BlockNode); ok {
-				if override, exists := overrides[blockNode.Name]; exists {
-					n.Body[i] = p.cloneNode(override)
-				} else {
-					err := p.applyOverridesRecursive(blockNode, overrides)
-					if err != nil {
-						return err
-					}
-				}
-			} else {
-				err := p.applyOverridesRecursive(child, overrides)
-				if err != nil {
-					return err
-				}
-			}
-		}
-	case *parser.IfNode:
-		for _, child := range n.Body {
-			err := p.applyOverridesRecursive(child, overrides)
-			if err != nil {
-				return err
-			}
-		}
-		for _, child := range n.Else {
-			err := p.applyOverridesRecursive(child, overrides)
-			if err != nil {
-				return err
-			}
-		}
-	case *parser.ForNode:
-		for _, child := range n.Body {
-			err := p.applyOverridesRecursive(child, overrides)
-			if err != nil {
-				return err
-			}
-		}
-		for _, child := range n.Else {
-			err := p.applyOverridesRecursive(child, overrides)
-			if err != nil {
+			if err := p.applyOverridesRecursive(child, overrides); err != nil {
 				return err
 			}
 		}

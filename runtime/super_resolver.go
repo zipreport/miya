@@ -55,94 +55,33 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 		// Not a super call - return as-is
 		return node, nil
 
-	case *parser.TemplateNode:
-		// Process all children in template
-		newChildren := make([]parser.Node, len(n.Children))
-		for i, child := range n.Children {
-			resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth)
-			if err != nil {
-				return nil, err
-			}
-			newChildren[i] = resolved
-		}
-
-		return &parser.TemplateNode{
-			Name:     n.Name,
-			Children: newChildren,
-		}, nil
-
 	case *parser.BlockNode:
 		// Process block contents with the block name as context
-		newBody := make([]parser.Node, len(n.Body))
-		for i, child := range n.Body {
+		block := parser.CloneStatement(n).(*parser.BlockNode)
+		for i, child := range block.Body {
 			resolved, err := s.resolveSuperCallsRecursive(child, n.Name, depth)
 			if err != nil {
 				return nil, err
 			}
-			newBody[i] = resolved
+			block.Body[i] = resolved
 		}
-
-		return &parser.BlockNode{
-			Name: n.Name,
-			Body: newBody,
-		}, nil
-
-	case *parser.IfNode:
-		// Process if statement bodies
-		newBody := make([]parser.Node, len(n.Body))
-		for i, child := range n.Body {
-			resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth)
-			if err != nil {
-				return nil, err
-			}
-			newBody[i] = resolved
-		}
-
-		newElse := make([]parser.Node, len(n.Else))
-		for i, child := range n.Else {
-			resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth)
-			if err != nil {
-				return nil, err
-			}
-			newElse[i] = resolved
-		}
-
-		return &parser.IfNode{
-			Condition: n.Condition,
-			Body:      newBody,
-			Else:      newElse,
-		}, nil
-
-	case *parser.ForNode:
-		// Process for loop bodies
-		newBody := make([]parser.Node, len(n.Body))
-		for i, child := range n.Body {
-			resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth)
-			if err != nil {
-				return nil, err
-			}
-			newBody[i] = resolved
-		}
-
-		newElse := make([]parser.Node, len(n.Else))
-		for i, child := range n.Else {
-			resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth)
-			if err != nil {
-				return nil, err
-			}
-			newElse[i] = resolved
-		}
-
-		return &parser.ForNode{
-			Variables: n.Variables,
-			Iterable:  n.Iterable,
-			Body:      newBody,
-			Else:      newElse,
-		}, nil
+		return block, nil
 
 	default:
-		// For other node types, return as-is (no super() calls possible)
-		return node, nil
+		if len(parser.ChildBodies(node)) == 0 {
+			return node, nil
+		}
+		clone := parser.CloneStatement(node)
+		for _, body := range parser.ChildBodies(clone) {
+			for i, child := range *body {
+				resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth)
+				if err != nil {
+					return nil, err
+				}
+				(*body)[i] = resolved
+			}
+		}
+		return clone, nil
 	}
 }
 
@@ -238,48 +177,14 @@ func (s *SuperResolver) findBlockInTemplate(template *parser.TemplateNode, block
 
 // findBlockRecursive recursively searches for a block in AST nodes
 func (s *SuperResolver) findBlockRecursive(node parser.Node, blockName string) *parser.BlockNode {
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		for _, child := range n.Children {
-			if block := s.findBlockRecursive(child, blockName); block != nil {
-				return block
-			}
+	var found *parser.BlockNode
+	parser.WalkStatements([]parser.Node{node}, func(n parser.Node) bool {
+		if block, ok := n.(*parser.BlockNode); ok && block.Name == blockName {
+			found = block
 		}
-	case *parser.BlockNode:
-		if n.Name == blockName {
-			return n
-		}
-		// Also check nested blocks
-		for _, child := range n.Body {
-			if block := s.findBlockRecursive(child, blockName); block != nil {
-				return block
-			}
-		}
-	case *parser.IfNode:
-		for _, child := range n.Body {
-			if block := s.findBlockRecursive(child, blockName); block != nil {
-				return block
-			}
-		}
-		for _, child := range n.Else {
-			if block := s.findBlockRecursive(child, blockName); block != nil {
-				return block
-			}
-		}
-	case *parser.ForNode:
-		for _, child := range n.Body {
-			if block := s.findBlockRecursive(child, blockName); block != nil {
-				return block
-			}
-		}
-		for _, child := range n.Else {
-			if block := s.findBlockRecursive(child, blockName); block != nil {
-				return block
-			}
-		}
-	}
-
-	return nil
+		return found == nil
+	})
+	return found
 }
 
 // cloneNodeForSuper creates a deep copy of a node for super() resolution
@@ -311,68 +216,8 @@ func (s *SuperResolver) cloneNodeForSuper(node parser.Node) (parser.Node, error)
 			Children: clonedChildren,
 		}, nil
 
-	case *parser.TextNode:
-		return &parser.TextNode{Content: n.Content}, nil
-
-	case *parser.VariableNode:
-		if _, isSuperNode := n.Expression.(*parser.SuperNode); isSuperNode {
-		}
-		return &parser.VariableNode{Expression: n.Expression}, nil
-
-	case *parser.IfNode:
-		clonedBody := make([]parser.Node, len(n.Body))
-		for i, child := range n.Body {
-			cloned, err := s.cloneNodeForSuper(child)
-			if err != nil {
-				return nil, err
-			}
-			clonedBody[i] = cloned
-		}
-
-		clonedElse := make([]parser.Node, len(n.Else))
-		for i, child := range n.Else {
-			cloned, err := s.cloneNodeForSuper(child)
-			if err != nil {
-				return nil, err
-			}
-			clonedElse[i] = cloned
-		}
-
-		return &parser.IfNode{
-			Condition: n.Condition,
-			Body:      clonedBody,
-			Else:      clonedElse,
-		}, nil
-
-	case *parser.ForNode:
-		clonedBody := make([]parser.Node, len(n.Body))
-		for i, child := range n.Body {
-			cloned, err := s.cloneNodeForSuper(child)
-			if err != nil {
-				return nil, err
-			}
-			clonedBody[i] = cloned
-		}
-
-		clonedElse := make([]parser.Node, len(n.Else))
-		for i, child := range n.Else {
-			cloned, err := s.cloneNodeForSuper(child)
-			if err != nil {
-				return nil, err
-			}
-			clonedElse[i] = cloned
-		}
-
-		return &parser.ForNode{
-			Variables: n.Variables,
-			Iterable:  n.Iterable,
-			Body:      clonedBody,
-			Else:      clonedElse,
-		}, nil
-
 	default:
-		// For unknown types, return as-is
-		return node, nil
+		return parser.CloneStatement(node), nil
 	}
 }
 
@@ -389,63 +234,11 @@ func (s *SuperResolver) ProcessTemplateWithSuperCalls(template *parser.TemplateN
 
 // resolveTemplateWithBlockContext processes template while maintaining block context
 func (s *SuperResolver) resolveTemplateWithBlockContext(template *parser.TemplateNode) (*parser.TemplateNode, error) {
-	// Clone the template
-	newTemplate := &parser.TemplateNode{
-		Name:     template.Name,
-		Children: make([]parser.Node, len(template.Children)),
+	resolved, err := s.resolveSuperCallsRecursive(template, "", 0)
+	if err != nil {
+		return nil, err
 	}
-
-	// Process each child node
-	for i, child := range template.Children {
-		resolvedChild, err := s.resolveNodeWithBlockContext(child, "")
-		if err != nil {
-			return nil, err
-		}
-		newTemplate.Children[i] = resolvedChild
-	}
-
-	return newTemplate, nil
-}
-
-// resolveNodeWithBlockContext processes a node while tracking block context
-func (s *SuperResolver) resolveNodeWithBlockContext(node parser.Node, currentBlockName string) (parser.Node, error) {
-	if node == nil {
-		return nil, nil
-	}
-
-	switch n := node.(type) {
-	case *parser.BlockNode:
-		// Process block content with the block name as context
-		newBody := make([]parser.Node, len(n.Body))
-		for i, child := range n.Body {
-			resolvedChild, err := s.resolveNodeWithBlockContext(child, n.Name)
-			if err != nil {
-				return nil, err
-			}
-			newBody[i] = resolvedChild
-		}
-
-		return &parser.BlockNode{
-			Name: n.Name,
-			Body: newBody,
-		}, nil
-
-	case *parser.SuperNode:
-		// Resolve super() call with current block context
-		return s.resolveSuperCall(currentBlockName, 0)
-
-	case *parser.VariableNode:
-		// Check if this is {{ super() }} wrapped in VariableNode
-		if _, isSuperNode := n.Expression.(*parser.SuperNode); isSuperNode {
-			return s.resolveSuperCall(currentBlockName, 0)
-		}
-		// For other variable nodes, return as-is
-		return node, nil
-
-	default:
-		// For other node types, return as-is or process recursively if needed
-		return node, nil
-	}
+	return resolved.(*parser.TemplateNode), nil
 }
 
 // SuperCallDetector checks if a node contains super() calls
@@ -463,55 +256,17 @@ func (d *SuperCallDetector) HasSuperCalls(node parser.Node) bool {
 
 // hasSuperCallsRecursive recursively checks for super() calls
 func (d *SuperCallDetector) hasSuperCallsRecursive(node parser.Node) bool {
-	switch n := node.(type) {
-	case *parser.SuperNode:
-		return true
-
-	case *parser.VariableNode:
-		// Check if this is {{ super() }} or {{ super }} wrapped in VariableNode
-		if _, isSuperNode := n.Expression.(*parser.SuperNode); isSuperNode {
-			return true
-		}
-		return false
-
-	case *parser.TemplateNode:
-		for _, child := range n.Children {
-			if d.hasSuperCallsRecursive(child) {
-				return true
+	found := false
+	parser.WalkStatements([]parser.Node{node}, func(n parser.Node) bool {
+		switch n := n.(type) {
+		case *parser.SuperNode:
+			found = true
+		case *parser.VariableNode:
+			if _, isSuper := n.Expression.(*parser.SuperNode); isSuper {
+				found = true
 			}
 		}
-
-	case *parser.BlockNode:
-		for _, child := range n.Body {
-			if d.hasSuperCallsRecursive(child) {
-				return true
-			}
-		}
-
-	case *parser.IfNode:
-		for _, child := range n.Body {
-			if d.hasSuperCallsRecursive(child) {
-				return true
-			}
-		}
-		for _, child := range n.Else {
-			if d.hasSuperCallsRecursive(child) {
-				return true
-			}
-		}
-
-	case *parser.ForNode:
-		for _, child := range n.Body {
-			if d.hasSuperCallsRecursive(child) {
-				return true
-			}
-		}
-		for _, child := range n.Else {
-			if d.hasSuperCallsRecursive(child) {
-				return true
-			}
-		}
-	}
-
-	return false
+		return !found
+	})
+	return found
 }
