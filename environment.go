@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"hash/fnv"
 	"runtime/debug"
-	"strings"
 	"sync"
 	"time"
 
@@ -17,7 +16,6 @@ import (
 	"github.com/zipreport/miya/macros"
 	"github.com/zipreport/miya/parser"
 	"github.com/zipreport/miya/runtime"
-	"github.com/zipreport/miya/whitespace"
 )
 
 // Environment is the central configuration object for template compilation and rendering.
@@ -40,7 +38,6 @@ type Environment struct {
 	inheritanceResolver *inheritance.InheritanceResolver
 	macroRegistry       *macros.MacroRegistry
 	testRegistry        *branching.TestRegistry
-	whitespaceProcessor *whitespace.WhitespaceProcessor
 	extensionRegistry   *extensions.Registry
 	globals             map[string]interface{}
 	globalsMu           sync.RWMutex
@@ -90,18 +87,17 @@ func NewEnvironment(opts ...EnvironmentOption) *Environment {
 	inheritanceCache := runtime.NewInheritanceCache()
 
 	env := &Environment{
-		filterRegistry:      filters.NewRegistry(),
-		macroRegistry:       macros.NewMacroRegistry(),
-		testRegistry:        branching.NewTestRegistry(),
-		whitespaceProcessor: whitespace.NewWhitespaceProcessor(false, false, false),
-		extensionRegistry:   extensions.NewRegistry(),
-		globals:             make(map[string]interface{}),
-		tests:               make(map[string]TestFunc), // deprecated
-		cache:               make(map[string]*Template),
-		inheritanceCache:    inheritanceCache,
-		extensionConfig:     make(map[string]interface{}),
-		autoEscape:          true,
-		undefinedBehavior:   runtime.UndefinedSilent, // Default to silent undefined
+		filterRegistry:    filters.NewRegistry(),
+		macroRegistry:     macros.NewMacroRegistry(),
+		testRegistry:      branching.NewTestRegistry(),
+		extensionRegistry: extensions.NewRegistry(),
+		globals:           make(map[string]interface{}),
+		tests:             make(map[string]TestFunc), // deprecated
+		cache:             make(map[string]*Template),
+		inheritanceCache:  inheritanceCache,
+		extensionConfig:   make(map[string]interface{}),
+		autoEscape:        true,
+		undefinedBehavior: runtime.UndefinedSilent, // Default to silent undefined
 
 		varStartString:     "{{",
 		varEndString:       "}}",
@@ -127,13 +123,6 @@ func NewEnvironment(opts ...EnvironmentOption) *Environment {
 	// Initialize shared import system (reused across renders)
 	templateLoader := runtime.NewSimpleTemplateLoader(env)
 	env.importSystem = runtime.NewImportSystem(templateLoader, nil)
-
-	// Update whitespace processor with final settings
-	env.whitespaceProcessor = whitespace.NewWhitespaceProcessor(
-		env.trimBlocks,
-		env.lstripBlocks,
-		env.keepTrailingNewline,
-	)
 
 	// Create inheritance resolver if we have a loader
 	if env.loader != nil {
@@ -181,21 +170,6 @@ func (e *Environment) GetTemplate(name string) (*Template, error) {
 	e.cacheMutex.Unlock()
 
 	return tmpl, nil
-}
-
-// hasInlineWhitespaceControl checks if template contains inline whitespace control syntax
-func (e *Environment) hasInlineWhitespaceControl(source string) bool {
-	// Fast path: if no '-' exists, no whitespace control syntax is present
-	if strings.IndexByte(source, '-') == -1 {
-		return false
-	}
-	// Only do detailed checks if '-' was found
-	return strings.Contains(source, "{%-") ||
-		strings.Contains(source, "-%}") ||
-		strings.Contains(source, "{{-") ||
-		strings.Contains(source, "-}}") ||
-		strings.Contains(source, "{#-") ||
-		strings.Contains(source, "-#}")
 }
 
 // FromString compiles a template from a string source.
@@ -734,34 +708,6 @@ func (e *Environment) RenderTemplate(name string, context Context) (string, erro
 		return "", err
 	}
 	return template.Render(context)
-}
-
-// applyBlockTrimming applies block trimming rules to output
-func (e *Environment) applyBlockTrimming(output string) string {
-	if !e.trimBlocks && !e.lstripBlocks {
-		return output
-	}
-
-	lines := strings.Split(output, "\n")
-	for i := 0; i < len(lines); i++ {
-		line := lines[i]
-		if e.lstripBlocks {
-			// Remove leading whitespace from lines that start with block tags
-			if strings.Contains(line, e.blockStartString) {
-				lines[i] = strings.TrimLeft(line, " \t")
-			}
-		}
-		if e.trimBlocks {
-			// Remove trailing newline after block tags
-			if strings.Contains(line, e.blockEndString) {
-				if i < len(lines)-1 && lines[i+1] == "" {
-					lines = append(lines[:i+1], lines[i+2:]...)
-				}
-			}
-		}
-	}
-
-	return strings.Join(lines, "\n")
 }
 
 // loaderAdapter adapts loader.Loader to inheritance.TemplateLoader interface

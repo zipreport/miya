@@ -5,19 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"regexp"
 	"runtime/debug"
-	"strings"
 	"sync"
 
 	"github.com/zipreport/miya/parser"
 	"github.com/zipreport/miya/runtime"
-)
-
-// Pre-compiled regexes for performance (Phase 3a optimization)
-var (
-	htmlOptionRegex = regexp.MustCompile(`(?s)(<option[^>]*>)(.*?)(</option>)`)
-	whitespaceRegex = regexp.MustCompile(`\s+`)
 )
 
 // Template is a compiled template ready for rendering.
@@ -41,7 +33,7 @@ type Template struct {
 var ErrRenderPanic = errors.New("miya: recovered panic during render")
 
 // Render executes the template with the given context and returns the rendered output as a string.
-// It resolves template inheritance, applies whitespace processing, and handles auto-escaping.
+// It resolves template inheritance and handles auto-escaping; its output equals RenderTo's.
 func (t *Template) Render(context Context) (output string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -191,26 +183,6 @@ func (t *Template) Source() string {
 // AST returns the parsed abstract syntax tree of the template.
 func (t *Template) AST() parser.Node {
 	return t.ast
-}
-
-// normalizeHTMLOptionWhitespace compresses whitespace within HTML option elements
-func normalizeHTMLOptionWhitespace(html string) string {
-	// Use pre-compiled regex (Phase 3a optimization)
-	return htmlOptionRegex.ReplaceAllStringFunc(html, func(match string) string {
-		parts := htmlOptionRegex.FindStringSubmatch(match)
-		if len(parts) != 4 {
-			return match
-		}
-
-		openTag := parts[1]
-		content := parts[2]
-		closeTag := parts[3]
-
-		// Use pre-compiled whitespace regex (Phase 3a optimization)
-		normalized := whitespaceRegex.ReplaceAllString(strings.TrimSpace(content), " ")
-
-		return openTag + normalized + closeTag
-	})
 }
 
 // GetASTAsTemplateNode returns the AST as a TemplateNode for inheritance processing

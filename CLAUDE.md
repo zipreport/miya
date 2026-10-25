@@ -70,7 +70,6 @@ Template Source → Lexer → Parser → AST → Runtime Evaluator → Output
 | `inheritance/` | Template inheritance (`{% extends %}`, `{% block %}`) |
 | `macros/` | Macro definition and invocation |
 | `extensions/` | Custom tag/extension system |
-| `whitespace/` | Whitespace control processing |
 
 ### Key Types
 

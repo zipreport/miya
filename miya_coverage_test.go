@@ -526,40 +526,6 @@ func TestCapitalizeFirst(t *testing.T) {
 	}
 }
 
-// TestNormalizeHTMLOptionWhitespace tests HTML option whitespace normalization
-func TestNormalizeHTMLOptionWhitespace(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "option with extra whitespace",
-			input:    "<option value=\"1\">  Option   One  </option>",
-			expected: "<option value=\"1\">Option One</option>",
-		},
-		{
-			name:     "option with newlines",
-			input:    "<option value=\"2\">\n  Option Two\n</option>",
-			expected: "<option value=\"2\">Option Two</option>",
-		},
-		{
-			name:     "no options",
-			input:    "<div>Hello World</div>",
-			expected: "<div>Hello World</div>",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := normalizeHTMLOptionWhitespace(tt.input)
-			if result != tt.expected {
-				t.Errorf("normalizeHTMLOptionWhitespace(%q) = %q, expected %q", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
-
 // Benchmark tests
 func BenchmarkContextOperations(b *testing.B) {
 	ctx := NewContext()
