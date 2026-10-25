@@ -6,12 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `miya.ErrRenderPanic`, wrapped by the error `Render`, `RenderTo` and `Environment.CallMacro` return when they recover from a panic.
+
 ### Fixed
 
+- Bad data and malformed templates return errors instead of panicking or crashing the process: `nil` in `+`, `+` on lists of different element types, nil functions (called or iterated), `{% extends %}` with a non-string (also in a parent template), mismatched `-%}`/`-}}`, negative `truncate`/`truncatehtml` length, huge `center`/`pad_left`/`pad_right`/`indent`/`batch` sizes, NaN and infinite `currency`, a crash in the trim-blocks pass, and templates nested more than 500 levels deep (previously a fatal stack overflow). `Render`, `RenderTo` and `CallMacro` recover any other panic as an error wrapping `ErrRenderPanic`; `inheritance.InheritanceEvaluator` does not.
 - `Template.Release()` no longer corrupts cached templates. A released `FromString` template used to render its raw source, a released `GetTemplate` template rendered nothing, and releasing a base template changed its children's output.
 
 ### Changed
 
+- **Breaking:** `range()` over more than 1,000,000 items, `lipsum()` over 1000 paragraphs or sentences, list `+` producing more than 10,000,000 items, `batch` filling past 1,000,000 items, padding filters past 64 MiB and `indent` output past 64 MiB return an error; templates nested deeper than 500 levels fail to parse. A parent template whose `{% extends %}` is not a string literal is an error (it used to look up a template named `<<DYNAMIC>>`). These limits stop single huge allocations; they do not bound a render's memory or time.
 - `Template.Release()` now removes the template from the environment's template cache and leaves it usable. A later `FromString`/`GetTemplate` of the same source or name parses it again. The parser no longer pools AST nodes.
 
 ### Deprecated
