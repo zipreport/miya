@@ -116,6 +116,9 @@ func (nw *NamespaceWrapper) SetAttr(name string, value interface{}) error {
 	return nil
 }
 
+// maxRangeLength bounds the number of items range() will materialise.
+const maxRangeLength = 1000000
+
 // rangeFunction implements the range() global function
 // It generates a sequence of numbers similar to Python's range()
 func rangeFunction(args ...interface{}) (interface{}, error) {
@@ -144,16 +147,33 @@ func rangeFunction(args ...interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("range() takes 1 to 3 arguments, got %d", len(args))
 	}
 
+	// Compute the length before allocating, using unsigned arithmetic so
+	// extreme bounds cannot overflow into a small number.
+	var n uint64
+	if step > 0 && stop > start {
+		d := uint64(stop) - uint64(start)
+		n = d / uint64(step)
+		if d%uint64(step) != 0 {
+			n++
+		}
+	} else if step < 0 && stop < start {
+		d := uint64(start) - uint64(stop)
+		m := -uint64(int64(step))
+		n = d / m
+		if d%m != 0 {
+			n++
+		}
+	}
+	if n > maxRangeLength {
+		return nil, fmt.Errorf("range() too large: %d items (limit %d)", n, maxRangeLength)
+	}
+
 	// Generate the sequence
-	var result []interface{}
-	if step > 0 {
-		for i := start; i < stop; i += step {
-			result = append(result, i)
-		}
-	} else {
-		for i := start; i > stop; i += step {
-			result = append(result, i)
-		}
+	result := make([]interface{}, 0, n)
+	i := start
+	for k := uint64(0); k < n; k++ {
+		result = append(result, i)
+		i += step
 	}
 
 	return result, nil
@@ -249,6 +269,10 @@ func lipsumFunction(args ...interface{}) (interface{}, error) {
 		if max, ok := args[3].(int); ok {
 			maxSentences = max
 		}
+	}
+
+	if paragraphs > 1000 || minSentences > 1000 || maxSentences > 1000 {
+		return nil, fmt.Errorf("lipsum() too large")
 	}
 
 	// Lorem ipsum words
