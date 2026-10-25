@@ -3,7 +3,6 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"html"
 	"math"
 	"reflect"
 	"strconv"
@@ -357,9 +356,7 @@ func (e *DefaultEvaluator) EvalVariableNode(node *parser.VariableNode, ctx Conte
 		}
 	} else if autoCtx, ok := ctx.(AutoescapeContext); ok && autoCtx.IsAutoescapeEnabled() {
 		// Fallback to old interface for backward compatibility
-		if str, ok := result.(string); ok {
-			return html.EscapeString(str), nil
-		}
+		return escapeOutput(result), nil
 	}
 
 	return result, nil
@@ -3110,6 +3107,11 @@ type autoescapeContext struct {
 // IsAutoescapeEnabled returns whether autoescape is enabled in this context
 func (ac *autoescapeContext) IsAutoescapeEnabled() bool {
 	return ac.autoescape
+}
+
+// Clone keeps the block's autoescape setting for loops and with-blocks inside it.
+func (ac *autoescapeContext) Clone() Context {
+	return &autoescapeContext{Context: ac.Context.Clone(), autoescape: ac.autoescape}
 }
 
 // AutoescapeContext interface for contexts that support autoescape state
