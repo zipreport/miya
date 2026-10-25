@@ -461,6 +461,9 @@ func CurrencyFilter(value interface{}, args ...interface{}) (interface{}, error)
 	if err != nil {
 		return nil, fmt.Errorf("currency filter requires a number: %v", err)
 	}
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return nil, fmt.Errorf("currency filter requires a finite number")
+	}
 
 	// Format with specified decimals
 	formatted := fmt.Sprintf("%."+fmt.Sprintf("%d", decimals)+"f", f)

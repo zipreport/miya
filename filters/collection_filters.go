@@ -435,6 +435,9 @@ func SliceFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	}
 }
 
+// maxBatchFill bounds the number of items a batch filter will pad to.
+const maxBatchFill = 1000000
+
 // BatchFilter creates batches of items
 func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	if len(args) < 1 {
@@ -455,6 +458,10 @@ func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		fillWith = args[1]
 	}
 
+	if fillWith != nil && size > maxBatchFill {
+		return nil, fmt.Errorf("batch size too large to fill")
+	}
+
 	switch v := value.(type) {
 	case []interface{}:
 		var batches [][]interface{}
@@ -465,16 +472,14 @@ func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
 				end = len(v)
 			}
 
-			batch := make([]interface{}, size)
+			batch := make([]interface{}, end-i, end-i)
 			copy(batch, v[i:end])
 
 			// Fill remaining slots if needed
 			if fillWith != nil {
-				for j := end - i; j < size; j++ {
-					batch[j] = fillWith
+				for len(batch) < size {
+					batch = append(batch, fillWith)
 				}
-			} else {
-				batch = batch[:end-i]
 			}
 
 			batches = append(batches, batch)

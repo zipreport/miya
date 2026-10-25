@@ -145,6 +145,9 @@ func TruncateFilter(value interface{}, args ...interface{}) (interface{}, error)
 	if err != nil {
 		return nil, fmt.Errorf("truncate length must be integer: %v", err)
 	}
+	if length < 0 {
+		return nil, fmt.Errorf("truncate length must not be negative")
+	}
 
 	killwords := false
 	end := "..."
@@ -242,6 +245,19 @@ func WordwrapFilter(value interface{}, args ...interface{}) (interface{}, error)
 	return strings.Join(lines, wrapString), nil
 }
 
+// maxRepeatBytes bounds the padding a template can ask a filter to build.
+const maxRepeatBytes = 64 << 20
+
+func repeatBounded(s string, count int) (string, error) {
+	if count <= 0 {
+		return "", nil
+	}
+	if len(s) > 0 && count > maxRepeatBytes/len(s) {
+		return "", fmt.Errorf("filter output too large")
+	}
+	return strings.Repeat(s, count), nil
+}
+
 // CenterFilter centers string in field of given width
 func CenterFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	if len(args) < 1 {
@@ -269,10 +285,13 @@ func CenterFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 	padding := width - sLen
 	leftPad := padding / 2
-	rightPad := padding - leftPad
 
-	result := strings.Repeat(fillchar, leftPad) + s + strings.Repeat(fillchar, rightPad)
-	return result, nil
+	pad, err := repeatBounded(fillchar, padding)
+	if err != nil {
+		return nil, err
+	}
+	split := leftPad * len(fillchar)
+	return pad[:split] + s + pad[split:], nil
 }
 
 // IndentFilter indents each line
@@ -298,7 +317,13 @@ func IndentFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	}
 
 	lines := strings.Split(s, "\n")
-	prefix := strings.Repeat(indentString, width)
+	prefix, err := repeatBounded(indentString, width)
+	if err != nil {
+		return nil, err
+	}
+	if len(prefix) > 0 && len(lines) > maxRepeatBytes/len(prefix) {
+		return nil, fmt.Errorf("indent output too large")
+	}
 
 	for i, line := range lines {
 		if i == 0 && !indentFirst {
@@ -544,7 +569,11 @@ func PadLeftFilter(value interface{}, args ...interface{}) (interface{}, error) 
 	}
 
 	padding := width - sLen
-	return strings.Repeat(fillchar, padding) + s, nil
+	pad, err := repeatBounded(fillchar, padding)
+	if err != nil {
+		return nil, err
+	}
+	return pad + s, nil
 }
 
 // PadRightFilter pads string on the right
@@ -573,7 +602,11 @@ func PadRightFilter(value interface{}, args ...interface{}) (interface{}, error)
 	}
 
 	padding := width - sLen
-	return s + strings.Repeat(fillchar, padding), nil
+	pad, err := repeatBounded(fillchar, padding)
+	if err != nil {
+		return nil, err
+	}
+	return s + pad, nil
 }
 
 // WordcountFilter counts words in a string

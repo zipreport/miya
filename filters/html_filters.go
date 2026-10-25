@@ -225,6 +225,9 @@ func TruncateHTMLFilter(value interface{}, args ...interface{}) (interface{}, er
 	if err != nil {
 		return nil, fmt.Errorf("truncatehtml length must be integer: %v", err)
 	}
+	if length < 0 {
+		return nil, fmt.Errorf("truncatehtml length must not be negative")
+	}
 
 	killwords := false
 	end := "..."
