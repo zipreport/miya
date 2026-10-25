@@ -678,20 +678,17 @@ env.ClearInheritanceCache()
 
 ## Memory Management
 
-### Releasing Template AST Nodes
+### Releasing one-off templates
 
-Miya uses `sync.Pool` to pool frequently allocated AST node types. When you are done with a template and want to return its nodes to the pool for reuse:
+Compiled templates are cached by the environment, by name for `GetTemplate` and by source for `FromString`, and the cache does not expire. If you compile many distinct one-off templates, call `tmpl.Release()` when done: it removes that template from the cache, so it can be garbage collected once you drop it. The template stays usable; compiling the same source again re-parses it. `ClearCache()` drops everything.
 
 ```go
 tmpl, _ := env.FromString("{{ x }}")
 output, _ := tmpl.Render(ctx)
 
-// Optional: return AST nodes to the pool for reuse.
-// After Release(), the template must not be used for rendering.
+// drop this one-off template from the environment's cache
 tmpl.Release()
 ```
-
-`Release()` is optional — if not called, nodes are garbage collected normally. Use it in high-throughput scenarios where you compile many short-lived templates and want to reduce GC pressure.
 
 ### Context Pooling
 

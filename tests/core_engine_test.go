@@ -452,7 +452,6 @@ func TestCoreTemplateEngine(t *testing.T) {
 	// Execute all tests
 	t.Logf("Running %d comprehensive core engine tests...", len(allTests))
 	helpers.RenderTestCases(t, env, allTests)
-	t.Logf("✅ All %d core engine tests passed!", len(allTests))
 }
 
 // TestCoreEngineErrors covers all error cases in one comprehensive test
@@ -556,7 +555,6 @@ func TestCoreEngineErrors(t *testing.T) {
 
 	t.Logf("Running %d comprehensive error tests...", len(errorTests))
 	helpers.RenderTestCases(t, env, errorTests)
-	t.Logf("✅ All %d error tests passed!", len(errorTests))
 }
 
 // Helper functions are in tests/helpers package

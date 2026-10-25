@@ -13,8 +13,8 @@ A high-performance Jinja2-compatible template engine implementation in Go.
 ## Features
 
 - **Jinja2 Compatibility**: Parse and render Jinja2 templates with familiar syntax
-- **High Performance**: Optimized for speed with template compilation, caching, and AST node pooling
-- **Memory Efficient**: Optional `Release()` method for returning pooled nodes to reduce GC pressure
+- **High Performance**: Optimized for speed with template compilation and caching
+- **Bounded caching**: templates are cached by the environment; `Release()` drops a one-off template from the cache
 - **Template Inheritance**: Full support for extends, blocks, and includes
 - **Rich Filter System**: Built-in filters plus support for custom filters
 - **Flexible Loading**: Load templates from filesystem, memory, or embedded resources
@@ -146,17 +146,15 @@ template := `{% do complex_calculation %}Result: {{ result }}`
 
 ### Memory Management
 
-Miya uses AST node pooling to reduce allocations during template parsing. For high-throughput applications, you can explicitly release pooled nodes when a template is no longer needed:
+Compiled templates are cached by the environment, by name for `GetTemplate` and by source for `FromString`, and the cache does not expire. If you compile many distinct one-off templates, call `tmpl.Release()` when done: it removes that template from the cache, so it can be garbage collected once you drop it. The template stays usable; compiling the same source again re-parses it. `ClearCache()` drops everything.
 
 ```go
 tmpl, _ := env.FromString("Hello {{ name }}!")
 output, _ := tmpl.Render(ctx)
 
-// Optional: release pooled AST nodes for reuse
+// drop this one-off template from the environment's cache
 tmpl.Release()
 ```
-
-**Note:** Calling `Release()` is optional. If not called, nodes will be garbage collected normally. Use it in scenarios where you're creating many short-lived templates and want to minimize GC pressure.
 
 ## Documentation
 

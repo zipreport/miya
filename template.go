@@ -22,10 +22,11 @@ var (
 // It holds the parsed AST and a reference to the Environment that created it.
 // Templates are safe for concurrent rendering.
 type Template struct {
-	name   string
-	source string
-	env    *Environment
-	ast    parser.Node // Will be set when parser is implemented
+	name     string
+	source   string
+	env      *Environment
+	cacheKey string      // key of this template in env.cache; "" when the Environment did not cache it
+	ast      parser.Node // Will be set when parser is implemented
 
 	// Cached inheritance check result (nil = not yet computed)
 	hasInheritanceCache *bool
@@ -201,18 +202,25 @@ func (t *Template) SetAST(ast parser.Node) {
 	t.cacheMu.Unlock()
 }
 
-// Release returns pooled AST nodes back to their pools for reuse.
-// This should be called when a template is no longer needed and you want to
-// reduce memory pressure. After calling Release(), the template should not
-// be used for rendering.
+// Release removes this template from its Environment's template cache, so
+// the Environment no longer keeps it alive. Use it for one-off templates,
+// such as many distinct FromString sources, to keep the cache from growing.
 //
-// Note: This is optional - if not called, nodes will be garbage collected normally.
-// Use this when you're done with a template and want to enable immediate node reuse.
+// The template stays usable, and anyone else holding it is unaffected; a
+// later FromString or GetTemplate of the same source or name parses it
+// again. Release only removes the cache entry if it still points to this
+// template, so it is safe to call more than once, concurrently, or after
+// ClearCache.
 func (t *Template) Release() {
-	if t.ast != nil {
-		parser.ReleaseAST(t.ast)
-		t.ast = nil
+	if t.env == nil || t.cacheKey == "" {
+		return
 	}
+	e := t.env
+	e.cacheMutex.Lock()
+	if cached, ok := e.cache[t.cacheKey]; ok && cached == t {
+		delete(e.cache, t.cacheKey)
+	}
+	e.cacheMutex.Unlock()
 }
 
 // hasInheritanceDirectives checks if template contains {% extends %} directives
