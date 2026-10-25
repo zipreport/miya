@@ -2,6 +2,7 @@ package filters
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"unicode"
@@ -360,7 +361,66 @@ func FormatFilter(value interface{}, args ...interface{}) (result interface{}, e
 	}()
 
 	// Use the string as format and args as values
+	s, args = pyIntVerbs(s, args)
 	return fmt.Sprintf(s, args...), nil
+}
+
+// pyIntVerbs makes %d and %i accept float operands as Python's % operator
+// does (truncating like int()), and rewrites %i, which Go lacks, to %d.
+// Other verbs and their arguments are left unchanged. A format using Go's
+// explicit argument indexes (%[1]d) is returned untouched.
+func pyIntVerbs(format string, args []interface{}) (string, []interface{}) {
+	if strings.Contains(format, "%[") {
+		return format, args
+	}
+	out := append([]interface{}(nil), args...)
+	var b strings.Builder
+	argi := 0
+	for i := 0; i < len(format); i++ {
+		if format[i] != '%' {
+			b.WriteByte(format[i])
+			continue
+		}
+		j := i + 1
+		for j < len(format) && strings.IndexByte("+-# 0123456789.*", format[j]) >= 0 {
+			if format[j] == '*' {
+				argi++
+			}
+			j++
+		}
+		if j >= len(format) {
+			b.WriteString(format[i:])
+			break
+		}
+		verb := format[j]
+		b.WriteString(format[i:j])
+		i = j
+		if verb == '%' {
+			b.WriteByte('%')
+			continue
+		}
+		if verb == 'i' {
+			verb = 'd'
+		}
+		if verb == 'd' && argi < len(out) {
+			var f float64
+			isFloat := true
+			switch v := out[argi].(type) {
+			case float64:
+				f = v
+			case float32:
+				f = float64(v)
+			default:
+				isFloat = false
+			}
+			if isFloat && !math.IsNaN(f) && math.Abs(f) < 9e18 {
+				out[argi] = int64(f)
+			}
+		}
+		b.WriteByte(verb)
+		argi++
+	}
+	return b.String(), out
 }
 
 // Helper function to convert regex patterns for case-insensitive matching
