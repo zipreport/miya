@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `loop.depth` counts recursion levels only (nested ordinary loops are each depth 1; recursive calls go 1, 2, 3…), and `loop.depth0` exists.
 - Recursive loops apply their `if` filter at every level.
 - A `for` loop in a template without a parent that calls `super()` keeps its `if` filter and `recursive` flag. (Under `{% extends %}`, the same needs plan 034's inheritance fixes.)
+- The `loop` object is no longer reused across loops and renders (a stored `loop` showed another loop's values, and concurrent renders raced on it); `AddGlobal`, `AddExtension` and `ConfigureInheritanceCache` no longer race with renders; an extension is visible only after its `OnLoad` succeeds; inheritance-cache cleanup and loader statistics are race-free; `NewTemplateCache` with a negative size no longer panics; `ConcurrentTemplateRenderer` no longer panics on a second `Stop`, rejects `RenderAsync` before `Start`, and answers jobs pending at `Stop`.
 
 ### Changed
 
@@ -55,6 +56,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** a positional filter argument after a keyword argument (`join(d="-", ",")`) is a syntax error, as in Jinja2. A repeated keyword still binds the last value, as in Jinja2.
 - **Breaking:** `//` and `%` follow Python: they floor instead of truncating (`-7 // 2` is `-4`, `-7 % 3` is `2`), keep float operands (`7.5 % 2` is `1.5`, `10 // 0.3` is `33`), accept every Go numeric type, and reject strings (`"10" // 3` used to be `3`). With JSON data, where every number is a float, `n // 2` is now a float, so `(n // 2) is integer` is false, as in Jinja2.
 - **Breaking:** each for-loop iteration starts from the scope outside the loop, as in Jinja2: a `{% set %}` in the loop body no longer carries over to the next iteration, and a recursive `loop(...)` call no longer sees the calling iteration's `set`s. Use `namespace()` to accumulate across iterations.
+- **Breaking:** assigning an attribute (`{% set x.y = ... %}`) works only on `namespace()` objects, and item assignment (`{% set x[k] = ... %}`) is an error, as in Jinja2; templates can no longer modify the caller's maps, slices, structs, or Go values that merely have `Get`/`Set` methods (embed `runtime.NamespaceMarker` to opt a type in). `NewTemplateCache(0)` disables the cache and a negative size means unbounded.
 
 ### Deprecated
 

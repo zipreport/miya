@@ -22,7 +22,10 @@ import (
 
 // Environment is the central configuration object for template compilation and rendering.
 // It holds the template loader, filter/test registries, caching, and all rendering options.
-// An Environment is safe for concurrent use; its template cache is protected by sync.RWMutex.
+// An Environment is safe for concurrent use: templates may be rendered while AddGlobal,
+// AddFilter, AddTest and AddExtension are called. Calls to AddTest must not run
+// concurrently with each other. SetConfig, SetLoader and changes to a loader's templates
+// (such as StringLoader.AddTemplate) must happen before rendering starts.
 //
 // Create an Environment with NewEnvironment and configure it using EnvironmentOption functions:
 //

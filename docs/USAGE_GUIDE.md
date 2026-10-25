@@ -453,27 +453,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 3. Call `tmpl.Render(ctx)` freely from any goroutine — evaluators are pooled per render
 4. **Always create a fresh `Context` for each render** — contexts are not thread-safe
 
-### Explicit Thread-Safe Wrappers
+### Changing the Environment While Rendering
 
-For scenarios where you need additional safety guarantees (e.g., dynamically adding filters or globals while rendering), Miya provides explicit thread-safe wrappers:
+An `Environment` is safe for concurrent use: templates may be rendered while `AddGlobal`, `AddFilter`, `AddTest` and `AddExtension` are called. Calls to `AddTest` must not run concurrently with each other. `SetConfig`, `SetLoader` and changes to a loader's templates (such as `StringLoader.AddTemplate`) must happen before rendering starts.
 
-```go
-// Thread-safe environment — adds mutex protection around AddFilter/AddGlobal
-safeEnv := miya.NewThreadSafeEnvironment(
-    miya.WithLoader(fsLoader),
-    miya.WithAutoEscape(true),
-)
-
-// Safe to call from any goroutine, even while renders are in progress
-safeEnv.AddFilterConcurrent("myfilter", myFilterFunc)
-safeEnv.AddGlobalConcurrent("version", "2.0")
-
-// Get thread-safe template wrapper
-safeTmpl, err := safeEnv.GetTemplateConcurrent("page.html")
-output, err := safeTmpl.RenderConcurrent(ctx)
-```
-
-Use `ThreadSafeEnvironment` when you need to mutate the environment (add filters, globals) concurrently with template renders. For the common case of a read-only environment serving renders, the standard `Environment` is already safe.
+`ThreadSafeEnvironment` adds nothing to this: renders never take its mutexes, so the standard `Environment` is all you need.
 
 ### Worker Pool: ConcurrentTemplateRenderer
 
@@ -509,6 +493,8 @@ for i, output := range outputs {
 ```
 
 Workers include panic recovery — a panic in one render does not crash other workers.
+
+Start the renderer once. After `Stop`, `RenderAsync` rejects work with a "renderer is stopped" error, and jobs still queued at `Stop` are answered with the same error. `RenderBatch` does not use the worker pool and is independent of `Start` and `Stop`.
 
 ### Rate-Limited Rendering
 
