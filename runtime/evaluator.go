@@ -393,6 +393,14 @@ func (e *DefaultEvaluator) EvalVariableNode(node *parser.VariableNode, ctx Conte
 
 func (e *DefaultEvaluator) EvalIdentifierNode(node *parser.IdentifierNode, ctx Context) (interface{}, error) {
 	value, ok := ctx.GetVariable(node.Name)
+	if u, isUndef := value.(*Undefined); ok && isUndef && e.undefinedHandler != nil && e.undefinedHandler.GetUndefinedBehavior() == UndefinedStrict {
+		// A bound undefined (a macro parameter that was not passed, or a name
+		// a {% from %} import did not find) fails on use, keeping its hint.
+		if u.Hint != "" {
+			return nil, fmt.Errorf("undefined variable %s: %s", u.Name, u.Hint)
+		}
+		ok = false
+	}
 	if !ok {
 		// Use undefined handler to determine behavior
 		if e.undefinedHandler != nil {
@@ -933,6 +941,10 @@ func (e *DefaultEvaluator) EvalBlockSetNode(node *parser.BlockSetNode, ctx Conte
 }
 
 func (e *DefaultEvaluator) EvalCallNode(node *parser.CallNode, ctx Context) (interface{}, error) {
+	return e.evalCall(node, ctx, nil)
+}
+
+func (e *DefaultEvaluator) evalCall(node *parser.CallNode, ctx Context, caller *Macro) (interface{}, error) {
 	function, err := e.EvalNode(node.Function, ctx)
 	if err != nil {
 		return nil, err
@@ -956,6 +968,9 @@ func (e *DefaultEvaluator) EvalCallNode(node *parser.CallNode, ctx Context) (int
 			return nil, err
 		}
 		kwargs[key] = argValue
+	}
+	if caller != nil {
+		kwargs["caller"] = caller
 	}
 
 	return e.callFunctionWithContext(function, args, kwargs, ctx)
@@ -1046,49 +1061,20 @@ func (e *DefaultEvaluator) EvalSuperNode(node *parser.SuperNode, ctx Context) (i
 }
 
 func (e *DefaultEvaluator) EvalMacroNode(node *parser.MacroNode, ctx Context) (interface{}, error) {
-	// Create a macro function that can be called with a context parameter
-	macroFunc := func(callCtx Context, args ...interface{}) (interface{}, error) {
-		leave, err := e.enter("macro " + node.Name)
-		if err != nil {
-			return nil, err
-		}
-		defer leave()
-
-		// Create a new context for macro execution, inherit from the call context
-		// to get access to variables like 'caller' that might be set by call blocks
-		macroCtx := callCtx.Clone()
-
-		// Set up macro parameters
-		for i, paramName := range node.Parameters {
-			if i < len(args) {
-				macroCtx.SetVariable(paramName, args[i])
-			} else if defaultExpr, hasDefault := node.Defaults[paramName]; hasDefault {
-				// Evaluate default value
-				defaultVal, err := e.EvalNode(defaultExpr, ctx)
-				if err != nil {
-					return nil, fmt.Errorf("error evaluating macro parameter default: %w", err)
-				}
-				macroCtx.SetVariable(paramName, defaultVal)
-			} else {
-				return nil, fmt.Errorf("missing required macro parameter: %s", paramName)
-			}
-		}
-
-		// Execute macro body
-		result, err := e.evalNodeList(node.Body, macroCtx)
-		if err != nil {
-			return nil, err
-		}
-
-		// Convert result to string
-		if result == nil {
-			return "", nil
-		}
-		return ToString(result), nil
+	defaults := make(map[string]interface{}, len(node.Defaults))
+	for name, expr := range node.Defaults {
+		defaults[name] = expr
 	}
-
-	// Register the macro as a variable in the context
-	ctx.SetVariable(node.Name, macroFunc)
+	// The macro body runs in the context it is defined in, as in Jinja2.
+	ctx.SetVariable(node.Name, &Macro{
+		Name:       node.Name,
+		Parameters: node.Parameters,
+		Defaults:   defaults,
+		Body:       node.Body,
+		MacroUsage: node.MacroUsage,
+		defCtx:     ctx,
+		evaluator:  e,
+	})
 
 	// Macro definitions don't produce output during evaluation
 	return "", nil
@@ -1816,6 +1802,8 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 	case *CallableLoop:
 		// CallableLoop objects support function calls for recursion
 		return fn.Call(args...)
+	case *Macro:
+		return fn.Call(args, kwargs)
 	case *Undefined:
 		if fn.Hint != "" {
 			return nil, fmt.Errorf("cannot call undefined %s: %s", fn.Name, fn.Hint)
@@ -3129,34 +3117,26 @@ func (e *DefaultEvaluator) EvalContinueNode(node *parser.ContinueNode, ctx Conte
 
 // EvalCallBlockNode evaluates call blocks ({% call macro() %}content{% endcall %})
 func (e *DefaultEvaluator) EvalCallBlockNode(node *parser.CallBlockNode, ctx Context) (interface{}, error) {
-	// Render the block content to create the "caller" function
-	blockContent, err := e.evalNodeList(node.Body, ctx)
-	if err != nil {
-		return nil, err
+	call, ok := node.Call.(*parser.CallNode)
+	if !ok {
+		// The parser rejects this; only a hand-built AST gets here.
+		return nil, fmt.Errorf("{%% call %%} requires a call expression, got %s", node.Call.String())
 	}
-
-	// Convert block content to string
-	var blockStr string
-	if blockContent != nil {
-		blockStr = fmt.Sprintf("%v", blockContent)
+	defaults := make(map[string]interface{}, len(node.Defaults))
+	for name, expr := range node.Defaults {
+		defaults[name] = expr
 	}
-
-	// Create a "caller" function that returns the block content
-	callerFunc := func(args ...interface{}) (interface{}, error) {
-		return blockStr, nil
+	// caller() renders the block body in the call site's context.
+	caller := &Macro{
+		Name:       "caller",
+		Parameters: node.Parameters,
+		Defaults:   defaults,
+		Body:       node.Body,
+		MacroUsage: node.MacroUsage,
+		defCtx:     ctx,
+		evaluator:  e,
 	}
-
-	// Create a new context that includes the caller function
-	callCtx := ctx.Clone()
-	callCtx.SetVariable("caller", callerFunc)
-
-	// Evaluate the call expression with the extended context
-	result, err := e.EvalNode(node.Call, callCtx)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return e.evalCall(call, ctx, caller)
 }
 
 // EvalImportNode evaluates import statements ({% import 'template' as name %})

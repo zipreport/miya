@@ -26,8 +26,7 @@ type ImportedNamespace struct {
 func (in *ImportedNamespace) Get(name string) (interface{}, bool) {
 	// Check if it's a macro
 	if macro, ok := in.namespace.Macros[name]; ok {
-		// Return a callable function for the macro
-		return in.createMacroFunction(macro), true
+		return macro.bind(in.evaluator), true
 	}
 
 	// Check if it's a variable
@@ -58,25 +57,6 @@ func (in *ImportedNamespace) String() string {
 		in.namespace.TemplateName, len(in.namespace.Macros), len(in.namespace.Variables))
 }
 
-// createMacroFunction creates a callable function for a macro
-func (in *ImportedNamespace) createMacroFunction(macro *TemplateMacro) interface{} {
-	return func(args ...interface{}) (interface{}, error) {
-		// Parse keyword arguments if provided
-		kwargs := make(map[string]interface{})
-
-		// If the last argument is a map, treat it as kwargs
-		if len(args) > 0 {
-			if kw, ok := args[len(args)-1].(map[string]interface{}); ok {
-				kwargs = kw
-				args = args[:len(args)-1]
-			}
-		}
-
-		// Call the macro with the evaluator
-		return macro.Call(in.evaluator, in.namespace.Context, args, kwargs)
-	}
-}
-
 // TemplateMacro represents a macro that can be called from templates
 type TemplateMacro struct {
 	Name       string
@@ -84,59 +64,26 @@ type TemplateMacro struct {
 	Defaults   map[string]interface{}
 	Body       []parser.Node
 	Context    Context // The context in which the macro was defined
+	parser.MacroUsage
 }
 
-// Call executes the macro with the given arguments
+// bind returns the macro as a callable bound to its definition context.
+func (tm *TemplateMacro) bind(evaluator *DefaultEvaluator) *Macro {
+	return &Macro{
+		Name:       tm.Name,
+		Parameters: tm.Parameters,
+		Defaults:   tm.Defaults,
+		Body:       tm.Body,
+		MacroUsage: tm.MacroUsage,
+		defCtx:     tm.Context,
+		evaluator:  evaluator,
+	}
+}
+
+// Call executes the macro with the given arguments. callCtx is not used: the
+// body runs in the definition context, and a caller is passed in kwargs["caller"].
 func (tm *TemplateMacro) Call(evaluator *DefaultEvaluator, callCtx Context, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
-	leave, err := evaluator.enter("macro " + tm.Name)
-	if err != nil {
-		return nil, err
-	}
-	defer leave()
-
-	// Create a new context for macro execution
-	macroCtx := tm.Context.Clone()
-
-	// Set up macro parameters
-	for i, paramName := range tm.Parameters {
-		if i < len(args) {
-			macroCtx.SetVariable(paramName, args[i])
-		} else if defaultVal, hasDefault := tm.Defaults[paramName]; hasDefault {
-			// For now, evaluate default values as literals
-			if defaultExpr, ok := defaultVal.(parser.ExpressionNode); ok {
-				evalDefault, err := evaluator.EvalNode(defaultExpr, macroCtx)
-				if err != nil {
-					return nil, fmt.Errorf("error evaluating default value for parameter %s: %w", paramName, err)
-				}
-				macroCtx.SetVariable(paramName, evalDefault)
-			} else {
-				macroCtx.SetVariable(paramName, defaultVal)
-			}
-		} else {
-			return nil, fmt.Errorf("missing required macro parameter: %s", paramName)
-		}
-	}
-
-	// Set keyword arguments
-	for key, value := range kwargs {
-		macroCtx.SetVariable(key, value)
-	}
-
-	// Inherit caller from call context if available
-	if caller, exists := callCtx.GetVariable("caller"); exists {
-		macroCtx.SetVariable("caller", caller)
-	}
-
-	// Execute macro body
-	if len(tm.Body) > 0 {
-		result, err := evaluator.evalNodeList(tm.Body, macroCtx)
-		if err != nil {
-			return nil, fmt.Errorf("error executing macro %s: %w", tm.Name, err)
-		}
-		return result, nil
-	}
-
-	return "", nil
+	return tm.bind(evaluator).Call(args, kwargs)
 }
 
 // TemplateLoader interface for loading templates
@@ -217,9 +164,12 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 			Defaults:   defaults,
 			Body:       n.Body,
 			Context:    namespace.Context,
+			MacroUsage: n.MacroUsage,
 		}
 
 		namespace.Macros[n.Name] = macro
+		// Register the macro in its own module so it can call itself and its siblings.
+		namespace.Context.SetVariable(n.Name, macro.bind(evaluator))
 
 	case *parser.SetNode:
 		// Extract global variable assignments
@@ -318,13 +268,7 @@ func (is *ImportSystem) GetNamespaceMap(namespace *TemplateNamespace, evaluator 
 
 	// Add macros as callable functions
 	for name, macro := range namespace.Macros {
-		macroFunc := func(m *TemplateMacro, eval *DefaultEvaluator) func(...interface{}) (interface{}, error) {
-			return func(args ...interface{}) (interface{}, error) {
-				// For now, call with empty kwargs - full implementation would parse kwargs from args
-				return m.Call(eval, namespace.Context, args, make(map[string]interface{}))
-			}
-		}(macro, evaluator)
-		result[name] = macroFunc
+		result[name] = macro.bind(evaluator)
 	}
 
 	// Add variables

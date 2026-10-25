@@ -246,6 +246,9 @@ func testCallable(value interface{}, args ...interface{}) (bool, error) {
 	if value == nil {
 		return false, nil
 	}
+	if _, ok := value.(*runtime.Macro); ok {
+		return true, nil
+	}
 
 	rv := reflect.ValueOf(value)
 	return rv.Kind() == reflect.Func, nil
