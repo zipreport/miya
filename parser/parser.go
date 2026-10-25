@@ -13,6 +13,20 @@ type Parser struct {
 	tokens  []*lexer.Token
 	current int
 	errors  []string
+	depth   int // nesting of parsePrimary/parseBlockStatement calls
+}
+
+// maxParseDepth bounds expression and statement nesting so a deeply nested
+// template returns an error instead of overflowing the goroutine stack.
+// Jinja2 itself fails at about 100 levels, so no working template comes close.
+const maxParseDepth = 500
+
+func (p *Parser) enterNesting() error {
+	p.depth++
+	if p.depth > maxParseDepth {
+		return p.error(fmt.Sprintf("template nesting too deep (limit %d)", maxParseDepth))
+	}
+	return nil
 }
 
 // NewParser creates a new parser with the given tokens
@@ -92,6 +106,10 @@ func (p *Parser) parseVariable() (Node, error) {
 
 // parseBlockStatement parses block statements {% ... %}
 func (p *Parser) parseBlockStatement() (Node, error) {
+	defer func() { p.depth-- }()
+	if err := p.enterNesting(); err != nil {
+		return nil, err
+	}
 	p.advance() // consume {% or {%-
 
 	if p.isAtEnd() {
@@ -913,7 +931,12 @@ func (p *Parser) parseConditional() (ExpressionNode, error) {
 		}
 		p.advance() // consume 'else'
 
+		if err := p.enterNesting(); err != nil {
+			p.depth--
+			return nil, err
+		}
 		falseExpr, err := p.parseConditional()
+		p.depth--
 		if err != nil {
 			return nil, err
 		}
@@ -966,7 +989,12 @@ func (p *Parser) parseAnd() (ExpressionNode, error) {
 func (p *Parser) parseNot() (ExpressionNode, error) {
 	if p.check(lexer.TokenNot) {
 		operator := p.advance()
+		if err := p.enterNesting(); err != nil {
+			p.depth--
+			return nil, err
+		}
 		expr, err := p.parseNot()
+		p.depth--
 		if err != nil {
 			return nil, err
 		}
@@ -1140,7 +1168,12 @@ func (p *Parser) parsePower() (ExpressionNode, error) {
 
 	if p.check(lexer.TokenPower) {
 		operator := p.advance()
+		if err := p.enterNesting(); err != nil {
+			p.depth--
+			return nil, err
+		}
 		right, err := p.parseUnary() // Right associative, and unary can bind to the right side
+		p.depth--
 		if err != nil {
 			return nil, err
 		}
@@ -1389,6 +1422,10 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 
 // parsePrimary parses primary expressions
 func (p *Parser) parsePrimary() (ExpressionNode, error) {
+	defer func() { p.depth-- }()
+	if err := p.enterNesting(); err != nil {
+		return nil, err
+	}
 	switch p.peek().Type {
 	case lexer.TokenTrue, lexer.TokenFalse:
 		token := p.advance()
