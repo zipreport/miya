@@ -1059,8 +1059,8 @@ func TestEcommerceTemplateSystem(t *testing.T) {
 			expectedContent: []string{
 				"Premium Laptop",
 				"SKU: LAP-001",
-				"$1,499.99",
-				"$1,299.99",
+				"$1499.99",
+				"$1299.99",
 				"You save $200.00",
 				"4.8/5 (89 reviews)",
 				"High-performance laptop",

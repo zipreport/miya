@@ -2222,7 +2222,7 @@ func (e *DefaultEvaluator) powerWithNode(a, b interface{}, node parser.Node) (in
 }
 
 func (e *DefaultEvaluator) concatenateWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
-	return fmt.Sprintf("%v%v", a, b), nil
+	return ToString(a) + ToString(b), nil
 }
 
 // Legacy method for existing code
