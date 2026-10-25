@@ -145,56 +145,41 @@ type TemplateLoader interface {
 	TemplateExists(name string) bool
 }
 
-// ImportSystem handles template imports and namespace management
+// ImportSystem handles template imports and namespace management.
+// It keeps no per-template state: the evaluator decides when a module is
+// reused (see DefaultEvaluator.loadModule), so one ImportSystem can serve
+// concurrent renders.
 type ImportSystem struct {
-	loader     TemplateLoader
-	namespaces map[string]*TemplateNamespace // Cache for loaded namespaces
+	loader TemplateLoader
 }
 
 // NewImportSystem creates a new import system
 func NewImportSystem(loader TemplateLoader, evaluator *DefaultEvaluator) *ImportSystem {
 	// Note: evaluator parameter kept for API compatibility but no longer stored
 	return &ImportSystem{
-		loader:     loader,
-		namespaces: make(map[string]*TemplateNamespace),
+		loader: loader,
 	}
 }
 
-// LoadTemplateNamespace loads a template and creates its namespace
-func (is *ImportSystem) LoadTemplateNamespace(templateName string, baseCtx Context, evaluator *DefaultEvaluator) (*TemplateNamespace, error) {
-	// Check cache first
-	if ns, exists := is.namespaces[templateName]; exists {
-		return ns, nil
-	}
-
-	// Check if template exists
-	if !is.loader.TemplateExists(templateName) {
-		// Create a placeholder namespace for missing templates
-		namespace := &TemplateNamespace{
-			TemplateName: templateName,
-			Macros:       make(map[string]*TemplateMacro),
-			Variables:    make(map[string]interface{}),
-			Context:      baseCtx.Clone(),
-		}
-
-		// Cache the placeholder namespace
-		is.namespaces[templateName] = namespace
-
-		return namespace, nil
-	}
-
-	// Load the template AST
+// LoadTemplateNamespace loads a template and builds its namespace. moduleCtx
+// becomes the module's context and is written to (top-level sets and the
+// file's own imports land in it), so pass a context you own. The loader must
+// return an error for a template that does not exist; TemplateExists is not
+// consulted.
+func (is *ImportSystem) LoadTemplateNamespace(templateName string, moduleCtx Context, evaluator *DefaultEvaluator) (*TemplateNamespace, error) {
 	ast, err := is.loader.LoadTemplate(templateName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load template %q: %w", templateName, err)
 	}
+	if ast == nil {
+		return nil, fmt.Errorf("failed to load template %q: the loader returned no template", templateName)
+	}
 
-	// Create namespace
 	namespace := &TemplateNamespace{
 		TemplateName: templateName,
 		Macros:       make(map[string]*TemplateMacro),
 		Variables:    make(map[string]interface{}),
-		Context:      baseCtx.Clone(),
+		Context:      moduleCtx,
 	}
 
 	// Extract macros and variables from AST
@@ -202,9 +187,6 @@ func (is *ImportSystem) LoadTemplateNamespace(templateName string, baseCtx Conte
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract namespace from template %q: %w", templateName, err)
 	}
-
-	// Cache the namespace
-	is.namespaces[templateName] = namespace
 
 	return namespace, nil
 }
@@ -246,12 +228,26 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 				// Evaluate the value in the namespace context
 				value, err := evaluator.EvalNode(n.Value, namespace.Context)
 				if err != nil {
-					// If evaluation fails, store a placeholder
-					namespace.Variables[identNode.Name] = fmt.Sprintf("[Variable %s from %s]", identNode.Name, namespace.TemplateName)
-				} else {
-					namespace.Variables[identNode.Name] = value
+					return fmt.Errorf("{%% set %s %%}: %w", identNode.Name, err)
 				}
+				namespace.Variables[identNode.Name] = value
+				namespace.Context.SetVariable(identNode.Name, value)
 			}
+		}
+
+	case *parser.BlockSetNode:
+		if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
+			return fmt.Errorf("{%% set %s %%}: %w", n.Variable, err)
+		}
+		if value, ok := namespace.Context.GetVariable(n.Variable); ok {
+			namespace.Variables[n.Variable] = value
+		}
+
+	case *parser.ImportNode, *parser.FromNode:
+		// The file's own imports run in its module context, so its macros can
+		// call them. As in Jinja2, they are not exported.
+		if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
+			return err
 		}
 
 	case *parser.IfNode:

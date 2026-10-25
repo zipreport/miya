@@ -184,11 +184,16 @@ type DefaultEvaluator struct {
 	importSystem     *ImportSystem
 	undefinedHandler *UndefinedHandler
 	depth            atomic.Int32
+	// importMemo holds the modules imported without context during the current
+	// render, so every such import of a template shares one module, as in Jinja2.
+	// SetImportSystem clears it; renders never share it.
+	importMemo map[string]*TemplateNamespace
 }
 
 // enter counts one level of template recursion; call the returned func when leaving.
-// The counter is atomic because cached macro closures can run on another render's
-// evaluator, so their depth is added to that render's count while they run.
+// The counter is atomic because one evaluator's depth may be touched from
+// goroutines started by Go callables. Imported macro closures are no longer
+// shared across renders.
 func (e *DefaultEvaluator) enter(what string) (func(), error) {
 	if e.depth.Add(1) > maxRecursionDepth {
 		e.depth.Add(-1)
@@ -229,6 +234,7 @@ func (e *DefaultEvaluator) SetUndefinedBehavior(behavior UndefinedBehavior) {
 // SetImportSystem sets the import system for handling template imports
 func (e *DefaultEvaluator) SetImportSystem(importSystem *ImportSystem) {
 	e.importSystem = importSystem
+	e.importMemo = nil
 }
 
 func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{}, error) {
@@ -348,6 +354,15 @@ func (e *DefaultEvaluator) EvalVariableNode(node *parser.VariableNode, ctx Conte
 	// Handle nil values
 	if result == nil {
 		return "", nil
+	}
+
+	// A strict undefined value stored in a variable (such as a name a
+	// {% from %} import did not find) raises when printed, as in Jinja2.
+	if u, ok := result.(*Undefined); ok && u.Behavior == UndefinedStrict {
+		if u.Hint != "" {
+			return nil, fmt.Errorf("undefined variable %s: %s", u.Name, u.Hint)
+		}
+		return nil, u.Error()
 	}
 
 	// Apply auto-escaping if enabled in this context
@@ -1060,7 +1075,8 @@ func (e *DefaultEvaluator) EvalTestNode(node *parser.TestNode, ctx Context) (int
 
 		// Check if it's an identifier node - most common case for "defined" test
 		if identNode, ok := node.Expression.(*parser.IdentifierNode); ok {
-			_, isDefined = ctx.GetVariable(identNode.Name)
+			value, ok := ctx.GetVariable(identNode.Name)
+			isDefined = ok && !IsUndefined(value)
 		} else {
 			// For other expression types, try to evaluate and check for undefined
 			value, err := e.EvalNode(node.Expression, ctx)
@@ -1767,6 +1783,10 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 	case *CallableLoop:
 		// CallableLoop objects support function calls for recursion
 		return fn.Call(args...)
+	case *Undefined:
+		if fn.Hint != "" {
+			return nil, fmt.Errorf("cannot call undefined %s: %s", fn.Name, fn.Hint)
+		}
 	}
 
 	// Handle different function types
@@ -3224,24 +3244,11 @@ func (e *DefaultEvaluator) EvalImportNode(node *parser.ImportNode, ctx Context) 
 		return nil, fmt.Errorf("template name must be a string, got %T", templateExpr)
 	}
 
-	// Use the new import system if available
-	if e.importSystem != nil {
-		namespace, err := e.importSystem.LoadTemplateNamespace(templateName, ctx, e)
-		if err != nil {
-			return nil, fmt.Errorf("error loading template %q: %w", templateName, err)
-		}
-
-		// Create an ImportedNamespace wrapper
-		importedNS := e.importSystem.GetImportedNamespace(namespace, e)
-		ctx.SetVariable(node.Alias, importedNS)
-	} else {
-		// Fallback to the old placeholder system
-		templateNamespace, err := e.loadTemplateNamespace(templateName, ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error loading template %q: %w", templateName, err)
-		}
-		ctx.SetVariable(node.Alias, templateNamespace)
+	namespace, err := e.loadModule(templateName, ctx, node.WithContext)
+	if err != nil {
+		return nil, err
 	}
+	ctx.SetVariable(node.Alias, e.importSystem.GetImportedNamespace(namespace, e))
 
 	return "", nil // Import statements don't produce output
 }
@@ -3260,27 +3267,11 @@ func (e *DefaultEvaluator) EvalFromNode(node *parser.FromNode, ctx Context) (int
 		return nil, fmt.Errorf("template name must be a string, got %T", templateExpr)
 	}
 
-	var namespaceMap map[string]interface{}
-
-	// Use the new import system if available
-	if e.importSystem != nil {
-		namespace, err := e.importSystem.LoadTemplateNamespace(templateName, ctx, e)
-		if err != nil {
-			return nil, fmt.Errorf("error loading template %q: %w", templateName, err)
-		}
-		namespaceMap = e.importSystem.GetNamespaceMap(namespace, e)
-	} else {
-		// Fallback to the old placeholder system
-		templateNamespace, err := e.loadTemplateNamespace(templateName, ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error loading template %q: %w", templateName, err)
-		}
-		var ok bool
-		namespaceMap, ok = templateNamespace.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("template namespace is not a map")
-		}
+	namespace, err := e.loadModule(templateName, ctx, node.WithContext)
+	if err != nil {
+		return nil, err
 	}
+	namespaceMap := e.importSystem.GetNamespaceMap(namespace, e)
 
 	// Import specific items from the namespace
 	for _, name := range node.Names {
@@ -3294,11 +3285,12 @@ func (e *DefaultEvaluator) EvalFromNode(node *parser.FromNode, ctx Context) (int
 		if item, exists := namespaceMap[name]; exists {
 			ctx.SetVariable(varName, item)
 		} else {
-			// Create a placeholder if the item doesn't exist
-			placeholderFunc := func(args ...interface{}) (interface{}, error) {
-				return fmt.Sprintf("[Undefined macro %s from %s]", name, templateName), nil
-			}
-			ctx.SetVariable(varName, placeholderFunc)
+			// As in Jinja2, a missing name is undefined; calling it is an error.
+			ctx.SetVariable(varName, &Undefined{
+				Name:     name,
+				Behavior: e.undefinedHandler.GetUndefinedBehavior(),
+				Hint:     fmt.Sprintf("the template %q does not export the requested name %q", templateName, name),
+			})
 		}
 	}
 
@@ -3330,42 +3322,59 @@ func (e *DefaultEvaluator) EvalWithNode(node *parser.WithNode, ctx Context) (int
 	return result, nil
 }
 
-// loadTemplateNamespace loads a template and extracts its macros and variables
-func (e *DefaultEvaluator) loadTemplateNamespace(templateName string, ctx Context) (interface{}, error) {
-	// We need access to the environment to load templates
-	// This is a limitation of the current design - the runtime evaluator doesn't have direct access to the environment
-	// For now, we'll return a basic namespace with placeholder functionality
-
-	// Try to get environment from context if available
-	if envCtx, ok := ctx.(EnvironmentContext); ok {
-		// In a full implementation, we would:
-		// 1. Load the template using envCtx.LoadTemplate(templateName)
-		// 2. Parse the template AST to find MacroNodes
-		// 3. Create callable functions for each macro
-		// 4. Return a namespace containing all the macros
-		_ = envCtx // Use the context to avoid unused variable warning
+// loadModule returns the namespace of an imported template. An import without
+// context reuses the module already built for that template in this render, as
+// Jinja2 does; an import with context is built fresh every time.
+func (e *DefaultEvaluator) loadModule(templateName string, ctx Context, withContext bool) (*TemplateNamespace, error) {
+	if e.importSystem == nil {
+		return nil, fmt.Errorf("cannot import %q: the evaluator has no import system (it was not created by an Environment render)", templateName)
 	}
-
-	// For now, create a basic namespace regardless of context availability
-	return e.createPlaceholderNamespace(templateName), nil
+	if !withContext {
+		if ns, ok := e.importMemo[templateName]; ok {
+			return ns, nil
+		}
+	}
+	leave, err := e.enter("import " + strconv.Quote(templateName))
+	if err != nil {
+		return nil, err
+	}
+	defer leave()
+	ns, err := e.importSystem.LoadTemplateNamespace(templateName, importContext(ctx, withContext), e)
+	if err != nil {
+		return nil, err
+	}
+	if !withContext {
+		if e.importMemo == nil {
+			e.importMemo = make(map[string]*TemplateNamespace)
+		}
+		e.importMemo[templateName] = ns
+	}
+	return ns, nil
 }
 
-// createPlaceholderNamespace creates a placeholder namespace for import functionality
-func (e *DefaultEvaluator) createPlaceholderNamespace(templateName string) map[string]interface{} {
-	return map[string]interface{}{
-		"__template__": templateName,
-		"__imported__": true,
-		// Add some common macro names as placeholders
-		"render_field": func(args ...interface{}) (interface{}, error) {
-			return fmt.Sprintf("[Macro render_field from %s]", templateName), nil
-		},
-		"input": func(args ...interface{}) (interface{}, error) {
-			return fmt.Sprintf("[Macro input from %s]", templateName), nil
-		},
-		"button": func(args ...interface{}) (interface{}, error) {
-			return fmt.Sprintf("[Macro button from %s]", templateName), nil
-		},
+// ModuleContexter is implemented by contexts that can create an empty context
+// sharing their environment (globals, filters, tests). Imports without context
+// use it so the imported template sees no render variables.
+type ModuleContexter interface {
+	NewModuleContext() Context
+}
+
+// importContext returns the context an imported template runs in: a copy of
+// ctx for "with context", otherwise an empty context with ctx's environment.
+func importContext(ctx Context, withContext bool) Context {
+	if withContext {
+		return ctx.Clone()
 	}
+	switch c := ctx.(type) {
+	case ModuleContexter:
+		return c.NewModuleContext()
+	case *autoescapeContext:
+		// The importer's {% autoescape %} block does not apply to the imported template.
+		return importContext(c.Context, false)
+	case *ContextWrapper:
+		return &ContextWrapper{Context: importContext(c.Context, false), escapeContext: c.escapeContext, autoEscaper: c.autoEscaper}
+	}
+	return &simpleContext{variables: make(map[string]interface{})}
 }
 
 // EvalDoNode evaluates a do statement by executing the expression for side effects

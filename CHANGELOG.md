@@ -16,6 +16,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Template.Release()` no longer corrupts cached templates. A released `FromString` template used to render its raw source, a released `GetTemplate` template rendered nothing, and releasing a base template changed its children's output.
 - Dict literals keep their contents: `{% set d = {'k': 'v'} %}{{ d.k }}` prints `v` (it printed nothing, and every dict literal was empty). Each evaluation builds a new dict, so writes into one no longer carry over to the next render. Keys are stored as strings, as for every miya dict, so `{1: 'a'}[1]` and `{1: 'a'}['1']` find the same entry, and a list key such as `{[1, 2]: 'x'}` is stored under `"[1 2]"` instead of raising an error as Jinja2 does.
 - With autoescape on, values that are not strings (named string types, errors, `fmt.Stringer`s, lists, maps, structs) are escaped on output; a `*runtime.SafeValue` is treated as safe; `{{ bytes }}` prints a `[]byte` as text (escaped) instead of `[60 98 62]`. `urlize`, `urlizetruncate`, `nl2br` and `truncatehtml` escape their input text. `xmlattr` output is no longer double-escaped. `tojson` escapes `'`. `{% autoescape %}` blocks keep their setting inside `for` loops and `{% with %}`. `urlize(..., nofollow=true)` no longer adds an extra `nofollow` to every link after the first.
+- Concurrent renders on one `Environment` that import templates no longer race or crash (`concurrent map writes`).
+- `{% from x import name %}` for a missing name gives an undefined value whose call fails with "does not export the requested name", not placeholder text.
+- Macros see their own file's top-level `{% set %}` variables, including block sets (`{% set x %}...{% endset %}`).
+- An imported template's own `import`/`from` statements run, so its macros can call the helpers it imports.
+- A self-import or mutual import fails with `runtime.ErrMaxRecursion` instead of returning a half-built module.
+- `from ... import a as b` works in templates that use `{% extends %}`.
+- `with context` / `without context` parse, including after a trailing comma in `from ... import a, with context`.
 
 ### Changed
 
@@ -23,6 +30,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Template.Release()` now removes the template from the environment's template cache and leaves it usable. A later `FromString`/`GetTemplate` of the same source or name parses it again. The parser no longer pools AST nodes.
 - **Breaking:** a filter, global or data value that relied on a non-string type to bypass autoescape (for example Go's `html/template.HTML`) is now escaped; return `runtime.SafeValue` instead. `filters.SafeValue` is now an alias of `runtime.SafeValue`. `xmlattr` rejects attribute names containing whitespace, `/`, `>` or `=`. `nl2br` and `urlize` escape their input text even with autoescape off (filters cannot see the setting; `urlize` matches Jinja2). A truncated `truncatehtml` result is escaped text, including the `end` argument. Non-string values passed through macros, `caller()`, imports and `{% set %}` blocks are now escaped twice (as plain strings already were) until the Markup change lands.
 - **Breaking:** `and`/`or` return one of their operands and skip the right side when the left decides, as in Jinja2: `{{ name or 'default' }}` prints the name, not `true`; `{% if x != 0 and 10 / x %}` no longer raises; templates that printed `{{ a or b }}` expecting `true`/`false` now print a value.
+- **Breaking:** imported templates run without the importer's context, as in Jinja2. `{% import %}` and `{% from %}` macros no longer see render variables or variables set before the import. Write `{% import "x.html" as x with context %}` (or `from ... import ... with context`) to keep the old visibility. Each import builds its own namespace, so a loop no longer reuses the first iteration's values.
+- **Breaking:** importing a template that does not exist, or one with a syntax error, is an error. Previously both rendered silently.
+- **Breaking:** a top-level `{% set %}` in an imported template that fails to evaluate (for example a strict-mode undefined variable) fails the render. Previously the variable silently held the text `[Variable x from file]`.
+- Within one render, every import of a template *without* context shares one module, as in Jinja2 (an imported `namespace()` counter keeps counting across imports in a loop). Imports with context are built fresh each time. Unlike Jinja2, modules are never shared between renders.
+- `{{ x is defined }}` is false when `x` holds an undefined value (`{% set x = nope %}`), as in Jinja2. In strict mode, printing a name that a `{% from %}` import did not find raises an error.
+- `runtime.ImportSystem.LoadTemplateNamespace` uses the context it is given as the module context, without cloning it, writes to it, and expects the loader to return an error for a missing template (`TemplateExists` is not consulted). An import on an evaluator that has no import system (for example one an extension creates with `runtime.NewEvaluator()`) is an error instead of binding placeholder macros.
 
 ### Deprecated
 

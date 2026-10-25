@@ -1121,6 +1121,9 @@ type ImportNode struct {
 	baseNode
 	Template ExpressionNode // The template to import
 	Alias    string         // The alias name for the imported template
+	// WithContext is true for "with context": the imported template sees the
+	// importer's variables. The default, as in Jinja2, is without context.
+	WithContext bool
 }
 
 func NewImportNode(line, column int, template ExpressionNode, alias string) *ImportNode {
@@ -1143,6 +1146,8 @@ type FromNode struct {
 	Template ExpressionNode    // The template to import from
 	Names    []string          // The names to import
 	Aliases  map[string]string // Optional aliases for imported names (name -> alias)
+	// WithContext is true for "with context": see ImportNode.WithContext.
+	WithContext bool
 }
 
 func NewFromNode(line, column int, template ExpressionNode, names []string, aliases map[string]string) *FromNode {

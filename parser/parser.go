@@ -1784,13 +1784,37 @@ func (p *Parser) parseImportStatement() (Node, error) {
 	}
 	alias := p.advance().Value
 
+	withContext, err := p.parseImportContext()
+	if err != nil {
+		return nil, err
+	}
+
 	// Expect closing %}
 	if !p.check(lexer.TokenBlockEnd) && !p.check(lexer.TokenBlockEndTrim) {
 		return nil, p.error("expected '%}' after import statement")
 	}
 	p.advance() // consume '%}'
 
-	return NewImportNode(importToken.Line, importToken.Column, template, alias), nil
+	node := NewImportNode(importToken.Line, importToken.Column, template, alias)
+	node.WithContext = withContext
+	return node, nil
+}
+
+// parseImportContext parses an optional "with context" or "without context"
+// and reports whether the import is with context.
+func (p *Parser) parseImportContext() (bool, error) {
+	withContext := false
+	if p.check(lexer.TokenWith) {
+		withContext = true
+	} else if !p.check(lexer.TokenIdentifier) || p.peek().Value != "without" {
+		return false, nil
+	}
+	p.advance() // consume 'with' or 'without'
+	if !p.check(lexer.TokenIdentifier) || p.peek().Value != "context" {
+		return false, p.error("expected 'context' after 'with' or 'without'")
+	}
+	p.advance() // consume 'context'
+	return withContext, nil
 }
 
 // parseFromStatement parses from-import statements {% from 'template' import name1, name2 %}
@@ -1833,9 +1857,18 @@ func (p *Parser) parseFromStatement() (Node, error) {
 		// Check for comma to continue or end
 		if p.check(lexer.TokenComma) {
 			p.advance() // consume ','
+			// As in Jinja2, a trailing comma may precede "with/without context".
+			if p.check(lexer.TokenWith) || (p.check(lexer.TokenIdentifier) && p.peek().Value == "without" && p.peekNext().Value == "context") {
+				break
+			}
 			continue
 		}
 		break
+	}
+
+	withContext, err := p.parseImportContext()
+	if err != nil {
+		return nil, err
 	}
 
 	// Expect closing %}
@@ -1844,7 +1877,9 @@ func (p *Parser) parseFromStatement() (Node, error) {
 	}
 	p.advance() // consume '%}'
 
-	return NewFromNode(fromToken.Line, fromToken.Column, template, names, aliases), nil
+	node := NewFromNode(fromToken.Line, fromToken.Column, template, names, aliases)
+	node.WithContext = withContext
+	return node, nil
 }
 
 func (p *Parser) error(message string) error {

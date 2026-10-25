@@ -154,6 +154,12 @@ func (a *TemplateContextAdapter) Clone() runtime.Context {
 	return &TemplateContextAdapter{ctx: a.ctx.Clone(), env: a.env}
 }
 
+// NewModuleContext returns an empty context that shares the environment, for
+// templates imported without context.
+func (a *TemplateContextAdapter) NewModuleContext() runtime.Context {
+	return &TemplateContextAdapter{ctx: newContextWithEnv(a.env), env: a.env}
+}
+
 func (a *TemplateContextAdapter) All() map[string]interface{} {
 	return a.ctx.All()
 }

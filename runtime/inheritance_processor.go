@@ -580,9 +580,9 @@ func (p *InheritanceProcessor) cloneNode(node parser.Node) parser.Node {
 	case *parser.ExtendsNode:
 		return &parser.ExtendsNode{Template: n.Template}
 	case *parser.FromNode:
-		return &parser.FromNode{Template: n.Template, Names: n.Names}
+		return &parser.FromNode{Template: n.Template, Names: n.Names, Aliases: n.Aliases, WithContext: n.WithContext}
 	case *parser.ImportNode:
-		return &parser.ImportNode{Template: n.Template, Alias: n.Alias}
+		return &parser.ImportNode{Template: n.Template, Alias: n.Alias, WithContext: n.WithContext}
 	case *parser.IfNode:
 		clone := &parser.IfNode{
 			Condition: n.Condition,

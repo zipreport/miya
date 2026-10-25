@@ -284,36 +284,6 @@
   "plan": "053",
   "reason": "want \"1-2\", got \"%!s(int=1)-%!s(int=2)\""
  },
- "imp-001": {
-  "kind": "output",
-  "plan": "026",
-  "reason": "want \"[]\", got \"[SECRET]\""
- },
- "imp-002": {
-  "kind": "output",
-  "plan": "026",
-  "reason": "want \"A:|B:|\", got \"A:A|B:A|\""
- },
- "imp-005": {
-  "kind": "output",
-  "plan": "026",
-  "reason": "want \"G\", got \"\""
- },
- "imp-006": {
-  "kind": "output",
-  "plan": "026",
-  "reason": "want render-time error TemplateNotFound, got output \"x\""
- },
- "imp-007": {
-  "kind": "output",
-  "plan": "026",
-  "reason": "want render-time error UndefinedError, got output \"[Undefined macro nothere from lib]\""
- },
- "imp-008": {
-  "kind": "error",
-  "plan": "026",
-  "reason": "want \"[V]\", got compile-time error: parser error in template main: expected '%}' after import statement at line 1, column 23"
- },
  "inc-001": {
   "kind": "output",
   "plan": "049",

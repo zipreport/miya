@@ -1975,7 +1975,7 @@ func (etl *ErrorTemplateLoader) LoadTemplate(name string) (*parser.TemplateNode,
 }
 
 func (etl *ErrorTemplateLoader) TemplateExists(name string) bool {
-	return true // Claim it exists but fail on load
+	return true // Not consulted by LoadTemplateNamespace
 }
 
 // Test template import system
@@ -1993,9 +1993,6 @@ func TestTemplateImportSystem(t *testing.T) {
 		if importSys.loader != loader {
 			t.Error("Expected loader to be set")
 		}
-		if importSys.namespaces == nil {
-			t.Error("Expected namespaces map to be initialized")
-		}
 	})
 
 	t.Run("LoadTemplateNamespace_MissingTemplate", func(t *testing.T) {
@@ -2004,34 +2001,16 @@ func TestTemplateImportSystem(t *testing.T) {
 		// Try to load non-existent template
 		ns, err := importSys.LoadTemplateNamespace("missing.html", ctx, evaluator)
 
-		if err != nil {
-			t.Fatalf("Unexpected error for missing template: %v", err)
+		if err == nil {
+			t.Fatal("Expected an error for a missing template")
 		}
 
-		if ns == nil {
-			t.Fatal("Expected placeholder namespace to be created")
+		if ns != nil {
+			t.Errorf("Expected nil namespace, got %v", ns)
 		}
 
-		if ns.TemplateName != "missing.html" {
-			t.Errorf("Expected template name 'missing.html', got %s", ns.TemplateName)
-		}
-
-		if ns.Macros == nil {
-			t.Error("Expected macros map to be initialized")
-		}
-
-		if ns.Variables == nil {
-			t.Error("Expected variables map to be initialized")
-		}
-
-		// Check that it's cached
-		ns2, err := importSys.LoadTemplateNamespace("missing.html", ctx, evaluator)
-		if err != nil {
-			t.Fatalf("Unexpected error on cached lookup: %v", err)
-		}
-
-		if ns2 != ns {
-			t.Error("Expected cached namespace to be returned")
+		if !stringContains(err.Error(), "failed to load template") {
+			t.Errorf("Expected load failure message, got: %v", err)
 		}
 	})
 
@@ -2103,8 +2082,8 @@ func TestTemplateImportSystem(t *testing.T) {
 			t.Error("Expected error when loader fails")
 		}
 
-		if !stringContains(err.Error(), "failed to load template") {
-			t.Errorf("Expected load failure message, got: %v", err)
+		if !stringContains(err.Error(), "failed to load template") || !stringContains(err.Error(), "simulated loader error") {
+			t.Errorf("Expected the loader's own error, wrapped, got: %v", err)
 		}
 	})
 
