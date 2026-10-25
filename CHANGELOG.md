@@ -40,6 +40,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Template names are checked per segment, like Jinja2's `split_template_path`: `a..b.html` is a valid name, any `..` segment is rejected (`a/../b` used to be accepted), and on POSIX a backslash is an ordinary character.
 - `LoadTemplate` on a loader without a parser returns an error instead of panicking.
 - `FileSystemLoader.LoadTemplate` re-parses a template whose file modification time changed. This affects direct `LoadTemplate` callers only: an `Environment` caches compiled templates itself and does not re-read files (use `ClearCache`/`InvalidateTemplate`).
+- Macro keyword arguments bind by name for local, imported and from-imported macros; defaults can use earlier parameters; `varargs` and `kwargs` work; a parameter without a default and not passed is undefined instead of an error.
+- Imported macros can call themselves and macros from their own file, and work in `{% call %}`.
+- `{% call(args) macro() %}` parses and passes arguments to the block; `caller()` is rendered on each call.
+- An `{% autoescape %}` block's setting applies inside macro and call-block bodies defined in it.
+- Runaway macro recursion reports the depth limit once instead of wrapping it at every level.
 
 ### Changed
 
@@ -67,6 +72,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** with `followLinks` false, a symlink inside the search path is followed only if it is relative and resolves inside the search path. An absolute symlink, or one that leaves the folder, is "template not found" (set `SetFollowLinks(true)` to follow every link, as before for directories). A relative symlinked *file* inside the folder is now accepted; it used to be rejected.
 - **Breaking:** in a `ChainLoader`, a template that exists in an earlier loader but does not compile is an error; it used to fall through to a later loader's copy.
 - `LRUFileSystemLoader`'s size and TTL bound only its own `LoadTemplate` cache; they do not bound what an `Environment` caches.
+- **Breaking:** a macro body no longer sees the caller's local variables (loop variables, and `{% set %}` inside the calling macro or loop body). As in Jinja2, it sees its parameters and the scope where it was defined. Pass values as arguments. A `{% set %}` inside a `{% block %}` is still visible to macros called from that block, because miya blocks share the top-level context (unchanged).
+- **Breaking:** an unknown keyword argument, a keyword that repeats a positional argument, or more positional arguments than parameters is an error, unless the macro uses `kwargs`/`varargs`.
+- **Breaking:** a missing argument without a default is undefined, not an error.
+- **Breaking:** `{% call %}` on a macro that never calls `caller()` is an error.
+- **Breaking:** `caller()` inside a call block nested in a macro no longer reaches the outer macro's caller; it fails with `no caller defined`, as in Jinja2.
+- **Breaking:** `{% call %}` must be followed by a call (`{% call w()|upper %}` is a parse error, `expected call`), and a macro or call-block parameter named `caller` must have a default.
+- **Breaking:** a parameter named `varargs` or `kwargs` is an ordinary parameter and turns the catch-all off, as in Jinja2.
+- **Breaking (Go):** macros are `*runtime.Macro` values (`Call(args, kwargs)`), so Go code that type-asserted a macro to a `func` must use the new type. `{{ m }}` prints `<Macro 'm'>`. Each lookup of an imported macro returns a new value, so `m.s is sameas m.s` is now false.
+- **Breaking (Go):** a Go function used in `{% call %}` receives the caller differently. A `func(...interface{})` gets a trailing `map[string]interface{}` holding `caller`; a `func(Context, ...interface{})` no longer finds `caller` in its context.
 
 ### Deprecated
 

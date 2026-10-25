@@ -264,66 +264,6 @@
   "plan": "034",
   "reason": "want \"[1(2(3))]\", got render-time error: cannot call non-function value of type map[string]interface {}"
  },
- "mac-001": {
-  "kind": "error",
-  "plan": "028",
-  "reason": "want \"1-2\", got render-time error: missing required macro parameter: a"
- },
- "mac-002": {
-  "kind": "error",
-  "plan": "028",
-  "reason": "want \"1-5\", got render-time error: missing required macro parameter: a"
- },
- "mac-003": {
-  "kind": "output",
-  "plan": "028",
-  "reason": "want \"1-9\", got \"1-2\""
- },
- "mac-004": {
-  "kind": "output",
-  "plan": "028",
-  "reason": "want \"11x\", got \"1x\""
- },
- "mac-005": {
-  "kind": "error",
-  "plan": "028",
-  "reason": "want \"nob\", got render-time error: missing required macro parameter: b"
- },
- "mac-006": {
-  "kind": "output",
-  "plan": "028",
-  "reason": "want render-time error TypeError, got output \"1\""
- },
- "mac-007": {
-  "kind": "error",
-  "plan": "028",
-  "reason": "want \"3210\", got render-time error: error executing macro r: cannot call non-function value of type *runtime.Undefined"
- },
- "mac-008": {
-  "kind": "error",
-  "plan": "028",
-  "reason": "want \"AB\", got render-time error: error executing macro a: cannot call non-function value of type *runtime.Undefined"
- },
- "mac-009": {
-  "kind": "error",
-  "plan": "028",
-  "reason": "want \"[in]\", got render-time error: error executing macro wrap: cannot call non-function value of type *runtime.Undefined"
- },
- "mac-010": {
-  "kind": "error",
-  "plan": "028",
-  "reason": "want \"G N\", got render-time error: missing required macro parameter: n"
- },
- "mac-011": {
-  "kind": "error",
-  "plan": "028",
-  "reason": "want \"2\", got render-time error: object of type *runtime.Undefined has no len()"
- },
- "mac-012": {
-  "kind": "error",
-  "plan": "028",
-  "reason": "want render-time error TypeError, got compile-time error: parser error in template main: expected '%}' after call expression at line 1, column 52"
- },
  "macesc-001": {
   "kind": "output",
   "plan": "027",
