@@ -140,12 +140,18 @@ output, err := tmpl.Render(ctx)
 
 ```
 tests/
-├── unit/           # Unit tests for individual components
-├── integration/    # Full template rendering tests
-├── jinja/          # Jinja2 compatibility tests
-├── performance/    # Benchmark tests
-└── fixtures/       # Test template files
+├── core_engine_test.go        # Core engine rendering and error tests
+├── advanced_features_test.go  # Advanced feature and edge case tests
+├── performance_test.go        # Wall-clock performance checks
+├── helpers/                   # Shared test helpers and fixtures
+└── unit/                      # Unit tests by topic
+benchmarks/
+├── benchmark_miya.go          # Go benchmark
+├── benchmark_python.py        # Python reference benchmark
+└── compat_demo/               # Compatibility demo (has a test)
 ```
+
+Package-level `*_test.go` files sit beside the code (`./`, `runtime/`, `parser/`, `filters/`, `loader/`, ...).
 
 ### Running Specific Test Categories
 
@@ -153,11 +159,11 @@ tests/
 # Unit tests only
 go test ./tests/unit/...
 
-# Integration tests
-go test ./tests/integration/...
+# Core engine and advanced feature tests
+go test ./tests/
 
-# Jinja compatibility tests
-go test ./tests/jinja/...
+# Everything
+make test
 ```
 
 ## Common Development Tasks

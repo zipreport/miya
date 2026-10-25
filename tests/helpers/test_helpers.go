@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"strings"
 	"testing"
 
 	jinja2 "github.com/zipreport/miya"
@@ -27,7 +28,7 @@ func RenderTestCase(t *testing.T, env *jinja2.Environment, tc TestCase) {
 				t.Errorf("Expected error but got none")
 				return
 			}
-			if tc.ErrorContains != "" && !contains(err.Error(), tc.ErrorContains) {
+			if tc.ErrorContains != "" && !strings.Contains(err.Error(), tc.ErrorContains) {
 				t.Errorf("Expected error to contain '%s', got: %v", tc.ErrorContains, err)
 			}
 			return
@@ -64,20 +65,6 @@ func CreateEnvironment() *jinja2.Environment {
 	return jinja2.NewEnvironment()
 }
 
-// contains is a simple string contains check
-func contains(s, substr string) bool {
-	return len(substr) == 0 || len(s) >= len(substr) && (s == substr || containsAt(s, substr, 0, len(s)-len(substr)+1))
-}
-
-func containsAt(s, substr string, start, end int) bool {
-	for i := start; i < end; i++ {
-		if s[i:i+len(substr)] == substr {
-			return true
-		}
-	}
-	return false
-}
-
 // AssertError checks that an error occurred with optional message validation
 func AssertError(t *testing.T, err error, expectedContains string) {
 	t.Helper()
@@ -85,7 +72,7 @@ func AssertError(t *testing.T, err error, expectedContains string) {
 		t.Error("Expected error but got none")
 		return
 	}
-	if expectedContains != "" && !contains(err.Error(), expectedContains) {
+	if expectedContains != "" && !strings.Contains(err.Error(), expectedContains) {
 		t.Errorf("Expected error to contain '%s', got: %v", expectedContains, err)
 	}
 }

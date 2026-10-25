@@ -720,8 +720,7 @@ func TestCoreEvaluator(t *testing.T) {
 		}
 		result, err = evaluator.EvalGetItemNode(negNode, ctx)
 		if err != nil {
-			// Negative indexing might not be implemented, skip this test
-			t.Skipf("Negative indexing not supported: %v", err)
+			t.Fatalf("Negative indexing failed: %v", err)
 		} else if result != 5 {
 			t.Errorf("Expected 5, got %v", result)
 		}
