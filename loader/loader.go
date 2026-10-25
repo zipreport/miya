@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -91,6 +92,9 @@ type cachedTemplate struct {
 	template *parser.TemplateNode
 	source   *TemplateSource
 	expires  time.Time
+
+	// searchPath and rel locate the file a FileSystemLoader entry was read from.
+	searchPath, rel string
 }
 
 // Base implementation (keeping compatibility)
@@ -175,13 +179,13 @@ func (f *FileSystemLoader) IsCached(name string) bool {
 	defer f.cacheMutex.RUnlock()
 
 	cached, ok := f.cache[name]
-	return ok && !f.isExpired(cached)
+	return ok && f.valid(cached)
 }
 
 // LoadTemplate loads and parses a template by name
 func (f *FileSystemLoader) LoadTemplate(name string) (*parser.TemplateNode, error) {
 	f.cacheMutex.RLock()
-	if cached, ok := f.cache[name]; ok && !f.isExpired(cached) {
+	if cached, ok := f.cache[name]; ok && f.valid(cached) {
 		f.cacheMutex.RUnlock()
 		atomic.AddInt64(&f.stats.Hits, 1)
 		return cached.template, nil
@@ -190,7 +194,11 @@ func (f *FileSystemLoader) LoadTemplate(name string) (*parser.TemplateNode, erro
 
 	atomic.AddInt64(&f.stats.Misses, 1)
 
-	source, err := f.GetSourceWithMetadata(name)
+	if f.parser == nil {
+		return nil, fmt.Errorf("loader has no template parser; use GetSource or pass a parser")
+	}
+
+	source, searchPath, rel, err := f.readTemplate(name)
 	if err != nil {
 		return nil, err
 	}
@@ -206,6 +214,9 @@ func (f *FileSystemLoader) LoadTemplate(name string) (*parser.TemplateNode, erro
 		template: template,
 		source:   source,
 		expires:  time.Now().Add(5 * time.Minute), // 5 minute cache
+
+		searchPath: searchPath,
+		rel:        rel,
 	}
 	f.cacheMutex.Unlock()
 
@@ -214,40 +225,68 @@ func (f *FileSystemLoader) LoadTemplate(name string) (*parser.TemplateNode, erro
 
 // GetSourceWithMetadata retrieves the source content of a template with metadata
 func (f *FileSystemLoader) GetSourceWithMetadata(name string) (*TemplateSource, error) {
-	resolvedPath, err := f.findTemplate(name)
+	src, _, _, err := f.readTemplate(name)
+	return src, err
+}
+
+// readTemplate locates name and reads it through the same root, taking the
+// modification time from the open file (fstat), not from a second lookup.
+func (f *FileSystemLoader) readTemplate(name string) (src *TemplateSource, searchPath, rel string, err error) {
+	searchPath, rel, err = f.locate(name)
 	if err != nil {
-		return nil, err
+		return nil, "", "", err
 	}
 
-	content, err := os.ReadFile(resolvedPath)
+	fh, err := f.openIn(searchPath, rel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read template %s: %v", name, err)
+		return nil, "", "", fmt.Errorf("failed to read template %s: %v", name, err)
+	}
+	defer fh.Close()
+
+	st, err := fh.Stat()
+	if err != nil {
+		return nil, "", "", fmt.Errorf("failed to stat template %s: %v", name, err)
+	}
+	if st.IsDir() {
+		return nil, "", "", fmt.Errorf("failed to read template %s: is a directory", name)
 	}
 
-	stat, err := os.Stat(resolvedPath)
+	content, err := io.ReadAll(fh)
 	if err != nil {
-		return nil, fmt.Errorf("failed to stat template %s: %v", name, err)
+		return nil, "", "", fmt.Errorf("failed to read template %s: %v", name, err)
 	}
 
 	return &TemplateSource{
 		Name:    name,
 		Content: string(content),
-		ModTime: stat.ModTime(),
-	}, nil
+		ModTime: st.ModTime(),
+	}, searchPath, rel, nil
+}
+
+// safeTemplateName applies Jinja2's split_template_path rule: the name is
+// split on "/" only; a ".." segment, or a segment containing the OS path
+// separator where that is not "/", makes the name invalid; empty and "."
+// segments are dropped. It returns "" for an invalid name. On POSIX a
+// backslash is an ordinary file-name character, as in Jinja2.
+func safeTemplateName(name string) string {
+	var parts []string
+	for _, seg := range strings.Split(name, "/") {
+		switch {
+		case seg == "" || seg == ".":
+			continue
+		case seg == "..":
+			return ""
+		case filepath.Separator != '/' && strings.ContainsRune(seg, filepath.Separator):
+			return ""
+		}
+		parts = append(parts, seg)
+	}
+	return strings.Join(parts, "/")
 }
 
 // ResolveTemplateName resolves a template name to its canonical form
 func (f *FileSystemLoader) ResolveTemplateName(name string) string {
-	// Clean the path and remove any directory traversal attempts
-	name = filepath.Clean(name)
-	name = strings.TrimPrefix(name, "/")
-
-	// Ensure no directory traversal
-	if strings.Contains(name, "..") {
-		return ""
-	}
-
-	return name
+	return safeTemplateName(name)
 }
 
 // ListTemplates returns a list of all available templates
@@ -405,12 +444,13 @@ func (f *FileSystemLoader) GetTemplatesInDirectory(dir string) ([]string, error)
 
 // GetTemplateInfo returns detailed information about a template
 func (f *FileSystemLoader) GetTemplateInfo(name string) (*TemplateInfo, error) {
-	resolvedPath, err := f.findTemplate(name)
+	searchPath, rel, err := f.locate(name)
 	if err != nil {
 		return nil, err
 	}
+	resolvedPath := filepath.Join(searchPath, filepath.FromSlash(rel))
 
-	stat, err := os.Stat(resolvedPath)
+	stat, err := f.statIn(searchPath, rel)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat template %s: %v", name, err)
 	}
@@ -487,69 +527,66 @@ func (f *FileSystemLoader) GetCacheStats() CacheStats {
 	}
 }
 
-// findTemplate finds the full path to a template file
-func (f *FileSystemLoader) findTemplate(name string) (string, error) {
-	name = f.ResolveTemplateName(name)
-	if name == "" {
-		return "", fmt.Errorf("invalid template name")
+// locate finds name under the search paths. It returns the search path and
+// the "/"-separated relative name (extension appended if one was needed).
+func (f *FileSystemLoader) locate(name string) (searchPath, rel string, err error) {
+	rel0 := f.ResolveTemplateName(name)
+	if rel0 == "" {
+		return "", "", fmt.Errorf("invalid template name")
 	}
 
-	// Try each search path
-	for _, searchPath := range f.searchPaths {
-		// Try the name as-is first
-		fullPath := filepath.Join(searchPath, name)
-		if f.fileExists(fullPath) {
-			return fullPath, nil
-		}
-
-		// If no extension, try with each valid extension
-		if filepath.Ext(name) == "" {
+	for _, sp := range f.searchPaths {
+		candidates := []string{rel0}
+		if path.Ext(rel0) == "" {
 			for _, ext := range f.extensions {
-				fullPathWithExt := fullPath + ext
-				if f.fileExists(fullPathWithExt) {
-					return fullPathWithExt, nil
-				}
+				candidates = append(candidates, rel0+ext)
+			}
+		}
+		for _, cand := range candidates {
+			if st, err := f.statIn(sp, cand); err == nil && !st.IsDir() {
+				return sp, cand, nil
 			}
 		}
 	}
 
-	return "", fmt.Errorf("template not found: %s", name)
+	return "", "", fmt.Errorf("template not found: %s", name)
 }
 
-// fileExists checks if a file exists and is readable
-func (f *FileSystemLoader) fileExists(path string) bool {
-	// Use Lstat to check symlinks without following them
-	stat, err := os.Lstat(path)
+// statIn stats rel under searchPath. With followLinks false the lookup goes
+// through os.Root, so no path or link can leave searchPath.
+func (f *FileSystemLoader) statIn(searchPath, rel string) (os.FileInfo, error) {
+	if f.followLinks {
+		return os.Stat(filepath.Join(searchPath, filepath.FromSlash(rel)))
+	}
+	r, err := os.OpenRoot(searchPath)
 	if err != nil {
-		return false
+		return nil, err
 	}
-
-	// If followLinks is false, check if it's a symlink
-	if !f.followLinks {
-		if stat.Mode()&os.ModeSymlink != 0 {
-			return false
-		}
-	}
-
-	// If it's a symlink and we're following links, use Stat to check the target
-	if stat.Mode()&os.ModeSymlink != 0 && f.followLinks {
-		stat, err = os.Stat(path)
-		if err != nil {
-			return false
-		}
-	}
-
-	// Check if it's a file and not a directory
-	if stat.IsDir() {
-		return false
-	}
-
-	return true
+	defer r.Close()
+	return r.Stat(rel)
 }
 
-// isExpired checks if a cached template has expired
-func (f *FileSystemLoader) isExpired(cached *cachedTemplate) bool {
-	return time.Now().After(cached.expires)
+// openIn opens rel under searchPath, with the same containment as statIn.
+func (f *FileSystemLoader) openIn(searchPath, rel string) (*os.File, error) {
+	if f.followLinks {
+		return os.Open(filepath.Join(searchPath, filepath.FromSlash(rel)))
+	}
+	r, err := os.OpenRoot(searchPath)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	return r.Open(rel)
+}
+
+// valid reports whether a cached template is within its TTL and its file is
+// unchanged (same modification time).
+func (f *FileSystemLoader) valid(cached *cachedTemplate) bool {
+	if !time.Now().Before(cached.expires) {
+		return false
+	}
+	st, err := f.statIn(cached.searchPath, cached.rel)
+	return err == nil && st.ModTime().Equal(cached.source.ModTime)
 }
 
 // EmbedLoader loads templates from embedded filesystem
@@ -609,6 +646,10 @@ func (e *EmbedLoader) LoadTemplate(name string) (*parser.TemplateNode, error) {
 
 	atomic.AddInt64(&e.stats.Misses, 1)
 
+	if e.parser == nil {
+		return nil, fmt.Errorf("loader has no template parser; use GetSource or pass a parser")
+	}
+
 	source, err := e.GetSourceWithMetadata(name)
 	if err != nil {
 		return nil, err
@@ -649,16 +690,7 @@ func (e *EmbedLoader) GetSourceWithMetadata(name string) (*TemplateSource, error
 
 // ResolveTemplateName resolves a template name to its canonical form
 func (e *EmbedLoader) ResolveTemplateName(name string) string {
-	// Clean the path and remove any directory traversal attempts
-	name = filepath.Clean(name)
-	name = strings.TrimPrefix(name, "/")
-
-	// Ensure no directory traversal
-	if strings.Contains(name, "..") {
-		return ""
-	}
-
-	return name
+	return safeTemplateName(name)
 }
 
 // ListTemplates returns a list of all available templates
@@ -911,6 +943,10 @@ func (s *StringLoader) LoadTemplate(name string) (*parser.TemplateNode, error) {
 	content, exists := s.templates[name]
 	if !exists {
 		return nil, fmt.Errorf("template not found: %s", name)
+	}
+
+	if s.parser == nil {
+		return nil, fmt.Errorf("loader has no template parser; use GetSource or pass a parser")
 	}
 
 	return s.parser.ParseTemplate(name, content)

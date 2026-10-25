@@ -1,6 +1,7 @@
 package loader
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -228,6 +229,10 @@ func (l *LRUFileSystemLoader) LoadTemplate(name string) (*parser.TemplateNode, e
 	// Try to get from LRU cache first
 	if template, _, found := l.lruCache.Get(name); found {
 		return template, nil
+	}
+
+	if l.parser == nil {
+		return nil, fmt.Errorf("loader has no template parser; use GetSource or pass a parser")
 	}
 
 	// Load from filesystem
