@@ -90,7 +90,7 @@ func TestLogicalOperators(t *testing.T) {
 func TestLogicalOperatorsKnownDivergences(t *testing.T) {
 	// owner: plan 047 (typed nil becomes none and falsy); Jinja2 would give R.
 	t.Run("typed_nil_or", func(t *testing.T) {
-		env := miya.NewEnvironment()
+		env := miya.NewEnvironment(miya.WithAutoEscape(false))
 		got, err := env.RenderString(`{{ tnil or 'R' }}`, miya.NewContextFrom(map[string]interface{}{"tnil": (*struct{ X int })(nil)}))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

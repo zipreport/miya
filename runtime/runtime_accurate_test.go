@@ -837,6 +837,8 @@ func TestCoreEvaluator(t *testing.T) {
 			{false, "or", false, false},
 			{true, "or", false, true},
 			{false, "or", true, true},
+			{"a", "or", "x", "a"},
+			{0, "and", "x", 0},
 		}
 
 		for _, test := range tests {

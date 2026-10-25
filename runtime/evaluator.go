@@ -458,6 +458,19 @@ func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) 
 }
 
 func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Context) (interface{}, error) {
+	if node.Operator == "and" || node.Operator == "or" {
+		left, err := e.EvalNode(node.Left, ctx)
+		if err != nil {
+			return nil, err
+		}
+		// Jinja2: `or` keeps a truthy left, `and` keeps a falsy left; otherwise the
+		// right operand is the result and is only evaluated now.
+		if e.isTruthy(left) == (node.Operator == "or") {
+			return left, nil
+		}
+		return e.EvalNode(node.Right, ctx)
+	}
+
 	left, err := e.EvalNode(node.Left, ctx)
 	if err != nil {
 		return nil, err
@@ -1641,9 +1654,15 @@ func (e *DefaultEvaluator) applyBinaryOpWithNode(op string, left, right interfac
 	case ">=":
 		return e.greaterEqual(left, right)
 	case "and":
-		return e.isTruthy(left) && e.isTruthy(right), nil
+		if !e.isTruthy(left) {
+			return left, nil
+		}
+		return right, nil
 	case "or":
-		return e.isTruthy(left) || e.isTruthy(right), nil
+		if e.isTruthy(left) {
+			return left, nil
+		}
+		return right, nil
 	case "~":
 		return e.concatenateWithNode(left, right, node)
 	case "in":
