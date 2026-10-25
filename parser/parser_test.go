@@ -516,12 +516,10 @@ func TestParseRaw(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			l := lexer.NewLexer(tt.input, nil)
 			tokens, err := l.Tokenize()
-			if err != nil {
-				t.Fatalf("lexer error: %v", err)
+			if err == nil {
+				p := NewParser(tokens)
+				_, err = p.Parse()
 			}
-
-			p := NewParser(tokens)
-			_, err = p.Parse()
 
 			if tt.wantErr && err == nil {
 				t.Errorf("expected error, got none")

@@ -341,7 +341,7 @@ func TestCoreTemplateEngine(t *testing.T) {
 			Name:     "Raw blocks",
 			Template: `{% raw %}{{ not_rendered }} {% for x in y %}{% endraw %}`,
 			Context:  map[string]interface{}{},
-			Expected: "{{not_rendered}} {%forxiny%}",
+			Expected: "{{ not_rendered }} {% for x in y %}",
 		},
 		{
 			Name:     "Filter blocks",
