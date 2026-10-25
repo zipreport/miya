@@ -143,6 +143,28 @@ func TestRenderNoPanic(t *testing.T) {
 			t.Fatalf("pool_survives_panic: got %q, %v", out, err)
 		}
 	})
+
+	t.Run("render_to_panic", func(t *testing.T) {
+		env := newEnv()
+		if err := env.AddFilter("boom", boom); err != nil {
+			t.Fatal(err)
+		}
+		tmpl, err := env.FromString(`{{ 1|boom }}`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Fatalf("panicked: %v", r)
+				}
+			}()
+			err = tmpl.RenderTo(&strings.Builder{}, miya.NewContext())
+		}()
+		if err == nil || !errors.Is(err, miya.ErrRenderPanic) {
+			t.Fatalf("want ErrRenderPanic, got %v", err)
+		}
+	})
 }
 
 func sp(s string) *string { return &s }
