@@ -1,6 +1,7 @@
 package miya_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -16,6 +17,8 @@ func TestRenderNoPanic(t *testing.T) {
 		opts = append([]miya.EnvironmentOption{miya.WithLoader(sl), miya.WithAutoEscape(false)}, opts...)
 		return miya.NewEnvironment(opts...)
 	}
+
+	boom := func(v interface{}, a ...interface{}) (interface{}, error) { panic("boom") }
 
 	var nilVariadic func(...interface{}) (interface{}, error)
 	var nilReflect func() string
@@ -91,6 +94,55 @@ func TestRenderNoPanic(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("call_macro_panic", func(t *testing.T) {
+		env := newEnv()
+		if err := env.AddFilter("boom", boom); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := env.FromString("{% macro m() %}{{ 1|boom }}{% endmacro %}"); err != nil {
+			t.Fatal(err)
+		}
+		var err error
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Fatalf("panicked: %v", r)
+				}
+			}()
+			_, err = env.CallMacro("m", miya.NewContext(), nil, nil)
+		}()
+		if err == nil || !errors.Is(err, miya.ErrRenderPanic) {
+			t.Fatalf("want ErrRenderPanic, got %v", err)
+		}
+	})
+
+	t.Run("panicking_filter", func(t *testing.T) {
+		env := newEnv()
+		if err := env.AddFilter("boom", boom); err != nil {
+			t.Fatal(err)
+		}
+		var err error
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Fatalf("panicked: %v", r)
+				}
+			}()
+			_, err = env.RenderString(`{{ 1|boom }}`, miya.NewContext())
+		}()
+		if err == nil || !strings.Contains(err.Error(), "recovered panic") || !strings.Contains(err.Error(), "boom") {
+			t.Fatalf("want recovered panic error mentioning boom, got %v", err)
+		}
+		if !errors.Is(err, miya.ErrRenderPanic) {
+			t.Fatalf("errors.Is(err, ErrRenderPanic) false: %v", err)
+		}
+
+		out, err := env.RenderString(`{{ 1 + 1 }}`, miya.NewContext())
+		if err != nil || out != "2" {
+			t.Fatalf("pool_survives_panic: got %q, %v", out, err)
+		}
+	})
 }
 
 func sp(s string) *string { return &s }

@@ -3,6 +3,7 @@ package miya
 import (
 	"fmt"
 	"hash/fnv"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
@@ -422,7 +423,14 @@ func (e *Environment) ListMacros() []string {
 }
 
 // CallMacro calls a macro with the given arguments
-func (e *Environment) CallMacro(name string, ctx Context, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+func (e *Environment) CallMacro(name string, ctx Context, args []interface{}, kwargs map[string]interface{}) (result interface{}, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = nil
+			err = fmt.Errorf("%w: %v\n%s", ErrRenderPanic, r, debug.Stack())
+		}
+	}()
+
 	// Create runtime context adapter
 	runtimeCtx := &TemplateContextAdapter{ctx: ctx, env: e}
 

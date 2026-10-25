@@ -2,9 +2,11 @@ package miya
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
+	"runtime/debug"
 	"strings"
 	"sync"
 
@@ -33,15 +35,27 @@ type Template struct {
 	cacheMu             sync.RWMutex // Protects hasInheritanceCache
 }
 
+// ErrRenderPanic is wrapped by the error returned when a render recovers from a
+// panic. Its presence means a bug in miya or in a registered filter or function,
+// not a template error.
+var ErrRenderPanic = errors.New("miya: recovered panic during render")
+
 // Render executes the template with the given context and returns the rendered output as a string.
 // It resolves template inheritance, applies whitespace processing, and handles auto-escaping.
-func (t *Template) Render(context Context) (string, error) {
+func (t *Template) Render(context Context) (output string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			output = ""
+			err = fmt.Errorf("%w: %v\n%s", ErrRenderPanic, r, debug.Stack())
+		}
+	}()
+
 	var buf bytes.Buffer
-	err := t.RenderTo(&buf, context)
+	err = t.RenderTo(&buf, context)
 	if err != nil {
 		return "", err
 	}
-	output := buf.String()
+	output = buf.String()
 
 	// Apply block trimming if enabled
 	if t.env.trimBlocks || t.env.lstripBlocks {
@@ -56,7 +70,13 @@ func (t *Template) Render(context Context) (string, error) {
 
 // RenderTo executes the template with the given context and writes the output to w.
 // This is more efficient than Render when writing to an io.Writer directly.
-func (t *Template) RenderTo(w io.Writer, context Context) error {
+func (t *Template) RenderTo(w io.Writer, context Context) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("%w: %v\n%s", ErrRenderPanic, r, debug.Stack())
+		}
+	}()
+
 	if t.ast == nil {
 		// If no AST is available, just write the source as-is
 		_, err := w.Write([]byte(t.source))
@@ -87,13 +107,13 @@ func (t *Template) RenderTo(w io.Writer, context Context) error {
 
 	// Get evaluator from pool (performance optimization)
 	evaluator := t.env.evaluatorPool.Get().(*runtime.DefaultEvaluator)
-	defer t.env.evaluatorPool.Put(evaluator)
 
 	// Reset evaluator state for this render
 	evaluator.SetUndefinedBehavior(t.env.undefinedBehavior)
 	evaluator.SetImportSystem(t.env.importSystem)
 
 	result, err := evaluator.EvalNode(finalAST, &TemplateContextAdapter{ctx: ctx, env: t.env})
+	t.env.evaluatorPool.Put(evaluator)
 	if err != nil {
 		return err
 	}
