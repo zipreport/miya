@@ -404,11 +404,6 @@
   "plan": "038",
   "reason": "want \"true\", got compile-time error: parser error in template main: expected test name after 'is' at line 1, column 10"
  },
- "parse-023": {
-  "kind": "error",
-  "plan": "033",
-  "reason": "want \"a b\", got compile-time error: parser error in template main: unexpected block statement: PLUS at line 1, column 6"
- },
  "parse-024": {
   "kind": "error",
   "plan": "038",
@@ -468,80 +463,5 @@
   "kind": "output",
   "plan": "049",
   "reason": "want \"10\", got \"1\""
- },
- "ws-001": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"{{ a }} {% for x in y %}\", got \"{{a}} {%forxiny%}\""
- },
- "ws-002": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"{{ 'str' }}\", got \"{{str}}\""
- },
- "ws-003": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"<p>{# keep #}</p>\", got \"<p></p>\""
- },
- "ws-004": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"x = 1;\\ny = 2;\", got \"x = 1;y = 2;\""
- },
- "ws-005": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"<script>\\nvar a = 1\\nvar b = 2\\n</script>\", got \"<script>\\nvar a = 1var b = 2\\n</script>\""
- },
- "ws-006": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"Total  due\", got \"Totaldue\""
- },
- "ws-007": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"-%}\", got \" %}\""
- },
- "ws-008": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"a {# x #} b\", got \"ab\""
- },
- "ws-009": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"a b\", got \"ab\""
- },
- "ws-011": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"1\", got \"1\\n\""
- },
- "ws-013": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"x\\n\", got \"  x\\n\""
- },
- "ws-014": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"<pre>line1\\nline2</pre>\", got \"<pre>line1line2</pre>\""
- },
- "ws-015": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"x %}\\n\\ny\", got \"x %}\\ny\""
- },
- "ws-016": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"<option>  a\\n   b </option>\", got \"<option>a b</option>\""
- },
- "ws-017": {
-  "kind": "output",
-  "plan": "033",
-  "reason": "want \"<pre><option>  a\\n   b </option></pre>\", got \"<pre><option>a b</option></pre>\""
  }
 }

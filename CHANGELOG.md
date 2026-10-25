@@ -45,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `{% call(args) macro() %}` parses and passes arguments to the block; `caller()` is rendered on each call.
 - An `{% autoescape %}` block's setting applies inside macro and call-block bodies defined in it.
 - Runaway macro recursion reports the depth limit once instead of wrapping it at every level.
+- Data containing `%}` followed by blank lines no longer panics with trim_blocks.
 
 ### Changed
 
@@ -81,6 +82,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** a parameter named `varargs` or `kwargs` is an ordinary parameter and turns the catch-all off, as in Jinja2.
 - **Breaking (Go):** macros are `*runtime.Macro` values (`Call(args, kwargs)`), so Go code that type-asserted a macro to a `func` must use the new type. `{{ m }}` prints `<Macro 'm'>`. Each lookup of an imported macro returns a new value, so `m.s is sameas m.s` is now false.
 - **Breaking (Go):** a Go function used in `{% call %}` receives the caller differently. A `func(...interface{})` gets a trailing `map[string]interface{}` holding `caller`; a `func(Context, ...interface{})` no longer finds `caller` in its context.
+- **Breaking:** whitespace control is done by the lexer and matches Jinja2:
+  - a comment on its own line no longer joins the lines around it, and inline comments keep the spaces around them;
+  - `-`, trim_blocks and lstrip_blocks no longer act inside string literals, `{% raw %}` or data;
+  - lstrip_blocks applies on the first line;
+  - `{%+`, `+%}`, `{#+` and `+#}` are supported;
+  - `\r\n` and `\r` in templates become `\n`;
+  - one trailing newline of the template is removed unless keep_trailing_newline is set (before, only when another whitespace option was on);
+  - `-` markers now work in templates loaded through `StringLoader` or `FileSystemLoader`.
+- **Breaking:** `{% raw %}` content is output verbatim; it used to lose spaces, quotes and comments.
+- **Breaking:** `Render` no longer rewrites its output: whitespace inside `<option>` is kept, and data containing `%}` or `{%` keeps its blank lines and indentation. `Render` and `RenderTo` now produce the same output.
+- **Breaking:** the `whitespace` package is removed.
+- **Breaking:** CRLF and CR line endings in templates always become LF. There is no option to keep them (miya has no `newline_sequence`), so templates that must emit CRLF (MIME, CSV, ICS) need it produced from data or a filter.
+- **Breaking:** code that builds its own `lexer.LexerConfig` — `loader.NewDirectTemplateParserWithConfig`, `DirectTemplateParser.SetLexerConfig`, `extensions.CreateTokensFromString` — now gets that config's trim_blocks, lstrip_blocks and keep_trailing_newline applied (they were ignored), CRLF normalized, and the template's trailing newline removed unless the config sets `KeepTrailingNewline`. Templates rendered through an `Environment` use the environment's options instead.
+- `{% raw +%}` is rejected with an error, as in Jinja2.
 
 ### Deprecated
 
