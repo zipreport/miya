@@ -400,14 +400,8 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 	// Start with root template and replace blocks with child implementations
 	finalTemplate := p.cloneTemplateNode(hierarchy.RootTemplate)
 
-	// Collect and add import statements from all templates in the hierarchy
-	err := p.addImportStatementsToTemplate(finalTemplate, hierarchy)
-	if err != nil {
-		return nil, fmt.Errorf("failed to add import statements: %v", err)
-	}
-
 	// Apply child block overrides to the final template
-	err = p.applyBlockOverrides(finalTemplate, hierarchy, context)
+	err := p.applyBlockOverrides(finalTemplate, hierarchy, context)
 	if err != nil {
 		return nil, fmt.Errorf("failed to apply block overrides: %v", err)
 	}
@@ -446,7 +440,81 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 		}
 	}
 
+	// Run each extending template's own top-level code before its parent's,
+	// as Jinja2 does: child first, root last
+	var hoisted []parser.Node
+	for _, tmpl := range hierarchy.Templates[:len(hierarchy.Templates)-1] {
+		hoisted = append(hoisted, topLevelCode(tmpl)...)
+	}
+	if len(hoisted) > 0 {
+		// Blocks kept in hoisted code (inside for, with, ...) render the
+		// most-derived definition, as every other block does
+		overrides := make(map[string]*parser.BlockNode)
+		for i := len(hierarchy.Templates) - 2; i >= 0; i-- {
+			p.collectChildOverrides(hierarchy.Templates[i], overrides)
+		}
+		code := parser.NewTemplateNode("", 0, 0)
+		code.Children = hoisted
+		if err := p.applyOverridesRecursive(code, overrides); err != nil {
+			return nil, err
+		}
+		finalTemplate.Children = append(code.Children, finalTemplate.Children...)
+	}
+
 	return finalTemplate, nil
+}
+
+// topLevelCode returns what an extending template runs outside its blocks:
+// copies of the nodes before {% extends %}, and the statements after it as
+// afterExtends keeps them.
+func topLevelCode(tmpl *parser.TemplateNode) []parser.Node {
+	for i, child := range tmpl.Children {
+		if _, ok := child.(*parser.ExtendsNode); !ok {
+			continue
+		}
+		var code []parser.Node
+		for _, n := range tmpl.Children[:i] {
+			code = append(code, parser.CloneStatement(n))
+		}
+		return append(code, afterExtends(tmpl.Children[i+1:], true)...)
+	}
+	return nil
+}
+
+// afterExtends copies the statements that follow {% extends %} the way Jinja2
+// runs them: output ({{ }}, text, raw) in a page-writing body is not run, a
+// block definition is skipped while still at the top level (the template and
+// if/elif/else branches), and everything else runs and prints before the
+// parent's output: include, call blocks, and blocks inside for, with,
+// autoescape and filter. Macro, call and set-block bodies are function bodies
+// and are kept whole. Extension tags run with their output discarded.
+func afterExtends(nodes []parser.Node, topLevel bool) []parser.Node {
+	var kept []parser.Node
+	for _, n := range nodes {
+		switch n := n.(type) {
+		case *parser.TextNode, *parser.VariableNode, *parser.RawNode, *parser.CommentNode:
+			continue
+		case *parser.BlockNode:
+			if topLevel {
+				continue
+			}
+			kept = append(kept, parser.CloneStatement(n))
+			continue
+		case *parser.MacroNode, *parser.BlockSetNode, *parser.CallBlockNode:
+			kept = append(kept, parser.CloneStatement(n))
+			continue
+		case *parser.ExtensionNode:
+			kept = append(kept, parser.NewDiscardNode([]parser.Node{parser.CloneStatement(n)}, n.Line(), n.Column()))
+			continue
+		}
+		c := parser.CloneStatement(n)
+		_, isIf := n.(*parser.IfNode)
+		for _, body := range parser.ChildBodies(c) {
+			*body = afterExtends(*body, topLevel && isIf)
+		}
+		kept = append(kept, c)
+	}
+	return kept
 }
 
 // cloneTemplateNode creates a deep copy of a template node
@@ -547,52 +615,6 @@ func (p *InheritanceProcessor) ClearCache() {
 // GetCacheStats returns cache performance statistics
 func (p *InheritanceProcessor) GetCacheStats() CacheStats {
 	return p.cache.GetStats()
-}
-
-// addImportStatementsToTemplate collects import statements from all templates in the hierarchy
-// and adds them to the final template
-func (p *InheritanceProcessor) addImportStatementsToTemplate(finalTemplate *parser.TemplateNode, hierarchy *InheritanceHierarchy) error {
-	var importNodes []parser.Node
-
-	// Collect import statements from all templates in hierarchy (child to parent order)
-	for _, template := range hierarchy.Templates {
-		imports := p.collectImportNodes(template)
-		importNodes = append(importNodes, imports...)
-	}
-
-	if len(importNodes) > 0 {
-		// Insert import statements at the beginning of the final template (after extends if present)
-		insertIndex := 0
-		if len(finalTemplate.Children) > 0 {
-			// Skip past ExtendsNode if it exists
-			if _, isExtendsNode := finalTemplate.Children[0].(*parser.ExtendsNode); isExtendsNode {
-				insertIndex = 1
-			}
-		}
-
-		// Create new children slice with imports inserted
-		newChildren := make([]parser.Node, 0, len(finalTemplate.Children)+len(importNodes))
-		newChildren = append(newChildren, finalTemplate.Children[:insertIndex]...)
-		newChildren = append(newChildren, importNodes...)
-		newChildren = append(newChildren, finalTemplate.Children[insertIndex:]...)
-		finalTemplate.Children = newChildren
-	}
-
-	return nil
-}
-
-// collectImportNodes recursively collects ImportNode and FromNode from a template
-func (p *InheritanceProcessor) collectImportNodes(template *parser.TemplateNode) []parser.Node {
-	var imports []parser.Node
-
-	for _, child := range template.Children {
-		switch child.(type) {
-		case *parser.ImportNode, *parser.FromNode:
-			imports = append(imports, p.cloneNode(child))
-		}
-	}
-
-	return imports
 }
 
 // validateSuperCallsInTemplate checks if super() calls are used in valid contexts
