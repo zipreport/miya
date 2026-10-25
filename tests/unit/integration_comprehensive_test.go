@@ -509,7 +509,7 @@ func TestWebApplicationTemplateSystem(t *testing.T) {
 			},
 			expectedContent: []string{
 				"How to Use Go Templates - Test Blog",
-				"By Tech Writer",
+				`By <a href="/authors/tech-writer">Tech Writer</a>`,
 				"5 min read",
 				"This is the full content of the blog post with <strong>HTML</strong>",
 				"About Tech Writer",

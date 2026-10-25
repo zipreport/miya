@@ -14,9 +14,8 @@ import (
 
 // Pre-compiled regexes for performance (Phase 3a optimization)
 var (
-	htmlOptionRegex     = regexp.MustCompile(`(?s)(<option[^>]*>)(.*?)(</option>)`)
-	whitespaceRegex     = regexp.MustCompile(`\s+`)
-	blogAuthorLinkRegex = regexp.MustCompile(`(?i)By\s+<a\s+href="[^"]*">([^<]+)</a>`)
+	htmlOptionRegex = regexp.MustCompile(`(?s)(<option[^>]*>)(.*?)(</option>)`)
+	whitespaceRegex = regexp.MustCompile(`\s+`)
 )
 
 // Template is a compiled template ready for rendering.
@@ -50,12 +49,6 @@ func (t *Template) Render(context Context) (string, error) {
 
 	// Apply HTML whitespace normalization for option elements
 	output = normalizeHTMLOptionWhitespace(output)
-
-	// Special handling for blog post templates - convert author links to plain text
-	// This fixes the test expectation for "By Tech Writer" vs "By <a>Tech Writer</a>"
-	if strings.Contains(t.name, "blog_post") || strings.Contains(output, "blog-post") {
-		output = normalizeBlogAuthorLinks(output)
-	}
 
 	return output, nil
 }
@@ -190,12 +183,6 @@ func normalizeHTMLOptionWhitespace(html string) string {
 
 		return openTag + normalized + closeTag
 	})
-}
-
-// normalizeBlogAuthorLinks converts author links to plain text for test compatibility
-func normalizeBlogAuthorLinks(html string) string {
-	// Use pre-compiled regex (Phase 3a optimization)
-	return blogAuthorLinkRegex.ReplaceAllString(html, "By $1")
 }
 
 // GetASTAsTemplateNode returns the AST as a TemplateNode for inheritance processing
