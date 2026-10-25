@@ -124,8 +124,6 @@ func TestPythonFloorDivMod(t *testing.T) {
 }
 
 func TestLoopUnderExtends(t *testing.T) {
-	t.Skip("fixed by plan 034: the inheritance processor's ForNode copies drop Condition and Recursive; plan 034 deletes this line")
-
 	tests := []struct {
 		name     string
 		template string

@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `miya.ErrRenderPanic`, wrapped by the error `Render`, `RenderTo` and `Environment.CallMacro` return when they recover from a panic.
 - `Environment.SetFilterParams(name, params...)`, `Environment.AddFilterWithParams(name, fn, params...)` and `filters.Param` declare a custom filter's parameter names so templates can pass them as keyword arguments. Keywords reach the filter as ordinary positional arguments; an unfilled earlier position receives its `Param.Default`, which is `nil` when unset. Also `filters.KwArgs` and `runtime.KwargsFilterApplier`.
+- `runtime.InheritanceProcessor.ResolveInheritanceWith`, which takes the evaluator for dynamic `{% extends %}`.
 
 ### Fixed
 
@@ -46,6 +47,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - An `{% autoescape %}` block's setting applies inside macro and call-block bodies defined in it.
 - Runaway macro recursion reports the depth limit once instead of wrapping it at every level.
 - Data containing `%}` followed by blank lines no longer panics with trim_blocks.
+- `{% elif %}` branches of a base template were dropped when a child extended it.
+- Two `FromString` templates extending different parents rendered the first one's output.
+- `ClearCache` now also clears the inheritance cache, so changed parent templates are reloaded when the loader serves the new source. A loader's own cache (`FileSystemLoader`, `EmbedLoader`, `LRUFileSystemLoader`) is separate: call its `ClearCache` too. `InvalidateTemplate(parent)` does not reach the cached hierarchies of templates that extend `parent`; call `ClearCache` after changing a parent.
+- Rendering a template that uses `extends` no longer formats the whole context on every render (9.8 ms → 8.5 µs with a 20 000-row context).
 
 ### Changed
 
@@ -96,6 +101,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** CRLF and CR line endings in templates always become LF. There is no option to keep them (miya has no `newline_sequence`), so templates that must emit CRLF (MIME, CSV, ICS) need it produced from data or a filter.
 - **Breaking:** code that builds its own `lexer.LexerConfig` — `loader.NewDirectTemplateParserWithConfig`, `DirectTemplateParser.SetLexerConfig`, `extensions.CreateTokensFromString` — now gets that config's trim_blocks, lstrip_blocks and keep_trailing_newline applied (they were ignored), CRLF normalized, and the template's trailing newline removed unless the config sets `KeepTrailingNewline`. Templates rendered through an `Environment` use the environment's options instead.
 - `{% raw +%}` is rejected with an error, as in Jinja2.
+- **Breaking:** blocks inside `if`/`elif`/`else`, `for`, `with`, `macro`, `filter`, `set` blocks, `call` and `autoescape` can be overridden by a child template, and `super()` works there. A block nested inside a child's block override also overrides the parent's block of that name.
+- **Breaking:** a child template's top-level code runs before its parent's, as in Jinja2: its `set`, `macro`, `import` and `if` statements take effect, and text before `{% extends %}` is output. After `{% extends %}`, `{{ }}` and text are still not output (and not evaluated), but `{% include %}`, `{% call %}`, `filter` blocks and blocks inside `for`/`with`/`autoescape` now run and print before the parent's output; a missing include there is now an error.
+- **Breaking:** a root template's `{% import %}`/`{% from %}` is no longer moved to the top: a block that uses an import written after it fails, as in Jinja2. Move imports above the blocks that use them.
+- **Breaking:** two blocks with the same name in one template are an error (`block 'a' defined twice`), also when they sit in different `if`/`else` branches, as in Jinja2; such templates now fail to load.
+- **Breaking:** a dynamic `{% extends expr %}` follows the environment's undefined behaviour: in strict mode an undefined name in `expr` is an `UndefinedError`.
+- `{% block name scoped %}` is accepted.
 
 ### Deprecated
 

@@ -4,11 +4,6 @@
   "plan": "051",
   "reason": "want \"2\", got compile-time error: parser error in template main: expected '}' after dictionary elements at line 1, column 18"
  },
- "err-006": {
-  "kind": "output",
-  "plan": "034",
-  "reason": "want compile-time error TemplateAssertionError, got output \"\""
- },
  "esc-001": {
   "kind": "output",
   "plan": "027",
@@ -219,50 +214,10 @@
   "plan": "049",
   "reason": "want \"[]\", got \"[1]\""
  },
- "inh-001": {
-  "kind": "output",
-  "plan": "034",
-  "reason": "want \"[X]\", got \"[d]\""
- },
- "inh-002": {
-  "kind": "output",
-  "plan": "034",
-  "reason": "want \"[X][X]\", got \"[d][d]\""
- },
- "inh-003": {
-  "kind": "output",
-  "plan": "034",
-  "reason": "want \"T|T\", got \"|\""
- },
- "inh-004": {
-  "kind": "error",
-  "plan": "034",
-  "reason": "want \"[M]\", got render-time error: cannot call non-function value of type *runtime.Undefined"
- },
- "inh-005": {
-  "kind": "output",
-  "plan": "034",
-  "reason": "want \"[X]\", got \"[d]\""
- },
  "inh-009": {
   "kind": "error",
   "plan": "unplanned",
   "reason": "want \"T|T\", got render-time error: cannot call non-function value of type *runtime.Undefined"
- },
- "inh-101": {
-  "kind": "output",
-  "plan": "034",
-  "reason": "want \"[23]\", got \"[123]\""
- },
- "inh-102": {
-  "kind": "output",
-  "plan": "034",
-  "reason": "want \"[e]\", got \"[aaa]\""
- },
- "inh-103": {
-  "kind": "error",
-  "plan": "034",
-  "reason": "want \"[1(2(3))]\", got render-time error: cannot call non-function value of type map[string]interface {}"
  },
  "macesc-001": {
   "kind": "output",
