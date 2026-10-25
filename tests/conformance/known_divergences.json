@@ -571,7 +571,7 @@
  },
  "nopanic-002": {
   "kind": "output",
-  "plan": "030",
+  "plan": "048",
   "reason": "want \"[[1, 2], [3]]\", got \"[[1 2] [3]]\" (list repr)"
  },
  "parse-001": {
