@@ -482,7 +482,7 @@ When adding new documentation:
 - All operators
 - Global functions (9)
 - Advanced features (filter blocks, whitespace, etc.)
-- Performance optimizations (AST node pooling, evaluator pooling, caching)
+- Performance optimizations (evaluator pooling, caching)
 
  **Partial Compatibility:**
 - Macros (95% - no caller())

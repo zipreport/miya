@@ -109,14 +109,9 @@ output, err := tmpl.Render(ctx)
 
 2. **sync.Pool for evaluators**: The environment pools evaluators for reuse
 
-3. **sync.Pool for AST nodes**: The parser pools frequently allocated node types to reduce GC pressure. See `parser/node_pool.go` for pooled types:
-   - `LiteralNode`, `IdentifierNode`, `BinaryOpNode`, `FilterNode`
-   - `UnaryOpNode`, `AttributeNode`, `GetItemNode`, `CallNode`
-   - Use `AcquireXXXNode()` in parser, `Template.Release()` to return nodes to pools
+3. **Template caching**: Templates are cached by name/content hash
 
-4. **Template caching**: Templates are cached by name/content hash
-
-5. **Lazy initialization**: Inheritance processor initializes on first use
+4. **Lazy initialization**: Inheritance processor initializes on first use
 
 ### Error Handling
 
