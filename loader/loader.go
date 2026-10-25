@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/zipreport/miya/parser"
@@ -182,12 +183,12 @@ func (f *FileSystemLoader) LoadTemplate(name string) (*parser.TemplateNode, erro
 	f.cacheMutex.RLock()
 	if cached, ok := f.cache[name]; ok && !f.isExpired(cached) {
 		f.cacheMutex.RUnlock()
-		f.stats.Hits++
+		atomic.AddInt64(&f.stats.Hits, 1)
 		return cached.template, nil
 	}
 	f.cacheMutex.RUnlock()
 
-	f.stats.Misses++
+	atomic.AddInt64(&f.stats.Misses, 1)
 
 	source, err := f.GetSourceWithMetadata(name)
 	if err != nil {
@@ -479,9 +480,11 @@ func (f *FileSystemLoader) GetCacheStats() CacheStats {
 	f.cacheMutex.RLock()
 	defer f.cacheMutex.RUnlock()
 
-	stats := f.stats
-	stats.Size = len(f.cache)
-	return stats
+	return CacheStats{
+		Hits:   atomic.LoadInt64(&f.stats.Hits),
+		Misses: atomic.LoadInt64(&f.stats.Misses),
+		Size:   len(f.cache),
+	}
 }
 
 // findTemplate finds the full path to a template file
@@ -599,12 +602,12 @@ func (e *EmbedLoader) LoadTemplate(name string) (*parser.TemplateNode, error) {
 	e.cacheMutex.RLock()
 	if cached, ok := e.cache[name]; ok {
 		e.cacheMutex.RUnlock()
-		e.stats.Hits++
+		atomic.AddInt64(&e.stats.Hits, 1)
 		return cached.template, nil
 	}
 	e.cacheMutex.RUnlock()
 
-	e.stats.Misses++
+	atomic.AddInt64(&e.stats.Misses, 1)
 
 	source, err := e.GetSourceWithMetadata(name)
 	if err != nil {
@@ -715,9 +718,11 @@ func (e *EmbedLoader) GetCacheStats() CacheStats {
 	e.cacheMutex.RLock()
 	defer e.cacheMutex.RUnlock()
 
-	stats := e.stats
-	stats.Size = len(e.cache)
-	return stats
+	return CacheStats{
+		Hits:   atomic.LoadInt64(&e.stats.Hits),
+		Misses: atomic.LoadInt64(&e.stats.Misses),
+		Size:   len(e.cache),
+	}
 }
 
 // resolvePath resolves a template name to a filesystem path
