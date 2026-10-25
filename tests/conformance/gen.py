@@ -379,6 +379,10 @@ case("nopanic-003", "{{ s|indent(-1, true) }}", {"s": "hello world"})
 case("nopanic-004", "{% extends 1 %}")
 
 
+# --- templates cannot modify data (plan 040) --------------------------------
+case("mut-001", "{% set d = dict() %}{% set d.k = 1 %}{{ d.k }}")
+case("mut-002", "{% set n = namespace(a=1) %}{% set n.a = 2 %}{{ n.a }}")
+
 def render(c):
     env = jinja2.Environment(
         loader=jinja2.DictLoader(c["templates"]),

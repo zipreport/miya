@@ -5623,6 +5623,43 @@
    "templates": {
     "main": "{% extends 1 %}"
    }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateRuntimeError",
+    "phase": "render"
+   },
+   "id": "mut-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set d = dict() %}{% set d.k = 1 %}{{ d.k }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "2"
+   },
+   "id": "mut-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set n = namespace(a=1) %}{% set n.a = 2 %}{{ n.a }}"
+   }
   }
  ],
  "jinja2": "3.1.6",
