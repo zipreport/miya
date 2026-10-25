@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `miya.ErrRenderPanic`, wrapped by the error `Render`, `RenderTo` and `Environment.CallMacro` return when they recover from a panic.
 - `Environment.SetFilterParams(name, params...)`, `Environment.AddFilterWithParams(name, fn, params...)` and `filters.Param` declare a custom filter's parameter names so templates can pass them as keyword arguments. Keywords reach the filter as ordinary positional arguments; an unfilled earlier position receives its `Param.Default`, which is `nil` when unset. Also `filters.KwArgs` and `runtime.KwargsFilterApplier`.
 - `runtime.InheritanceProcessor.ResolveInheritanceWith`, which takes the evaluator for dynamic `{% extends %}`.
+- `runtime.CompareNumbers`, `runtime.Equal`, `runtime.GroupTuple`, `filters.TestLookup` and `(*filters.FilterRegistry).SetTestLookup`.
 
 ### Fixed
 
@@ -51,6 +52,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Two `FromString` templates extending different parents rendered the first one's output.
 - `ClearCache` now also clears the inheritance cache, so changed parent templates are reloaded when the loader serves the new source. A loader's own cache (`FileSystemLoader`, `EmbedLoader`, `LRUFileSystemLoader`) is separate: call its `ClearCache` too. `InvalidateTemplate(parent)` does not reach the cached hierarchies of templates that extend `parent`; call `ClearCache` after changing a parent.
 - Rendering a template that uses `extends` no longer formats the whole context on every render (9.8 ms → 8.5 µs with a 20 000-row context).
+- `map("filtername", args...)` applies the filter to each item, keyword arguments included.
+- `groupby` groups have `.grouper` and `.list`, the grouper keeps its type, and `groupby(attr, default=...)` works; `map(attribute="grouper")`, `selectattr("grouper", ...)` and `sort(attribute="grouper")` work on groups.
+- `sort(attribute="a,b")` sorts by several attributes.
+- The `true` and `false` tests exist (`selectattr("paid", "true")`); the `in` test compares numbers by value.
+- Collection filters accept strings, dicts (their keys, sorted) and typed Go slices.
+- The `eq`/`equalto`/`ne` tests compare like `==` (JSON `1` equals `1`, lists element by element); the aliases `==`, `!=`, `<`, `<=`, `>`, `>=`, `lessthan`, `greaterthan` exist.
 
 ### Changed
 
@@ -107,10 +114,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** two blocks with the same name in one template are an error (`block 'a' defined twice`), also when they sit in different `if`/`else` branches, as in Jinja2; such templates now fail to load.
 - **Breaking:** a dynamic `{% extends expr %}` follows the environment's undefined behaviour: in strict mode an undefined name in `expr` is an `UndefinedError`.
 - `{% block name scoped %}` is accepted.
+- **Breaking:** `sort`, `min`, `max` and `groupby` compare numbers numerically (`true`/`false` count as 1/0), strings case-insensitively (unless `case_sensitive`) and lists element by element, like Jinja2; comparing a number with a string is an error that names the attribute. `[10, 9, 2]|sort` used to give `10, 2, 9`.
+- `None` (JSON `null`) and missing attributes never fail a sort: `sort` and `groupby` put them first, as one group (last with `reverse`), and `min`/`max` skip them. This deliberately differs from Jinja2, which raises `TypeError`.
+- **Breaking:** `unique` is case-insensitive by default and keeps `1` and `"1"` apart.
+- **Breaking:** `min`/`max` with `attribute=` return the item, not the attribute; on an empty list they return undefined (prints nothing) instead of failing.
+- **Breaking:** `slice(n, fill_with)` splits a list into n columns, as in Jinja2. It used to slice from index n.
+- **Breaking:** `select`, `reject`, `selectattr` and `rejectattr` apply the named test (`select("odd")`, `selectattr("n", "gt", 1)`); they used to ignore it. An unknown test name is an error.
+- **Breaking:** `map("x")` applies the filter `x` to items that have no attribute `x` (`words|map("upper")`). Items that have the attribute still map it (a miya extension; Jinja2 always applies the filter). With keyword arguments, `map("round", precision=1)` always applies the filter.
+- **Breaking:** attribute names are paths, as in Jinja2: `attribute="c.name"` looks up `name` inside `c`, and `"0"` indexes a list. A map key that itself contains a `.` is no longer found.
+- `==` and the `eq` test still do not equate `true` with `1` (Python does), while `sort` and `unique` treat booleans as 0/1.
+- **Breaking (Go API):** `SortFilter` and `UniqueFilter` return `[]interface{}` for `[]string` input; `GroupByFilter` returns `[]interface{}` of `runtime.GroupTuple` instead of `[][]interface{}`.
 
 ### Deprecated
 
 - `parser.ReleaseAST`, `parser.ReleaseNode`, the `parser.Release*Node` functions, `parser.GetNodePoolStats` and `parser.NodePoolStats` do nothing.
+- `filters.SelectFilter`, `RejectFilter`, `SelectAttrFilter` and `RejectAttrFilter`: templates no longer use them (the registered filters apply tests); they keep their old value-comparing behaviour for direct Go callers.
 
 ## [v0.2.0]
 

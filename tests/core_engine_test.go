@@ -202,7 +202,7 @@ func TestCoreTemplateEngine(t *testing.T) {
 		},
 		{
 			Name:     "Advanced list operations",
-			Template: `{{ items|list|unique|join(",") }}, {{ [1,2,3,4,5]|list|slice(1,4)|join("-") }}`,
+			Template: `{{ items|list|unique|join(",") }}, {{ [1,2,3,4,5][1:4]|join("-") }}`,
 			Context:  map[string]interface{}{"items": []int{1, 2, 2, 3}},
 			Expected: "1,2,3, 2-3-4",
 		},

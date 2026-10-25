@@ -3,6 +3,8 @@ package filters
 import (
 	"strings"
 	"testing"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 // Test Utility Filters with 0% coverage
@@ -150,11 +152,23 @@ func TestAdditionalUtilityFilters(t *testing.T) {
 			t.Errorf("GroupByFilter failed: %v", err)
 		}
 
-		// Result format may vary - just check it's not nil
-		if result == nil {
-			t.Error("Expected non-nil result from GroupByFilter")
-		} else {
-			t.Logf("GroupByFilter returned type: %T", result)
+		groups, ok := result.([]interface{})
+		if !ok || len(groups) != 2 {
+			t.Fatalf("GroupByFilter = %#v, want 2 groups", result)
+		}
+		wantGroupers := []string{"A", "B"}
+		wantLens := []int{2, 1}
+		for i, g := range groups {
+			tuple, ok := g.(runtime.GroupTuple)
+			if !ok || len(tuple) != 2 {
+				t.Fatalf("group %d = %#v, want runtime.GroupTuple of 2", i, g)
+			}
+			if tuple[0] != wantGroupers[i] {
+				t.Errorf("group %d grouper = %v, want %v", i, tuple[0], wantGroupers[i])
+			}
+			if list, _ := tuple[1].([]interface{}); len(list) != wantLens[i] {
+				t.Errorf("group %d list = %v, want length %d", i, tuple[1], wantLens[i])
+			}
 		}
 	})
 }

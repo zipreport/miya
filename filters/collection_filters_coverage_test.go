@@ -315,75 +315,74 @@ func TestReverseFilter(t *testing.T) {
 	})
 }
 
-// TestSliceFilter tests the SliceFilter function
+// TestSliceFilter tests the SliceFilter function (Jinja2's slice(slices, fill_with))
 func TestSliceFilter(t *testing.T) {
 	t.Run("nil value", func(t *testing.T) {
-		// SliceFilter returns error for nil
+		// A missing slice count is an error
 		_, err := SliceFilter(nil, 0, 1)
 		if err == nil {
-			t.Error("SliceFilter(nil) should return error")
+			t.Error("SliceFilter(nil, 0) should return error")
 		}
 	})
 
-	t.Run("interface slice with start and stop", func(t *testing.T) {
-		result, err := SliceFilter([]interface{}{1, 2, 3, 4, 5}, 1, 4)
+	t.Run("split into columns", func(t *testing.T) {
+		result, err := SliceFilter([]interface{}{1, 2, 3, 4, 5}, 2)
 		if err != nil {
 			t.Fatalf("SliceFilter returned error: %v", err)
 		}
-		expected := []interface{}{2, 3, 4}
+		expected := []interface{}{[]interface{}{1, 2, 3}, []interface{}{4, 5}}
 		if !reflect.DeepEqual(result, expected) {
 			t.Errorf("SliceFilter = %v, want %v", result, expected)
 		}
 	})
 
-	t.Run("interface slice with only start", func(t *testing.T) {
-		result, err := SliceFilter([]interface{}{1, 2, 3, 4, 5}, 2)
+	t.Run("fill", func(t *testing.T) {
+		result, err := SliceFilter([]interface{}{1, 2, 3, 4, 5}, 3, 0)
 		if err != nil {
 			t.Fatalf("SliceFilter returned error: %v", err)
 		}
-		expected := []interface{}{3, 4, 5}
+		expected := []interface{}{[]interface{}{1, 2}, []interface{}{3, 4}, []interface{}{5, 0}}
 		if !reflect.DeepEqual(result, expected) {
 			t.Errorf("SliceFilter = %v, want %v", result, expected)
 		}
 	})
 
 	t.Run("string slice", func(t *testing.T) {
-		result, err := SliceFilter([]string{"a", "b", "c", "d"}, 1, 3)
+		result, err := SliceFilter([]string{"a", "b", "c", "d"}, 2)
 		if err != nil {
 			t.Fatalf("SliceFilter returned error: %v", err)
 		}
-		expected := []string{"b", "c"}
+		expected := []interface{}{[]interface{}{"a", "b"}, []interface{}{"c", "d"}}
 		if !reflect.DeepEqual(result, expected) {
 			t.Errorf("SliceFilter = %v, want %v", result, expected)
 		}
 	})
 
 	t.Run("string", func(t *testing.T) {
-		result, err := SliceFilter("hello world", 0, 5)
+		result, err := SliceFilter("abc", 2)
 		if err != nil {
 			t.Fatalf("SliceFilter returned error: %v", err)
 		}
-		if result != "hello" {
-			t.Errorf("SliceFilter = %v, want 'hello'", result)
-		}
-	})
-
-	t.Run("negative indices", func(t *testing.T) {
-		result, err := SliceFilter([]interface{}{1, 2, 3, 4, 5}, -2)
-		if err != nil {
-			t.Fatalf("SliceFilter returned error: %v", err)
-		}
-		expected := []interface{}{4, 5}
+		expected := []interface{}{[]interface{}{"a", "b"}, []interface{}{"c"}}
 		if !reflect.DeepEqual(result, expected) {
 			t.Errorf("SliceFilter = %v, want %v", result, expected)
 		}
 	})
 
-	t.Run("int slice not supported", func(t *testing.T) {
-		// SliceFilter doesn't support typed slices via reflection
-		_, err := SliceFilter([]int{10, 20, 30, 40}, 1, 3)
-		if err == nil {
-			t.Error("SliceFilter should return error for []int")
+	t.Run("non-positive slices", func(t *testing.T) {
+		if _, err := SliceFilter([]interface{}{1, 2, 3}, -2); err == nil {
+			t.Error("SliceFilter should return error for a negative number of slices")
+		}
+	})
+
+	t.Run("int slice", func(t *testing.T) {
+		result, err := SliceFilter([]int{10, 20, 30, 40}, 2)
+		if err != nil {
+			t.Fatalf("SliceFilter returned error: %v", err)
+		}
+		expected := []interface{}{[]interface{}{10, 20}, []interface{}{30, 40}}
+		if !reflect.DeepEqual(result, expected) {
+			t.Errorf("SliceFilter = %v, want %v", result, expected)
 		}
 	})
 }

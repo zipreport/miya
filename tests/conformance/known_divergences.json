@@ -54,16 +54,6 @@
   "plan": "054",
   "reason": "want \"go <a href=\\\"http://x.com\\\" rel=\\\"noopener\\\">http://x.com</a> &lt;b&gt;\", got \"go <a href=\\\"http://x.com\\\">http://x.com</a> &lt;b&gt;\""
  },
- "fkw-006": {
-  "kind": "error",
-  "plan": "039",
-  "reason": "want \"x:2;y:1;\", got render-time error: object of type *runtime.Undefined has no len()"
- },
- "fkw-009": {
-  "kind": "error",
-  "plan": "039",
-  "reason": "want \"b,a\", got render-time error: map filter requires a sequence"
- },
  "fkw-011": {
   "kind": "output",
   "plan": "050",
@@ -104,36 +94,6 @@
   "plan": "deviation",
   "reason": "want \"2.67\", got \"2.68\""
  },
- "fsem-008": {
-  "kind": "output",
-  "plan": "039",
-  "reason": "want \"2\", got \"1\""
- },
- "fsem-009": {
-  "kind": "output",
-  "plan": "039",
-  "reason": "want \"A,B\", got \"a,b\""
- },
- "fsem-010": {
-  "kind": "output",
-  "plan": "039",
-  "reason": "want \"1,3\", got \"1,2,3\""
- },
- "fsem-011": {
-  "kind": "output",
-  "plan": "039",
-  "reason": "want \"2\", got \"\""
- },
- "fsem-012": {
-  "kind": "output",
-  "plan": "039",
-  "reason": "want \"2,3\", got \"1,2,3\""
- },
- "fsem-013": {
-  "kind": "output",
-  "plan": "039",
-  "reason": "want \"a,B\", got \"a,B,b,A\""
- },
  "fsem-014": {
   "kind": "output",
   "plan": "050",
@@ -154,16 +114,6 @@
   "plan": "054",
   "reason": "want \"a b\", got \"a  b\""
  },
- "fsem-018": {
-  "kind": "output",
-  "plan": "039",
-  "reason": "want \"2,9,10,33\", got \"10,2,33,9\""
- },
- "fsem-019": {
-  "kind": "output",
-  "plan": "039",
-  "reason": "want \"3\", got \"10\""
- },
  "fsem-020": {
   "kind": "output",
   "plan": "050",
@@ -179,11 +129,6 @@
   "plan": "050",
   "reason": "want \"                                       x                                        |\", got render-time error: center filter requires width argument"
  },
- "fsem-024": {
-  "kind": "output",
-  "plan": "039",
-  "reason": "want \"1\", got \"0\""
- },
  "fsem-026": {
   "kind": "output",
   "plan": "048",
@@ -193,11 +138,6 @@
   "kind": "output",
   "plan": "deviation",
   "reason": "want \"5\", got \"5.00\""
- },
- "fsem-029": {
-  "kind": "error",
-  "plan": "039",
-  "reason": "want \"cherry\", got render-time error: max filter requires non-empty sequence"
  },
  "fsem-031": {
   "kind": "output",

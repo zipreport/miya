@@ -167,7 +167,7 @@ func TestCollectionFilters(t *testing.T) {
 		{"join", JoinFilter, []interface{}{"a", "b", "c"}, []interface{}{", "}, "a, b, c", false},
 		{"reverse", ReverseFilter, []interface{}{"a", "b", "c"}, nil, []interface{}{"c", "b", "a"}, false},
 		{"unique", UniqueFilter, []interface{}{"a", "b", "a", "c"}, nil, []interface{}{"a", "b", "c"}, false},
-		{"slice", SliceFilter, []interface{}{"a", "b", "c", "d"}, []interface{}{1, 3}, []interface{}{"b", "c"}, false},
+		{"slice", SliceFilter, []interface{}{"a", "b", "c", "d"}, []interface{}{1, 3}, []interface{}{[]interface{}{"a", "b", "c", "d", 3}}, false},
 		{"batch", BatchFilter, []interface{}{"a", "b", "c", "d", "e"}, []interface{}{2}, [][]interface{}{{"a", "b"}, {"c", "d"}, {"e"}}, false},
 		{"list", ListFilter, "abc", nil, []interface{}{"a", "b", "c"}, false},
 	}
