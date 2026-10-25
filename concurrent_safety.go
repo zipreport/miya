@@ -81,15 +81,26 @@ func (tse *ThreadSafeEnvironment) AddGlobalConcurrent(name string, value interfa
 	tse.Environment.AddGlobal(name, value)
 }
 
-// ConcurrentTemplateRenderer provides high-performance concurrent template rendering
+// ConcurrentTemplateRenderer provides high-performance concurrent template rendering.
+//
+// Start once; after Stop, RenderAsync rejects work. RenderBatch does not use the
+// worker pool and is not affected by Start or Stop.
 type ConcurrentTemplateRenderer struct {
 	template *Template
 	workers  int
 	workChan chan renderJob
 	wg       sync.WaitGroup
-	started  int32
 	stopChan chan struct{}
+
+	mu    sync.RWMutex
+	state int // rendererNew, rendererRunning or rendererStopped
 }
+
+const (
+	rendererNew = iota
+	rendererRunning
+	rendererStopped
+)
 
 type renderJob struct {
 	ctx      Context
@@ -111,11 +122,15 @@ func NewConcurrentTemplateRenderer(template *Template, workers int) *ConcurrentT
 	}
 }
 
-// Start starts the concurrent renderer workers
+// Start starts the concurrent renderer workers. A renderer starts once; Start on a
+// running or stopped renderer does nothing.
 func (ctr *ConcurrentTemplateRenderer) Start() {
-	if !atomic.CompareAndSwapInt32(&ctr.started, 0, 1) {
-		return // Already started
+	ctr.mu.Lock()
+	defer ctr.mu.Unlock()
+	if ctr.state != rendererNew {
+		return
 	}
+	ctr.state = rendererRunning
 
 	for i := 0; i < ctr.workers; i++ {
 		ctr.wg.Add(1)
@@ -123,36 +138,57 @@ func (ctr *ConcurrentTemplateRenderer) Start() {
 	}
 }
 
-// Stop stops the concurrent renderer workers
+// Stop stops the concurrent renderer workers. Jobs still queued are answered with
+// an error. A stopped renderer stays stopped.
 func (ctr *ConcurrentTemplateRenderer) Stop() {
-	if !atomic.CompareAndSwapInt32(&ctr.started, 1, 0) {
-		return // Not started or already stopped
+	ctr.mu.Lock()
+	switch ctr.state {
+	case rendererNew:
+		ctr.state = rendererStopped
+		ctr.mu.Unlock()
+		return
+	case rendererStopped:
+		ctr.mu.Unlock()
+		return
 	}
-
+	ctr.state = rendererStopped
 	close(ctr.stopChan)
+	ctr.mu.Unlock()
+
 	ctr.wg.Wait()
+
+	// Answer jobs that were queued but never picked up
+	for {
+		select {
+		case job := <-ctr.workChan:
+			job.resultCh <- renderResult{err: fmt.Errorf("renderer is stopped")}
+			close(job.resultCh)
+		default:
+			return
+		}
+	}
 }
 
 // RenderAsync renders a template asynchronously
 func (ctr *ConcurrentTemplateRenderer) RenderAsync(ctx Context) <-chan renderResult {
 	resultCh := make(chan renderResult, 1)
 
-	// Check if stopped first to avoid race condition where both channels are ready
-	select {
-	case <-ctr.stopChan:
-		resultCh <- renderResult{err: fmt.Errorf("renderer is stopped")}
-		return resultCh
-	default:
-	}
+	// The read lock is held across the send: Stop cannot close stopChan until it is
+	// released, so the workers are running for as long as the send can block.
+	ctr.mu.RLock()
+	defer ctr.mu.RUnlock()
 
-	// Try to send work, but also check for stop
-	select {
-	case ctr.workChan <- renderJob{ctx: ctx, resultCh: resultCh}:
-		return resultCh
-	case <-ctr.stopChan:
+	switch ctr.state {
+	case rendererNew:
+		resultCh <- renderResult{err: fmt.Errorf("renderer not started")}
+		close(resultCh)
+	case rendererStopped:
 		resultCh <- renderResult{err: fmt.Errorf("renderer is stopped")}
-		return resultCh
+		close(resultCh)
+	default:
+		ctr.workChan <- renderJob{ctx: ctx, resultCh: resultCh}
 	}
+	return resultCh
 }
 
 // worker processes render jobs
