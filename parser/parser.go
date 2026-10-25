@@ -61,6 +61,10 @@ func (p *Parser) Parse() (*TemplateNode, error) {
 		return nil, fmt.Errorf("parse errors: %s", strings.Join(p.errors, "; "))
 	}
 
+	if err := CheckDuplicateBlocks(template); err != nil {
+		return nil, err
+	}
+
 	return template, nil
 }
 
@@ -530,6 +534,11 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 		return nil, p.error("expected block name after 'block'")
 	}
 	blockName := p.advance().Value
+
+	// "scoped" is accepted; blocks always see the variables around them
+	if p.check(lexer.TokenIdentifier) && p.peek().Value == "scoped" {
+		p.advance()
+	}
 
 	if !p.check(lexer.TokenBlockEnd) && !p.check(lexer.TokenBlockEndTrim) {
 		return nil, p.error("expected '%}' after block name")
