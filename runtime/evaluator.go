@@ -2491,15 +2491,22 @@ func (e *DefaultEvaluator) divide(a, b interface{}) (interface{}, error) {
 }
 
 func (e *DefaultEvaluator) floorDivideWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
-	aInt, aErr := e.toInt(a)
-	bInt, bErr := e.toInt(b)
-	if aErr == nil && bErr == nil {
-		if bInt == 0 {
-			return nil, NewMathError("floor division", fmt.Errorf("division by zero"), node)
-		}
-		return aInt / bInt, nil
+	ai, bi, af, bf, isInt, ok := pyOperands(a, b)
+	if !ok {
+		return nil, NewTypeError("floor division", a, node).WithContext(fmt.Sprintf("cannot floor divide %T and %T", a, b))
 	}
-	return nil, NewTypeError("floor division", a, node).WithContext(fmt.Sprintf("cannot floor divide %T and %T", a, b))
+	if (isInt && bi == 0) || (!isInt && bf == 0) {
+		return nil, NewMathError("floor division", fmt.Errorf("division by zero"), node)
+	}
+	if isInt {
+		q := ai / bi
+		if ai%bi != 0 && (ai < 0) != (bi < 0) {
+			q--
+		}
+		return int(q), nil
+	}
+	floordiv, _ := pyFloatDivMod(af, bf)
+	return floordiv, nil
 }
 
 func (e *DefaultEvaluator) floorDivide(a, b interface{}) (interface{}, error) {
@@ -2515,15 +2522,22 @@ func (e *DefaultEvaluator) modulo(a, b interface{}) (interface{}, error) {
 		b = 0
 	}
 
-	aInt, aErr := e.toInt(a)
-	bInt, bErr := e.toInt(b)
-	if aErr == nil && bErr == nil {
-		if bInt == 0 {
-			return nil, fmt.Errorf("modulo by zero")
-		}
-		return aInt % bInt, nil
+	ai, bi, af, bf, isInt, ok := pyOperands(a, b)
+	if !ok {
+		return nil, fmt.Errorf("cannot modulo %T and %T", a, b)
 	}
-	return nil, fmt.Errorf("cannot modulo %T and %T", a, b)
+	if (isInt && bi == 0) || (!isInt && bf == 0) {
+		return nil, fmt.Errorf("modulo by zero")
+	}
+	if isInt {
+		r := ai % bi
+		if r != 0 && (r < 0) != (bi < 0) {
+			r += bi
+		}
+		return int(r), nil
+	}
+	_, mod := pyFloatDivMod(af, bf)
+	return mod, nil
 }
 
 func (e *DefaultEvaluator) power(a, b interface{}) (interface{}, error) {
@@ -2563,6 +2577,64 @@ func numericValue(v interface{}) (i int64, u uint64, f float64, kind byte, ok bo
 		return 0, 0, rv.Float(), 'f', true
 	}
 	return
+}
+
+// pyOperands classifies a and b for Python's // and %: both integers (kind
+// 'i', or 'u' that fits in int64) use exact int64 arithmetic; anything else
+// numeric uses float64. Non-numbers (including numeric strings) are not ok.
+func pyOperands(a, b interface{}) (ai, bi int64, af, bf float64, isInt, ok bool) {
+	i1, u1, f1, k1, ok1 := numericValue(a)
+	i2, u2, f2, k2, ok2 := numericValue(b)
+	if !ok1 || !ok2 {
+		return
+	}
+	ok = true
+	if k1 == 'u' && u1 <= math.MaxInt64 {
+		i1, k1 = int64(u1), 'i'
+	}
+	if k2 == 'u' && u2 <= math.MaxInt64 {
+		i2, k2 = int64(u2), 'i'
+	}
+	if k1 == 'i' && k2 == 'i' {
+		return i1, i2, 0, 0, true, true
+	}
+	af = pyFloatOf(i1, u1, f1, k1)
+	bf = pyFloatOf(i2, u2, f2, k2)
+	return
+}
+
+func pyFloatOf(i int64, u uint64, f float64, kind byte) float64 {
+	switch kind {
+	case 'i':
+		return float64(i)
+	case 'u':
+		return float64(u)
+	}
+	return f
+}
+
+// pyFloatDivMod is CPython's float_divmod: floor division and a modulo with
+// the sign of the divisor, corrected so that 1 // 0.1 == 9.
+func pyFloatDivMod(vx, wx float64) (floordiv, mod float64) {
+	mod = math.Mod(vx, wx)
+	div := (vx - mod) / wx
+	if mod != 0 {
+		if (wx < 0) != (mod < 0) {
+			mod += wx
+			div -= 1.0
+		}
+	} else {
+		mod = math.Copysign(0, wx)
+	}
+	if div != 0 {
+		floordiv = math.Floor(div)
+		if div-floordiv > 0.5 {
+			floordiv += 1.0
+		}
+	} else {
+		floordiv = math.Copysign(0, vx/wx)
+	}
+	return floordiv, mod
 }
 
 // compareNumbers orders two numbers of any Go numeric type. ok is false unless
