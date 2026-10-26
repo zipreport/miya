@@ -458,8 +458,6 @@ Numbers like {{ 12345 }} are also affected.
 
 ### **Runtime Optimizations**
 -  **Expression Evaluation** - Optimized AST evaluation
--  **Filter Chain Optimization** - Efficient filter processing
--  **Memory Pooling** - Reduced garbage collection pressure
 -  **Variable Resolution** - Fast context variable lookup
 
 ### **Error Handling**
