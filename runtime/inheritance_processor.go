@@ -80,13 +80,13 @@ func (p *InheritanceProcessor) ResolveInheritanceWith(template TemplateInterface
 		// Build inheritance hierarchy with context for dynamic resolution
 		hierarchy, err = p.buildInheritanceHierarchyWithContext(template, context, eval)
 		if err != nil {
-			return nil, fmt.Errorf("failed to build inheritance hierarchy: %v", err)
+			return nil, fmt.Errorf("failed to build inheritance hierarchy: %w", err)
 		}
 	} else if templateName == "<string>" {
 		// Every FromString template has this name, so the cache cannot tell them apart
 		hierarchy, err = p.buildInheritanceHierarchy(template)
 		if err != nil {
-			return nil, fmt.Errorf("failed to build inheritance hierarchy: %v", err)
+			return nil, fmt.Errorf("failed to build inheritance hierarchy: %w", err)
 		}
 	} else {
 		// Static inheritance - can use caching
@@ -96,7 +96,7 @@ func (p *InheritanceProcessor) ResolveInheritanceWith(template TemplateInterface
 			// Build inheritance hierarchy
 			hierarchy, err = p.buildInheritanceHierarchy(template)
 			if err != nil {
-				return nil, fmt.Errorf("failed to build inheritance hierarchy: %v", err)
+				return nil, fmt.Errorf("failed to build inheritance hierarchy: %w", err)
 			}
 
 			// Cache the hierarchy for future use
@@ -107,7 +107,7 @@ func (p *InheritanceProcessor) ResolveInheritanceWith(template TemplateInterface
 	// Resolve blocks and build final template
 	finalTemplate, err := p.buildFinalTemplate(hierarchy, context)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build final template: %v", err)
+		return nil, fmt.Errorf("failed to build final template: %w", err)
 	}
 
 	return finalTemplate, nil
@@ -226,7 +226,7 @@ func (p *InheritanceProcessor) buildInheritanceHierarchy(template TemplateInterf
 		// Load parent template
 		parentTemplate, err := p.env.GetTemplate(parentName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load parent template %s: %v", parentName, err)
+			return nil, fmt.Errorf("failed to load parent template %s: %w", parentName, err)
 		}
 
 		current = parentTemplate
@@ -314,7 +314,7 @@ func (p *InheritanceProcessor) buildInheritanceHierarchyWithContext(template Tem
 		// Find parent template - use context for dynamic resolution
 		parentName, err := p.findExtendsTemplateWithContext(ast, context, eval)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve parent template: %v", err)
+			return nil, fmt.Errorf("failed to resolve parent template: %w", err)
 		}
 		if parentName == "" {
 			hierarchy.RootTemplate = ast
@@ -324,7 +324,7 @@ func (p *InheritanceProcessor) buildInheritanceHierarchyWithContext(template Tem
 		// Load parent template
 		parentTemplate, err := p.env.GetTemplate(parentName)
 		if err != nil {
-			return nil, fmt.Errorf("failed to load parent template %s: %v", parentName, err)
+			return nil, fmt.Errorf("failed to load parent template %s: %w", parentName, err)
 		}
 
 		current = parentTemplate
@@ -353,7 +353,7 @@ func (p *InheritanceProcessor) findExtendsTemplateWithContext(node parser.Node, 
 		// Dynamic template name - evaluate expression
 		templateName, err := eval.EvalNode(n.Template, context)
 		if err != nil {
-			return "", fmt.Errorf("failed to evaluate dynamic template name: %v", err)
+			return "", fmt.Errorf("failed to evaluate dynamic template name: %w", err)
 		}
 
 		// Convert result to string
@@ -394,7 +394,7 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 	// Apply child block overrides to the final template
 	err := p.applyBlockOverrides(finalTemplate, hierarchy, context)
 	if err != nil {
-		return nil, fmt.Errorf("failed to apply block overrides: %v", err)
+		return nil, fmt.Errorf("failed to apply block overrides: %w", err)
 	}
 
 	// Check for super() calls outside of blocks - these should always error
@@ -420,14 +420,14 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 		superResolver := NewSuperResolver(hierarchy, context, hierarchy.BlockMap)
 		resolvedTemplate, err := superResolver.ProcessTemplateWithSuperCalls(finalTemplate)
 		if err != nil {
-			return nil, fmt.Errorf("failed to resolve super() calls: %v", err)
+			return nil, fmt.Errorf("failed to resolve super() calls: %w", err)
 		}
 		finalTemplate = resolvedTemplate
 	} else if hasSuperCalls && len(hierarchy.Templates) == 1 {
 		// For single templates (base templates), replace super() calls with empty content
 		finalTemplate, err = p.replaceSuperCallsWithEmpty(finalTemplate)
 		if err != nil {
-			return nil, fmt.Errorf("failed to replace super() calls: %v", err)
+			return nil, fmt.Errorf("failed to replace super() calls: %w", err)
 		}
 	}
 

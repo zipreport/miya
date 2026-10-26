@@ -3825,7 +3825,7 @@ func (e *DefaultEvaluator) EvalFilterBlockNode(node *parser.FilterBlockNode, ctx
 		// Evaluate the filter
 		result, err := e.EvalFilterNode(filterNode, ctx)
 		if err != nil {
-			return nil, fmt.Errorf("error applying filter '%s' in filter block: %v", filter.FilterName, err)
+			return nil, fmt.Errorf("error applying filter '%s' in filter block: %w", filter.FilterName, err)
 		}
 		current = result
 	}

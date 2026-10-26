@@ -199,7 +199,7 @@ func (b *listBox) method(e *DefaultEvaluator, name string) *builtinMethod {
 
 func checkListGrowth(have, add int) error {
 	if have+add > maxConcatLength {
-		return fmt.Errorf("list too large: %d items (limit %d)", have+add, maxConcatLength)
+		return &SizeError{Msg: fmt.Sprintf("list too large: %d items (limit %d)", have+add, maxConcatLength)}
 	}
 	return nil
 }
@@ -655,7 +655,7 @@ func pyReplace(s string, esc bool, args []interface{}) (interface{}, error) {
 		n = int64(count)
 	}
 	if size := int64(len(s)) + n*int64(len(repl)-len(old)); size > maxStringResult {
-		return nil, fmt.Errorf("replace(): result too large")
+		return nil, fmt.Errorf("replace(): %w", ErrOutputTooLarge)
 	}
 	r := strings.Replace(s, old, repl, count)
 	if esc {
@@ -687,7 +687,7 @@ func (e *DefaultEvaluator) pyJoin(sep string, esc bool, args []interface{}) (int
 			total += int64(len(sep))
 		}
 		if total > maxStringResult {
-			return nil, fmt.Errorf("join(): result too large")
+			return nil, fmt.Errorf("join(): %w", ErrOutputTooLarge)
 		}
 	}
 	r := strings.Join(parts, sep)
@@ -741,7 +741,7 @@ func (e *DefaultEvaluator) pyFormat(s string, esc bool, args []interface{}, kwar
 			i++
 		}
 		if out.Len() > maxStringResult {
-			return "", fmt.Errorf("format(): result too large")
+			return "", fmt.Errorf("format(): %w", ErrOutputTooLarge)
 		}
 	}
 	return out.String(), nil
@@ -915,7 +915,7 @@ func repeatValue(seq, count interface{}) (interface{}, error) {
 			return "", nil
 		}
 		if n > maxStringResult/len(s) {
-			return nil, fmt.Errorf("string repetition result too large")
+			return nil, fmt.Errorf("string repetition %w", ErrOutputTooLarge)
 		}
 		return strings.Repeat(s, n), nil
 	}
@@ -924,7 +924,7 @@ func repeatValue(seq, count interface{}) (interface{}, error) {
 		return []interface{}{}, nil
 	}
 	if n > maxListRepeat/rv.Len() {
-		return nil, fmt.Errorf("list repetition result too large")
+		return nil, fmt.Errorf("list repetition %w", ErrOutputTooLarge)
 	}
 	out := make([]interface{}, 0, n*rv.Len())
 	for k := 0; k < n; k++ {

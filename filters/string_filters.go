@@ -273,7 +273,7 @@ func repeatBounded(s string, count int) (string, error) {
 		return "", nil
 	}
 	if len(s) > 0 && count > maxRepeatBytes/len(s) {
-		return "", fmt.Errorf("filter output too large")
+		return "", &runtime.SizeError{Msg: "filter output too large"}
 	}
 	return strings.Repeat(s, count), nil
 }
@@ -341,7 +341,7 @@ func IndentFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	lines := strings.Split(strings.NewReplacer("\r\n", "\n", "\r", "\n").Replace(s+"\n"), "\n")
 	lines = lines[:len(lines)-1]
 	if len(indention) > 0 && len(lines) > maxRepeatBytes/len(indention) {
-		return nil, fmt.Errorf("indent output too large")
+		return nil, &runtime.SizeError{Msg: "indent output too large"}
 	}
 
 	var rv string

@@ -90,7 +90,7 @@ func (t *Template) RenderTo(w io.Writer, context Context) (err error) {
 		resolvedAST, err := processor.ResolveInheritanceWith(&templateAdapter{template: t}, runtimeCtx, evaluator)
 		if err != nil {
 			t.env.evaluatorPool.Put(evaluator)
-			return fmt.Errorf("inheritance resolution error: %v", err)
+			return fmt.Errorf("inheritance resolution error: %w", err)
 		}
 		finalAST = resolvedAST
 	}
