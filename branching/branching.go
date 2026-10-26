@@ -138,11 +138,8 @@ func (r *TestRegistry) registerBuiltinTests() {
 
 // Built-in test implementations
 
-// testDefined checks if a value is defined (not nil and not undefined)
+// testDefined checks if a value is defined (not an Undefined)
 func testDefined(value interface{}, args ...interface{}) (bool, error) {
-	if value == nil {
-		return false, nil
-	}
 	// Check if value is an Undefined type
 	if _, ok := value.(*runtime.Undefined); ok {
 		return false, nil
@@ -150,11 +147,8 @@ func testDefined(value interface{}, args ...interface{}) (bool, error) {
 	return true, nil
 }
 
-// testUndefined checks if a value is undefined (nil or Undefined type)
+// testUndefined checks if a value is an Undefined
 func testUndefined(value interface{}, args ...interface{}) (bool, error) {
-	if value == nil {
-		return true, nil
-	}
 	// Check if value is an Undefined type
 	if _, ok := value.(*runtime.Undefined); ok {
 		return true, nil

@@ -433,6 +433,75 @@ func (e *DefaultEvaluator) EvalIdentifierNode(node *parser.IdentifierNode, ctx C
 	return Unbox(value), nil
 }
 
+// evalLookup evaluates expr like EvalNode, except that when expr is a
+// variable, attribute or item lookup that finds nothing it returns an
+// *Undefined instead of failing, even in strict mode. Jinja2's StrictUndefined
+// can be passed to default and to the defined/undefined/none tests; only
+// using it fails. Errors from evaluating the base of the lookup still fail.
+func (e *DefaultEvaluator) evalLookup(expr parser.Node, ctx Context) (interface{}, error) {
+	behavior := UndefinedSilent
+	if e.undefinedHandler != nil {
+		behavior = e.undefinedHandler.GetUndefinedBehavior()
+	}
+	switch n := expr.(type) {
+	case *parser.IdentifierNode:
+		if v, ok := ctx.GetVariable(n.Name); ok {
+			return Unbox(v), nil
+		}
+		return NewUndefined(n.Name, behavior, n), nil
+	case *parser.AttributeNode:
+		if isListMethodName(n.Attribute) {
+			if raw, ok := e.rawOperand(n.Object, ctx); ok {
+				if b, ok := raw.(*listBox); ok {
+					return b.method(e, n.Attribute), nil
+				}
+			}
+		}
+		obj, err := e.EvalNode(n.Object, ctx)
+		if err != nil {
+			return nil, err
+		}
+		if u, ok := obj.(*Undefined); ok && e.undefinedHandler != nil {
+			return e.undefinedHandler.HandleAttributeAccess(u, n.Attribute, n)
+		}
+		if m, ok := e.builtinMethodFor(obj, n.Attribute); ok {
+			return m, nil
+		}
+		missing := NewUndefined(fmt.Sprintf("%s.%s", e.getObjectName(obj), n.Attribute), behavior, n)
+		if usesReflectLookup(obj) {
+			value, ok := e.lookupReflect(obj, n.Attribute)
+			if !ok {
+				return missing, nil
+			}
+			return value, nil
+		}
+		if !e.attributeExists(obj, n.Attribute) {
+			return missing, nil
+		}
+		return e.getAttribute(obj, n.Attribute), nil
+	case *parser.GetItemNode:
+		obj, err := e.EvalNode(n.Object, ctx)
+		if err != nil {
+			return nil, err
+		}
+		key, err := e.EvalNode(n.Key, ctx)
+		if err != nil {
+			return nil, err
+		}
+		if u, ok := obj.(*Undefined); ok && e.undefinedHandler != nil {
+			return e.undefinedHandler.HandleItemAccess(u, key, n)
+		}
+		v, gerr := e.getItem(obj, key)
+		if gerr != nil {
+			// Jinja2's getitem returns Undefined when the base is None, is not
+			// subscriptable, or rejects the key type; it never raises here.
+			return NewUndefined(fmt.Sprintf("%s[%v]", e.getObjectName(obj), key), behavior, n), nil
+		}
+		return v, nil
+	}
+	return e.EvalNode(expr, ctx)
+}
+
 func (e *DefaultEvaluator) EvalLiteralNode(node *parser.LiteralNode, ctx Context) (interface{}, error) {
 	return node.Value, nil
 }
@@ -524,11 +593,25 @@ func (e *DefaultEvaluator) EvalGetItemNode(node *parser.GetItemNode, ctx Context
 		return e.undefinedHandler.HandleItemAccess(undefined, key, node)
 	}
 
-	return e.getItem(obj, key)
+	v, err := e.getItem(obj, key)
+	if err != nil {
+		return nil, err
+	}
+	if _, missing := v.(*Undefined); missing && e.undefinedHandler != nil {
+		// a missing key or index: strict mode fails, other modes get their own Undefined
+		return e.undefinedHandler.Handle(fmt.Sprintf("%s[%v]", e.getObjectName(obj), key), node)
+	}
+	return v, nil
 }
 
 func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) (interface{}, error) {
-	value, err := e.EvalNode(node.Expression, ctx)
+	var value interface{}
+	var err error
+	if node.FilterName == "default" || node.FilterName == "d" {
+		value, err = e.evalLookup(node.Expression, ctx)
+	} else {
+		value, err = e.EvalNode(node.Expression, ctx)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -1195,37 +1278,23 @@ func (e *DefaultEvaluator) EvalMacroNode(node *parser.MacroNode, ctx Context) (i
 }
 
 func (e *DefaultEvaluator) EvalTestNode(node *parser.TestNode, ctx Context) (interface{}, error) {
-	// Special handling for the "defined" test - don't evaluate the expression first
+	var value interface{}
+	var err error
+	switch node.TestName {
+	case "defined", "undefined", "none":
+		value, err = e.evalLookup(node.Expression, ctx)
+	default:
+		value, err = e.EvalNode(node.Expression, ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
 	if node.TestName == "defined" {
-		var isDefined bool
-
-		// Check if it's an identifier node - most common case for "defined" test
-		if identNode, ok := node.Expression.(*parser.IdentifierNode); ok {
-			value, ok := ctx.GetVariable(identNode.Name)
-			isDefined = ok && !IsUndefined(value)
-		} else {
-			// For other expression types, try to evaluate and check for undefined
-			value, err := e.EvalNode(node.Expression, ctx)
-			if err != nil {
-				// If there's an error (e.g., undefined variable), it's not defined
-				isDefined = false
-			} else {
-				// Check if the value is an Undefined type or nil
-				isDefined = !IsUndefined(value) && value != nil
-			}
-		}
-
-		result := isDefined
+		result := !IsUndefined(value)
 		if node.Negated {
 			result = !result
 		}
 		return result, nil
-	}
-
-	// Evaluate the expression being tested
-	value, err := e.EvalNode(node.Expression, ctx)
-	if err != nil {
-		return nil, err
 	}
 
 	// Evaluate test arguments with pre-allocated capacity
@@ -1805,7 +1874,11 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 	switch v := obj.(type) {
 	case map[string]interface{}:
 		keyStr := fmt.Sprintf("%v", key)
-		return v[keyStr], nil
+		val, ok := v[keyStr]
+		if !ok {
+			return NewUndefined(keyStr, UndefinedSilent, nil), nil
+		}
+		return val, nil
 	case []interface{}:
 		keyInt, err := e.toInt(key)
 		if err != nil {
@@ -1865,11 +1938,11 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 		case reflect.Map:
 			k, ok := mapKey(key, rv.Type().Key())
 			if !ok {
-				return nil, nil
+				return NewUndefined(fmt.Sprintf("%v", key), UndefinedSilent, nil), nil
 			}
 			val := rv.MapIndex(k)
 			if !val.IsValid() {
-				return nil, nil
+				return NewUndefined(fmt.Sprintf("%v", key), UndefinedSilent, nil), nil
 			}
 			return val.Interface(), nil
 		}
@@ -1966,13 +2039,20 @@ func (e *DefaultEvaluator) applyFilter(name string, value interface{}, args []in
 	case "length":
 		return e.length(value)
 	case "default":
-		if len(args) == 0 {
-			return value, nil
+		var defaultValue interface{} = ""
+		if len(args) > 0 {
+			defaultValue = args[0]
 		}
-		if e.isTruthy(value) {
-			return value, nil
+		if len(args) > 1 && e.isTruthy(args[1]) {
+			if e.isTruthy(value) {
+				return value, nil
+			}
+			return defaultValue, nil
 		}
-		return args[0], nil
+		if _, undef := value.(*Undefined); undef || value == nil || value == "" {
+			return defaultValue, nil
+		}
+		return value, nil
 	case "escape":
 		return e.htmlEscape(fmt.Sprintf("%v", value)), nil
 	case "safe":

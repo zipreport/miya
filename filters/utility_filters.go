@@ -10,14 +10,13 @@ import (
 	"github.com/zipreport/miya/runtime"
 )
 
-// DefaultFilter returns default value if input is falsy
+// DefaultFilter returns the default value (by default "") when the input is undefined, nil or the empty string, or, when the second argument is true, any falsy value. Unlike Jinja2, nil and "" count as missing: JSON null is how data says "absent".
 func DefaultFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	value = runtime.Indirect(value)
-	if len(args) == 0 {
-		return value, nil
+	var defaultValue interface{} = ""
+	if len(args) > 0 {
+		defaultValue = args[0]
 	}
-
-	defaultValue := args[0]
 	boolean := false
 
 	if len(args) > 1 {
