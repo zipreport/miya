@@ -1,6 +1,6 @@
 # Global Functions Guide
 
-Global functions are built-in functions available in all templates without imports. Miya Engine provides 9 essential global functions with 100% Jinja2 compatibility.
+Global functions are built-in functions available in all templates without imports. Miya Engine provides 9 essential global functions.
 
 > **Working Example:** See `examples/features/global-functions/` for complete examples.
 
@@ -736,7 +736,7 @@ Generate URLs from endpoint names:
 
 ## Summary
 
-**9 Global Functions - 100% Jinja2 Compatible**
+**9 Global Functions**
 
 All global functions work identically to Jinja2:
 
