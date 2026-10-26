@@ -225,7 +225,6 @@ func PPrintFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // DictSortFilter sorts a dictionary by keys or values
 func DictSortFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	value = dictInput(value)
 	caseSensitive := false
 	byKey := true
 	reverse := false
@@ -240,52 +239,50 @@ func DictSortFilter(value interface{}, args ...interface{}) (interface{}, error)
 		reverse = ToBool(args[2])
 	}
 
-	switch v := value.(type) {
-	case map[string]interface{}:
-		type kv struct {
-			key   string
-			value interface{}
-		}
-
-		var pairs []kv
-		for k, val := range v {
-			pairs = append(pairs, kv{key: k, value: val})
-		}
-
-		less := func(i, j int) bool {
-			fi, fj := pairs[i].key, pairs[j].key
-			if !byKey {
-				fi, fj = ToString(pairs[i].value), ToString(pairs[j].value)
-			}
-			gi, gj := fi, fj
-			if !caseSensitive {
-				gi, gj = strings.ToLower(fi), strings.ToLower(fj)
-			}
-			if gi != gj {
-				return gi < gj
-			}
-			if fi != fj {
-				return fi < fj
-			}
-			return pairs[i].key < pairs[j].key
-		}
-		sort.SliceStable(pairs, func(i, j int) bool {
-			if reverse {
-				return less(j, i)
-			}
-			return less(i, j)
-		})
-
-		result := make([][]interface{}, len(pairs))
-		for i, pair := range pairs {
-			result[i] = []interface{}{pair.key, pair.value}
-		}
-
-		return result, nil
-
-	default:
+	pairs, ok := runtime.SortedMapPairs(value)
+	if !ok {
 		return nil, fmt.Errorf("dictsort filter requires a mapping")
 	}
+
+	pick := 0
+	if !byKey {
+		pick = 1
+	}
+	sortOf := func(p interface{}) interface{} { return p.([]interface{})[pick] }
+	keyOf := func(p interface{}) interface{} { return p.([]interface{})[0] }
+
+	var firstErr error
+	cmp := func(a, b interface{}) int {
+		c, err := compareItems(sortOf(a), sortOf(b), caseSensitive)
+		if err == nil && c == 0 {
+			c, err = compareItems(sortOf(a), sortOf(b), true)
+		}
+		if err == nil && c == 0 {
+			c, err = compareItems(keyOf(a), keyOf(b), true)
+		}
+		if err != nil && firstErr == nil {
+			firstErr = err
+		}
+		return c
+	}
+	sort.SliceStable(pairs, func(i, j int) bool {
+		if firstErr != nil {
+			return false
+		}
+		if reverse {
+			return cmp(pairs[j], pairs[i]) < 0
+		}
+		return cmp(pairs[i], pairs[j]) < 0
+	})
+	if firstErr != nil {
+		return nil, firstErr
+	}
+
+	result := make([][]interface{}, len(pairs))
+	for i, pair := range pairs {
+		result[i] = pair.([]interface{})
+	}
+	return result, nil
 }
 
 // GroupByFilter groups sequence items by attribute, like Jinja2's groupby:

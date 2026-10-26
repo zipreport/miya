@@ -488,11 +488,14 @@ func TestItemsFilter(t *testing.T) {
 		}
 	})
 
-	t.Run("generic map not supported", func(t *testing.T) {
-		// ItemsFilter doesn't support maps with non-string keys via reflection
-		_, err := ItemsFilter(map[int]string{1: "a", 2: "b"})
-		if err == nil {
-			t.Error("ItemsFilter should return error for map[int]string")
+	t.Run("generic map sorted by key", func(t *testing.T) {
+		got, err := ItemsFilter(map[int]string{2: "b", 1: "a"})
+		if err != nil {
+			t.Fatalf("ItemsFilter error: %v", err)
+		}
+		want := []interface{}{[]interface{}{1, "a"}, []interface{}{2, "b"}}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("ItemsFilter = %v, want %v", got, want)
 		}
 	})
 
@@ -534,11 +537,14 @@ func TestKeysFilter(t *testing.T) {
 		}
 	})
 
-	t.Run("generic map not supported", func(t *testing.T) {
-		// KeysFilter doesn't support maps with non-string keys via reflection
-		_, err := KeysFilter(map[int]string{1: "a", 2: "b"})
-		if err == nil {
-			t.Error("KeysFilter should return error for map[int]string")
+	t.Run("generic map sorted by key", func(t *testing.T) {
+		got, err := KeysFilter(map[int]string{2: "b", 1: "a"})
+		if err != nil {
+			t.Fatalf("KeysFilter error: %v", err)
+		}
+		want := []interface{}{1, 2}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("KeysFilter = %v, want %v", got, want)
 		}
 	})
 
@@ -580,11 +586,14 @@ func TestValuesFilter(t *testing.T) {
 		}
 	})
 
-	t.Run("generic map not supported", func(t *testing.T) {
-		// ValuesFilter doesn't support maps with non-string keys via reflection
-		_, err := ValuesFilter(map[int]string{1: "a", 2: "b"})
-		if err == nil {
-			t.Error("ValuesFilter should return error for map[int]string")
+	t.Run("generic map sorted by key", func(t *testing.T) {
+		got, err := ValuesFilter(map[int]string{2: "b", 1: "a"})
+		if err != nil {
+			t.Fatalf("ValuesFilter error: %v", err)
+		}
+		want := []interface{}{"a", "b"}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("ValuesFilter = %v, want %v", got, want)
 		}
 	})
 

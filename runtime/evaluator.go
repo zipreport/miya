@@ -457,7 +457,7 @@ func (e *DefaultEvaluator) evalLookup(expr parser.Node, ctx Context) (interface{
 			return m, nil
 		}
 		missing := NewUndefined(fmt.Sprintf("%s.%s", e.getObjectName(obj), n.Attribute), behavior, n)
-		if usesReflectLookup(obj) {
+		if UsesReflectLookup(obj) {
 			value, ok := e.lookupReflect(obj, n.Attribute)
 			if !ok {
 				return missing, nil
@@ -546,7 +546,7 @@ func (e *DefaultEvaluator) EvalAttributeNode(node *parser.AttributeNode, ctx Con
 		return m, nil
 	}
 
-	if usesReflectLookup(obj) {
+	if UsesReflectLookup(obj) {
 		value, ok := e.lookupReflect(obj, node.Attribute)
 		if !ok && e.undefinedHandler != nil {
 			attrName := fmt.Sprintf("%s.%s", e.getObjectName(obj), node.Attribute)
@@ -1845,6 +1845,9 @@ func (e *DefaultEvaluator) lookupReflect(obj interface{}, attr string) (interfac
 				return nil, false
 			}
 		default:
+			if isDictMethodName(attr) {
+				return dictMethodOver(rv, attr), true
+			}
 			return nil, false
 		}
 		if val := rv.MapIndex(key); val.IsValid() {
@@ -1860,6 +1863,9 @@ func (e *DefaultEvaluator) lookupReflect(obj interface{}, attr string) (interfac
 		if isDictMethodName(attr) {
 			if m, ok := StringKeyMap(obj); ok && e.attributeExists(m, attr) {
 				return e.getAttribute(m, attr), true
+			}
+			if kt.Kind() == reflect.Interface {
+				return dictMethodOver(rv, attr), true
 			}
 		}
 	case reflect.Slice, reflect.Array:

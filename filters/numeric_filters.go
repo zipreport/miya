@@ -126,6 +126,11 @@ func IntFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		value = r.Value
 	}
 
+	value = runtime.BasicValue(value)
+	if n, ok := runtime.Number(value); ok {
+		value = n
+	}
+
 	switch v := value.(type) {
 	case int, int8, int16, int32, int64:
 		return reflect.ValueOf(v).Int(), nil
@@ -176,6 +181,11 @@ func FloatFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		value = r.Value
 	}
 
+	value = runtime.BasicValue(value)
+	if n, ok := runtime.Number(value); ok {
+		value = n
+	}
+
 	switch v := value.(type) {
 	case int, int8, int16, int32, int64:
 		return float64(reflect.ValueOf(v).Int()), nil
@@ -223,6 +233,7 @@ func SumFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	}
 
 	sum := start
+	value = mapAsKeys(value)
 
 	switch v := value.(type) {
 	case []interface{}:
@@ -558,6 +569,35 @@ func ToFloat(value interface{}) (float64, error) {
 		}
 		return 0.0, nil
 	default:
+		switch bv := runtime.BasicValue(value).(type) {
+		case string:
+			return strconv.ParseFloat(bv, 64)
+		case bool:
+			if bv {
+				return 1.0, nil
+			}
+			return 0.0, nil
+		}
+		if n, ok := numberNoBool(value); ok {
+			switch x := n.(type) {
+			case int64:
+				return float64(x), nil
+			case uint64:
+				return float64(x), nil
+			case float64:
+				return x, nil
+			}
+		}
 		return 0, fmt.Errorf("cannot convert %T to float64", value)
 	}
+}
+
+// numberNoBool is runtime.Number without bool kinds, for the ToInt and
+// ToFloat fallbacks: a bool is not an integer in ToInt.
+func numberNoBool(value interface{}) (interface{}, bool) {
+	v := runtime.Indirect(value)
+	if v == nil || reflect.TypeOf(v).Kind() == reflect.Bool {
+		return nil, false
+	}
+	return runtime.Number(v)
 }

@@ -391,6 +391,16 @@ func ToInt(value interface{}) (int, error) {
 		_, err := fmt.Sscanf(v, "%d", &i)
 		return i, err
 	default:
+		if n, ok := numberNoBool(value); ok {
+			switch x := n.(type) {
+			case int64:
+				return int(x), nil
+			case uint64:
+				return int(x), nil
+			case float64:
+				return int(x), nil
+			}
+		}
 		return 0, fmt.Errorf("cannot convert %v to int", reflect.TypeOf(value))
 	}
 }
@@ -401,7 +411,15 @@ func ToBool(value interface{}) bool {
 		return false
 	}
 
+	if runtime.IsUndefined(value) {
+		return false
+	}
+
 	switch v := value.(type) {
+	case runtime.SafeValue:
+		return ToBool(v.Value)
+	case *runtime.SafeValue:
+		return ToBool(v.Value)
 	case runtime.RoundedFloat:
 		return v.Value != 0
 	case bool:

@@ -622,13 +622,13 @@ func testEscaped(value interface{}, args ...interface{}) (bool, error) {
 
 // testTrue checks if a value is the boolean true
 func testTrue(value interface{}, args ...interface{}) (bool, error) {
-	b, ok := value.(bool)
+	b, ok := runtime.BasicValue(value).(bool)
 	return ok && b, nil
 }
 
 // testFalse checks if a value is the boolean false
 func testFalse(value interface{}, args ...interface{}) (bool, error) {
-	b, ok := value.(bool)
+	b, ok := runtime.BasicValue(value).(bool)
 	return ok && !b, nil
 }
 

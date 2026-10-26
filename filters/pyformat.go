@@ -223,7 +223,7 @@ func pyFormat(format string, args []interface{}, kwargs map[string]interface{}, 
 					s = string(runtime.EscapeMarkup(s))
 				}
 			case 'r', 'a':
-				if str, ok := runtime.Unmark(arg).(string); ok {
+				if str, ok := runtime.BasicValue(runtime.Unmark(arg)).(string); ok {
 					s = pyRepr(str)
 					if c == 'a' {
 						s = pyASCII(s)

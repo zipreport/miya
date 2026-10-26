@@ -268,14 +268,120 @@ func isDictMethodName(attr string) bool {
 	return attr == "get" || attr == "items" || attr == "keys" || attr == "values"
 }
 
-// usesReflectLookup reports whether attribute access on obj goes through
+// UsesReflectLookup reports whether attribute access on obj goes through
 // lookupReflect: true unless obj is one of the runtime's own types handled
 // by the fast cases of attributeExists and getAttribute.
-func usesReflectLookup(obj interface{}) bool {
+func UsesReflectLookup(obj interface{}) bool {
 	switch obj.(type) {
 	case nil, NamespaceInterface, *Cycler, *Joiner, *CallableLoop,
 		map[string]interface{}, map[string]string, GroupTuple:
 		return false
 	}
 	return true
+}
+
+// Number returns v as int64, uint64 (only above MaxInt64) or float64 when it
+// is a number of any Go kind, a pointer to one, a named numeric type, a bool
+// (0 or 1, as in Python) or a RoundedFloat. ok is false otherwise.
+func Number(v interface{}) (n interface{}, ok bool) {
+	i, u, f, kind, ok := numericValue(v)
+	if !ok {
+		return nil, false
+	}
+	switch kind {
+	case 'i':
+		return i, true
+	case 'u':
+		if u <= math.MaxInt64 {
+			return int64(u), true
+		}
+		return u, true
+	}
+	return f, true
+}
+
+// BasicValue converts a named bool or string type, or a pointer to one, to a
+// plain bool or string. Other values are returned unchanged.
+func BasicValue(v interface{}) interface{} { return basicValue(v) }
+
+// SortedMapKeys returns the keys of any Go map in the order a {% for %} loop
+// visits them. ok is false when v is not a map.
+func SortedMapKeys(v interface{}) ([]interface{}, bool) {
+	if m, ok := StringKeyMap(v); ok {
+		keys := sortedKeys(m)
+		out := make([]interface{}, len(keys))
+		for i, k := range keys {
+			out[i] = k
+		}
+		return out, true
+	}
+	rv := reflect.ValueOf(Indirect(v))
+	if rv.Kind() != reflect.Map {
+		return nil, false
+	}
+	return sortedMapKeys(rv), true
+}
+
+// SortedMapPairs returns the [key, value] pairs of any Go map in the order a
+// {% for %} loop visits the keys. ok is false when v is not a map.
+func SortedMapPairs(v interface{}) ([]interface{}, bool) {
+	if m, ok := StringKeyMap(v); ok {
+		keys := sortedKeys(m)
+		out := make([]interface{}, len(keys))
+		for i, k := range keys {
+			out[i] = []interface{}{k, m[k]}
+		}
+		return out, true
+	}
+	rv := reflect.ValueOf(Indirect(v))
+	if rv.Kind() != reflect.Map {
+		return nil, false
+	}
+	return sortedMapPairs(rv), true
+}
+
+// dictMethodOver builds the dict method attr (get, items, keys, values) of a
+// map with non-string keys, in the order of sortedMapPairs. get tries the key
+// as a typed map key first, then scans with Equal, so 1.0 finds the key 1.
+func dictMethodOver(rv reflect.Value, attr string) interface{} {
+	if attr == "get" {
+		return &builtinMethod{name: "get", fn: func(args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+			if len(kwargs) > 0 {
+				return nil, fmt.Errorf("get() takes no keyword arguments")
+			}
+			if len(args) < 1 || len(args) > 2 {
+				return nil, fmt.Errorf("get() takes 1 or 2 arguments (%d given)", len(args))
+			}
+			if k, ok := mapKey(args[0], rv.Type().Key()); ok {
+				if val := rv.MapIndex(k); val.IsValid() {
+					return val.Interface(), nil
+				}
+			}
+			for _, p := range sortedMapPairs(rv) {
+				pair := p.([]interface{})
+				if Equal(pair[0], args[0]) {
+					return pair[1], nil
+				}
+			}
+			if len(args) == 2 {
+				return args[1], nil
+			}
+			return nil, nil
+		}}
+	}
+	return func(args ...interface{}) (interface{}, error) {
+		pairs := sortedMapPairs(rv)
+		if attr == "items" {
+			return pairs, nil
+		}
+		pick := 0
+		if attr == "values" {
+			pick = 1
+		}
+		out := make([]interface{}, len(pairs))
+		for i, p := range pairs {
+			out[i] = p.([]interface{})[pick]
+		}
+		return out, nil
+	}
 }

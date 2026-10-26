@@ -20,9 +20,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `runtime.ErrTemplateNotFound` and `runtime.TemplateNotFoundError` (with the missing template's `Name`), returned for templates the loader cannot find. A custom `runtime.TemplateLoader` that returns its own errors keeps the old rule (`TemplateExists` decides).
 - `WithTruncateLeeway(n)` environment option: the default `leeway` of `truncate` (Jinja2's `truncate.leeway` policy). Also `filters.TruncateFilterWithLeeway`, `(*filters.FilterRegistry).Replace` and `runtime.RoundedFloat`.
 - `runtime.ErrOutputTooLarge` and `runtime.SizeError`, wrapped by every size-limit error.
+- `runtime.Number`, `runtime.BasicValue`, `runtime.SortedMapKeys`, `runtime.SortedMapPairs` and `runtime.UsesReflectLookup`.
 
 ### Fixed
 
+- Filters now treat Go pointers, named types (`type Status string`, `type Score float64`, `type Flag bool`) and typed maps the way expressions already did (plan 047):
+  - `map`/`sort`/`sum`/`groupby`/`selectattr`/`attr` on lists of struct pointers used to give empty or zero results silently;
+  - `int`/`float`/`round`/`abs`/`sum` on named numbers gave 0 or an error;
+  - `max`/`sort`/`unique` failed on named strings;
+  - `dictsort`/`items`/`.keys()` failed on maps with non-string keys, and the sequence filters wrapped a map as one item instead of using its keys;
+  - `dictsort(by='value')` compared numbers as strings.
+- Undefined values are false in `select`/`reject` and in boolean filter arguments.
 - With autoescape on, `%r` and `%a` in a safe format string (`<a title='%r'>`) left the quotes raw, `%c` turned a number into a raw `<`, and a Go numeric or bool value with a `String()` or `Format` method skipped escaping as an argument of `format`, `replace` and `join`; a safe input given to `wordwrap` with a plain wrapstring spliced it raw between the attributes of a tag. All are escaped now.
 - `truncate` measured the HTML-escaped `end` when cutting, and escaped a safe `end`; it now measures the raw text and keeps a safe `end`, and an untruncated safe value stays safe. `length` and `leeway` accept a `{% set n %}20{% endset %}` number.
 - Typed Go maps, slices and arrays work in templates: `m.key`, `m['key']`, `m[1]`, `for k in m`, `for k, v in m`, `m.keys()`, negative indexes, and the `join`, `reverse`, `batch`, `items`, `keys`, `values` and `dictsort` filters. Maps with string keys decoded from YAML (`map[interface{}]interface{}`) work too. Maps with non-string keys iterate in a fixed order (bools, numbers, then strings).
@@ -107,6 +115,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `time.Duration` and other named integers are numbers in `int`, `float`, `sum` and `round` (a duration gives nanoseconds instead of 0).
 - `%c` in a safe format string (`'%c'|safe|format(60)`) is now an error, as in Jinja2; it used to turn a number from data into a raw `<`.
 - `format`, `truncate` and `wordwrap` receive their input and arguments unchanged under autoescape and mix safe and plain text themselves. Go callers of `FormatFilter`, `TruncateFilter` and `WordwrapFilter` that pass `runtime.Markup` get `runtime.Markup` back (`truncate` with a safe `end` escapes the plain text). Under autoescape off or outside the HTML family they are unchanged. A safe input with a plain wrapstring that is not whitespace (`wordwrap(5, false, ' onerror=x ')`) now gives a plain string, escaped when printed, as in Jinja2; a whitespace-only wrapstring such as `'\n'`, or none, keeps the safe result (Jinja2 returns plain there). `{% filter wordwrap(…, '<br>') %}` now escapes its whole body (Jinja2 prints it raw).
 - Deliberate differences from Jinja2 here: `%x`, `%o` and `%X` format a number in a safe format string (markupsafe raises a TypeError); safe input with a safe wrapstring keeps the input's markup raw, so wrapping can split escaped entities and attribute values (it only matters with a safe wrapstring containing a quote but no `>`); `%r` of a safe argument prints the repr of its text, not `Markup(...)`.

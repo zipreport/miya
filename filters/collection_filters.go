@@ -14,6 +14,7 @@ import (
 
 // FirstFilter returns the first item in a sequence
 func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = mapAsKeys(value)
 	if value == nil {
 		return nil, nil
 	}
@@ -63,6 +64,7 @@ func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // LastFilter returns the last item in a sequence
 func LastFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = mapAsKeys(value)
 	if value == nil {
 		return nil, nil
 	}
@@ -161,9 +163,24 @@ func typedSeq(value interface{}) interface{} {
 	}
 	value = runtime.Indirect(value)
 	switch reflect.ValueOf(value).Kind() {
-	case reflect.Slice, reflect.Array:
+	case reflect.Slice, reflect.Array, reflect.Map:
 		if seq, err := toInterfaceSlice(value); err == nil {
 			return seq
+		}
+	}
+	return value
+}
+
+// mapAsKeys returns the keys of a Go map, in {% for %} order, as a slice;
+// any other value is returned unchanged.
+func mapAsKeys(value interface{}) interface{} {
+	switch value.(type) {
+	case nil, []interface{}, []string, string:
+		return value
+	}
+	if reflect.ValueOf(runtime.Indirect(value)).Kind() == reflect.Map {
+		if keys, ok := runtime.SortedMapKeys(value); ok {
+			return keys
 		}
 	}
 	return value
@@ -293,6 +310,7 @@ func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // ListFilter converts value to list
 func ListFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = mapAsKeys(value)
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -478,6 +496,9 @@ func ItemsFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return items, nil
 
 	default:
+		if pairs, ok := runtime.SortedMapPairs(value); ok {
+			return pairs, nil
+		}
 		return nil, fmt.Errorf("items filter requires a mapping")
 	}
 }
@@ -513,6 +534,9 @@ func KeysFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return keys, nil
 
 	default:
+		if keys, ok := runtime.SortedMapKeys(value); ok {
+			return keys, nil
+		}
 		return nil, fmt.Errorf("keys filter requires a mapping")
 	}
 }
@@ -556,6 +580,13 @@ func ValuesFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return values, nil
 
 	default:
+		if pairs, ok := runtime.SortedMapPairs(value); ok {
+			values := make([]interface{}, len(pairs))
+			for i, p := range pairs {
+				values[i] = p.([]interface{})[1]
+			}
+			return values, nil
+		}
 		return nil, fmt.Errorf("values filter requires a mapping")
 	}
 }
@@ -644,6 +675,9 @@ func toInterfaceSlice(value interface{}) ([]interface{}, error) {
 				result[i] = rv.Index(i).Interface()
 			}
 			return result, nil
+		}
+		if keys, ok := runtime.SortedMapKeys(value); ok {
+			return keys, nil
 		}
 
 		return nil, fmt.Errorf("expected sequence, got %T", value)
@@ -801,6 +835,7 @@ func splitAttributes(attribute string) []string {
 // lowercased unless caseSensitive.
 func sortKeys(item interface{}, attrs []string, caseSensitive bool) []interface{} {
 	fold := func(v interface{}) interface{} {
+		v = runtime.BasicValue(v)
 		if s, ok := v.(string); ok && !caseSensitive {
 			return strings.ToLower(s)
 		}
@@ -843,7 +878,7 @@ func wrapAttributeError(filterName, attribute string, err error) error {
 // other: a deliberate deviation, see the plan's "Why this matters".
 // Any other pairing is an error, as in Python.
 func compareItems(a, b interface{}, caseSensitive bool) (int, error) {
-	a, b = runtime.Unmark(a), runtime.Unmark(b)
+	a, b = runtime.BasicValue(runtime.Unmark(a)), runtime.BasicValue(runtime.Unmark(b))
 	if a == nil || b == nil {
 		switch {
 		case a == nil && b == nil:
@@ -942,7 +977,7 @@ func pyTypeName(v interface{}) string {
 // exactly when Jinja2's unique treats them as equal (booleans count as 1/0,
 // numbers compare by value, strings lowercased unless caseSensitive).
 func uniqueKey(v interface{}, caseSensitive bool) string {
-	v = runtime.Unmark(v)
+	v = runtime.BasicValue(runtime.Unmark(v))
 	if v == nil {
 		return "z:"
 	}
@@ -1008,16 +1043,22 @@ func lookupSegment(obj interface{}, seg string) (interface{}, bool) {
 		return val, ok
 	}
 
+	if runtime.IsUndefined(obj) || !runtime.UsesReflectLookup(obj) {
+		return nil, false
+	}
 	obj = runtime.Indirect(obj)
 	if obj == nil {
 		return nil, false
 	}
 	rv := reflect.ValueOf(obj)
+	if rv.Kind() == reflect.Ptr && !rv.IsNil() {
+		rv = rv.Elem()
+	}
 	switch rv.Kind() {
 	case reflect.Map:
 		if kt := rv.Type().Key(); kt.Kind() == reflect.String {
 			if val := rv.MapIndex(reflect.ValueOf(seg).Convert(kt)); val.IsValid() {
-				return val.Interface(), true
+				return nonFuncValue(val)
 			}
 		}
 	case reflect.Slice, reflect.Array:
@@ -1028,13 +1069,34 @@ func lookupSegment(obj interface{}, seg string) (interface{}, bool) {
 		return rv.Index(idx).Interface(), true
 	case reflect.Struct:
 		if v, ok := structField(rv, seg, false); ok {
-			return v, true
+			return nonFunc(v)
 		}
 		if capital := capitalizeFirst(seg); capital != seg {
-			return structField(rv, capital, true)
+			if v, ok := structField(rv, capital, true); ok {
+				return nonFunc(v)
+			}
 		}
 	}
 	return nil, false
+}
+
+// nonFunc hides func values, which expressions never call through filters.
+func nonFunc(v interface{}) (interface{}, bool) {
+	if v != nil && reflect.TypeOf(v).Kind() == reflect.Func {
+		return nil, false
+	}
+	return v, true
+}
+
+func nonFuncValue(val reflect.Value) (interface{}, bool) {
+	inner := val
+	if inner.Kind() == reflect.Interface {
+		inner = inner.Elem()
+	}
+	if inner.Kind() == reflect.Func {
+		return nil, false
+	}
+	return val.Interface(), true
 }
 
 // structField reads the exported field name of the struct rv. Fields promoted
