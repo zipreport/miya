@@ -91,13 +91,7 @@ func StringKeyMap(v interface{}) (map[string]interface{}, bool) {
 	return result, true
 }
 
-// mapKey converts a template value to a key of type kt: any value for
-// string-kind keys (spelled by DictKey, so none is "None" as for dicts; a
-// []byte key is its text); a
-// number for integer, unsigned and float keys (a float must be integral and
-// in range for integer keys; unsigned keys reject negative numbers); for
-// interface keys, the value itself if it is comparable. ok is false when no
-// key of type kt can be built.
+// stringMapKey spells key for a string-kind map key: DictKey of the dereferenced value; a []byte key is its text.
 func stringMapKey(key interface{}) string {
 	key = Indirect(key)
 	if _, ok := key.([]byte); ok {
@@ -106,6 +100,13 @@ func stringMapKey(key interface{}) string {
 	return DictKey(key)
 }
 
+// mapKey converts a template value to a key of type kt: any value for
+// string-kind keys (spelled by DictKey, so none is "None" as for dicts; a
+// []byte key is its text); a
+// number for integer, unsigned and float keys (a float must be integral and
+// in range for integer keys; unsigned keys reject negative numbers); for
+// interface keys, the value itself if it is comparable. ok is false when no
+// key of type kt can be built.
 func mapKey(key interface{}, kt reflect.Type) (reflect.Value, bool) {
 	switch kt.Kind() {
 	case reflect.String:
