@@ -13,7 +13,8 @@ miya's conformance suite (`tests/conformance/`) holds 289 small templates writte
 1. [Deliberate differences](#deliberate-differences)
 2. [Differences that are not deliberate](#differences-that-are-not-deliberate)
 3. [Comprehension limitations](#comprehension-limitations)
-4. [Migration checklist](#migration-checklist)
+4. [Memory and untrusted templates](#memory-and-untrusted-templates)
+5. [Migration checklist](#migration-checklist)
 
 ---
 
@@ -91,6 +92,16 @@ Workaround for nested comprehensions:
 ```
 
 (`{% do %}` also needs the `jinja2.ext.do` extension in stock Jinja2.)
+
+---
+
+## Memory and untrusted templates
+
+- miya bounds recursion of templates and macros and some single results (64 MiB for `join`, `replace`, `format`, repetition, `center`/`indent`, printed containers), but not a render's total memory. Size-limit errors wrap `runtime.ErrOutputTooLarge`.
+- A template can allocate without limit (lists built in loops, `~` accumulation, filters such as `tojson`, `urlize`, `regex_replace`, `wordwrap`), and Go's out-of-memory is fatal.
+- Render untrusted templates in a separate process with an OS memory limit (cgroup, container limit, or `ulimit -v`). `GOMEMLIMIT` alone does not prevent the crash.
+- A template can also build a value nested tens of thousands of levels deep (`{% set ns.l = [ns.l] %}` in a loop). Printing, comparing or serialising it then overflows the Go stack, which is also fatal. Data from `encoding/json` is limited to 10000 levels by the decoder.
+- Render data on its own cannot exceed these limits unless the template amplifies it.
 
 ---
 

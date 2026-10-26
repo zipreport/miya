@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `'ab' * 3` and `[1] * 2` repeat.
 - `runtime.ErrTemplateNotFound` and `runtime.TemplateNotFoundError` (with the missing template's `Name`), returned for templates the loader cannot find. A custom `runtime.TemplateLoader` that returns its own errors keeps the old rule (`TemplateExists` decides).
 - `WithTruncateLeeway(n)` environment option: the default `leeway` of `truncate` (Jinja2's `truncate.leeway` policy). Also `filters.TruncateFilterWithLeeway`, `(*filters.FilterRegistry).Replace` and `runtime.RoundedFloat`.
+- `runtime.ErrOutputTooLarge` and `runtime.SizeError`, wrapped by every size-limit error.
 
 ### Fixed
 
@@ -99,6 +100,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `format_number` and `currency` no longer put a separator after the minus sign (`-123456|format_number` printed `-,123,456`).
 - `}}`, `%}` and custom end delimiters no longer end a tag while a `(`, `[` or `{` opened in it is still open, as in Jinja2: `{{ {'a': {'b': 2}}.a.b }}` renders `2`, and a block end of `}` works with dict literals.
 - `wordcount` counts words like Jinja2 (`\w+`), so punctuation and hyphens separate words.
+- Errors from filter blocks and template inheritance keep their cause, so `errors.Is` finds `ErrOutputTooLarge` and other sentinels through them.
 
 ### Changed
 
@@ -222,6 +224,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Environment.GetMacro`, `ListMacros`, `CallMacro` and `ClearMacros`, and the `macros` package behind them. The registry mixes macros from every compiled template and binds arguments differently from template calls. They will be removed in a later minor release. To call a macro, render a template that imports it (`{% from "lib.html" import m %}{{ m(x) }}`), or walk `Template.AST()`.
 - `parser.ReleaseAST`, `parser.ReleaseNode`, the `parser.Release*Node` functions, `parser.GetNodePoolStats` and `parser.NodePoolStats` do nothing.
 - `filters.SelectFilter`, `RejectFilter`, `SelectAttrFilter` and `RejectAttrFilter`: templates no longer use them (the registered filters apply tests); they keep their old value-comparing behaviour for direct Go callers.
+- Docs: a section on [memory and untrusted templates](docs/MIYA_LIMITATIONS.md#memory-and-untrusted-templates).
 
 ## [v0.2.0]
 
