@@ -256,7 +256,7 @@ func TestRepetition(t *testing.T) {
 		{name: "literal_numeric", tpl: `{{ '0' * 3 }}|{{ '3' * 2 }}`, want: `000|33`},
 		{name: "zero_pad_idiom", tpl: `{{ '0' * (6 - s|length) ~ s }}`, data: pvD{"s": "42"}, want: `000042`},
 		{name: "data_numeric_kept", tpl: `{{ n * 2 }}`, data: pvD{"n": "3"}, want: `6`},
-		{name: "data_inf_trap", tpl: `{{ w * 2 }}`, data: pvD{"w": "inf"}, want: `+Inf`},
+		{name: "data_inf_repeats", tpl: `{{ w * 2 }}`, data: pvD{"w": "inf"}, want: `infinf`},
 		{name: "data_text_repeats", tpl: `{{ w * 2 }}`, data: pvD{"w": "ab"}, want: `abab`},
 		{name: "list", tpl: `{{ [1] * 2 }}|{{ 2 * [1] }}|{{ [1, 2] * 0 }}`, want: `[1, 1]|[1, 1]|[]`},
 		{name: "too_large", tpl: `{{ 'a' * 100000000 }}`, errHas: "too large"},
