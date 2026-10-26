@@ -297,8 +297,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "[&#39;&lt;&#39;, &#39;b&#39;, &#39;&gt;&#39;, &#39;x&#39;, &#39;&lt;&#39;, &#39;/&#39;, &#39;b&#39;, &#39;&gt;&#39;]",
-    "known_unrelated": "lists print Go-style (control K5; plan 035)"
+    "want": "[&#39;&lt;&#39;, &#39;b&#39;, &#39;&gt;&#39;, &#39;x&#39;, &#39;&lt;&#39;, &#39;/&#39;, &#39;b&#39;, &#39;&gt;&#39;]"
   },
   {
     "name": "W16_neq_lt",
@@ -316,8 +315,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "8|3",
-    "known_unrelated": "wordcount splits on whitespace, not \\w+ (control K1; plan 039)"
+    "want": "8|3"
   },
   {
     "name": "W18_filterblock",
@@ -353,8 +351,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "<b>xxxx...",
-    "known_unrelated": "truncate leeway algorithm (control K3; plan 039)"
+    "want": "<b>xxxx..."
   },
   {
     "name": "W22_format",
@@ -428,8 +425,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "T",
-    "known_unrelated": "no string methods (control K2; plan 038)"
+    "want": "T"
   },
   {
     "name": "W31_upper_method",
@@ -438,8 +434,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "<B>X</B>",
-    "known_unrelated": "no string methods (control K2; plan 038)"
+    "want": "<B>X</B>"
   },
   {
     "name": "W32_sort",
@@ -466,8 +461,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "3",
-    "known_unrelated": "control: wordcount on a plain string (plan 039)"
+    "want": "3"
   },
   {
     "name": "K2_ctl_method",
@@ -476,8 +470,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "ABC",
-    "known_unrelated": "control: string methods (plan 038)"
+    "want": "ABC"
   },
   {
     "name": "K3_ctl_truncate",
@@ -486,8 +479,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "&lt;b&gt;xxxx...",
-    "known_unrelated": "control: truncate on a plain string (plan 039)"
+    "want": "&lt;b&gt;xxxx..."
   },
   {
     "name": "K4_ctl_default",
@@ -506,8 +498,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "[&#39;a&#39;, &#39;b&#39;]|[&#39;&lt;&#39;]",
-    "known_unrelated": "control: list printing (plan 035)"
+    "want": "[&#39;a&#39;, &#39;b&#39;]|[&#39;&lt;&#39;]"
   },
   {
     "name": "K6_ctl_mul",
@@ -516,8 +507,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "abab",
-    "known_unrelated": "control: str * int (plan 038/039)"
+    "want": "abab"
   },
   {
     "name": "K7_ctl_dict_val",
@@ -544,8 +534,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "&lt;B&gt;x&lt;/b&gt;",
-    "known_unrelated": "control: title algorithm on a plain string (plan 039)"
+    "want": "&lt;B&gt;x&lt;/b&gt;"
   },
   {
     "name": "K11_ctl_join_str",
@@ -573,8 +562,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "<B>x</b><I>",
-    "known_unrelated": "title word-boundary algorithm (control K10; plan 039)"
+    "want": "<B>x</b><I>"
   },
   {
     "name": "X2_goarg_filter",

@@ -224,7 +224,7 @@ func TestCoreTemplateEngine(t *testing.T) {
 			Name:     "URL filters",
 			Template: `{{ url|urlencode }}, {{ text|urlize }}`,
 			Context:  map[string]interface{}{"url": "hello world", "text": "Visit https://example.com"},
-			Expected: `hello+world, Visit <a href="https://example.com">https://example.com</a>`,
+			Expected: `hello%20world, Visit <a href="https://example.com" rel="noopener">https://example.com</a>`,
 		},
 
 		// =================== TYPE CONVERSION ===================

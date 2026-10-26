@@ -122,7 +122,7 @@ func TestHTMLFilters(t *testing.T) {
 	}{
 		{"escape", EscapeFilter, "<script>alert('xss')</script>", nil, runtime.Markup("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;"), false},
 		{"safe", SafeFilter, "<b>bold</b>", nil, runtime.Markup("<b>bold</b>"), false},
-		{"urlencode", URLEncodeFilter, "hello world", nil, "hello+world", false},
+		{"urlencode", URLEncodeFilter, "hello world", nil, "hello%20world", false},
 		{"striptags", StripTagsFilter, "<p>Hello <b>world</b></p>", nil, "Hello world", false},
 		{"filesizeformat", FileSizeFormatFilter, 1024, nil, "1.0 kB", false},
 		{"filesizeformat binary", FileSizeFormatFilter, 1024, []interface{}{true}, "1.0 KiB", false},

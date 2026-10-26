@@ -194,9 +194,9 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 			return
 		}
 
-		// Should contain some link markup or the URL
-		if !strings.Contains(resultStr, "http://example.com") {
-			t.Logf("UrlizeFilter result didn't contain URL: %s", resultStr)
+		want := `Visit <a href="http://example.com" rel="noopener">http://example.com</a> for more info`
+		if resultStr != want {
+			t.Errorf("UrlizeFilter = %q, want %q", resultStr, want)
 		}
 	})
 
@@ -219,9 +219,9 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 			return
 		}
 
-		// Should contain target attribute if links are created
-		if strings.Contains(resultStr, "<a") && !strings.Contains(resultStr, "_blank") {
-			t.Logf("Expected _blank target in link, got: %s", resultStr)
+		want := `Visit <a href="http://example.com" rel="noopener" target="_blank">http://example.com</a>`
+		if resultStr != want {
+			t.Errorf("UrlizeTargetFilter = %q, want %q", resultStr, want)
 		}
 	})
 
