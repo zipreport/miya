@@ -98,9 +98,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `center` defaults to 80 and pads like Python.
 - `format_number` and `currency` no longer put a separator after the minus sign (`-123456|format_number` printed `-,123,456`).
 - `}}`, `%}` and custom end delimiters no longer end a tag while a `(`, `[` or `{` opened in it is still open, as in Jinja2: `{{ {'a': {'b': 2}}.a.b }}` renders `2`, and a block end of `}` works with dict literals.
+- `wordcount` counts words like Jinja2 (`\w+`), so punctuation and hyphens separate words.
 
 ### Changed
 
+- **Breaking:** `urlize(trim_url_limit, nofollow, target, rel, extra_schemes)` follows Jinja2. Links get `rel="noopener"`, combined with `rel` and `nofollow` and sorted. Trailing punctuation stays outside the link, `www.` and e-mail addresses are linked, and URLs are not shortened unless `trim_url_limit` is given. The first argument used to be a boolean that trimmed at 40 characters.
+- **Breaking:** `urlizetarget` (miya-only) produces the same links: they get `rel="noopener"` and are no longer shortened to 40 characters.
+- **Breaking:** `urlencode` encodes strings with `%20` and no longer encodes `/`, so it is not safe for building a single path segment: `'../admin'|urlencode` stays `../admin` (it was `..%2Fadmin`). Dicts and lists of pairs become query strings.
+- `urlize` HTML-escapes its `target` and `rel` values and omits an empty `target`.
+- `title` lowercases the rest of each word and capitalizes after `-` and brackets: `'ACME corp'|title` is now `Acme Corp`. In a `{% filter title %}` block this applies to the markup too: `<a href="/About-Us">read more</a>` becomes `<A Href="/about-Us">read More</a>`, as in Jinja2.
+- `striptags` collapses whitespace to single spaces and removes comments.
 - **Breaking:** `wordwrap(width, break_long_words, wrapstring, break_on_hyphens)` follows Python's `textwrap`, as Jinja2 does. Long words are broken (pass `break_long_words=false` to keep them), words split after hyphens, runs of spaces inside a line are kept, and `width` defaults to 79. The second argument is `break_long_words`; it used to be `break_on_hyphens`.
 - **Breaking:** a nil pointer prints as empty, is false in `{% if %}`, is `none`, and is treated like `none` by `default`; it printed `<nil>` and was true. A non-nil pointer to a string, number, bool, slice or map behaves as the value it points to (it printed a memory address). Zero values of named bool, string and number types (`type Flag bool`) are false in `{% if %}` and in `default(x, true)`, named bools and strings compare equal to plain ones, and named strings and numbers pass `is string` / `is number`.
 - **Breaking:** booleans are numbers in arithmetic and comparison, as in Python: `true + 1` is `2` and `true == 1` is true (both used to fail or be false).

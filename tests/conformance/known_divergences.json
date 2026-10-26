@@ -1,19 +1,4 @@
 {
- "esc-005": {
-  "kind": "output",
-  "plan": "054",
-  "reason": "want \"see <a href=\\\"http://a.com/&lt;b&gt;\\\" rel=\\\"noopener\\\">http://a.com/&lt;b&gt;</a> now\", got \"see <a href=\\\"http://a.com/\\\">http://a.com/</a>&lt;b&gt; now\""
- },
- "esc-016": {
-  "kind": "output",
-  "plan": "054",
-  "reason": "want \"&lt;b&gt; <a href=\\\"http://a.com\\\" rel=\\\"noopener\\\">http://a.com</a>\", got \"&lt;b&gt; <a href=\\\"http://a.com\\\">http://a.com</a>\""
- },
- "esc-020": {
-  "kind": "output",
-  "plan": "054",
-  "reason": "want \"go <a href=\\\"http://x.com\\\" rel=\\\"noopener\\\">http://x.com</a> &lt;b&gt;\", got \"go <a href=\\\"http://x.com\\\">http://x.com</a> &lt;b&gt;\""
- },
  "fsem-005": {
   "kind": "output",
   "plan": "deviation",
@@ -28,16 +13,6 @@
   "kind": "output",
   "plan": "deviation",
   "reason": "want \"2.67\", got \"2.68\""
- },
- "fsem-016": {
-  "kind": "output",
-  "plan": "054",
-  "reason": "want \"a%20b/c\", got \"a+b%2Fc\""
- },
- "fsem-017": {
-  "kind": "output",
-  "plan": "054",
-  "reason": "want \"a b\", got \"a  b\""
  },
  "fsem-028": {
   "kind": "output",
