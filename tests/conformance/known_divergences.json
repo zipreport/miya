@@ -139,110 +139,10 @@
   "plan": "048",
   "reason": "want \"[[1, 2], [3]]\", got \"[[1 2] [3]]\""
  },
- "parse-001": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"true\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 22"
- },
- "parse-002": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"true\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 13"
- },
- "parse-003": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"true\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 13"
- },
- "parse-004": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"true\", got compile-time error: parser error in template main: expected test name after 'is' at line 1, column 10"
- },
- "parse-005": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"true\", got compile-time error: parser error in template main: expected test name after 'is' at line 1, column 10"
- },
- "parse-006": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"true\", got compile-time error: parser error in template main: expected test name after 'is' at line 1, column 10"
- },
- "parse-007": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"me\", got compile-time error: parser error in template main: expected attribute name after '.' at line 1, column 9"
- },
- "parse-008": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"1\", got compile-time error: parser error in template main: expected attribute name after '.' at line 1, column 7"
- },
- "parse-011": {
-  "kind": "output",
-  "plan": "038",
-  "reason": "want \"4\", got \"-4\""
- },
- "parse-012": {
-  "kind": "output",
-  "plan": "038",
-  "reason": "want \"64\", got \"512\""
- },
- "parse-013": {
-  "kind": "output",
-  "plan": "038",
-  "reason": "want \"5\", got \"-5\""
- },
- "parse-014": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"2\", got compile-time error: parser error in template main: expected ')' after expression at line 1, column 7"
- },
  "parse-015": {
   "kind": "error",
   "plan": "unplanned",
-  "reason": "want \"1-2\", got compile-time error: parser error in template main: expected ')' after expression at line 1, column 17"
- },
- "parse-016": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"12\", got compile-time error: parser error in template main: expected '%}' after set statement at line 1, column 17"
- },
- "parse-017": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"16\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 6"
- },
- "parse-018": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"1000\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 6"
- },
- "parse-019": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"1000\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 6"
- },
- "parse-020": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"ab\", got compile-time error: parser error in template main: expected '}}' after variable expression at line 1, column 9"
- },
- "parse-021": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"1\", got compile-time error: parser error in template main: expected attribute name after '.' at line 1, column 7"
- },
- "parse-022": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"true\", got compile-time error: parser error in template main: expected test name after 'is' at line 1, column 10"
- },
- "parse-024": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"|\", got compile-time error: parser error in template main: expected 'else' in conditional expression at line 1, column 12"
+  "reason": "want \"1-2\", got render-time error: cannot modulo string and []interface {}"
  },
  "parse-025": {
   "kind": "error",
@@ -258,16 +158,6 @@
   "kind": "error",
   "plan": "048",
   "reason": "want \"aaa\", got render-time error: cannot multiply string and int"
- },
- "parse-028": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"5\", got compile-time error: parser error in template main: unexpected token in expression: MINUS at line 1, column 6"
- },
- "parse-029": {
-  "kind": "error",
-  "plan": "038",
-  "reason": "want \"m|\", got compile-time error: parser error in template main: unexpected token in expression: MISSING at line 1, column 5"
  },
  "undef-001": {
   "kind": "error",
