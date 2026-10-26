@@ -505,12 +505,6 @@ func (e *DefaultEvaluator) joinMarkup(ctx Context, value interface{}, args []int
 	}
 	escaped := make([]interface{}, len(items))
 	for i, it := range items {
-		if attr != nil {
-			if _, undef := it.(*Undefined); undef || it == nil {
-				escaped[i] = ""
-				continue
-			}
-		}
 		escaped[i] = escapeFor(ctx, it)
 	}
 	shaped := []interface{}{}
