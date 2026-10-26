@@ -42,7 +42,10 @@ func TestConcurrentEnvironmentMutation(t *testing.T) {
 func TestConfigureInheritanceCacheConcurrent(t *testing.T) {
 	sl := loader.NewStringLoader(loader.NewDirectTemplateParser())
 	sl.AddTemplate("base.html", `[{% block b %}{% endblock %}]`)
-	sl.AddTemplate("child.html", `{% extends "base.html" %}{% block b %}x{% endblock %}`)
+	const children = 600
+	for i := 0; i < children; i++ {
+		sl.AddTemplate(fmt.Sprintf("child%d.html", i), `{% extends "base.html" %}{% block b %}x{% endblock %}`)
+	}
 	env := miya.NewEnvironment(miya.WithLoader(sl))
 
 	done := make(chan struct{})
@@ -63,16 +66,16 @@ func TestConfigureInheritanceCacheConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	for g := 0; g < 2; g++ {
 		wg.Add(1)
-		go func() {
+		go func(g int) {
 			defer wg.Done()
-			for i := 0; i < 300; i++ {
-				got, err := env.RenderTemplate("child.html", miya.NewContext())
+			for i := g * children / 2; i < (g+1)*children/2; i++ {
+				got, err := env.RenderTemplate(fmt.Sprintf("child%d.html", i), miya.NewContext())
 				if err != nil || got != "[x]" {
 					t.Errorf("got %q, err %v; want [x]", got, err)
 					return
 				}
 			}
-		}()
+		}(g)
 	}
 	wg.Wait()
 	close(done)
