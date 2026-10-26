@@ -29,7 +29,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - `replace` with a safe argument on a number or boolean, and `map` with safe arguments over number and list items, keep the safe text, as in Jinja2.
-- Typed Go maps with string keys look keys up the same way through `[]`, `in` and `.get()` (`none` is `"None"`); maps with interface keys find `1.0` under `1` with `[]` as `.get()` does; `range`, `lipsum`, list `+`, `batch`, `slice` and `format` width/precision limit errors wrap `ErrOutputTooLarge`; interface-key maps with string keys (as decoded from YAML) look keys up like `.get()`; `wordwrap` accepts a `{% set %}` block as its width again.
+- Typed Go maps with string keys look keys up the same way through `[]`, `in` and `.get()` (`none` is `"None"`); `range`, `lipsum`, list `+`, `batch`, `slice` and `format` width/precision limit errors wrap `ErrOutputTooLarge`; `wordwrap` accepts a `{% set %}` block as its width again.
+  - `[]`, `in` and `.get()` on a map with interface keys (as YAML decoders produce) find a key that is the key itself, the same number in another numeric type (or bool 0/1), or its `DictKey` spelling (`1.0` finds `1`; `none` finds a `"None"` key), without scanning the map. A lookup that misses no longer copies or sorts the map: 100 misses on a 20 001-entry map took 2.7 s.
+  - Keys of other Go types in hand-built maps (`int8`, `int32`, `uint`, `float32`, `Markup` and named-string keys, `RoundedFloat`, pointer and array keys) are no longer found by value equality in interface-key maps.
+  - On a typed map, `in` and `.get()` look up a key that converts to the key type without scanning.
+  - Pointer keys are dereferenced in `[]`, `in`, `.get()` and dict literals (`{p: 1}` has the key `'1'`, not an address).
+  - An undefined key finds a string-key map's `""` entry in `[]`, `.get()` and `in` (Jinja2: not found).
 - Under autoescape, safe values stay safe through `map` with a filter (`[s]|map('upper')`), `map(attribute=…, default=s)`, `default(s)`, `loop.cycle(s, …)`, `join(d=s)` and `join(…, attribute=…)`, and through `+` with a Go named string type.
 - `v|replace(old, new)` with a safe `old` or `new` escapes `v` first, as Jinja2 does.
 - A safe value repeated with `*` stays safe under autoescape.
@@ -40,6 +45,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A `none` dict key prints `None`, and a rounded number finds its integer key.
 - `RoundedFloat`'s Go fields are no longer template attributes.
 - `{{ super() }}` renders the parent block with the parent's autoescape setting.
+- `map(filter)` under autoescape runs the filter once per item; `map('0')` on list items reads the index again when autoescape is on; `map('join', s)` over a mix of lists and safe strings no longer errors.
 - A macro (or `caller()`) can change a list passed to it, as in Jinja2: `{% do l.append(x) %}` inside the macro changes the caller's list. Lists passed from render data are copied, so application data is never changed.
 - Go functions that take a `runtime.Context`, and `Namespace.Get`/`GetAttr`/`All()` and `ImportedNamespace.Get`, see plain lists, never the internal box type. `RawGet` returns the raw value.
 - An attribute chain passed to a macro, a list method or a namespace lookup (`m(l.pop().a.b)`) is evaluated once.
@@ -140,7 +146,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- **Breaking:** a `{% block %}` body and an `{% include %}`d template render with the environment's autoescape setting, as in Jinja2. An `{% autoescape %}` tag around the block or include no longer applies to it, in the template that defines it or in a child's override. Tags inside the block body or included template still apply. Move such a tag inside to keep the old output. A block inside a `{% call %}` body under `{% autoescape false %}` is now escaped twice, as in Jinja2.
+- **Breaking:** a `{% block %}` body and an `{% include %}`d template render with the environment's autoescape setting, as in Jinja2. An `{% autoescape %}` tag around the block or include no longer applies to it, in the template that defines it or in a child's override. Tags inside the block body or included template still apply. Move such a tag inside to keep the old output. A block inside a `{% call %}` body under `{% autoescape false %}` is now escaped twice, as in Jinja2. With autoescape off, an `{% autoescape true %}` tag around a block or include no longer escapes it.
 - **Breaking:** an error in an imported module's top-level code (for example an undefined attribute in `{{ }}`) now fails the import, where it used to be skipped.
 - Go functions that take a `runtime.Context` receive a wrapper that unboxes lists; reach the original context with `interface{ Unwrap() runtime.Context }`. Code that type-asserts the context to `*miya.TemplateContextAdapter`, `*runtime.ContextWrapper` or `runtime.ContextAwareContext` now gets `ok == false`.
 - Docs: a section on [memory and untrusted templates](docs/MIYA_LIMITATIONS.md#memory-and-untrusted-templates).

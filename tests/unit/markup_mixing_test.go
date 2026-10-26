@@ -76,9 +76,12 @@ func TestMarkupMixing(t *testing.T) {
 		{"width_after_escape", `{{ fl|format(lt) }}`, `&lt;  |`},
 		{"fb11_guard", `{% filter wordwrap(80) %}<p>{{ x }}</p>{% endfilter %}`, `<p>&lt;x&gt;</p>`},
 		{"fb_wordwrap_newline", `{% filter wordwrap(72, true, '\n') %}<p>{{ x }}</p>{% endfilter %}`, `<p>&lt;x&gt;</p>`},
+		// Jinja2: "&lt;img\nsrc=/a.png\nalt=photo&gt;"
 		{"deviation_wordwrap_newline_safe", `{{ card|wordwrap(5, false, '\n') }}`, "<img\nsrc=/a.png\nalt=photo>"},
 		{"deviation_fb_wordwrap_br", `{% filter wordwrap(72, true, '<br>') %}<p>{{ x }}</p>{% endfilter %}`, `&lt;p&gt;&amp;lt;x&amp;gt;&lt;/p&gt;`},
+		// Jinja2: error: TypeError
 		{"deviation_setblock_length", `{% set n %}20{% endset %}{{ t|truncate(n) }}`, strings.Repeat("y", 17) + `...`},
+		// Jinja2: error: TypeError
 		{"deviation_setblock_width", `{% set n %}5{% endset %}{{ m|wordwrap(n) }}`, `<b>`},
 	}
 	for _, tc := range rows {

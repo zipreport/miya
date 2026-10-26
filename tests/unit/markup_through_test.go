@@ -55,8 +55,11 @@ func TestMarkupThrough(t *testing.T) {
 		{"Q9_map_replace_numbers", `{{ [1, v]|map('replace','1',s)|join }}`, false, "", `<b>&lt;b&gt;`},
 		{"Q9_replace_rounded", `{{ (2.567|round(1))|replace('.', s) }}`, false, "", `2<b>6`},
 		{"Q9_map_rounded", `{{ [2.567|round(1)]|map('replace','.',s)|join }}`, false, "", `2<b>6`},
+		// Jinja2: Tru<b>
 		{"deviation_bool_str", `{{ true|replace('e', s) }}`, false, "", `tru<b>`},
 		// Jinja2: error: TemplateRuntimeError (No filter named '0')
+		// Jinja2: Tru<b>
+		{"deviation_map_bool", `{{ [true]|map('replace','e',s)|join }}`, false, "", `tru<b>`},
 		{"deviation_map_digit_on", `{{ [[v,2]]|map('0')|join }}`, false, "", `&lt;b&gt;`},
 		// Jinja2: error: TemplateRuntimeError (No filter named '0')
 		{"deviation_map_digit_off", `{{ [[v,2]]|map('0')|join }}`, true, "", `<b>`},
@@ -65,8 +68,10 @@ func TestMarkupThrough(t *testing.T) {
 		// Jinja2: error: TemplateRuntimeError (No filter named 'nofilter')
 		{"deviation_map_nofilter", `{{ [[v]]|map('nofilter')|list }}`, false, "", `[Undefined]`},
 		{"map_join_mixed", `{{ [['<a>','b'], s]|map('join', s)|join }}`, false, "", `&lt;a&gt;<b>b&lt;<b>b<b>&gt;`},
-		{"grouptuple_attr_on", `{{ [{'k':1},{'k':2}]|groupby('k')|map('grouper')|join(',') }}`, false, "", `1,2`},
-		{"grouptuple_attr_off", `{{ [{'k':1},{'k':2}]|groupby('k')|map('grouper')|join(',') }}`, true, "", `1,2`},
+		// Jinja2: error: TemplateRuntimeError (No filter named 'grouper')
+		{"deviation_grouptuple_attr_on", `{{ [{'k':1},{'k':2}]|groupby('k')|map('grouper')|join(',') }}`, false, "", `1,2`},
+		// Jinja2: error: TemplateRuntimeError (No filter named 'grouper')
+		{"deviation_grouptuple_attr_off", `{{ [{'k':1},{'k':2}]|groupby('k')|map('grouper')|join(',') }}`, true, "", `1,2`},
 		{"cycle_none", `{{ [1]|map('string')|list }}{% for i in [1] %}{{ loop.cycle() }}{% endfor %}`, false, "", `ERR:cycle() requires`},
 		{"deviation_markup_repr", `{{ [s]|map('upper')|list }}`, false, "", `[&#39;&lt;B&gt;&#39;]`},
 		{"deviation_default_none", `{{ [none]|map('default', s)|join }}`, false, "", `<b>`},

@@ -20,6 +20,7 @@ func TestBlockEscaping(t *testing.T) {
 		{"p", p, nil, false, `&lt;`},
 		{"pn", p + `{{ x }}`, nil, false, `&lt;&lt;`},
 		{"c", `{% extends "p" %}{% block b %}{{ x }}{% endblock %}`, map[string]string{"p": p}, false, `&lt;`},
+		// Jinja2: "&amp;lt;&lt;"
 		{"deviation_super_reescape", `{% extends "p" %}{% block b %}{{ super() }}{{ x }}{% endblock %}`, map[string]string{"p": p}, false, `&lt;&lt;`},
 		{"pi", pi, nil, false, `<&lt;`},
 		{"ci", `{% extends "pi" %}{% block b %}[{{ x }}]{% endblock %}`, map[string]string{"pi": pi}, false, `<[&lt;]`},

@@ -23,13 +23,16 @@ func TestMapKeyRule(t *testing.T) {
 	rows := []struct{ name, tpl, want string }{
 		// Jinja2: [|None|False]
 		{"deviation_ms_none", `[{{ ms[none] }}|{{ ms.get(none) }}|{{ none in ms }}]`, `[N|N|true]`},
-		{"d_none", `[{{ d[none] }}|{{ d.get(none) }}|{{ none in d }}]`, `[N|N|true]`},
+		// Jinja2: [|None|False]
+		{"deviation_d_none", `[{{ d[none] }}|{{ d.get(none) }}|{{ none in d }}]`, `[N|N|true]`},
 		// Jinja2: [|one|False] (1 is not "1")
 		{"deviation_ms_int", `[{{ ms[1] }}|{{ ms.get(1) }}|{{ 1 in ms }}]`, `[one|one|true]`},
 		{"ifm_none", `[{{ ifm[none] }}|{{ ifm.get(none) }}|{{ none in ifm }}]`, `[nil|nil|true]`},
 		{"ifm_float", `[{{ ifm[1.0] }}|{{ ifm.get(1.0) }}|{{ 1.0 in ifm }}]`, `[one|one|true]`},
-		{"yam_none", `[{{ yam[none] }}|{{ yam.get(none) }}|{{ none in yam }}]`, `[N|N|true]`},
-		{"yam_int", `[{{ yam[1] }}|{{ yam.get(1) }}|{{ 1 in yam }}]`, `[one|one|true]`},
+		// Jinja2: [|None|False]
+		{"deviation_yam_none", `[{{ yam[none] }}|{{ yam.get(none) }}|{{ none in yam }}]`, `[N|N|true]`},
+		// Jinja2: [|None|False]
+		{"deviation_yam_int", `[{{ yam[1] }}|{{ yam.get(1) }}|{{ 1 in yam }}]`, `[one|one|true]`},
 		{"ptr_key", `{{ ms[p] }}|{{ p in ms }}`, `one|true`},
 		{"ptr_get", `[{{ ms[p] }}|{{ ms.get(p) }}|{{ p in ms }}]`, `[one|one|true]`},
 		{"bytes_key", `{{ ms[bs] }}`, `one`},

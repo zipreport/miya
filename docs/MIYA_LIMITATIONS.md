@@ -44,6 +44,7 @@ These are bugs or gaps, not design decisions.
 | `{{ '%s-%s' % (1, 2) }}` | error: `cannot modulo string and []interface {}` | `1-2` |
 | `{% do items.append(1) %}` on a list passed in as render data | error: store it first with `{% set items = items\|list %}` | mutates the list |
 | `enumerate(items, start=1)` | `start` is silently ignored; use `enumerate(items, 1)` (`enumerate` does not exist in Jinja2) | `enumerate` is undefined |
+| `{% autoescape false %}{% block b %}{{ x\|replace("<", s) }}{% endblock %}{% endautoescape %}` with `x = "<"`, `s = Markup("<b>")` | filters inside the block see escaping as on: `&lt;` (the output is escaped; before, `<b>`) | `&lt;b&gt;` |
 
 Printing differences:
 
