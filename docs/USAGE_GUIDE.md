@@ -636,14 +636,14 @@ if cachingLoader, ok := env.GetLoader().(loader.CachingLoader); ok {
 
 ### Inheritance Cache
 
-Template inheritance chains (e.g., `page.html` extends `layout.html` extends `base.html`) are cached separately with configurable TTLs:
+The chain of a template (e.g., `page.html` extends `layout.html` extends `base.html`) is cached separately, with configurable TTLs. Resolved templates are no longer cached, so the second argument of `ConfigureInheritanceCache` has no effect and `ResolvedCache` always reads zero:
 
 ```go
 import "time"
 
 env.ConfigureInheritanceCache(
     5*time.Minute,   // hierarchy TTL
-    10*time.Minute,  // resolved template TTL
+    10*time.Minute,  // resolved template TTL (no effect)
     1000,            // max cache entries
 )
 
@@ -651,8 +651,6 @@ env.ConfigureInheritanceCache(
 stats := env.GetInheritanceCacheStats()
 fmt.Printf("Hierarchy - Hits: %d, Misses: %d\n",
     stats.HierarchyCache.Hits, stats.HierarchyCache.Misses)
-fmt.Printf("Resolved  - Hits: %d, Misses: %d\n",
-    stats.ResolvedCache.Hits, stats.ResolvedCache.Misses)
 
 // Clear when needed
 env.ClearInheritanceCache()
