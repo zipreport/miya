@@ -383,14 +383,8 @@ func (e *DefaultEvaluator) EvalVariableNode(node *parser.VariableNode, ctx Conte
 	}
 
 	// Apply auto-escaping if enabled in this context
-	if contextWrapper, ok := ctx.(ContextAwareContext); ok && contextWrapper.GetAutoEscaper() != nil {
-		escaper := contextWrapper.GetAutoEscaper()
-		if escaper.config.Enabled {
-			return escaper.Escape(result, contextWrapper.GetEscapeContext()), nil
-		}
-	} else if autoCtx, ok := ctx.(AutoescapeContext); ok && autoCtx.IsAutoescapeEnabled() {
-		// Fallback to old interface for backward compatibility
-		return escapeOutput(result), nil
+	if on, _, _ := resolveEscape(ctx); on {
+		return escapeFor(ctx, result), nil
 	}
 
 	return result, nil
@@ -529,19 +523,27 @@ func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) 
 			}
 			kwargs[name] = v
 		}
-		if applier, ok := filterContext(ctx).(KwargsFilterApplier); ok {
-			return applier.ApplyFilterKwargs(node.FilterName, value, args, kwargs)
+		applier, ok := filterContext(ctx).(KwargsFilterApplier)
+		if !ok {
+			return nil, fmt.Errorf("filter %q: keyword arguments need an environment", node.FilterName)
 		}
-		return nil, fmt.Errorf("filter %q: keyword arguments need an environment", node.FilterName)
+		// The keywords travel as a trailing KwArgs so the markup policy treats
+		// them like positional arguments.
+		return e.applyFilterWithMarkup(node.FilterName, value, append(args[:len(args):len(args)], KwArgs(kwargs)), ctx,
+			func(v interface{}, a []interface{}) (interface{}, error) {
+				n := len(a) - 1
+				return applier.ApplyFilterKwargs(node.FilterName, v, a[:n], map[string]interface{}(a[n].(KwArgs)))
+			})
 	}
 
-	// Try to use environment's filter registry if available
-	if envCtx, ok := filterContext(ctx).(EnvironmentContext); ok {
-		return envCtx.ApplyFilter(node.FilterName, value, args...)
-	}
-
-	// Fallback to basic filters
-	return e.applyFilter(node.FilterName, value, args)
+	return e.applyFilterWithMarkup(node.FilterName, value, args, ctx, func(v interface{}, a []interface{}) (interface{}, error) {
+		// Try to use environment's filter registry if available
+		if envCtx, ok := envContext(ctx); ok {
+			return envCtx.ApplyFilter(node.FilterName, v, a...)
+		}
+		// Fallback to basic filters
+		return e.applyFilter(node.FilterName, v, a)
+	})
 }
 
 func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Context) (interface{}, error) {
@@ -568,6 +570,31 @@ func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Conte
 		return nil, err
 	}
 
+	switch node.Operator {
+	case "~":
+		if markupContext(ctx) {
+			if m, ok := concatMarkup(ctx, left, right); ok {
+				return m, nil
+			}
+		}
+		left, right = Unmark(left), Unmark(right)
+	case "+":
+		if !markupContext(ctx) {
+			left, right = Unmark(left), Unmark(right)
+			break
+		}
+		_, ls := left.(string)
+		_, rs := right.(string)
+		_, lm := AsMarkup(left)
+		_, rm := AsMarkup(right)
+		if (lm || rm) && (ls || lm) && (rs || rm) {
+			m, _ := concatMarkup(ctx, left, right)
+			return m, nil
+		}
+		left, right = Unmark(left), Unmark(right)
+	case "==", "!=", "<", "<=", ">", ">=", "in", "not in":
+		left, right = Unmark(left), Unmark(right)
+	}
 	return e.applyBinaryOpWithNode(node.Operator, left, right, node)
 }
 
@@ -948,8 +975,8 @@ func (e *DefaultEvaluator) EvalBlockSetNode(node *parser.BlockSetNode, ctx Conte
 		content = fmt.Sprintf("%v", bodyResult)
 	}
 
-	// Set the variable to the rendered content
-	ctx.SetVariable(node.Variable, content)
+	// Set the variable to the rendered content (Markup where escaping is on, as in Jinja2)
+	ctx.SetVariable(node.Variable, markIfSafe(content, ctx))
 
 	return "", nil // Block set statements don't produce output
 }
@@ -1138,9 +1165,14 @@ func (e *DefaultEvaluator) EvalTestNode(node *parser.TestNode, ctx Context) (int
 		args = append(args, argValue)
 	}
 
+	if node.TestName != "escaped" {
+		value = Unmark(value)
+		args = unmarkArgs(args)
+	}
+
 	// Try to use environment's test registry if available
 	var result bool
-	if envCtx, ok := filterContext(ctx).(EnvironmentContext); ok {
+	if envCtx, ok := envContext(ctx); ok {
 		var testErr error
 		result, testErr = envCtx.ApplyTest(node.TestName, value, args...)
 		if testErr != nil {
@@ -1661,6 +1693,14 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 	if obj == nil {
 		return nil, fmt.Errorf("cannot get item from nil")
 	}
+	key = Unmark(key)
+	if m, ok := AsMarkup(obj); ok {
+		r, err := e.getItem(string(m), key)
+		if s, ok := r.(string); ok {
+			return Markup(s), err
+		}
+		return r, err
+	}
 
 	switch v := obj.(type) {
 	case map[string]interface{}:
@@ -1862,14 +1902,27 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 		return fn.Join(), nil
 	case *CallableLoop:
 		// CallableLoop objects support function calls for recursion
-		return fn.Call(args...)
+		r, err := fn.Call(args...)
+		if err != nil {
+			return r, err
+		}
+		// A recursive iteration's output is template output, like a macro's
+		return markIfSafe(ToString(r), ctx), nil
 	case *Macro:
 		return fn.Call(args, kwargs)
 	case *Undefined:
 		if fn.Hint != "" {
 			return nil, fmt.Errorf("cannot call undefined %s: %s", fn.Name, fn.Hint)
 		}
+	case KeepMarkupFunc:
+		if len(kwargs) > 0 {
+			args = append(args, kwargs)
+		}
+		return fn(args...)
 	}
+
+	// Go functions get plain strings for safe values
+	args, kwargs = unmarkCall(args, kwargs)
 
 	// Handle different function types
 	switch fn := function.(type) {
@@ -2088,6 +2141,8 @@ func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) 
 	if obj == nil {
 		return nil, nil
 	}
+	// Iterating Markup yields plain characters, as in Jinja2
+	obj = Unmark(obj)
 	obj = Indirect(obj)
 	if obj == nil {
 		return nil, nil
@@ -2328,6 +2383,10 @@ func (e *DefaultEvaluator) isTruthy(obj interface{}) bool {
 		return v
 	case string:
 		return v != ""
+	case Markup:
+		return v != ""
+	case SafeValue:
+		return e.isTruthy(v.Value)
 	case int:
 		return v != 0
 	case int8:
@@ -2807,6 +2866,7 @@ func Equal(a, b interface{}) bool { var e DefaultEvaluator; return e.equal(a, b)
 
 // Comparison operations
 func (e *DefaultEvaluator) equal(a, b interface{}) bool {
+	a, b = Unmark(a), Unmark(b)
 	if cmp, ok := compareNumbers(a, b); ok {
 		return cmp == 0
 	}
@@ -2990,6 +3050,8 @@ func (e *DefaultEvaluator) length(obj interface{}) (int, error) {
 	switch v := obj.(type) {
 	case string:
 		return len(v), nil
+	case Markup:
+		return e.length(string(v))
 	case []interface{}:
 		return len(v), nil
 	case map[string]interface{}:
@@ -3128,6 +3190,9 @@ func (e *DefaultEvaluator) slice(obj interface{}, start, end, step *int) (interf
 	if obj == nil {
 		return nil, fmt.Errorf("cannot slice nil")
 	}
+	if m, ok := AsMarkup(obj); ok {
+		return Markup(e.sliceString(string(m), start, end, step)), nil
+	}
 
 	switch v := obj.(type) {
 	case string:
@@ -3215,17 +3280,24 @@ type autoescapeContext struct {
 	autoescape bool
 }
 
-// filterContext peels autoescapeContext wrappers so that filter and test
-// lookups reach the environment-aware context underneath.
+// filterContext peels context wrappers (autoescapeContext, ContextWrapper) so
+// that filter and test lookups reach the environment-aware context underneath.
 func filterContext(ctx Context) Context {
-	for {
-		ac, ok := ctx.(*autoescapeContext)
-		if !ok {
-			return ctx
+	for c := ctx; c != nil; {
+		if _, ok := c.(EnvironmentContext); ok {
+			return c
 		}
-		ctx = ac.Context
+		u, ok := c.(interface{ Unwrap() Context })
+		if !ok {
+			break
+		}
+		c = u.Unwrap()
 	}
+	return ctx
 }
+
+// Unwrap returns the wrapped context.
+func (ac *autoescapeContext) Unwrap() Context { return ac.Context }
 
 // IsAutoescapeEnabled returns whether autoescape is enabled in this context
 func (ac *autoescapeContext) IsAutoescapeEnabled() bool {
@@ -3417,11 +3489,23 @@ type ModuleContexter interface {
 	NewModuleContext() Context
 }
 
+// stripAutoescapeBlocks drops the importer's {% autoescape %} block wrappers: the imported
+// template escapes by its own setting, also when it is imported with context.
+func stripAutoescapeBlocks(ctx Context) Context {
+	switch c := ctx.(type) {
+	case *autoescapeContext:
+		return stripAutoescapeBlocks(c.Context)
+	case *ContextWrapper:
+		return &ContextWrapper{Context: stripAutoescapeBlocks(c.Context), escapeContext: c.escapeContext, autoEscaper: c.autoEscaper}
+	}
+	return ctx
+}
+
 // importContext returns the context an imported template runs in: a copy of
 // ctx for "with context", otherwise an empty context with ctx's environment.
 func importContext(ctx Context, withContext bool) Context {
 	if withContext {
-		return ctx.Clone()
+		return stripAutoescapeBlocks(ctx).Clone()
 	}
 	switch c := ctx.(type) {
 	case ModuleContexter:
@@ -3462,13 +3546,13 @@ func (e *DefaultEvaluator) EvalFilterBlockNode(node *parser.FilterBlockNode, ctx
 		bodyContent.WriteString(resultStr)
 	}
 
-	// Get the rendered body content as starting value
-	currentContent := bodyContent.String()
+	// The body is template output: Markup where escaping is on
+	body := bodyContent.String()
+	var current interface{} = markIfSafe(body, ctx)
 
-	// Apply each filter in the chain to the content
+	// Apply each filter in the chain to the previous result as it is
 	for _, filter := range node.FilterChain {
-		// Create a literal node with the current content as input to the filter
-		contentLiteral := parser.NewLiteralNode(currentContent, currentContent, filter.Line(), filter.Column())
+		contentLiteral := parser.NewLiteralNode(current, ToString(current), filter.Line(), filter.Column())
 
 		// Create a new filter node with the current content as the expression
 		filterNode := parser.NewFilterNode(contentLiteral, filter.FilterName, filter.Arguments, filter.Line(), filter.Column())
@@ -3479,10 +3563,12 @@ func (e *DefaultEvaluator) EvalFilterBlockNode(node *parser.FilterBlockNode, ctx
 		if err != nil {
 			return nil, fmt.Errorf("error applying filter '%s' in filter block: %v", filter.FilterName, err)
 		}
-
-		// Convert result back to string for the next filter in chain
-		currentContent = ToString(result)
+		current = result
 	}
 
-	return currentContent, nil
+	// Markup is written as is; anything else is escaped like {{ }} would
+	if m, ok := AsMarkup(current); ok {
+		return string(m), nil
+	}
+	return escapeFor(ctx, current), nil
 }

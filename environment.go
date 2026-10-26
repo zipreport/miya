@@ -789,19 +789,19 @@ func RenderTemplate(name string, context Context) (string, error) {
 // registerBuiltinGlobals registers all built-in global functions
 func registerBuiltinGlobals(env *Environment) {
 	// namespace() function
-	env.AddGlobal("namespace", namespaceFunction)
+	env.AddGlobal("namespace", runtime.KeepMarkupFunc(namespaceFunction))
 
 	// range() function
 	env.AddGlobal("range", rangeFunction)
 
 	// dict() function
-	env.AddGlobal("dict", dictFunction)
+	env.AddGlobal("dict", runtime.KeepMarkupFunc(dictFunction))
 
 	// cycler() function
-	env.AddGlobal("cycler", cyclerFunction)
+	env.AddGlobal("cycler", runtime.KeepMarkupFunc(cyclerFunction))
 
 	// joiner() function
-	env.AddGlobal("joiner", joinerFunction)
+	env.AddGlobal("joiner", runtime.KeepMarkupFunc(joinerFunction))
 
 	// lipsum() function
 	env.AddGlobal("lipsum", lipsumFunction)

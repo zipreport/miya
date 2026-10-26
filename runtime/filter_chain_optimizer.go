@@ -63,11 +63,12 @@ func (fco *FilterChainOptimizer) EvalFilterChain(node parser.ExpressionNode, ctx
 		}
 
 		// Apply the filter
-		if envCtx, ok := filterContext(ctx).(EnvironmentContext); ok {
-			value, err = envCtx.ApplyFilter(filter.name, value, args...)
-		} else {
-			value, err = fco.evaluator.applyFilter(filter.name, value, args)
-		}
+		value, err = fco.evaluator.applyFilterWithMarkup(filter.name, value, args, ctx, func(v interface{}, a []interface{}) (interface{}, error) {
+			if envCtx, ok := envContext(ctx); ok {
+				return envCtx.ApplyFilter(filter.name, v, a...)
+			}
+			return fco.evaluator.applyFilter(filter.name, v, a)
+		})
 
 		if err != nil {
 			return nil, err
@@ -243,7 +244,7 @@ func (fp *FilterPipeline) Apply(value interface{}, ctx Context) (interface{}, er
 	var err error
 
 	for _, filter := range fp.filters {
-		if envCtx, ok := filterContext(ctx).(EnvironmentContext); ok {
+		if envCtx, ok := envContext(ctx); ok {
 			result, err = envCtx.ApplyFilter(filter.name, result, filter.args...)
 		} else {
 			return nil, fmt.Errorf("context does not support filters")

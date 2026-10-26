@@ -36,7 +36,17 @@ func (r *FilterRegistry) test(name string) (func(value interface{}, args ...inte
 	r.mutex.RUnlock()
 	if lookup != nil {
 		if t, ok := lookup(name); ok {
-			return t, nil
+			if name == "escaped" {
+				return t, nil
+			}
+			// Tests see plain strings for safe values, as in EvalTestNode.
+			return func(value interface{}, args ...interface{}) (bool, error) {
+				plain := make([]interface{}, len(args))
+				for i, a := range args {
+					plain[i] = runtime.Unmark(a)
+				}
+				return t(runtime.Unmark(value), plain...)
+			}, nil
 		}
 	}
 	return nil, fmt.Errorf("no test named %q", name)

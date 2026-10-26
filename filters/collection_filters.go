@@ -843,6 +843,7 @@ func wrapAttributeError(filterName, attribute string, err error) error {
 // other: a deliberate deviation, see the plan's "Why this matters".
 // Any other pairing is an error, as in Python.
 func compareItems(a, b interface{}, caseSensitive bool) (int, error) {
+	a, b = runtime.Unmark(a), runtime.Unmark(b)
 	if a == nil || b == nil {
 		switch {
 		case a == nil && b == nil:
@@ -941,6 +942,7 @@ func pyTypeName(v interface{}) string {
 // exactly when Jinja2's unique treats them as equal (booleans count as 1/0,
 // numbers compare by value, strings lowercased unless caseSensitive).
 func uniqueKey(v interface{}, caseSensitive bool) string {
+	v = runtime.Unmark(v)
 	if v == nil {
 		return "z:"
 	}

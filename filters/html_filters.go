@@ -24,17 +24,20 @@ type SafeValue = runtime.SafeValue
 // EscapeFilter escapes HTML characters
 func EscapeFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	// Don't escape if already marked as safe
-	if _, ok := value.(SafeValue); ok {
-		return value, nil
+	if m, ok := runtime.AsMarkup(value); ok {
+		return m, nil
 	}
 
 	s := ToString(value)
-	return html.EscapeString(s), nil
+	return runtime.Markup(html.EscapeString(s)), nil
 }
 
 // SafeFilter marks a value as safe (won't be escaped)
 func SafeFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	return SafeValue{Value: value}, nil
+	if m, ok := runtime.AsMarkup(value); ok {
+		return m, nil
+	}
+	return runtime.Markup(ToString(value)), nil
 }
 
 // URLEncodeFilter URL-encodes a string
@@ -90,7 +93,11 @@ func XMLAttrFilter(value interface{}, args ...interface{}) (interface{}, error) 
 				}
 				result.WriteString(html.EscapeString(key))
 				result.WriteString(`="`)
-				result.WriteString(html.EscapeString(attrValue))
+				if _, safe := runtime.AsMarkup(val); safe {
+					result.WriteString(attrValue)
+				} else {
+					result.WriteString(html.EscapeString(attrValue))
+				}
 				result.WriteByte('"')
 				attrCount++
 			}
@@ -127,7 +134,7 @@ func XMLAttrFilter(value interface{}, args ...interface{}) (interface{}, error) 
 		return "", nil
 	}
 
-	return SafeValue{Value: " " + result.String()}, nil
+	return runtime.Markup(" " + result.String()), nil
 }
 
 // StripTagsFilter removes HTML/XML tags
@@ -145,7 +152,7 @@ func StripTagsFilter(value interface{}, args ...interface{}) (interface{}, error
 
 // isSafe reports whether value is already marked safe.
 func isSafe(value interface{}) bool {
-	_, ok := value.(SafeValue)
+	_, ok := runtime.AsMarkup(value)
 	return ok
 }
 
@@ -224,7 +231,7 @@ func UrlizeFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return fmt.Sprintf(`<a %s>%s</a>`, strings.Join(attrs, " "), html.EscapeString(displayURL))
 	}
 
-	return SafeValue{Value: linkify(s, isSafe(value), link)}, nil
+	return runtime.Markup(linkify(s, isSafe(value), link)), nil
 }
 
 // UrlizeTargetFilter is like urlize but with a specific target
@@ -291,7 +298,7 @@ func TruncateHTMLFilter(value interface{}, args ...interface{}) (interface{}, er
 		}
 	}
 
-	return SafeValue{Value: html.EscapeString(truncated) + html.EscapeString(end)}, nil
+	return runtime.Markup(html.EscapeString(truncated) + html.EscapeString(end)), nil
 }
 
 // FileSizeFormatFilter formats file sizes in human-readable format
@@ -345,14 +352,10 @@ func MarkSafeFilter(value interface{}, args ...interface{}) (interface{}, error)
 // ForceEscapeFilter forces HTML escaping even for safe values
 func ForceEscapeFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	// Force escape even if marked as safe
-	var s string
-	if safeVal, ok := value.(SafeValue); ok {
-		s = ToString(safeVal.Value)
-	} else {
-		s = ToString(value)
-	}
-	// Return as SafeValue to prevent double-escaping
-	return SafeValue{Value: html.EscapeString(s)}, nil
+	// ToString reads the content of a safe value
+	s := ToString(value)
+	// Return as Markup to prevent double-escaping
+	return runtime.Markup(html.EscapeString(s)), nil
 }
 
 // NL2BRFilter converts newlines to HTML <br> tags
@@ -367,7 +370,7 @@ func NL2BRFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	result = strings.ReplaceAll(result, "\r", "<br>") // Mac
 	result = strings.ReplaceAll(result, "\n", "<br>") // Unix
 
-	return SafeValue{Value: result}, nil
+	return runtime.Markup(result), nil
 }
 
 // UrlizeTruncateFilter combines urlize with truncation
@@ -450,5 +453,5 @@ func UrlizeTruncateFilter(value interface{}, args ...interface{}) (interface{}, 
 		return fmt.Sprintf(`<a %s>%s</a>`, strings.Join(attrs, " "), html.EscapeString(displayURL))
 	}
 
-	return SafeValue{Value: linkify(s, isSafe(value), link)}, nil
+	return runtime.Markup(linkify(s, isSafe(value), link)), nil
 }

@@ -391,7 +391,7 @@ func ToJSONFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 	data = bytes.ReplaceAll(data, []byte("'"), []byte(`\u0027`))
 
-	return runtime.SafeValue{Value: string(data)}, nil
+	return runtime.Markup(string(data)), nil
 }
 
 // FromJSONFilter parses JSON string to value

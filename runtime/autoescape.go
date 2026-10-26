@@ -105,9 +105,9 @@ func (ae *AutoEscaper) Escape(value interface{}, context EscapeContext) string {
 		return ToString(value)
 	}
 
-	// If already a SafeValue, don't escape
-	if safeVal, ok := value.(SafeValue); ok {
-		return ToString(safeVal.Value)
+	// Safe values are not escaped again
+	if m, ok := AsMarkup(value); ok {
+		return string(m)
 	}
 
 	str := ToString(value)
@@ -229,6 +229,9 @@ func ToString(value interface{}) string {
 	if str, ok := value.(string); ok {
 		return str
 	}
+	if m, ok := value.(Markup); ok {
+		return string(m)
+	}
 	if b, ok := value.([]byte); ok {
 		return string(b)
 	}
@@ -257,6 +260,9 @@ func ToString(value interface{}) string {
 // escapeOutput is what {{ }} writes under autoescape: safe values unchanged,
 // anything else converted with ToString and HTML-escaped.
 func escapeOutput(value interface{}) interface{} {
+	if m, ok := AsMarkup(value); ok {
+		return m
+	}
 	switch sv := value.(type) {
 	case SafeValue:
 		return sv
@@ -314,6 +320,9 @@ func NewContextWrapperFromInterface(ctx interface{}, escaper *AutoEscaper, conte
 	adapter := &ContextAdapter{ctx: ctx}
 	return NewContextWrapper(adapter, escaper, context)
 }
+
+// Unwrap returns the wrapped context.
+func (cw *ContextWrapper) Unwrap() Context { return cw.Context }
 
 // GetEscapeContext returns the current escape context
 func (cw *ContextWrapper) GetEscapeContext() EscapeContext {

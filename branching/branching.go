@@ -516,6 +516,9 @@ func testSameAs(value interface{}, args ...interface{}) (bool, error) {
 
 // testEscaped checks if a value is marked as escaped/safe
 func testEscaped(value interface{}, args ...interface{}) (bool, error) {
+	if _, ok := runtime.AsMarkup(value); ok {
+		return true, nil
+	}
 	// Check if the value is wrapped in a SafeValue (from filters package)
 	// We need to check the type name since we can't import the filters package here
 	// due to potential circular imports

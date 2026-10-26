@@ -108,7 +108,7 @@ func (m *Macro) Call(args []interface{}, kwargs map[string]interface{}) (interfa
 		return nil, fmt.Errorf("error executing macro %s: %w", m.Name, err)
 	}
 	if result == nil {
-		return "", nil
+		return markIfSafe("", m.defCtx), nil
 	}
-	return ToString(result), nil
+	return markIfSafe(ToString(result), m.defCtx), nil
 }
