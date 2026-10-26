@@ -371,6 +371,28 @@ func (e *Environment) ListTests() []string {
 
 // ApplyTest applies a test to a value
 func (e *Environment) ApplyTest(name string, value interface{}, args ...interface{}) (bool, error) {
+	// A test registered under either name wins over the built-in meaning
+	if _, registered := e.testRegistry.Get(name); registered {
+		return e.testRegistry.Apply(name, value, args...)
+	}
+	switch name {
+	case "filter":
+		// x is filter: x names a filter of this environment
+		filterName, ok := value.(string)
+		if !ok {
+			return false, nil
+		}
+		_, found := e.filterRegistry.Get(filterName)
+		return found, nil
+	case "test":
+		// x is test: x names a test of this environment
+		testName, ok := value.(string)
+		if !ok {
+			return false, nil
+		}
+		_, found := e.testRegistry.Get(testName)
+		return found || testName == "filter" || testName == "test", nil
+	}
 	return e.testRegistry.Apply(name, value, args...)
 }
 

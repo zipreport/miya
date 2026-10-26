@@ -284,6 +284,8 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 		return e.EvalFilterNode(n, ctx)
 	case *parser.BinaryOpNode:
 		return e.EvalBinaryOpNode(n, ctx)
+	case *parser.CompareNode:
+		return e.EvalCompareNode(n, ctx)
 	case *parser.UnaryOpNode:
 		return e.EvalUnaryOpNode(n, ctx)
 	case *parser.IfNode:
@@ -598,6 +600,31 @@ func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Conte
 		left, right = Unmark(left), Unmark(right)
 	}
 	return e.applyBinaryOpWithNode(node.Operator, left, right, node)
+}
+
+// EvalCompareNode evaluates a comparison chain such as a < b < c. Each
+// operand is evaluated at most once, and evaluation stops at the first
+// comparison that is false, as in Jinja2.
+func (e *DefaultEvaluator) EvalCompareNode(node *parser.CompareNode, ctx Context) (interface{}, error) {
+	left, err := e.EvalNode(node.Expr, ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, op := range node.Ops {
+		right, err := e.EvalNode(op.Right, ctx)
+		if err != nil {
+			return nil, err
+		}
+		result, err := e.applyBinaryOpWithNode(op.Operator, Unmark(left), Unmark(right), node)
+		if err != nil {
+			return nil, err
+		}
+		if !e.isTruthy(result) {
+			return false, nil
+		}
+		left = right
+	}
+	return true, nil
 }
 
 func (e *DefaultEvaluator) EvalUnaryOpNode(node *parser.UnaryOpNode, ctx Context) (interface{}, error) {
@@ -1068,7 +1095,12 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 
 	// Determine which context to use
 	includeCtx := ctx
-	if node.Context != nil {
+	if node.WithoutContext {
+		includeCtx = importContext(ctx, false)
+	} else if node.WithContext {
+		// A copy, as before, so {% set %} inside the include stays there
+		includeCtx = ctx.Clone()
+	} else if node.Context != nil {
 		// If a context expression is provided, evaluate it
 		contextValue, err := e.EvalNode(node.Context, ctx)
 		if err != nil {
@@ -1213,9 +1245,15 @@ func (e *DefaultEvaluator) EvalConditionalNode(node *parser.ConditionalNode, ctx
 	// Return appropriate expression based on condition
 	if e.isTruthy(condition) {
 		return e.EvalNode(node.TrueExpr, ctx)
-	} else {
-		return e.EvalNode(node.FalseExpr, ctx)
 	}
+	if node.FalseExpr == nil {
+		// {{ a if b }} with b false is undefined, as in Jinja2
+		if e.undefinedHandler != nil {
+			return e.undefinedHandler.Handle("inline if-expression without else", node)
+		}
+		return nil, nil
+	}
+	return e.EvalNode(node.FalseExpr, ctx)
 }
 
 func (e *DefaultEvaluator) EvalAssignmentNode(node *parser.AssignmentNode, ctx Context) (interface{}, error) {

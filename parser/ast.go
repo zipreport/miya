@@ -280,6 +280,44 @@ func (n *BinaryOpNode) String() string {
 
 func (n *BinaryOpNode) ExpressionNode() {}
 
+// CompareNode is a chain of two or more comparisons, a < b < c, which means
+// a < b and b < c as in Jinja2. Expr and each operand are evaluated once, and
+// evaluation stops at the first comparison that is false.
+type CompareNode struct {
+	baseNode
+	Expr ExpressionNode
+	Ops  []CompareOperand
+}
+
+// CompareOperand is one "operator operand" step of a CompareNode.
+type CompareOperand struct {
+	Operator string
+	Right    ExpressionNode
+	Line     int
+	Column   int
+}
+
+func NewCompareNode(expr ExpressionNode, ops []CompareOperand, line, column int) *CompareNode {
+	return &CompareNode{
+		baseNode: baseNode{line: line, column: column},
+		Expr:     expr,
+		Ops:      ops,
+	}
+}
+
+func (n *CompareNode) String() string {
+	var sb strings.Builder
+	sb.WriteString("Compare(")
+	sb.WriteString(n.Expr.String())
+	for _, op := range n.Ops {
+		sb.WriteString(" " + op.Operator + " " + op.Right.String())
+	}
+	sb.WriteString(")")
+	return sb.String()
+}
+
+func (n *CompareNode) ExpressionNode() {}
+
 // UnaryOpNode represents unary operations (not x, -x)
 type UnaryOpNode struct {
 	baseNode
@@ -475,9 +513,11 @@ func (n *ExtendsNode) StatementNode() {}
 // IncludeNode represents template inclusion
 type IncludeNode struct {
 	baseNode
-	Template      ExpressionNode
-	Context       ExpressionNode // optional
-	IgnoreMissing bool
+	Template       ExpressionNode
+	Context        ExpressionNode // optional
+	IgnoreMissing  bool
+	WithContext    bool // {% include ... with context %}
+	WithoutContext bool // {% include ... without context %}
 }
 
 func NewIncludeNode(template ExpressionNode, line, column int) *IncludeNode {
@@ -815,6 +855,9 @@ func NewConditionalNode(condition, trueExpr, falseExpr ExpressionNode, line, col
 }
 
 func (n *ConditionalNode) String() string {
+	if n.FalseExpr == nil {
+		return fmt.Sprintf("Conditional(%s ? %s)", n.Condition.String(), n.TrueExpr.String())
+	}
 	return fmt.Sprintf("Conditional(%s ? %s : %s)", n.Condition.String(), n.TrueExpr.String(), n.FalseExpr.String())
 }
 
