@@ -185,6 +185,12 @@ func TestMarkupGoInterop(t *testing.T) {
 				return runtime.SafeValue{Value: "<b>x</b>"}, nil
 			})
 		}},
+		{"go_test_gets_string", `{{ ('<b>'|safe) is isplain }}`, "true", nil, func(env *miya.Environment) {
+			_ = env.AddTest("isplain", func(v interface{}, args ...interface{}) (bool, error) { _, ok := v.(string); return ok, nil })
+		}},
+		{"go_test_gets_string_select", `{{ [('<b>'|safe)]|select('isplain')|list|length }}`, "1", nil, func(env *miya.Environment) {
+			_ = env.AddTest("isplain", func(v interface{}, args ...interface{}) (bool, error) { _, ok := v.(string); return ok, nil })
+		}},
 		{"escaped_test", m + `{{ "T" if b("x") is escaped else "F" }}`, "T", nil, nil},
 		{"forceescape_length", `{{ u|forceescape|length }}`, "9", map[string]interface{}{"u": "<s>"}, nil},
 		{"format_named_arg", `{{ ("<b>%s</b>"|safe)|format(n) }}`, "<b>&lt;s&gt;</b>", map[string]interface{}{"n": namedString("<s>")}, nil},

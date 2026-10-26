@@ -381,8 +381,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "<b>x</b>",
-    "known_unrelated": "dict literal .k attribute renders empty (control K7; plan 035)"
+    "want": "<b>x</b>"
   },
   {
     "name": "W25_nested_macro",
@@ -527,8 +526,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "v",
-    "known_unrelated": "control: dict literal attribute (plan 035)"
+    "want": "v"
   },
   {
     "name": "K8_ctl_safe_upper",
