@@ -1,6 +1,6 @@
 # Advanced Features Guide
 
-Advanced template features for professionals. Miya Engine provides filter blocks, do statements, whitespace control, raw blocks, and autoescape with 100% Jinja2 compatibility.
+Advanced template features for professionals. Miya Engine provides filter blocks, do statements, whitespace control, raw blocks, and autoescape.
 
 > **Working Example:** See `examples/features/advanced/` for complete examples.
 
@@ -135,8 +135,9 @@ The `do` statement evaluates an expression but doesn't print the result.
 {# Execute without output #}
 {% do numbers|sum %}
 
-{# Side effects only #}
-{% do data.update({"key": "value"}) %}
+{# Side effects only: change a list the template created #}
+{% set items = [] %}
+{% do items.append("value") %}
 
 {# With filters #}
 {% do (100 * 5)|round %}
@@ -149,8 +150,8 @@ The `do` statement evaluates an expression but doesn't print the result.
 {% set calculation_result = 0 %}
 {% do expensive_function(data) %}
 
-{# Execute for side effects #}
-{% do logger.log("Template rendered") %}
+{# Execute for side effects: call a function registered with env.AddGlobal #}
+{% do track_render("page") %}
 ```
 
 **Note:** In pure templates, `do` has limited use since templates shouldn't have side effects. Most useful when integrating with systems that track template execution.
@@ -843,7 +844,7 @@ Items: {%- for item in items %}{{ item }}{{ ", " if not loop.last }}{% endfor %}
 
 ## Summary
 
-**All Advanced Features: 100% Jinja2 Compatible**
+**Advanced Features**
 
  **Fully Supported:**
 - **Filter Blocks** - Apply filters to entire content blocks
@@ -862,4 +863,4 @@ Items: {%- for item in items %}{{ item }}{{ ", " if not loop.last }}{% endfor %}
 - Powerful block transformations
 - High performance with minimal memory overhead
 
-All advanced features work identically to Jinja2, providing professional-grade template control.
+For the known differences from Jinja2, see [Miya Limitations](MIYA_LIMITATIONS.md).
