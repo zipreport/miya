@@ -56,6 +56,15 @@ func TestMarkupThrough(t *testing.T) {
 		{"Q9_replace_rounded", `{{ (2.567|round(1))|replace('.', s) }}`, false, "", `2<b>6`},
 		{"Q9_map_rounded", `{{ [2.567|round(1)]|map('replace','.',s)|join }}`, false, "", `2<b>6`},
 		{"deviation_bool_str", `{{ true|replace('e', s) }}`, false, "", `tru<b>`},
+		// Jinja2: error: TemplateRuntimeError (No filter named '0')
+		{"deviation_map_digit_on", `{{ [[v,2]]|map('0')|join }}`, false, "", `&lt;b&gt;`},
+		// Jinja2: error: TemplateRuntimeError (No filter named '0')
+		{"deviation_map_digit_off", `{{ [[v,2]]|map('0')|join }}`, true, "", `<b>`},
+		// Jinja2: error: TemplateRuntimeError (No filter named '0.0')
+		{"deviation_map_digit_path", `{{ [[[v]]]|map('0.0')|join }}`, false, "", `&lt;b&gt;`},
+		// Jinja2: error: TemplateRuntimeError (No filter named 'nofilter')
+		{"deviation_map_nofilter", `{{ [[v]]|map('nofilter')|list }}`, false, "", `[Undefined]`},
+		{"map_join_mixed", `{{ [['<a>','b'], s]|map('join', s)|join }}`, false, "", `&lt;a&gt;<b>b&lt;<b>b<b>&gt;`},
 		{"grouptuple_attr_on", `{{ [{'k':1},{'k':2}]|groupby('k')|map('grouper')|join(',') }}`, false, "", `1,2`},
 		{"grouptuple_attr_off", `{{ [{'k':1},{'k':2}]|groupby('k')|map('grouper')|join(',') }}`, true, "", `1,2`},
 		{"cycle_none", `{{ [1]|map('string')|list }}{% for i in [1] %}{{ loop.cycle() }}{% endfor %}`, false, "", `ERR:cycle() requires`},
