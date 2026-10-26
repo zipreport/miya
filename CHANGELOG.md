@@ -101,6 +101,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `}}`, `%}` and custom end delimiters no longer end a tag while a `(`, `[` or `{` opened in it is still open, as in Jinja2: `{{ {'a': {'b': 2}}.a.b }}` renders `2`, and a block end of `}` works with dict literals.
 - `wordcount` counts words like Jinja2 (`\w+`), so punctuation and hyphens separate words.
 - Errors from filter blocks and template inheritance keep their cause, so `errors.Is` finds `ErrOutputTooLarge` and other sentinels through them.
+- `wordwrap` on long words, hyphenated runs or long runs of spaces, and `urlize` on long runs of brackets or trailing punctuation, used to be quadratic: inputs of 200-400 KB took 5-22 s. Both are now linear, and their output is unchanged.
 
 ### Changed
 

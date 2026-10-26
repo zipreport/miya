@@ -303,22 +303,34 @@ var (
 
 // stripRun removes a leading (or trailing) run of any of the tokens from s.
 func stripRun(s string, tokens []string, leading bool) (rest, run string) {
+	if leading {
+		i := 0
+		for {
+			matched := false
+			for _, t := range tokens {
+				if strings.HasPrefix(s[i:], t) {
+					i += len(t)
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				return s[i:], s[:i]
+			}
+		}
+	}
+	j := len(s)
 	for {
 		matched := false
 		for _, t := range tokens {
-			if leading && strings.HasPrefix(s, t) {
-				s, run = s[len(t):], run+t
-				matched = true
-				break
-			}
-			if !leading && strings.HasSuffix(s, t) {
-				s, run = s[:len(s)-len(t)], t+run
+			if strings.HasSuffix(s[:j], t) {
+				j -= len(t)
 				matched = true
 				break
 			}
 		}
 		if !matched {
-			return s, run
+			return s[:j], s[j:]
 		}
 	}
 }
@@ -401,14 +413,16 @@ func UrlizeFilter(value interface{}, args ...interface{}) (interface{}, error) {
 			if startCount <= strings.Count(middle, closing) {
 				continue
 			}
+			cut := 0
 			for n := minInt(startCount, strings.Count(tail, closing)); n > 0; n-- {
-				i := strings.Index(tail, closing)
+				i := strings.Index(tail[cut:], closing)
 				if i < 0 {
 					break
 				}
-				middle += tail[:i+len(closing)]
-				tail = tail[i+len(closing):]
+				cut += i + len(closing)
 			}
+			middle += tail[:cut]
+			tail = tail[cut:]
 		}
 
 		var link string

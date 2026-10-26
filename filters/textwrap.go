@@ -46,7 +46,7 @@ func isTextwrapWordPunct(r rune) bool {
 }
 
 // pyIsBlank mirrors `chunk.strip() == ”` (str.isspace for every rune).
-func pyIsBlank(chunk string) bool {
+func pyIsBlank(chunk []rune) bool {
 	for _, r := range chunk {
 		if !(unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f)) {
 			return false
@@ -80,32 +80,36 @@ func hyphenSplitAt(rs []rune, k int) bool {
 }
 
 // textwrapChunks mirrors TextWrapper._split with wordsep_re (Python 3.14).
-func textwrapChunks(line string, breakOnHyphens bool) []string {
+// The chunks are sub-slices of one rune buffer; callers must not append to them.
+func textwrapChunks(line string, breakOnHyphens bool) [][]rune {
 	rs := []rune(line)
-	var chunks []string
+	var chunks [][]rune
 	i := 0
+	end := 0 // end of the non-whitespace run containing i, valid while i < end
 	for i < len(rs) {
 		if strings.ContainsRune(textwrapWhitespace, rs[i]) {
 			j := i
 			for j < len(rs) && strings.ContainsRune(textwrapWhitespace, rs[j]) {
 				j++
 			}
-			chunks = append(chunks, string(rs[i:j]))
+			chunks = append(chunks, rs[i:j:j])
 			i = j
 			continue
 		}
-		end := i
-		for end < len(rs) && !strings.ContainsRune(textwrapWhitespace, rs[end]) {
-			end++
+		if end <= i {
+			end = i
+			for end < len(rs) && !strings.ContainsRune(textwrapWhitespace, rs[end]) {
+				end++
+			}
 		}
 		if !breakOnHyphens {
-			chunks = append(chunks, string(rs[i:end]))
+			chunks = append(chunks, rs[i:end:end])
 			i = end
 			continue
 		}
 		if i > 0 && isTextwrapWordPunct(rs[i-1]) {
 			if j := emDashEnd(rs, i); j >= 0 {
-				chunks = append(chunks, string(rs[i:j]))
+				chunks = append(chunks, rs[i:j:j])
 				i = j
 				continue
 			}
@@ -116,12 +120,12 @@ func textwrapChunks(line string, breakOnHyphens bool) []string {
 				stop = e + 1
 				break
 			}
-			if isTextwrapWordPunct(rs[e-1]) && emDashEnd(rs, e) >= 0 && rs[e] == '-' {
+			if rs[e] == '-' && isTextwrapWordPunct(rs[e-1]) && emDashEnd(rs, e) >= 0 {
 				stop = e
 				break
 			}
 		}
-		chunks = append(chunks, string(rs[i:stop]))
+		chunks = append(chunks, rs[i:stop:stop])
 		i = stop
 	}
 	return chunks
@@ -131,17 +135,16 @@ func textwrapChunks(line string, breakOnHyphens bool) []string {
 // drop_whitespace=True and no indents (Python 3.14). Lengths are in runes.
 func textwrapLines(line string, width int, breakLongWords, breakOnHyphens bool) []string {
 	chunks := textwrapChunks(line, breakOnHyphens)
-	n := func(s string) int { return len([]rune(s)) }
 	var lines []string
 	h := 0 // chunks[h] is Python's chunks[-1]
 	for h < len(chunks) {
-		var cur []string
+		var cur [][]rune
 		curLen := 0
-		if pyIsBlank(chunks[h]) && len(lines) > 0 {
+		if len(lines) > 0 && pyIsBlank(chunks[h]) {
 			h++
 		}
 		for h < len(chunks) {
-			l := n(chunks[h])
+			l := len(chunks[h])
 			if curLen+l > width {
 				break
 			}
@@ -149,13 +152,13 @@ func textwrapLines(line string, width int, breakLongWords, breakOnHyphens bool) 
 			curLen += l
 			h++
 		}
-		if h < len(chunks) && n(chunks[h]) > width {
+		if h < len(chunks) && len(chunks[h]) > width {
 			spaceLeft := width - curLen
 			if width < 1 {
 				spaceLeft = 1
 			}
 			if breakLongWords && spaceLeft > 0 {
-				rc := []rune(chunks[h])
+				rc := chunks[h]
 				end := spaceLeft
 				if breakOnHyphens && len(rc) > spaceLeft {
 					hyphen := -1
@@ -174,8 +177,8 @@ func textwrapLines(line string, width int, breakLongWords, breakOnHyphens bool) 
 						}
 					}
 				}
-				cur = append(cur, string(rc[:end]))
-				chunks[h] = string(rc[end:])
+				cur = append(cur, rc[:end])
+				chunks[h] = rc[end:]
 			} else if len(cur) == 0 {
 				cur = append(cur, chunks[h])
 				h++
@@ -185,7 +188,13 @@ func textwrapLines(line string, width int, breakLongWords, breakOnHyphens bool) 
 			cur = cur[:len(cur)-1]
 		}
 		if len(cur) > 0 {
-			lines = append(lines, strings.Join(cur, ""))
+			var b strings.Builder
+			for _, c := range cur {
+				for _, r := range c {
+					b.WriteRune(r)
+				}
+			}
+			lines = append(lines, b.String())
 		}
 	}
 	return lines
