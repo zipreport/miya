@@ -1,6 +1,6 @@
 # Comprehensions Guide
 
-List and dictionary comprehensions provide concise syntax for creating collections. Miya Engine supports basic comprehensions with some limitations compared to Jinja2.
+List and dictionary comprehensions provide concise syntax for creating collections. Comprehensions are a miya extension: Jinja2 has no list or dictionary comprehensions (`[x for x in y]` is a syntax error there). Miya supports the forms below and a few limitations.
 
 > **Working Example:** See `examples/features/comprehensions/` for complete examples.
 
@@ -10,9 +10,10 @@ List and dictionary comprehensions provide concise syntax for creating collectio
 
 1. [List Comprehensions](#list-comprehensions)
 2. [Dictionary Comprehensions](#dictionary-comprehensions)
-3. [Limitations](#limitations)
-4. [Workarounds](#workarounds)
-5. [Practical Examples](#practical-examples)
+3. [Filtering with `if`](#filtering-with-if)
+4. [Limitations](#limitations)
+5. [Workarounds](#workarounds)
+6. [Practical Examples](#practical-examples)
 
 ---
 
@@ -126,25 +127,32 @@ Create dictionaries from iterables:
 → {1: "$999", 2: "$29", 3: "$79"}
 ```
 
+Dictionary comprehension keys become strings: `{x: x * 2 for x in [1, 2]}` prints `{'1': 2, '2': 4}` (`&#39;` instead of `'` when autoescape is on).
+
+---
+
+## Filtering with `if`
+
+Both list and dictionary comprehensions accept an `if` clause:
+
+```html+jinja
+{{ [x * 2 for x in [1, 2, 3, 4] if x is even] }}
+→ [4, 8]
+
+{{ [x for x in [1, 2, 3, 4] if x > 2] }}
+→ [3, 4]
+
+{{ {x: x * 2 for x in [1, 2, 3, 4] if x > 2} }}
+→ {'3': 6, '4': 8}
+```
+
 ---
 
 ## Limitations
 
-###  Inline If Clauses Not Supported
-
-**Jinja2 syntax (NOT in Miya):**
-```html+jinja
-{#  Does NOT work in Miya #}
-{{ [x for x in numbers if x > 5] }}
-{{ [user.name for user in users if user.active] }}
-{{ {k: v for k, v in dict.items() if v > 0} }}
-```
-
-**Error:** Comprehensions with inline `if` clauses are not supported in Miya Engine.
-
 ###  Dict Unpacking with .items() Not Supported
 
-**Jinja2 syntax (NOT in Miya):**
+**Python syntax (not supported in Miya):**
 ```html+jinja
 {#  Does NOT work in Miya #}
 {{ {k: v for k, v in data.items()} }}
@@ -155,7 +163,7 @@ Create dictionaries from iterables:
 
 ###  Nested Comprehensions Not Supported
 
-**Jinja2 syntax (NOT in Miya):**
+**Python syntax (not supported in Miya):**
 ```html+jinja
 {#  Does NOT work in Miya #}
 {{ [item for sublist in lists for item in sublist] }}
@@ -170,25 +178,13 @@ Create dictionaries from iterables:
 
 ### Alternative 1: Use Template Filters
 
-Instead of inline `if`, use filters to pre-filter data:
+Filters can pre-filter data as well as an `if` clause:
 
 ```html+jinja
-{#  Not supported #}
-{{ [x for x in numbers if x > 5] }}
-
-{#  Use select filter #}
 {{ numbers|select("greaterthan", 5)|list }}
 
-{#  Not supported #}
-{{ [user.name for user in users if user.active] }}
-
-{#  Use selectattr filter #}
 {{ users|selectattr("active")|map(attribute="name")|list }}
 
-{#  Not supported #}
-{{ [user for user in users if user.age >= 18] }}
-
-{#  Use selectattr + list #}
 {{ users|selectattr("age", ">=", 18)|list }}
 ```
 
@@ -197,9 +193,6 @@ Instead of inline `if`, use filters to pre-filter data:
 For complex filtering, use traditional loops:
 
 ```html+jinja
-{#  Not supported #}
-{{ [x * 2 for x in numbers if x is even] }}
-
 {#  Use for loop with condition #}
 {% set result = [] %}
 {% for x in numbers %}
@@ -208,12 +201,16 @@ For complex filtering, use traditional loops:
   {% endif %}
 {% endfor %}
 {{ result }}
+→ [4, 8]
 
 {# Or use loop filtering #}
 {% for x in numbers if x is even %}
   {{ x * 2 }}{{ ", " if not loop.last else "" }}
 {% endfor %}
+→ 4, 8  (whitespace aside)
 ```
+
+`result.append(...)` works on a list the template created (with `set`, `with` or `namespace()`). To change a list passed in as render data, copy it first: `{% set numbers = numbers|list %}`.
 
 ### Alternative 3: Prepare Data in Application
 
@@ -418,10 +415,10 @@ Tuple unpacking (`for a, b in zip(...)`) is not supported in comprehensions. Use
 | Feature | Syntax | Status | Alternative |
 |---------|--------|--------|-------------|
 | Basic List | `[expr for x in list]` |  Supported | - |
-| List with Filter | `[expr for x in list if cond]` |  Not supported | Use `selectattr`/`select` filters |
+| List with Filter | `[expr for x in list if cond]` |  Supported | - |
 | Basic Dict | `{expr: expr for x in list}` |  Supported | - |
 | Dict with .items() | `{k: v for k, v in dict.items()}` |  Not supported | Loop over list instead |
-| Dict with Filter | `{k: v for x in list if cond}` |  Not supported | Pre-filter with `selectattr` |
+| Dict with Filter | `{k: v for x in list if cond}` |  Supported | - |
 | Nested | `[x for list in lists for x in list]` |  Not supported | Use nested loops |
 | With Filters | `[x|filter for x in list]` |  Supported | - |
 | With Expressions | `[x * 2 for x in list]` |  Supported | - |
@@ -438,7 +435,7 @@ Tuple unpacking (`for a, b in zip(...)`) is not supported in comprehensions. Use
 {#  Good - use filters #}
 {{ users|selectattr("active")|map(attribute="name")|list }}
 
-{#  Avoid - inline if not supported #}
+{#  Also works #}
 {{ [user.name for user in users if user.active] }}
 ```
 
@@ -448,7 +445,7 @@ Tuple unpacking (`for a, b in zip(...)`) is not supported in comprehensions. Use
 {#  Good - simple transformation #}
 {{ [x * 2 for x in numbers] }}
 
-{#  Avoid - too complex (tuple unpacking and inline if not supported) #}
+{#  Avoid - too complex (tuple unpacking is not supported) #}
 {# {{ [complex_function(x, y, z) for x, y, z in zip(a, b, c) if condition] }} #}
 ```
 
@@ -458,9 +455,6 @@ Tuple unpacking (`for a, b in zip(...)`) is not supported in comprehensions. Use
 {#  Good - filter in Go, comprehend in template #}
 # Go: ctx.Set("active_users", filterActiveUsers(users))
 {{ [user.name for user in active_users] }}
-
-{#  Avoid - trying to filter in comprehension #}
-{{ [user.name for user in users if user.active] }}
 ```
 
 ### 4. Use Descriptive Variable Names
@@ -477,7 +471,7 @@ Tuple unpacking (`for a, b in zip(...)`) is not supported in comprehensions. Use
 
 ## Summary
 
-**Comprehensions in Miya Engine: ~70% Jinja2 Compatible**
+**Comprehensions in Miya Engine**
 
  **Fully Supported:**
 - Basic list comprehensions `[expr for x in list]`
@@ -488,12 +482,11 @@ Tuple unpacking (`for a, b in zip(...)`) is not supported in comprehensions. Use
 - Nested property access `[user.name for user in users]`
 - String concatenation in comprehensions
 - Ternary operators in comprehensions
+- `if` clauses `[x for x in list if condition]` and `{k: v for x in list if condition}`
 
  **Not Supported:**
-- Inline if clauses `[x for x in list if condition]`
 - Dict comprehensions with .items() unpacking `{k: v for k, v in dict.items()}`
 - Nested comprehensions `[x for list in lists for x in list]`
-- Complex conditional filtering in comprehensions
 
 **Workarounds Available:**
 - Use `selectattr`/`select`/`reject` filters for filtering
