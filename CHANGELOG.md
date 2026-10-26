@@ -27,7 +27,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A macro (or `caller()`) can change a list passed to it, as in Jinja2: `{% do l.append(x) %}` inside the macro changes the caller's list. Lists passed from render data are copied, so application data is never changed.
 - Go functions that take a `runtime.Context`, and `Namespace.Get`/`GetAttr`/`All()` and `ImportedNamespace.Get`, see plain lists, never the internal box type. `RawGet` returns the raw value.
 - An attribute chain passed to a macro, a list method or a namespace lookup (`m(l.pop().a.b)`) is evaluated once.
-
 - An imported template now runs its whole top-level body, as Jinja2 does:
   - tuple and attribute `{% set %}`, `{% do %}` and `for` loops take effect;
   - only the taken `{% if %}` branch runs;
