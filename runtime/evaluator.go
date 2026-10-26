@@ -2019,14 +2019,26 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 			return rv.Index(keyInt).Interface(), nil
 		case reflect.Map:
 			k, ok := mapKey(key, rv.Type().Key())
-			if !ok {
-				return NewUndefined(fmt.Sprintf("%v", key), UndefinedSilent, nil), nil
+			if ok {
+				if val := rv.MapIndex(k); val.IsValid() {
+					return val.Interface(), nil
+				}
 			}
-			val := rv.MapIndex(k)
-			if !val.IsValid() {
-				return NewUndefined(fmt.Sprintf("%v", key), UndefinedSilent, nil), nil
+			if rv.Type().Key().Kind() == reflect.Interface {
+				if m, ok := StringKeyMap(obj); ok {
+					if val, ok := m[DictKey(key)]; ok {
+						return val, nil
+					}
+				} else {
+					for _, p := range sortedMapPairs(rv) {
+						pair := p.([]interface{})
+						if Equal(pair[0], key) {
+							return pair[1], nil
+						}
+					}
+				}
 			}
-			return val.Interface(), nil
+			return NewUndefined(fmt.Sprintf("%v", key), UndefinedSilent, nil), nil
 		}
 
 		return nil, fmt.Errorf("object is not subscriptable: %T", obj)
@@ -3267,6 +3279,16 @@ func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
 			return false, nil
 		case reflect.Map:
 			// Handle any map type
+			kt := rv.Type().Key()
+			if kt.Kind() == reflect.String {
+				return rv.MapIndex(reflect.ValueOf(stringMapKey(item)).Convert(kt)).IsValid(), nil
+			}
+			if kt.Kind() == reflect.Interface {
+				if m, ok := StringKeyMap(container); ok {
+					_, found := m[DictKey(item)]
+					return found, nil
+				}
+			}
 			keys := rv.MapKeys()
 			itemValue := reflect.ValueOf(item)
 			for _, key := range keys {
