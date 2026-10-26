@@ -367,6 +367,9 @@ func GroupByFilter(value interface{}, args ...interface{}) (interface{}, error) 
 // tojson behavior which returns Markup. This is necessary for safe
 // embedding of JSON in <script> blocks where HTML entities are not decoded.
 func ToJSONFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	if _, ok := value.(*runtime.Undefined); ok {
+		return nil, fmt.Errorf("tojson: Object of type Undefined is not JSON serializable")
+	}
 	indent := 0
 	if len(args) > 0 {
 		i, err := ToInt(args[0])

@@ -3135,6 +3135,8 @@ func (e *DefaultEvaluator) greaterEqual(a, b interface{}) (bool, error) {
 func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
 	container, item = basicValue(Indirect(container)), basicValue(Indirect(item))
 	switch v := container.(type) {
+	case *Undefined:
+		return false, nil
 	case string:
 		itemStr := e.fastToString(item)
 		return strings.Contains(v, itemStr), nil

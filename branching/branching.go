@@ -216,6 +216,9 @@ func testFloat(value interface{}, args ...interface{}) (bool, error) {
 
 // testSequence checks if a value is a sequence (slice/array)
 func testSequence(value interface{}, args ...interface{}) (bool, error) {
+	if _, ok := value.(*runtime.Undefined); ok {
+		return true, nil
+	}
 	if value == nil {
 		return false, nil
 	}
@@ -243,6 +246,9 @@ func testMapping(value interface{}, args ...interface{}) (bool, error) {
 
 // testIterable checks if a value is iterable
 func testIterable(value interface{}, args ...interface{}) (bool, error) {
+	if _, ok := value.(*runtime.Undefined); ok {
+		return true, nil
+	}
 	if value == nil {
 		return false, nil
 	}
@@ -638,6 +644,8 @@ func contains(container, item interface{}) (bool, error) {
 	}
 
 	switch v := container.(type) {
+	case *runtime.Undefined:
+		return false, nil
 	case string:
 		itemStr := fmt.Sprintf("%v", item)
 		return strings.Contains(v, itemStr), nil

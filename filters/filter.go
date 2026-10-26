@@ -95,7 +95,38 @@ func (r *FilterRegistry) Apply(name string, value interface{}, args ...interface
 	if !ok {
 		return nil, fmt.Errorf("unknown filter: %s", name)
 	}
+	value, done := undefinedInput(name, value)
+	if done {
+		return value, nil
+	}
 	return fn(value, args...)
+}
+
+// Built-in filters that see an undefined value as an empty sequence, as
+// Jinja2's Undefined iterates as empty. max, min and random of nothing are
+// undefined, so they return the value unchanged.
+var (
+	undefinedAsEmpty = map[string]bool{"length": true, "count": true, "join": true, "sum": true,
+		"sort": true, "reverse": true, "unique": true, "list": true, "batch": true, "slice": true,
+		"map": true, "select": true, "reject": true, "selectattr": true, "rejectattr": true, "groupby": true}
+	undefinedPassThrough = map[string]bool{"max": true, "min": true, "random": true}
+)
+
+// undefinedInput substitutes an undefined filter input by name. done reports
+// that value is already the filter's result.
+func undefinedInput(name string, value interface{}) (result interface{}, done bool) {
+	if _, ok := value.(*runtime.Undefined); !ok {
+		return value, false
+	}
+	switch {
+	case undefinedPassThrough[name]:
+		return value, true
+	case undefinedAsEmpty[name]:
+		return []interface{}{}, false
+	case name == "items":
+		return map[string]interface{}{}, false
+	}
+	return value, false
 }
 
 // SetParams declares the parameter names of a registered filter so that it can
@@ -143,6 +174,10 @@ func (r *FilterRegistry) ApplyKwargs(name string, value interface{}, args []inte
 
 	if !ok {
 		return nil, fmt.Errorf("unknown filter: %s", name)
+	}
+	value, done := undefinedInput(name, value)
+	if done {
+		return value, nil
 	}
 	if isKwargs {
 		return fn(value, append(args[:len(args):len(args)], KwArgs(kwargs))...)
