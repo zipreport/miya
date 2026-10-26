@@ -37,12 +37,6 @@ type Context interface {
 	All() map[string]interface{}
 }
 
-// FastEvalNode interface for Phase 3c optimization
-// Nodes that implement this can evaluate themselves directly
-type FastEvalNode interface {
-	FastEval(e *DefaultEvaluator, ctx Context) (interface{}, error)
-}
-
 // simpleContext is a minimal context implementation for fallback cases
 type simpleContext struct {
 	variables map[string]interface{}
@@ -270,11 +264,6 @@ func (e *DefaultEvaluator) SetImportSystem(importSystem *ImportSystem) {
 }
 
 func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{}, error) {
-	// Phase 3c optimization: Fast path for nodes that implement FastEval
-	if fastNode, ok := node.(FastEvalNode); ok {
-		return fastNode.FastEval(e, ctx)
-	}
-
 	switch n := node.(type) {
 	case *parser.TemplateNode:
 		return e.EvalTemplateNode(n, ctx)
