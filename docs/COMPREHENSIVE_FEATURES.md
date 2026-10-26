@@ -1,20 +1,16 @@
 # Comprehensive Miya Feature Documentation
 
-This document provides the complete feature reference for Miya (miya), based on the comprehensive demonstration implementation showing **131+ features** with **95%+ Jinja2 compatibility**.
+This document provides the complete feature reference for Miya (miya), based on the comprehensive demonstration implementation showing 131+ features.
 
 ##  Quick Summary
 
 - ** 131+ Features Implemented** and demonstrated
-- ** 95%+ Jinja2 Compatibility** for production use
 - ** Complete Template System** including inheritance, macros, filters
-- ** Production Ready** with performance optimizations and caching
-- ** Thread Safe** for concurrent web applications
+- ** Concurrency**: An `Environment` is safe for concurrent use; configure it (`SetConfig`, `SetLoader`, loader templates) before rendering starts.
 
 ---
 
 ##  Template Inheritance System
-
-### **Status: 100% Compatible **
 
 ```html+jinja
 <!-- base.html -->
@@ -53,8 +49,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 ---
 
 ##  Control Structures 
-
-### **Status: 100% Compatible **
 
 ### **Conditional Statements**
 ```html+jinja
@@ -140,8 +134,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 
 ##  Include & Import System
 
-### **Status: 100% Compatible **
-
 ### **Template Inclusion**
 ```html+jinja
 <!-- Include with context passing -->
@@ -172,8 +164,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 ---
 
 ##  Macro System
-
-### **Status: 90% Compatible **
 
 ```html+jinja
 <!-- Basic macro -->
@@ -237,8 +227,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 ---
 
 ##  Filter Library
-
-### **Status: 98% Compatible **
 
 ### **String Filters (18 filters)**
 ```html+jinja
@@ -340,8 +328,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 
 ##  Test Expressions
 
-### **Status: 95% Compatible **
-
 ### **Type Tests (8 tests)**
 ```html+jinja
 {{ variable is defined }}                   → true if exists
@@ -398,8 +384,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 ---
 
 ##  Advanced Features
-
-### **Status: 85% Compatible **
 
 ### **Whitespace Control**
 ```html+jinja
@@ -460,8 +444,6 @@ Numbers like {{ 12345 }} are also affected.
 ---
 
 ##  Performance & Production Features
-
-### **Status: 100% Implemented **
 
 ### **Caching System**
 -  **Template Compilation Caching** - LRU cache for parsed templates
@@ -531,45 +513,24 @@ ctx.Set("current_time", time.Now())
 
 ---
 
-##  Feature Compatibility Summary
+##  Feature Compatibility
 
-| Category | Total Features | Implemented | Compatibility | Status |
-|----------|----------------|-------------|---------------|---------|
-| **Template Inheritance** | 4 | 4 | 100% |  |
-| **Control Structures** | 7 | 7 | 100% |  |
-| **Include/Import System** | 3 | 3 | 100% |  |
-| **Macro System** | 6 | 5 | 90% |  |
-| **String Filters** | 18 | 18 | 100% |  |
-| **Collection Filters** | 15 | 15 | 100% |  |
-| **Numeric Filters** | 10 | 10 | 100% |  |
-| **HTML/Security Filters** | 11 | 11 | 100% |  |
-| **Utility Filters** | 11 | 11 | 100% |  |
-| **Date/Time Filters** | 8 | 7 | 90% |  |
-| **Test Expressions** | 26 | 25 | 95% |  |
-| **Advanced Features** | 8 | 7 | 85% |  |
-| **Performance Features** | 8 | 8 | 100% |  |
-| **Environment/Config** | 6 | 6 | 100% |  |
-
-### **Overall Compatibility: 95.4%**
-
-**Total Features: 131 implemented out of 136 possible**
+miya's conformance suite (`tests/conformance/`) holds 289 small templates written to probe edge cases and known bugs; they are not a sample of real templates. At this commit miya matches Jinja2 3.1.6 on 283 of them (same output, or failing in the same phase for the cases that expect an error), after normalising the printing differences listed in [the feature matrix](JINJA2_VS_MIYA_FEATURE_MATRIX.md). 4 of the remaining cases are deliberate differences. Every divergence and its reason is listed in `tests/conformance/known_divergences.json`. This is a regression net, not a compatibility percentage.
 
 ---
 
 ##  Production Readiness Assessment
 
-### ** Fully Production Ready**
+### **Core features**
 - Complete template inheritance system
 - Comprehensive filter library (73 filters)
 - Full test expression support (26 tests) 
 - Advanced template features (whitespace, escaping, raw blocks)
-- High-performance caching and optimizations
-- Thread-safe concurrent operations
+- Template caching
 - Professional template organization (FileSystemLoader)
 - Robust error handling and debugging
 
-### ** Enterprise Grade**
-- Memory optimization and pooling
+### **Configuration and security**
 - Configurable caching strategies
 - Multiple template loader types
 - Environment configuration options
@@ -580,7 +541,6 @@ ctx.Set("current_time", time.Now())
 - Clear, comprehensive error messages
 - Hot template reloading (development)
 - Template debugging and inspection
-- Complete feature parity with Jinja2
 - Extensive documentation and examples
 
 ---
@@ -674,4 +634,4 @@ ctx.Set("current_time", time.Now())
 
 ---
 
-**This comprehensive feature set makes Miya suitable for production web applications requiring full Jinja2 template compatibility in Go.**
+**This comprehensive feature set makes Miya suitable for production web applications that need a Jinja2-style template engine in Go.**
