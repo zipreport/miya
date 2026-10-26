@@ -97,6 +97,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `format_number` returns an error for infinite or NaN values instead of printing `+,Inf`.
 - `center` defaults to 80 and pads like Python.
 - `format_number` and `currency` no longer put a separator after the minus sign (`-123456|format_number` printed `-,123,456`).
+- `}}`, `%}` and custom end delimiters no longer end a tag while a `(`, `[` or `{` opened in it is still open, as in Jinja2: `{{ {'a': {'b': 2}}.a.b }}` renders `2`, and a block end of `}` works with dict literals.
 
 ### Changed
 
@@ -199,6 +200,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - `round(0)` (or no precision) of a value of 1e16 or more prints in exponent form, like any float (`1e20|round` prints `1e+20`; it printed `100000000000000000000`).
   - An unknown `method` is an error. A precision above 308, or one that overflows the value, returns it unchanged (it printed `NaN` or `+Inf`), and a value whose scaled form is beyond 2^53 is no longer distorted (`1e20|round(3)` printed `99999999999999983616.000`).
 - `filesizeformat` prints `kB` and `1 Byte`, truncates below 1 kB, and goes up to YB/YiB.
+- Unbalanced brackets are now reported by the lexer, with Jinja2's wording: `{{ (1 }}` gives `lexer error in template ...: unexpected '}', expected ')'` (was `parser error ...: expected ')' after expression`), and a stray closer such as `{{ x) }}` or the typo `{{ x }<div>` gives `unexpected ')'` / `unexpected '}'`. A bracket left open at the end of the template, or at an end delimiter that cannot close it (such as `%>`), is reported where it was opened: `unexpected '%>', expected ')' (opened at line 2, column ...)`. Code that matches on the old error text needs updating.
+- Custom extension tags whose arguments contain unbalanced punctuation (for example `:-)`) now fail in the lexer. Jinja2 rejects them too.
+- Error columns on lines after the first are one higher than the actual column (an existing quirk, unchanged here); line numbers are exact.
 
 ### Deprecated
 
