@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/zipreport/miya/parser"
@@ -211,4 +212,9 @@ func (h *UndefinedHandler) GetUndefinedBehavior() UndefinedBehavior {
 func (h *UndefinedHandler) SetUndefinedBehavior(behavior UndefinedBehavior) {
 	h.behavior = behavior
 	h.undefinedFactory = NewUndefinedHandler(behavior).undefinedFactory
+}
+
+// MarshalJSON rejects undefined values, as Jinja2's tojson does.
+func (u *Undefined) MarshalJSON() ([]byte, error) {
+	return nil, errors.New("Object of type Undefined is not JSON serializable")
 }

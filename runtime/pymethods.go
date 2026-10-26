@@ -362,7 +362,7 @@ func mapGetMethod(m map[string]interface{}) *builtinMethod {
 		if len(args) < 1 || len(args) > 2 {
 			return nil, fmt.Errorf("get() takes 1 or 2 arguments (%d given)", len(args))
 		}
-		if v, ok := m[ToString(args[0])]; ok {
+		if v, ok := m[DictKey(args[0])]; ok {
 			return v, nil
 		}
 		if len(args) == 2 {

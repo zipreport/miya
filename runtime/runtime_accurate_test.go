@@ -911,7 +911,7 @@ func TestCoreEvaluator(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected error for negation: %v", err)
 		}
-		if result != -5.0 {
+		if result != int64(-5) {
 			t.Errorf("Expected -5.0, got %v", result)
 		}
 
@@ -3615,7 +3615,7 @@ func TestRemainingUncoveredFunctions(t *testing.T) {
 			t.Fatalf("Unary minus failed: %v", err)
 		}
 
-		if result != float64(-5) {
+		if result != int64(-5) {
 			t.Errorf("Expected -5, got %v (type %T)", result, result)
 		}
 

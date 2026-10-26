@@ -532,6 +532,14 @@ func FormatNumberFilter(value interface{}, args ...interface{}) (interface{}, er
 	return integerPart, nil
 }
 
+func parseFiniteFloat(s string) (float64, error) {
+	f, err := strconv.ParseFloat(s, 64)
+	if err == nil && (math.IsInf(f, 0) || math.IsNaN(f)) {
+		return 0, fmt.Errorf("cannot convert %q to float", s)
+	}
+	return f, err
+}
+
 // Helper function for numeric filters
 func ToFloat(value interface{}) (float64, error) {
 	switch v := value.(type) {
@@ -562,7 +570,7 @@ func ToFloat(value interface{}) (float64, error) {
 	case float64:
 		return v, nil
 	case string:
-		return strconv.ParseFloat(v, 64)
+		return parseFiniteFloat(v)
 	case bool:
 		if v {
 			return 1.0, nil
@@ -571,7 +579,7 @@ func ToFloat(value interface{}) (float64, error) {
 	default:
 		switch bv := runtime.BasicValue(value).(type) {
 		case string:
-			return strconv.ParseFloat(bv, 64)
+			return parseFiniteFloat(bv)
 		case bool:
 			if bv {
 				return 1.0, nil

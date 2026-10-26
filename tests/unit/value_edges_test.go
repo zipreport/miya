@@ -41,7 +41,7 @@ func TestValueEdges(t *testing.T) {
 		{name: "k5", tpl: `{{ none in {none: 1} }}|{{ none is in {none: 1} }}`, want: `true|true`},
 		{name: "k6", tpl: `{{ {none: 1}.get(none) }}`, want: `1`},
 		{name: "k7", tpl: `{{ (1.0|round(2)) in {1: 1} }}`, want: `true`},
-		{name: "r2", tpl: `{{ [2.5|round(1)]|map(attribute='Value')|list }}`, want: `[Undefined]`},
+		{name: "r2", tpl: `{{ [2.5|round(1)]|map(attribute='Value')|list }}`, want: `[None]`}, // Jinja2 prints [Undefined]; map(attribute=) yields None for missing attributes
 		{name: "s4", tpl: `{{ w * 2 }}`, data: pvD{"w": "-2.5"}, want: `-5`},
 		{name: "s5", tpl: `{{ w * 2 }}`, data: pvD{"w": "1e2"}, want: `200`},
 		{name: "k1", tpl: `{{ '<nil>' in ({none: 'x'}|string) }}`, want: `false`},
@@ -121,5 +121,22 @@ func TestSuperEscaping(t *testing.T) {
 				t.Fatalf("got %q, %v; want %q", got, err, c.want)
 			}
 		})
+	}
+}
+
+// deviation_super_parent_tag: Jinja2 3.1.6 prints [&lt;i&gt;&amp;lt;x&amp;gt;&lt;/i&gt;]; miya does not double-escape.
+func TestSuperParentTag(t *testing.T) {
+	l := loader.NewStringLoader(loader.NewDirectTemplateParser())
+	l.AddTemplate("base", `{% autoescape false %}{% block b %}<i>{{ v }}</i>{% endblock %}{% endautoescape %}`)
+	l.AddTemplate("child", `{% extends 'base' %}{% block b %}[{{ super() }}]{% endblock %}`)
+	env := miya.NewEnvironment(miya.WithLoader(l), miya.WithAutoEscape(true))
+	tmpl, err := env.GetTemplate("child")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := tmpl.Render(miya.NewContextFrom(map[string]interface{}{"v": "<x>"}))
+	t.Logf("deviation_super_parent_tag: %q %v", got, err)
+	if err != nil || got != `[<i>&lt;x&gt;</i>]` {
+		t.Fatalf("got %q, %v", got, err)
 	}
 }

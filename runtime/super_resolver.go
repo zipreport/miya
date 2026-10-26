@@ -28,11 +28,11 @@ func NewSuperResolver(hierarchy *InheritanceHierarchy, context Context, blockMap
 
 // ResolveSuperCalls processes all {{ super() }} calls in the given AST node
 func (s *SuperResolver) ResolveSuperCalls(node parser.Node, currentBlockName string) (parser.Node, error) {
-	return s.resolveSuperCallsRecursive(node, currentBlockName, 0)
+	return s.resolveSuperCallsRecursive(node, currentBlockName, 0, nil)
 }
 
 // resolveSuperCallsRecursive recursively processes super() calls with depth tracking
-func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBlockName string, depth int) (parser.Node, error) {
+func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBlockName string, depth int, enclosing *bool) (parser.Node, error) {
 	if depth > 10 {
 		return nil, fmt.Errorf("super() call depth exceeded (possible infinite recursion)")
 	}
@@ -40,7 +40,11 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 	switch n := node.(type) {
 	case *parser.SuperNode:
 		// Found a direct {{ super() }} call - resolve it
-		return s.resolveSuperCall(currentBlockName, depth)
+		resolved, err := s.resolveSuperCall(currentBlockName, depth)
+		if err != nil {
+			return nil, err
+		}
+		return s.withParentEscaping(resolved, n, enclosing), nil
 
 	case *parser.VariableNode:
 		// Check if this is {{ super() }} or {{ super }} wrapped in VariableNode
@@ -50,7 +54,7 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 			if err != nil {
 				return nil, err
 			}
-			return resolved, nil
+			return s.withParentEscaping(resolved, n, enclosing), nil
 		}
 		// Not a super call - return as-is
 		return node, nil
@@ -59,7 +63,7 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 		// Process block contents with the block name as context
 		block := parser.CloneStatement(n).(*parser.BlockNode)
 		for i, child := range block.Body {
-			resolved, err := s.resolveSuperCallsRecursive(child, n.Name, depth)
+			resolved, err := s.resolveSuperCallsRecursive(child, n.Name, depth, enclosing)
 			if err != nil {
 				return nil, err
 			}
@@ -72,9 +76,13 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 			return node, nil
 		}
 		clone := parser.CloneStatement(node)
+		if ae, ok := clone.(*parser.AutoescapeNode); ok {
+			on := ae.Enabled
+			enclosing = &on
+		}
 		for _, body := range parser.ChildBodies(clone) {
 			for i, child := range *body {
-				resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth)
+				resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth, enclosing)
 				if err != nil {
 					return nil, err
 				}
@@ -83,6 +91,22 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 		}
 		return clone, nil
 	}
+}
+
+// withParentEscaping wraps resolved parent content in an {% autoescape %}
+// node with the render's base setting when a child {% autoescape %} around the
+// super() call would otherwise change how the parent block escapes.
+func (s *SuperResolver) withParentEscaping(resolved parser.Node, at parser.Node, enclosing *bool) parser.Node {
+	if enclosing == nil {
+		return resolved
+	}
+	on, _, _ := resolveEscape(s.context)
+	if *enclosing == on {
+		return resolved
+	}
+	w := parser.NewAutoescapeNode(on, at.Line(), at.Column())
+	w.Body = []parser.Node{resolved}
+	return w
 }
 
 // resolveSuperCall resolves a single {{ super() }} call to parent block content
@@ -120,7 +144,7 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 	}
 
 	// Process cloned parent block content for nested super() calls
-	resolvedParent, err := s.resolveSuperCallsRecursive(clonedParent, blockName, depth+1)
+	resolvedParent, err := s.resolveSuperCallsRecursive(clonedParent, blockName, depth+1, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +258,7 @@ func (s *SuperResolver) ProcessTemplateWithSuperCalls(template *parser.TemplateN
 
 // resolveTemplateWithBlockContext processes template while maintaining block context
 func (s *SuperResolver) resolveTemplateWithBlockContext(template *parser.TemplateNode) (*parser.TemplateNode, error) {
-	resolved, err := s.resolveSuperCallsRecursive(template, "", 0)
+	resolved, err := s.resolveSuperCallsRecursive(template, "", 0, nil)
 	if err != nil {
 		return nil, err
 	}

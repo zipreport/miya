@@ -24,6 +24,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Undefined values print as `Undefined` inside lists and dicts, and make `tojson` fail as in Jinja2 instead of emitting miya's internal fields.
+- `-7` is an integer.
+- The data strings `inf`, `nan` and `infinity` are not numbers in arithmetic or in numeric filters (`w * 2` repeats them, `w - 1` and `w|abs` are errors; `w + 1` concatenates in lenient mode).
+- zipreport-go's own `json` filter swallows errors (`pkg/template/filters.go:194-199`), so `{{ {'a': nope}|json }}` now prints `null` instead of miya's internal fields.
+- A `none` dict key prints `None`, and a rounded number finds its integer key.
+- `RoundedFloat`'s Go fields are no longer template attributes.
+- `{{ super() }}` renders the parent block with the parent's autoescape setting.
 - A macro (or `caller()`) can change a list passed to it, as in Jinja2: `{% do l.append(x) %}` inside the macro changes the caller's list. Lists passed from render data are copied, so application data is never changed.
 - Go functions that take a `runtime.Context`, and `Namespace.Get`/`GetAttr`/`All()` and `ImportedNamespace.Get`, see plain lists, never the internal box type. `RawGet` returns the raw value.
 - An attribute chain passed to a macro, a list method or a namespace lookup (`m(l.pop().a.b)`) is evaluated once.

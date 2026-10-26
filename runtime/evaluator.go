@@ -518,7 +518,7 @@ func (e *DefaultEvaluator) EvalDictNode(node *parser.DictNode, ctx Context) (int
 		if err != nil {
 			return nil, err
 		}
-		result[fmt.Sprintf("%v", key)] = value
+		result[DictKey(key)] = value
 	}
 	return result, nil
 }
@@ -1535,7 +1535,7 @@ func (e *DefaultEvaluator) EvalComprehensionNode(node *parser.ComprehensionNode,
 				return nil, err
 			}
 
-			keyStr := fmt.Sprintf("%v", key)
+			keyStr := DictKey(key)
 			result[keyStr] = value
 		}
 
@@ -1823,6 +1823,9 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 // a map whose keys are all strings (keys/values/items), or a slice element by
 // numeric attr. It never returns a Go method.
 func (e *DefaultEvaluator) lookupReflect(obj interface{}, attr string) (interface{}, bool) {
+	if _, ok := Indirect(obj).(RoundedFloat); ok {
+		return nil, false
+	}
 	rv := reflect.ValueOf(obj)
 	for i := 0; ; i++ {
 		if !rv.IsValid() {
@@ -1907,6 +1910,18 @@ func structField(rv reflect.Value, name string, fallback bool) (interface{}, boo
 	return f.Interface(), true
 }
 
+// DictKey is the string a dict literal, subscript, `in` test or .get() uses
+// for key.
+func DictKey(key interface{}) string {
+	switch k := key.(type) {
+	case nil:
+		return "None"
+	case RoundedFloat:
+		return fmt.Sprintf("%v", k.Value)
+	}
+	return fmt.Sprintf("%v", key)
+}
+
 func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 	if obj == nil {
 		return nil, fmt.Errorf("cannot get item from nil")
@@ -1922,7 +1937,7 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 
 	switch v := obj.(type) {
 	case map[string]interface{}:
-		keyStr := fmt.Sprintf("%v", key)
+		keyStr := DictKey(key)
 		val, ok := v[keyStr]
 		if !ok {
 			return NewUndefined(keyStr, UndefinedSilent, nil), nil
@@ -2958,6 +2973,22 @@ func (e *DefaultEvaluator) power(a, b interface{}) (interface{}, error) {
 }
 
 func (e *DefaultEvaluator) negate(a interface{}) (interface{}, error) {
+	if i, u, f, kind, ok := numericValue(a); ok {
+		switch kind {
+		case 'i':
+			if i == math.MinInt64 {
+				return -float64(i), nil
+			}
+			return -i, nil
+		case 'u':
+			if u <= math.MaxInt64 {
+				return -int64(u), nil
+			}
+			return -float64(u), nil
+		case 'f':
+			return -f, nil
+		}
+	}
 	aFloat, err := e.toFloat(a)
 	if err == nil {
 		return -aFloat, nil
@@ -3202,8 +3233,7 @@ func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
 		}
 		return false, nil
 	case map[string]interface{}:
-		itemStr := e.fastToString(item)
-		_, ok := v[itemStr]
+		_, ok := v[DictKey(item)]
 		return ok, nil
 	default:
 		// Use reflection to handle any slice/array type
@@ -3409,7 +3439,11 @@ func (e *DefaultEvaluator) toFloat(obj interface{}) (float64, error) {
 	case float64:
 		return v, nil
 	case string:
-		return strconv.ParseFloat(v, 64)
+		f, err := strconv.ParseFloat(v, 64)
+		if err == nil && (math.IsInf(f, 0) || math.IsNaN(f)) {
+			return 0, fmt.Errorf("cannot convert %q to float", v)
+		}
+		return f, err
 	default:
 		i, u, f, kind, ok := numericValue(obj)
 		if ok {

@@ -152,6 +152,10 @@ func (s *reprState) repr(v interface{}) {
 		s.reprNamespace(ns, v)
 		return
 	}
+	if _, ok := v.(*Undefined); ok {
+		s.write("Undefined")
+		return
+	}
 	if e, ok := v.(error); ok {
 		s.write(e.Error())
 		return

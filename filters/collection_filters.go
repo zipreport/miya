@@ -1050,6 +1050,9 @@ func lookupSegment(obj interface{}, seg string) (interface{}, bool) {
 	if obj == nil {
 		return nil, false
 	}
+	if _, ok := obj.(runtime.RoundedFloat); ok {
+		return nil, false
+	}
 	rv := reflect.ValueOf(obj)
 	if rv.Kind() == reflect.Ptr && !rv.IsNil() {
 		rv = rv.Elem()

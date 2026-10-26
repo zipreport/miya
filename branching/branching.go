@@ -744,8 +744,7 @@ func contains(container, item interface{}) (bool, error) {
 		}
 		return false, nil
 	case map[string]interface{}:
-		itemStr := fmt.Sprintf("%v", item)
-		_, ok := v[itemStr]
+		_, ok := v[runtime.DictKey(item)]
 		return ok, nil
 	default:
 		// Use reflection for other slice/array types
