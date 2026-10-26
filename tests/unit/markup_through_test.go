@@ -72,6 +72,8 @@ func TestMarkupThrough(t *testing.T) {
 		{"deviation_grouptuple_attr_on", `{{ [{'k':1},{'k':2}]|groupby('k')|map('grouper')|join(',') }}`, false, "", `1,2`},
 		// Jinja2: error: TemplateRuntimeError (No filter named 'grouper')
 		{"deviation_grouptuple_attr_off", `{{ [{'k':1},{'k':2}]|groupby('k')|map('grouper')|join(',') }}`, true, "", `1,2`},
+		// Jinja2: [1, [{&#39;k&#39;: 1}]],[2, [{&#39;k&#39;: 2}]] (the list filter, not the attribute)
+		{"deviation_grouptuple_filter_name", `{{ [{'k':1},{'k':2}]|groupby('k')|map('list')|join(',') }}`, false, "", `[{&#39;k&#39;: 1}],[{&#39;k&#39;: 2}]`},
 		{"cycle_none", `{{ [1]|map('string')|list }}{% for i in [1] %}{{ loop.cycle() }}{% endfor %}`, false, "", `ERR:cycle() requires`},
 		{"deviation_markup_repr", `{{ [s]|map('upper')|list }}`, false, "", `[&#39;&lt;B&gt;&#39;]`},
 		{"deviation_default_none", `{{ [none]|map('default', s)|join }}`, false, "", `<b>`},
