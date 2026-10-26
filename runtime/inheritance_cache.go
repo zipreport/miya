@@ -1,8 +1,6 @@
 package runtime
 
 import (
-	"crypto/md5"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -163,67 +161,6 @@ func (c *InheritanceCache) StoreHierarchy(templateName string, hierarchy *Inheri
 	c.hierarchyCache[templateName] = entry
 }
 
-// GetResolvedTemplate retrieves a cached resolved template
-func (c *InheritanceCache) GetResolvedTemplate(templateName string, contextHash string) (*parser.TemplateNode, bool) {
-	c.performCleanupIfNeeded()
-
-	cacheKey := c.buildResolvedCacheKey(templateName, contextHash)
-
-	c.resolvedMutex.RLock()
-	entry, exists := c.resolvedCache[cacheKey]
-	c.resolvedMutex.RUnlock()
-
-	if !exists {
-		atomic.AddInt64(&c.resolvedStats.misses, 1)
-		return nil, false
-	}
-
-	// Check expiration
-	if time.Now().After(entry.ExpiresAt) {
-		// Entry expired, remove it
-		c.resolvedMutex.Lock()
-		delete(c.resolvedCache, cacheKey)
-		c.resolvedMutex.Unlock()
-		atomic.AddInt64(&c.resolvedStats.misses, 1)
-		return nil, false
-	}
-
-	// Update access statistics
-	c.resolvedMutex.Lock()
-	entry.AccessCount++
-	entry.LastAccess = time.Now()
-	c.resolvedMutex.Unlock()
-
-	atomic.AddInt64(&c.resolvedStats.hits, 1)
-	return entry.ResolvedAST, true
-}
-
-// StoreResolvedTemplate caches a resolved template
-func (c *InheritanceCache) StoreResolvedTemplate(templateName string, contextHash string, resolvedAST *parser.TemplateNode, templateChain []string) {
-	c.resolvedMutex.Lock()
-	defer c.resolvedMutex.Unlock()
-
-	// Check if we need to make space
-	if len(c.resolvedCache) >= int(c.maxEntries.Load()) {
-		c.evictOldestResolved()
-	}
-
-	cacheKey := c.buildResolvedCacheKey(templateName, contextHash)
-	now := time.Now()
-
-	entry := &ResolvedTemplateCacheEntry{
-		ResolvedAST:   resolvedAST,
-		ContextHash:   contextHash,
-		TemplateChain: templateChain,
-		CreatedAt:     now,
-		ExpiresAt:     now.Add(time.Duration(c.resolvedTTL.Load())),
-		AccessCount:   1,
-		LastAccess:    now,
-	}
-
-	c.resolvedCache[cacheKey] = entry
-}
-
 // InvalidateTemplate removes all cache entries related to a template
 func (c *InheritanceCache) InvalidateTemplate(templateName string) {
 	c.hierarchyMutex.Lock()
@@ -293,11 +230,6 @@ func (c *InheritanceCache) GetStats() CacheStats {
 	return stats
 }
 
-// buildResolvedCacheKey creates a cache key for resolved templates
-func (c *InheritanceCache) buildResolvedCacheKey(templateName string, contextHash string) string {
-	return fmt.Sprintf("%s::%s", templateName, contextHash)
-}
-
 // evictOldestHierarchy removes the least recently used hierarchy entry
 func (c *InheritanceCache) evictOldestHierarchy() {
 	var oldestKey string
@@ -312,23 +244,6 @@ func (c *InheritanceCache) evictOldestHierarchy() {
 
 	if oldestKey != "" {
 		delete(c.hierarchyCache, oldestKey)
-	}
-}
-
-// evictOldestResolved removes the least recently used resolved template entry
-func (c *InheritanceCache) evictOldestResolved() {
-	var oldestKey string
-	var oldestTime time.Time = time.Now()
-
-	for key, entry := range c.resolvedCache {
-		if entry.LastAccess.Before(oldestTime) {
-			oldestTime = entry.LastAccess
-			oldestKey = key
-		}
-	}
-
-	if oldestKey != "" {
-		delete(c.resolvedCache, oldestKey)
 	}
 }
 
@@ -374,44 +289,4 @@ func (c *InheritanceCache) cleanup() {
 		delete(c.resolvedCache, key)
 	}
 	c.resolvedMutex.Unlock()
-}
-
-// ContextHasher creates context hashes for cache keys
-type ContextHasher struct{}
-
-// NewContextHasher creates a new context hasher
-func NewContextHasher() *ContextHasher {
-	return &ContextHasher{}
-}
-
-// HashContext creates a hash from context data for cache keying
-func (h *ContextHasher) HashContext(context Context) string {
-	if context == nil {
-		return "empty"
-	}
-
-	// Get all context variables and create a deterministic hash
-	data := context.All()
-	if len(data) == 0 {
-		return "empty"
-	}
-
-	// Create a simple hash based on key-value pairs
-	// Note: This is a simplified approach - a production system might want
-	// more sophisticated hashing that handles complex nested structures
-	hash := md5.New()
-
-	// Sort keys for consistent hashing
-	keys := make([]string, 0, len(data))
-	for k := range data {
-		keys = append(keys, k)
-	}
-
-	// Simple deterministic string representation
-	for _, key := range keys {
-		value := data[key]
-		fmt.Fprintf(hash, "%s:%v;", key, value)
-	}
-
-	return fmt.Sprintf("%x", hash.Sum(nil))[:16] // Use first 16 characters
 }
