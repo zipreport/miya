@@ -79,6 +79,7 @@ func TestMarkupMixing(t *testing.T) {
 		{"wordwrap_newline_safe", `{{ card|wordwrap(5, false, '\n') }}`, "<img\nsrc=/a.png\nalt=photo>"},
 		{"deviation_fb_wordwrap_br", `{% filter wordwrap(72, true, '<br>') %}<p>{{ x }}</p>{% endfilter %}`, `&lt;p&gt;&amp;lt;x&amp;gt;&lt;/p&gt;`},
 		{"setblock_length", `{% set n %}20{% endset %}{{ t|truncate(n) }}`, strings.Repeat("y", 17) + `...`},
+		{"setblock_width", `{% set n %}5{% endset %}{{ m|wordwrap(n) }}`, `<b>`},
 	}
 	for _, tc := range rows {
 		t.Run(tc.name, func(t *testing.T) {
