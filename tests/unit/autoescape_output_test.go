@@ -60,9 +60,9 @@ func TestAutoescapeOutput(t *testing.T) {
 		{name: "bytes_safe", tmpl: `{{ v|safe }}`, data: data{"v": []byte("<b>")}, want: `<b>`},
 		{name: "urlize_nofollow_twice", tmpl: `{{ 'a http://x.com b http://y.com'|urlize(nofollow=true) }}`, want: `a <a href="http://x.com" rel="nofollow noopener">http://x.com</a> b <a href="http://y.com" rel="nofollow noopener">http://y.com</a>`},
 		{name: "truncatehtml_decoded_safe", tmpl: `{{ "&lt;s&gt; long text here"|truncatehtml(5)|safe }}`, check: true, contains: []string{"&lt;s&gt;"}, notContains: []string{"<s>"}},
-		{name: "filter_block_pinned", tmpl: `{% filter upper %}<b>x</b>{% endfilter %}`, want: `<B>X</B>`},
-		{name: "filter_block_arg_pinned", tmpl: `{% filter replace('X', v) %}X{% endfilter %}`, data: data{"v": "<s>"}, want: `&lt;s&gt;`},
-		{name: "macro_nonstring_pinned", tmpl: `{% macro m(a) %}{{ a }}{% endmacro %}{{ m(v) }}`, data: data{"v": namedString("<n>")}, want: `&lt;n&gt;`},
+		{name: "filter_block", tmpl: `{% filter upper %}<b>x</b>{% endfilter %}`, want: `<B>X</B>`},
+		{name: "filter_block_arg", tmpl: `{% filter replace('X', v) %}X{% endfilter %}`, data: data{"v": "<s>"}, want: `&lt;s&gt;`},
+		{name: "macro_nonstring", tmpl: `{% macro m(a) %}{{ a }}{% endmacro %}{{ m(v) }}`, data: data{"v": namedString("<n>")}, want: `&lt;n&gt;`},
 	}
 
 	for _, tt := range tests {

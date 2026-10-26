@@ -86,9 +86,8 @@ func TestLogicalOperators(t *testing.T) {
 	}
 }
 
-// Each subtest pins current miya behaviour that differs from Jinja2; the plan
-// named in the comment must update the expectation when it fixes the cause.
-func TestLogicalOperatorsKnownDivergences(t *testing.T) {
+// Edge cases checked against Jinja2 3.1.
+func TestLogicalOperatorsEdgeCases(t *testing.T) {
 	// A typed nil pointer is none and falsy (plan 047), so `or` yields R as in Jinja2.
 	t.Run("typed_nil_or", func(t *testing.T) {
 		env := miya.NewEnvironment(miya.WithAutoEscape(false))
