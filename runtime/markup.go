@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"fmt"
 	"html"
 	"reflect"
 )
@@ -151,12 +152,11 @@ func envContext(ctx Context) (EnvironmentContext, bool) {
 // markupPreservingFilters return Markup when given Markup in Jinja2 (markupsafe
 // Markup methods, or slicing/padding of the input). The filter runs on the
 // plain string with its arguments escaped, and a string result is Markup.
-// wordwrap is a miya choice; Jinja2 returns a plain string there.
 var markupPreservingFilters = map[string]bool{
 	"upper": true, "lower": true, "capitalize": true, "trim": true, "strip": true,
-	"replace": true, "center": true, "indent": true, "truncate": true,
+	"replace": true, "center": true, "indent": true,
 	"reverse": true, "last": true, "string": true,
-	"format": true, "title": true, "wordwrap": true,
+	"title": true,
 }
 
 // markupAwareFilters receive the safe value unchanged: they implement the
@@ -170,9 +170,9 @@ var markupAwareFilters = map[string]bool{
 // markupPassthroughFilters return either their input or an argument.
 var markupPassthroughFilters = map[string]bool{"default": true, "d": true}
 
-// markupArgFilters get an unsafe input and their arguments unchanged, Markup
-// included, because they treat a safe argument themselves.
-var markupArgFilters = map[string]bool{"wordwrap": true}
+// markupMixingFilters receive their input and arguments unchanged, safe or not,
+// and implement Jinja2's mixing of safe and plain text themselves.
+var markupMixingFilters = map[string]bool{"format": true, "truncate": true, "wordwrap": true}
 
 func isNumberKind(v interface{}) bool {
 	switch reflect.ValueOf(v).Kind() {
@@ -228,7 +228,18 @@ func escapeArg(ctx Context, a interface{}) interface{} {
 	if _, ok := a.(RoundedFloat); ok {
 		return a
 	}
-	if a == nil || isNumberKind(a) || reflect.ValueOf(a).Kind() == reflect.Bool {
+	if a == nil {
+		return a
+	}
+	switch a.(type) {
+	case fmt.Stringer, error:
+		return escapeFor(ctx, a)
+	}
+	if isNumberKind(a) || reflect.ValueOf(a).Kind() == reflect.Bool {
+		// a number or bool stays one unless its string form needs escaping
+		if s := escapeFor(ctx, a); s != ToString(a) {
+			return s
+		}
 		return a
 	}
 	return escapeFor(ctx, a)
@@ -264,7 +275,7 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 	switch {
 	case name == "join" && markupContext(ctx):
 		result, err = e.joinMarkup(ctx, value, args, apply)
-	case !safe && markupArgFilters[name]:
+	case markupMixingFilters[name] && markupContext(ctx):
 		result, err = apply(value, args)
 	case !safe:
 		result, err = apply(value, unmarkArgs(args))

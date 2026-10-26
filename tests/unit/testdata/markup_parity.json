@@ -626,8 +626,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "<b>xxxxxx&lt;s&gt;",
-    "known_unrelated": "truncate leeway algorithm (control K3; plan 039)"
+    "want": "<b>xxxxxx&lt;s&gt;"
   },
   {
     "name": "X9_join_sep",

@@ -23,7 +23,10 @@ type pyFlags struct {
 
 // pyFormat implements Python's `str % args` (or `str % mapping` when kwargs is
 // not empty) for the conversions d i u o x X e E f F g G c s r a and %%.
-func pyFormat(format string, args []interface{}, kwargs map[string]interface{}) (string, error) {
+// With safe set the format string is trusted markup, as in markupsafe: the
+// text of %s, %r and %a arguments is HTML-escaped first (safe arguments are
+// kept) and %c is an error.
+func pyFormat(format string, args []interface{}, kwargs map[string]interface{}, safe bool) (string, error) {
 	rs := []rune(format)
 	mapping := len(kwargs) > 0
 	ai := 0
@@ -52,7 +55,7 @@ func pyFormat(format string, args []interface{}, kwargs map[string]interface{}) 
 		if mapping {
 			return 0, pyFormatErr("* wants int")
 		}
-		n, err := pyIntArg(a, '*')
+		n, err := pyIntArg(runtime.Unmark(a), '*')
 		if err != nil {
 			return 0, pyFormatErr("* wants int")
 		}
@@ -191,18 +194,21 @@ func pyFormat(format string, args []interface{}, kwargs map[string]interface{}) 
 		var text string
 		switch c {
 		case 'd', 'i', 'u', 'o', 'x', 'X':
-			n, err := pyIntArg(arg, c)
+			n, err := pyIntArg(runtime.Unmark(arg), c)
 			if err != nil {
 				return "", err
 			}
 			text = pyFormatInt(n, byte(c), fl, width, prec)
 		case 'e', 'E', 'f', 'F', 'g', 'G':
-			f, err := pyFloatArg(arg, c)
+			f, err := pyFloatArg(runtime.Unmark(arg), c)
 			if err != nil {
 				return "", err
 			}
 			text = pyFormatFloat(f, byte(c), fl, width, prec)
 		case 'c':
+			if safe {
+				return "", pyFormatErr("%c requires an int or a unicode character, not an escaped argument")
+			}
 			s, err := pyCharArg(arg)
 			if err != nil {
 				return "", err
@@ -213,14 +219,20 @@ func pyFormat(format string, args []interface{}, kwargs map[string]interface{}) 
 			switch c {
 			case 's':
 				s = ToString(arg)
+				if _, isSafe := runtime.AsMarkup(arg); safe && !isSafe {
+					s = string(runtime.EscapeMarkup(s))
+				}
 			case 'r', 'a':
-				if str, ok := arg.(string); ok {
+				if str, ok := runtime.Unmark(arg).(string); ok {
 					s = pyRepr(str)
 					if c == 'a' {
 						s = pyASCII(s)
 					}
 				} else {
 					s = ToString(arg)
+				}
+				if safe {
+					s = string(runtime.EscapeMarkup(s))
 				}
 			}
 			if prec >= 0 && utf8.RuneCountInString(s) > prec {

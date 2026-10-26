@@ -167,10 +167,11 @@ func TruncateFilterWithLeeway(leeway int) FilterFunc {
 // end="...", leeway=5).
 func truncate(defaultLeeway int, value interface{}, args ...interface{}) (interface{}, error) {
 	s := ToString(value)
+	_, valSafe := runtime.AsMarkup(value)
 
 	length := 255
 	if len(args) > 0 && args[0] != nil {
-		l, err := ToInt(args[0])
+		l, err := ToInt(runtime.Unmark(args[0]))
 		if err != nil {
 			return nil, fmt.Errorf("truncate length must be integer: %v", err)
 		}
@@ -178,12 +179,14 @@ func truncate(defaultLeeway int, value interface{}, args ...interface{}) (interf
 	}
 	killwords := len(args) > 1 && ToBool(args[1])
 	end := "..."
+	endSafe := false
 	if len(args) > 2 {
 		end = ToString(args[2])
+		_, endSafe = runtime.AsMarkup(args[2])
 	}
 	leeway := defaultLeeway
 	if len(args) > 3 && args[3] != nil {
-		l, err := ToInt(args[3])
+		l, err := ToInt(runtime.Unmark(args[3]))
 		if err != nil {
 			return nil, fmt.Errorf("truncate leeway must be integer: %v", err)
 		}
@@ -200,15 +203,26 @@ func truncate(defaultLeeway int, value interface{}, args ...interface{}) (interf
 
 	runes := []rune(s)
 	if len(runes) <= length+leeway {
+		if valSafe {
+			return value, nil
+		}
 		return s, nil
 	}
 
 	prefix := string(runes[:length-len(endRunes)])
-	if killwords {
-		return prefix + end, nil
+	if !killwords {
+		if i := strings.LastIndex(prefix, " "); i >= 0 {
+			prefix = prefix[:i]
+		}
 	}
-	if i := strings.LastIndex(prefix, " "); i >= 0 {
-		prefix = prefix[:i]
+	if valSafe || endSafe {
+		part := func(text string, safe bool) string {
+			if safe {
+				return text
+			}
+			return string(runtime.EscapeMarkup(text))
+		}
+		return runtime.Markup(part(prefix, valSafe) + part(end, endSafe)), nil
 	}
 	return prefix + end, nil
 }
@@ -241,8 +255,16 @@ func WordwrapFilter(value interface{}, args ...interface{}) (interface{}, error)
 		wrapString = ToString(arg(2))
 	}
 
+	_, inSafe := runtime.AsMarkup(value)
+	// A safe input with a plain, non-blank wrapstring is escaped as a whole
+	// by the caller, so the result must be plain (Jinja2's result).
+	plainResult := inSafe && !safeWrap && strings.TrimSpace(wrapString) != ""
+
 	input := pySplitlines(ToString(value))
 	if len(input) == 0 {
+		if inSafe && !plainResult {
+			return runtime.Markup(""), nil
+		}
 		return "", nil
 	}
 	if width <= 0 {
@@ -251,7 +273,7 @@ func WordwrapFilter(value interface{}, args ...interface{}) (interface{}, error)
 	var out []string
 	for _, line := range input {
 		wrapped := textwrapLines(line, width, breakLongWords, breakOnHyphens)
-		if safeWrap {
+		if safeWrap && !inSafe {
 			for i, l := range wrapped {
 				wrapped[i] = string(runtime.EscapeMarkup(l))
 			}
@@ -259,7 +281,7 @@ func WordwrapFilter(value interface{}, args ...interface{}) (interface{}, error)
 		out = append(out, strings.Join(wrapped, wrapString))
 	}
 	result := strings.Join(out, wrapString)
-	if safeWrap {
+	if (safeWrap || inSafe) && !plainResult {
 		return runtime.Markup(result), nil
 	}
 	return result, nil
@@ -384,7 +406,36 @@ func FormatFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	if len(kwargs) > 0 && len(args) > 0 {
 		return nil, fmt.Errorf("format: can't handle positional and keyword arguments at the same time")
 	}
-	return pyFormat(ToString(value), args, kwargs)
+	fm, safe := runtime.AsMarkup(value)
+	format := ToString(value)
+	if safe {
+		format = string(fm)
+	} else {
+		args = unmarkAll(args)
+		if len(kwargs) > 0 {
+			plain := make(map[string]interface{}, len(kwargs))
+			for k, v := range kwargs {
+				plain[k] = runtime.Unmark(v)
+			}
+			kwargs = plain
+		}
+	}
+	out, err := pyFormat(format, args, kwargs, safe)
+	if err != nil {
+		return nil, err
+	}
+	if safe {
+		return runtime.Markup(out), nil
+	}
+	return out, nil
+}
+
+func unmarkAll(args []interface{}) []interface{} {
+	out := make([]interface{}, len(args))
+	for i, a := range args {
+		out[i] = runtime.Unmark(a)
+	}
+	return out
 }
 
 // Helper function to convert regex patterns for case-insensitive matching

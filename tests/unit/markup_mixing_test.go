@@ -75,6 +75,9 @@ func TestMarkupMixing(t *testing.T) {
 		{"precision_escapes_first", `{{ fp|format(x) }}`, `&l`},
 		{"width_after_escape", `{{ fl|format(lt) }}`, `&lt;  |`},
 		{"fb11_guard", `{% filter wordwrap(80) %}<p>{{ x }}</p>{% endfilter %}`, `<p>&lt;x&gt;</p>`},
+		{"fb_wordwrap_newline", `{% filter wordwrap(72, true, '\n') %}<p>{{ x }}</p>{% endfilter %}`, `<p>&lt;x&gt;</p>`},
+		{"wordwrap_newline_safe", `{{ card|wordwrap(5, false, '\n') }}`, "<img\nsrc=/a.png\nalt=photo>"},
+		{"deviation_fb_wordwrap_br", `{% filter wordwrap(72, true, '<br>') %}<p>{{ x }}</p>{% endfilter %}`, `&lt;p&gt;&amp;lt;x&amp;gt;&lt;/p&gt;`},
 		{"setblock_length", `{% set n %}20{% endset %}{{ t|truncate(n) }}`, strings.Repeat("y", 17) + `...`},
 	}
 	for _, tc := range rows {
@@ -93,6 +96,36 @@ func TestMarkupMixing(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
+			if got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// Outside the HTML family these filters must not HTML-escape: the context
+// escaper runs once on the result.
+func TestMarkupMixingNonHTML(t *testing.T) {
+	rows := []struct{ name, tpl, want string }{
+		{"plain", `{{ x }}|{{ q }}`, `\u003cx\u003e|it\'s`},
+		{"format", `{{ fs|format(x) }}`, `\u003cx\u003e`},
+		{"format_safe_arg", `{{ fs|format(m) }}`, `\u003cb\u003e`},
+		{"truncate", `{{ p20|truncate(12, true, sm) }}`, `xxxxxxxxx\u003cs\u003e`},
+		{"wordwrap", `{{ card|wordwrap(5, false, sep) }}`, `\u003cimg onerror=alert(1) src=/a.png onerror=alert(1) alt=photo\u003e`},
+	}
+	for _, tc := range rows {
+		t.Run(tc.name, func(t *testing.T) {
+			env := miya.NewEnvironment(miya.WithAutoEscape(true))
+			tmpl, err := env.FromString(tc.tpl)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ctx := miya.NewTemplateContextAdapter(mixCtx(), env)
+			out, err := runtime.NewEvaluator().EvalNode(tmpl.AST(), runtime.NewContextWrapper(ctx, runtime.NewAutoEscaper(nil), runtime.EscapeContextJS))
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := runtime.ToString(out)
 			if got != tc.want {
 				t.Errorf("got %q, want %q", got, tc.want)
 			}
