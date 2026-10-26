@@ -1,353 +1,114 @@
 # Miya Engine Limitations and Differences from Jinja2
 
-This document details the **known limitations and differences** between Miya Engine and Jinja2, based on extensive testing of the implementation.
+This document lists the **known limitations and differences** between Miya Engine and Jinja2 3.1.6. Each item was checked by rendering it with miya and with Jinja2.
 
-> **Miya Version:** v0.1.0
+> **Applies to:** master after v0.2.0, including the changes listed under [Unreleased] in CHANGELOG.md
 
----
-
-##  Table of Contents
-
-1. [Critical Limitations](#critical-limitations)
-2. [Comprehensions Limitations](#comprehensions-limitations)
-3. [Filter Limitations](#filter-limitations)
-4. [Macro Limitations](#macro-limitations)
-5. [Syntax Limitations](#syntax-limitations)
-6. [Workarounds and Alternatives](#workarounds-and-alternatives)
+miya's conformance suite (`tests/conformance/`) holds 289 small templates written to probe edge cases and known bugs; they are not a sample of real templates. At this commit miya matches Jinja2 3.1.6 on 283 of them (same output, or failing in the same phase for the cases that expect an error), after normalising the printing differences listed below. 4 of the remaining cases are deliberate differences. Every divergence and its reason is listed in `tests/conformance/known_divergences.json`. This is a regression net, not a compatibility percentage.
 
 ---
 
-## Critical Limitations
+## Table of Contents
 
-###  1. Dictionary Comprehensions with `.items()` Unpacking
-
-**Not Supported:**
-```html+jinja
-{{ {k: v for k, v in dict.items()} }}
-{{ {key|upper: value for key, value in config.items()} }}
-```
-
-**Error:**
-```
-parser error: expected 'in' in dict comprehension
-```
-
-**Reason:** The parser doesn't support tuple unpacking in dictionary comprehensions.
-
-**Workaround:**
-```html+jinja
-{# Only single-item iteration works #}
-{{ {user.id: user.name for user in users} }}
-{{ {item.key: item.value for item in key_value_list} }}
-```
+1. [Deliberate differences](#deliberate-differences)
+2. [Differences that are not deliberate](#differences-that-are-not-deliberate)
+3. [Comprehension limitations](#comprehension-limitations)
+4. [Migration checklist](#migration-checklist)
 
 ---
 
-###  2. Nested Comprehensions
+## Deliberate differences
 
-**Not Supported:**
+- At the top level, booleans print `true`/`false` and `None` prints empty. Inside lists and dicts they print as in Python (`True`, `False`, `None`).
+- Whole floats print without `.0` everywhere, including inside lists and after `string`: `{{ [1.0] }}` prints `[1]`.
+- `round` rounds half away from zero and prints exactly n decimals: `2.5|round` prints `3` (Jinja2: `2.0`), `2.5|round(2)` prints `2.50`, `2.675|round(2)` prints `2.68`.
+- `default` also replaces `None` and the empty string, not only undefined values.
+- Dicts iterate and print in sorted key order, not insertion order.
+- Integers are 64-bit: `9223372036854775807 + 1` becomes a float.
+- Methods on Go values are not callable from templates (`{{ s.Hello() }}` is an error; fields such as `{{ s.Name }}` work). Pass computed values as data or register a global function. Python string, list and dict methods (`'abc'.upper()`, `d.get('a')`) do work.
+- `None` sorts before every other value in `sort`, where Jinja2 raises an error.
+- `map` with an unknown filter name yields empty values where Jinja2 raises an error.
+
+---
+
+## Differences that are not deliberate
+
+These are bugs or gaps, not design decisions.
+
+| Template | miya | Jinja2 |
+|----------|------|--------|
+| `{{ self.block_name() }}` | error: `cannot call non-function value of type *runtime.Undefined` | renders the block |
+| `{% include 'child' %}` where `child` has `{% extends 'base' %}` | inheritance is not resolved: `a{% include %}b` prints `aXb` | `a[X]b` (the base wraps the child's blocks) |
+| `{{ '%s-%s' % (1, 2) }}` | error: `cannot modulo string and []interface {}` | `1-2` |
+| `{% do items.append(1) %}` on a list passed in as render data | error: store it first with `{% set items = items\|list %}` | mutates the list |
+| `enumerate(items, start=1)` | `start` is silently ignored; use `enumerate(items, 1)` (`enumerate` does not exist in Jinja2) | `enumerate` is undefined |
+
+Printing differences:
+
+- Tuples print as lists: `{{ (1, 2) }}` prints `[1, 2]`.
+- `tojson` uses compact separators: `{"a":1}` where Jinja2 prints `{"a": 1}`.
+- `dictsort` pairs print as lists (`[a, 2]`), not tuples.
+- `pprint` output differs from Python's.
+
+Workarounds:
+
 ```html+jinja
-{{ [item for category in categories for item in category.items] }}
-{{ [(a, b) for a in list1 for b in list2] }}
-```
+{# string formatting: use the format filter #}
+{{ '%s-%s'|format(1, 2) }}      {# 1-2 #}
 
-**Error:**
-```
-parser error: unexpected 'for' in comprehension
-```
-
-**Reason:** Multiple `for` clauses in a single comprehension are not parsed correctly.
-
-**Workaround:**
-```html+jinja
-{# Use nested loops instead #}
-{% set result = [] %}
-{% for category in categories %}
-  {% for item in category.items %}
-    {% do result.append(item) %}
-  {% endfor %}
-{% endfor %}
+{# mutating a list from render data #}
+{% set numbers = numbers|list %}
+{% do numbers.append(1) %}
 ```
 
 ---
 
-## Comprehensions Limitations
+## Comprehension limitations
 
-### Summary Table
-
-| Feature | Jinja2 | Miya | Status |
-|---------|--------|------|--------|
-| `[expr for item in list]` |  |  | Works |
-| `[expr for item in list if cond]` |  |  | Works |
-| `{key: val for item in list}` |  |  | Works |
-| `{k: v for k, v in dict.items()}` |  |  | **Not Supported** |
-| `[item for list in lists for item in list]` |  |  | **Not Supported** |
-| `{k: v for item in list if cond}` |  |  | Works |
-
-### What Works
+List and dict comprehensions are a miya extension; stock Jinja2 rejects them. Inside that extension, two forms do not parse:
 
 ```html+jinja
-{#  Basic list comprehensions #}
-{{ [x * 2 for x in numbers] }}
-{{ [user.name for user in users] }}
-{{ [item|upper for item in items] }}
-
-{#  Basic dict comprehensions #}
-{{ {user.id: user.name for user in users} }}
-{{ {item.key: item.value for item in data} }}
-
-{#  With filters applied #}
-{{ [name|title for name in names] }}
-{{ [price|round(2) for price in prices] }}
+{{ {k: v for k, v in dict.items()} }}                 {# parser error: expected 'in' in dict comprehension #}
+{{ [item for cat in categories for item in cat.items] }}  {# parser error: expected ']' after list comprehension #}
 ```
 
----
+Single-variable comprehensions with an `if` clause work:
 
-## Filter Limitations
-
-###  Collection Filters with Limited Support
-
-The following filters appear to have issues when chained or used with certain data types:
-
-**Problematic Filters:**
-- `sort` - May fail with: "sort filter requires a sequence"
-- `reverse` - Limited support
-- `unique` - May not work as expected
-- `slice` - Limited support
-- `batch` - May have issues
-- `select` - Works but limited
-- `reject` - Works but limited
-- `selectattr` - Works in filter chains, not in comprehensions
-- `rejectattr` - Works in filter chains, not in comprehensions
-- `groupby` - Limited testing
-
-**Working Alternatives:**
 ```html+jinja
-{#  This may fail #}
-{{ numbers|sort|reverse }}
-
-{#  Use these instead #}
-{{ numbers|list }}  {# Just convert to list #}
-{% for num in numbers|sort %}{{ num }}{% endfor %}  {# In loops #}
+{{ [u.name for u in users if u.active] }}
+{{ {u.name: u.active for u in users} }}
 ```
 
-###  Reliably Working Filters
+Workaround for nested comprehensions:
 
-**String Filters:**
-- `upper`, `lower`, `capitalize`, `title`
-- `trim`, `replace`, `truncate`
-- `split`, `join`
-- `startswith`, `endswith`, `contains`
-- `slugify`
-
-**Numeric Filters:**
-- `abs`, `round`, `int`, `float`
-- `default`
-
-**HTML Filters:**
-- `escape`, `safe`, `striptags`
-- `urlencode`
-
-**Other:**
-- `length`, `first`, `last`
-- `default`
-- `tojson`
-
----
-
-## Macro Limitations
-
-###  `caller()` Function Not Supported
-
-**Not Supported:**
 ```html+jinja
-{% macro wrapper(title) %}
-  <div class="card">
-    <h3>{{ title }}</h3>
-    {{ caller() }}  {#  Not supported #}
-  </div>
-{% endmacro %}
-
-{% call wrapper("My Card") %}
-  <p>Card content</p>
-{% endcall %}
-```
-
-**Error:**
-```
-cannot call non-function value of type *runtime.Undefined
-```
-
-**Workaround:**
-```html+jinja
-{# Pass content as a parameter instead #}
-{% macro wrapper(title, content) %}
-  <div class="card">
-    <h3>{{ title }}</h3>
-    {{ content }}
-  </div>
-{% endmacro %}
-
-{% set my_content %}
-  <p>Card content</p>
-{% endset %}
-{{ wrapper("My Card", my_content) }}
-```
-
-###  Varargs and Kwargs Not Supported
-
-**Not Supported:**
-```html+jinja
-{% macro flexible(*args, **kwargs) %}
-  {#  Not supported #}
-{% endmacro %}
-```
-
-**Workaround:**
-```html+jinja
-{# Use explicit parameters with defaults #}
-{% macro flexible(param1="", param2="", param3="") %}
-  {#  This works #}
-{% endmacro %}
-```
-
----
-
-## Syntax Limitations
-
-###  `enumerate()` Keyword Arguments
-
-**Not Supported:**
-```html+jinja
-{% for i, item in enumerate(items, start=1) %}  {#  #}
-```
-
-**Workaround:**
-```html+jinja
-{% for i, item in enumerate(items, 1) %}  {#  Positional arg #}
-```
-
-###  Dictionary Iteration with Tuple Unpacking
-
-**Not Supported:**
-```html+jinja
-{% for key, value in dict.items() %}  {#  #}
-```
-
-**Workaround:**
-```html+jinja
-{# Iterate over keys #}
-{% for key in dict %}
-  {{ key }}: {{ dict[key] }}
-{% endfor %}
-
-{# Or use a list of objects #}
-{% for item in items %}
-  {{ item.key }}: {{ item.value }}
-{% endfor %}
-```
-
----
-
-## Workarounds and Alternatives
-
-### Pattern 1: Filtering Data
-
-**Instead of comprehensions with filters:**
-```html+jinja
-{#  Doesn't work #}
-{{ [user for user in users if user.active] }}
-
-{#  Use filter chains #}
-{{ users|selectattr("active")|list }}
-
-{#  Or use loops with conditionals #}
-{% set active_users = [] %}
-{% for user in users %}
-  {% if user.active %}
-    {% do active_users.append(user) %}
-  {% endif %}
-{% endfor %}
-```
-
-### Pattern 2: Complex Data Transformations
-
-**Instead of nested comprehensions:**
-```html+jinja
-{#  Doesn't work #}
-{{ [item for cat in categories for item in cat.items] }}
-
-{#  Use nested loops #}
 {% set all_items = [] %}
 {% for category in categories %}
-  {% for item in category.items %}
+  {% for item in category['items'] %}
     {% do all_items.append(item) %}
   {% endfor %}
 {% endfor %}
 ```
 
-### Pattern 4: Dictionary Processing
-
-**Instead of .items() unpacking:**
-```html+jinja
-{#  Doesn't work #}
-{{ {k|upper: v for k, v in dict.items()} }}
-
-{#  Create list of key-value objects first #}
-{% set kv_list = [] %}
-{% for key in dict %}
-  {% do kv_list.append({"key": key, "value": dict[key]}) %}
-{% endfor %}
-{{ {item.key|upper: item.value for item in kv_list} }}
-```
+(`{% do %}` also needs the `jinja2.ext.do` extension in stock Jinja2.)
 
 ---
 
-## Testing Your Templates
+## Migration checklist
 
-When migrating from Jinja2 to Miya, test for these patterns:
-
-### Checklist
-
-- [ ] No `.items()` unpacking in comprehensions
-- [ ] No nested comprehensions (multiple `for` clauses)
-- [ ] No `caller()` in macros
-- [ ] No varargs/kwargs in macros
-- [ ] `enumerate()` uses positional args only
-- [ ] No tuple unpacking in `{% for %}` loops
-- [ ] No multiple variable assignment with `{% set %}`
-
-### Quick Test
-
-```bash
-# Run examples to verify syntax
-cd examples/features/
-for dir in */; do
-  cd "$dir"
-  go run main.go > /dev/null 2>&1 && echo " $dir" || echo " $dir"
-  cd ..
-done
-```
+- [ ] No `self.block()` calls
+- [ ] No `{% include %}` of a template that itself uses `{% extends %}`
+- [ ] No `'...' % value` formatting; use the `format` filter
+- [ ] No `.append()` on lists passed in as render data without `{% set x = x|list %}` first
+- [ ] `enumerate()` uses positional arguments only
+- [ ] No `.items()` unpacking or multiple `for` clauses in comprehensions
+- [ ] No Go method calls on your data
+- [ ] Output that depends on the deliberate differences above (boolean and float printing, `round`, `default`, dict order) is checked
 
 ---
 
 ## See Also
 
-- [Feature Examples](https://github.com/zipreport/miya/tree/master/examples/features/) - Working examples of all supported features
+- [Feature Examples](https://github.com/zipreport/miya/tree/master/examples/features/) - Working examples of supported features
 - [JINJA2_VS_MIYA_FEATURE_MATRIX.md](JINJA2_VS_MIYA_FEATURE_MATRIX.md) - Complete compatibility matrix
 - [COMPREHENSIVE_FEATURES.md](COMPREHENSIVE_FEATURES.md) - All supported features with examples
-
----
-
-## Summary
-
-**Miya Engine provides ~95% Jinja2 compatibility** with these main limitations:
-
-1.  Comprehensions with `if` clauses
-2.  Dictionary comprehensions with `.items()`
-3.  Nested comprehensions
-4.  Inline conditionals without `else`
-5.  Macro `caller()` function
-6.  Some collection filters have limited support
-
-**Most Jinja2 templates will work with minor adjustments.** Use the examples in `examples/features/` as a reference for working syntax.
