@@ -322,12 +322,12 @@ func TestRuntimeErrorHandling(t *testing.T) {
 			errorMatch:  "undefined",
 		},
 		{
-			// Out-of-bounds array access returns undefined (empty string) in Jinja2
-			// This is intentional behavior, not an error
+			// Out-of-bounds array access is undefined, and printing a strict
+			// undefined raises in Jinja2 (StrictUndefined)
 			name:        "invalid array index",
 			template:    "{{ items[10] }}",
 			data:        map[string]interface{}{"items": []interface{}{"a", "b", "c"}},
-			expectError: false, // Returns silent undefined, not an error
+			expectError: true,
 		},
 		{
 			name:        "type mismatch in operations",

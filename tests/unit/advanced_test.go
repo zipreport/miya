@@ -115,7 +115,9 @@ func TestAdvancedFeaturesIntegration(t *testing.T) {
 		})
 		runtimeCtx := miya.NewTemplateContextAdapter(ctx, env)
 
-		// Test conditional: user.age is defined ? user.age : "Unknown age"
+		// Test conditional: user.age is defined ? user.age : "Unknown age".
+		// The key exists with a nil value, which counts as defined (as in
+		// Jinja2), so the conditional yields user.age, which is nil.
 		conditionNode := &parser.TestNode{
 			Expression: &parser.AttributeNode{
 				Object:    parser.NewIdentifierNode("user", 1, 1),
@@ -140,8 +142,8 @@ func TestAdvancedFeaturesIntegration(t *testing.T) {
 			t.Fatalf("Conditional with test expression failed: %v", err)
 		}
 
-		if result != "Unknown age" {
-			t.Errorf("Expected 'Unknown age', got %v", result)
+		if result != nil {
+			t.Errorf("Expected nil, got %v", result)
 		}
 	})
 
