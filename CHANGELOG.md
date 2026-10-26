@@ -30,11 +30,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `replace` with a safe argument on a number or boolean, and `map` with safe arguments over number and list items, keep the safe text, as in Jinja2.
 - Typed Go maps with string keys look keys up the same way through `[]`, `in` and `.get()` (`none` is `"None"`); `range`, `lipsum`, list `+`, `batch`, `slice` and `format` width/precision limit errors wrap `ErrOutputTooLarge`; `wordwrap` accepts a `{% set %}` block as its width again.
-  - `[]`, `in` and `.get()` on a map with interface keys (as YAML decoders produce) find a key that is the key itself, the same number in another numeric type (or bool 0/1), or its `DictKey` spelling (`1.0` finds `1`; `none` finds a `"None"` key), without scanning the map. A lookup that misses no longer copies or sorts the map: 100 misses on a 20 001-entry map took 2.7 s.
-  - Keys of other Go types in hand-built maps (`int8`, `int32`, `uint`, `float32`, `Markup` and named-string keys, `RoundedFloat`, pointer and array keys) are no longer found by value equality in interface-key maps.
-  - On a typed map, `in` and `.get()` look up a key that converts to the key type without scanning.
+  - `[]`, `in` and `.get()` on a map with interface keys (as YAML decoders produce) find a key that is the key itself, the same number in another numeric type (or bool 0/1), or its `DictKey` spelling (`1.0` finds `1`; `1` finds a `"1"` key; `none` finds a `"None"` key; a `Markup` key and a plain string find each other), without scanning the map. A lookup that misses no longer copies or sorts the map: 100 misses on a 20 001-entry map took 2.7 s.
+  - Keys of other Go types in hand-built interface-key maps (`int8`, `int32`, `uint`, `float32`, named-string types and `RoundedFloat`) are found only by a key of the same Go type, no longer by value equality. A named-string lookup key also finds a `Markup` key. Pointer keys are never found, because the lookup key is dereferenced.
+  - `[]`, `in`, `is in` and `.get()` on any Go map look the key up without scanning or copying the map, and agree with each other:
+    - a bool key is found by `true`/`false` or by 0/1;
+    - an array key is found by a list whose items equal its elements;
+    - any other key type (struct, pointer) is found only by a value of that type, compared with Go `==`.
+  - It used to be value equality, which changes three cases:
+    - pointer fields in struct keys are now compared by address;
+    - `map[*int]V` is no longer found by the number;
+    - a number inside an array key with interface elements must have the same Go type.
+  - On int64 and uint64 maps, a float at or beyond 2^63 (2^64 for uint64) no longer finds the largest keys. This matches Jinja2.
+  - `.get('5')` on a 20 000-entry `map[int]int` took about 23 ms per call; `.get()` on any string-key typed map copied the map; `'5' is in m` on a typed map failed the render.
+  - A `[]byte` key now finds a typed string-key map's entry through `.get()` as well. On `map[string]interface{}` it still misses everywhere.
   - Pointer keys are dereferenced in `[]`, `in`, `.get()` and dict literals (`{p: 1}` has the key `'1'`, not an address).
-  - An undefined key finds a string-key map's `""` entry in `[]`, `.get()` and `in` (Jinja2: not found).
+  - An undefined key finds the `""` entry of a string-key or interface-key map in `[]`, `.get()` and `in` (Jinja2: not found).
 - Under autoescape, safe values stay safe through `map` with a filter (`[s]|map('upper')`), `map(attribute=…, default=s)`, `default(s)`, `loop.cycle(s, …)`, `join(d=s)` and `join(…, attribute=…)`, and through `+` with a Go named string type.
 - `v|replace(old, new)` with a safe `old` or `new` escapes `v` first, as Jinja2 does.
 - A safe value repeated with `*` stays safe under autoescape.
@@ -45,7 +55,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A `none` dict key prints `None`, and a rounded number finds its integer key.
 - `RoundedFloat`'s Go fields are no longer template attributes.
 - `{{ super() }}` renders the parent block with the parent's autoescape setting.
-- `map(filter)` under autoescape runs the filter once per item; `map('0')` on list items reads the index again when autoescape is on; `map('join', s)` over a mix of lists and safe strings no longer errors.
+- `map(filter)` under autoescape runs the filter once per item; `map('0')` on list items reads the index again when autoescape is on; `map('join', s)` over a mix of lists and safe strings no longer errors with autoescape on (with autoescape off it and `map('reverse')` over such a mix still error; Jinja2 renders them). With autoescape on, `[v, s]|map('reverse')` works. For a list that mixes re-applied and other items, the other items' filter calls now run first, which can change the order of side effects and which error surfaces. A filter registered under a digit name such as `"0"` loses to the index on list items with autoescape on (Jinja2 calls the filter).
 - A macro (or `caller()`) can change a list passed to it, as in Jinja2: `{% do l.append(x) %}` inside the macro changes the caller's list. Lists passed from render data are copied, so application data is never changed.
 - Go functions that take a `runtime.Context`, and `Namespace.Get`/`GetAttr`/`All()` and `ImportedNamespace.Get`, see plain lists, never the internal box type. `RawGet` returns the raw value.
 - An attribute chain passed to a macro, a list method or a namespace lookup (`m(l.pop().a.b)`) is evaluated once.

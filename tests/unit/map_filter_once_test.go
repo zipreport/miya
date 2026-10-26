@@ -37,7 +37,8 @@ func TestMapFilterOnce(t *testing.T) {
 		})
 	}
 
-	t.Run("digit_filter_registered", func(t *testing.T) {
+	// Jinja2: [&#39;&lt;b&gt;&#39;, 2] (the filter runs)
+	t.Run("deviation_digit_filter_registered", func(t *testing.T) {
 		env := miya.NewEnvironment(miya.WithAutoEscape(true))
 		n := 0
 		env.AddFilter("0", func(v interface{}, args ...interface{}) (interface{}, error) {

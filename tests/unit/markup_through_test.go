@@ -57,9 +57,9 @@ func TestMarkupThrough(t *testing.T) {
 		{"Q9_map_rounded", `{{ [2.567|round(1)]|map('replace','.',s)|join }}`, false, "", `2<b>6`},
 		// Jinja2: Tru<b>
 		{"deviation_bool_str", `{{ true|replace('e', s) }}`, false, "", `tru<b>`},
-		// Jinja2: error: TemplateRuntimeError (No filter named '0')
 		// Jinja2: Tru<b>
 		{"deviation_map_bool", `{{ [true]|map('replace','e',s)|join }}`, false, "", `tru<b>`},
+		// Jinja2: error: TemplateRuntimeError (No filter named '0')
 		{"deviation_map_digit_on", `{{ [[v,2]]|map('0')|join }}`, false, "", `&lt;b&gt;`},
 		// Jinja2: error: TemplateRuntimeError (No filter named '0')
 		{"deviation_map_digit_off", `{{ [[v,2]]|map('0')|join }}`, true, "", `<b>`},

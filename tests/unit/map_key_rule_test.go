@@ -63,10 +63,12 @@ func TestMapKeyRule(t *testing.T) {
 		{"deviation_yam_int", `[{{ yam[1] }}|{{ yam.get(1) }}|{{ 1 in yam }}]`, `[one|one|true]`},
 		{"ptr_key", `{{ ms[p] }}|{{ p in ms }}`, `one|true`},
 		{"ptr_get", `[{{ ms[p] }}|{{ ms.get(p) }}|{{ p in ms }}]`, `[one|one|true]`},
-		{"bytes_key", `{{ ms[bs] }}`, `one`},
+		// Jinja2:
+		{"deviation_bytes_key", `{{ ms[bs] }}`, `one`},
 		{"mixed_num", `{{ ifm[1.0] }}|{{ ifm.get(1.0) }}|{{ 1.0 in ifm }}`, `one|one|true`},
 		{"mixed_miss", `[{{ ifm[2] }}|{{ ifm.get(2) }}|{{ 2 in ifm }}]`, `[||false]`},
-		{"slice_key", `[{{ ifm[[1]] }}|{{ ifm.get([1]) }}|{{ [1] in ifm }}]`, `[||false]`},
+		// Jinja2: error: TypeError (cannot use 'list' as a dict key (unhashable type: 'list'))
+		{"deviation_slice_key", `[{{ ifm[[1]] }}|{{ ifm.get([1]) }}|{{ [1] in ifm }}]`, `[||false]`},
 		{"ptr_dict_literal", `{{ {p: 1}|list }}`, `[&#39;1&#39;]`},
 		{"bool_int_key", `{{ ifm1[true] }}|{{ ift[1] }}`, `one|T`},
 		{"markup_key", `[{{ hm[mk] }}|{{ hm.get(mk) }}|{{ mk in hm }}|{{ mk is in hm }}|{{ hm['k'] }}|{{ hm.get('k') }}|{{ 'k' in hm }}|{{ 'k' is in hm }}]`, `[MK|MK|true|true|MK|MK|true|true]`},
