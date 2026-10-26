@@ -206,6 +206,8 @@ func TestMarkupAutoescapeBlocks(t *testing.T) {
 	tests := []struct{ name, src, want string }{
 		{"for_in_block", `{% autoescape true %}{% for i in [1] %}{{ u }}{% endfor %}{% endautoescape %}`, "&lt;s&gt;"},
 		{"filter_in_block", `{% autoescape true %}{{ u|upper }}{% endautoescape %}`, "&lt;S&gt;"},
+		// urlencode is not a built-in fallback filter: it needs the environment behind the block
+		{"env_filter_in_block", `{% autoescape true %}{{ u|urlencode }}{% endautoescape %}`, "%3Cs%3E"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
