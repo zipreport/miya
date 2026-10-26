@@ -13,11 +13,11 @@ A high-performance Jinja2-compatible template engine for Go.
 - **Jinja2 Compatibility**: Parse and render Jinja2 templates with familiar syntax
 - **High Performance**: Optimized for speed with template compilation and caching
 - **Bounded caching**: templates are cached by the environment; `Release()` drops a one-off template from the cache
-- **Template Inheritance**: Full support for extends, blocks, and includes
+- **Template Inheritance**: extends, blocks, `super()` and includes (see the limitations page for the known gaps)
 - **Rich Filter System**: Built-in filters plus support for custom filters
 - **Flexible Loading**: Load templates from filesystem, memory, or embedded resources
 - **Security**: Auto-escaping enabled by default to prevent XSS
-- **Thread Safe**: Safe for concurrent use in web applications
+- **Concurrency**: An `Environment` is safe for concurrent use; configure it (`SetConfig`, `SetLoader`, loader templates) before rendering starts.
 - **Developer Friendly**: Clear error messages with line numbers and debugging support
 
 ## Installation
@@ -103,12 +103,12 @@ func main() {
 
 | Feature | Miya | Other Go Template Engines |
 |---------|------|---------------------------|
-| Jinja2 Syntax | Full compatibility | Partial or none |
+| Jinja2 Syntax | Most common syntax; see the compatibility page | Partial or none |
 | Template Inheritance | Full support | Limited |
 | Filters | 70+ built-in | Varies |
 | List Comprehensions | Supported | Rare |
-| Thread Safety | Yes | Varies |
-| Performance | Optimized with pooling | Varies |
+| Thread Safety | An `Environment` is safe for concurrent use; configure it (`SetConfig`, `SetLoader`, loader templates) before rendering starts. | Varies |
+| Performance | Compiled templates, cached | Varies |
 
 ## License
 
