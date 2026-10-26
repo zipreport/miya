@@ -24,6 +24,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- A macro (or `caller()`) can change a list passed to it, as in Jinja2: `{% do l.append(x) %}` inside the macro changes the caller's list. Lists passed from render data are copied, so application data is never changed.
+- Go functions that take a `runtime.Context`, and `Namespace.Get`/`GetAttr`/`All()` and `ImportedNamespace.Get`, see plain lists, never the internal box type. `RawGet` returns the raw value.
+- An attribute chain passed to a macro, a list method or a namespace lookup (`m(l.pop().a.b)`) is evaluated once.
+
 - An imported template now runs its whole top-level body, as Jinja2 does:
   - tuple and attribute `{% set %}`, `{% do %}` and `for` loops take effect;
   - only the taken `{% if %}` branch runs;
@@ -123,6 +127,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Extension tags inside a macro that evaluate with `CreateEvaluateFunc`'s raw context now see the internal box for list parameters (they saw a plain slice before); unbox with `runtime.Unbox`. Lists passed through the deprecated `env.CallMacro` path (`macros/macros.go:92-133`) still cannot be appended to.
+- The list model is now documented: see "Lists" in `docs/DO_STATEMENTS_IMPLEMENTATION.md`.
 - `time.Duration` and other named integers are numbers in `int`, `float`, `sum` and `round` (a duration gives nanoseconds instead of 0).
 - `%c` in a safe format string (`'%c'|safe|format(60)`) is now an error, as in Jinja2; it used to turn a number from data into a raw `<`.
 - `format`, `truncate` and `wordwrap` receive their input and arguments unchanged under autoescape and mix safe and plain text themselves. Go callers of `FormatFilter`, `TruncateFilter` and `WordwrapFilter` that pass `runtime.Markup` get `runtime.Markup` back (`truncate` with a safe `end` escapes the plain text). Under autoescape off or outside the HTML family they are unchanged. A safe input with a plain wrapstring that is not whitespace (`wordwrap(5, false, ' onerror=x ')`) now gives a plain string, escaped when printed, as in Jinja2; a whitespace-only wrapstring such as `'\n'`, or none, keeps the safe result (Jinja2 returns plain there). `{% filter wordwrap(…, '<br>') %}` now escapes its whole body (Jinja2 prints it raw).

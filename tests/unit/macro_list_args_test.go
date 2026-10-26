@@ -17,6 +17,7 @@ func TestMacroListArgs(t *testing.T) {
 		// fixed: a macro changes a list it is given
 		{"macro_arg", `{% macro m(l) %}{% do l.append(3) %}{% endmacro %}{% set a=[1] %}{{ m(a) }}{{ a }}`, `[1, 3]`},
 		{"macro_kwarg", `{% macro m(l) %}{% do l.append(3) %}{% endmacro %}{% set a=[1] %}{{ m(l=a) }}{{ a }}`, `[1, 3]`},
+		{"macro_kwarg_literal", `{% macro m(l) %}{% do l.append(3) %}{{ l }}{% endmacro %}{{ m(l=[1]) }}`, `[1, 3]`},
 		{"macro_ns_arg", `{% macro m(l) %}{% do l.append(3) %}{% endmacro %}{% set ns=namespace(l=[1]) %}{{ m(ns.l) }}{{ ns.l }}`, `[1, 3]`},
 		{"macro_default_local", `{% macro m(l=[]) %}{% do l.append(3) %}{{ l }}{% endmacro %}{{ m() }}{{ m() }}`, `[3][3]`},
 		{"macro_literal_arg", `{% macro m(l) %}{% do l.append(3) %}{{ l }}{% endmacro %}{{ m([1]) }}`, `[1, 3]`},
