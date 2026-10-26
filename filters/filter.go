@@ -310,7 +310,7 @@ func ToString(value interface{}) string {
 	case fmt.Stringer:
 		return v.String()
 	default:
-		return fmt.Sprintf("%v", value)
+		return runtime.ToString(value)
 	}
 }
 

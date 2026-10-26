@@ -13,6 +13,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `runtime.InheritanceProcessor.ResolveInheritanceWith`, which takes the evaluator for dynamic `{% extends %}`.
 - `runtime.CompareNumbers`, `runtime.Equal`, `runtime.GroupTuple`, `filters.TestLookup` and `(*filters.FilterRegistry).SetTestLookup`.
 - `runtime.Markup`, `runtime.AsMarkup`, `runtime.Unmark`, `runtime.EscapeMarkup`, `runtime.KeepMarkupFunc` and `runtime.KwArgs` (`filters.KwArgs` is now an alias of it). Go code that type-asserted `filters.SafeValue` on a `|safe` result should use `runtime.AsMarkup`.
+- String methods `upper`, `lower`, `strip`, `lstrip`, `rstrip`, `split`, `replace`, `startswith`, `endswith`, `format`, `title`, `capitalize`, `join`, `count`, `find`. `str.format` supports `{0[key]}`, `{0.attr}`, `!r` and `!s`. On a safe (`Markup`) string they return `Markup` and `format`, `replace` and `join` escape the arguments that are not safe.
+- `d.get(key, default)`, and `get`/`items`/`keys`/`values` on string-to-string maps.
+- List methods `index` and `count`, plus `append`, `extend` and `pop` on lists stored with `{% set %}`, `{% with %}` or in a `namespace()` (`{% do ns.items.append(x) %}`). The mutating methods copy the list on the first write and never change the application's data. On any other list they fail with a hint to store it first (`{% set items = items|list %}`).
+- `'ab' * 3` and `[1] * 2` repeat.
 
 ### Fixed
 
@@ -78,6 +82,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `include` accepts Jinja2's `ignore missing` before `with context`/`without context`; `without context` hides the render's variables.
 - Deeply nested `not`/`-` chains return `template nesting too deep` instead of crashing.
 - Long flat chains (`1 + 1 + ...`, `a or b or ...`, `~`, `**`, `x|f|f|...`, `a.b.b...`) count towards the 500-level parse limit and return `template nesting too deep` instead of overflowing the stack when the template is rendered.
+- Printing a self-referencing list or dict prints `[...]` instead of crashing the process. Printing one container is capped at 64 MiB.
 
 ### Changed
 
@@ -159,6 +164,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** `is` applies to the operand right before it: `x + 1 is divisibleby(3)` is `x + (1 is divisibleby(3))` and `a == 1 is sameas(true)` is `a == (1 is sameas(true))`. Write `(x + 1) is divisibleby(3)`.
 - **Breaking (extensions):** `ParserAdapter.ParseArguments` uses the new expression grammar: adjacent string arguments join (`{% tag "a" "b" %}` gets one argument, `"ab"`), and keywords such as `as` are names.
 - To find affected templates: `grep -nE '~[^}%]*[-+]|[-+][^}%]*~' -r templates/` (`~` mixed with `+`/`-`) and `grep -nE '[-+*/%<>=][^}%]* is ' -r templates/` (`is` after an operator).
+- **Breaking:** lists and dicts print like Python: `['a', 'b']`, `{'k': 1}`, with `True`/`False`/`None` inside them (top-level `true`/`false`/empty are unchanged). Dicts print in sorted key order. Under autoescape the printed form is HTML-escaped, as in Jinja2.
+- **Breaking:** values with an `Error()` or `String()` method print through it inside lists and dicts too, and a `[]byte` inside a list prints as a quoted string.
+- **Breaking:** `*` with a string literal repeats it, as in Python, even when it looks like a number: `'0' * 3` is `000` and `'3' * 2` is `33` (it used to be `6`). A numeric string from data still multiplies as a number.
+- `d.items()` returns a list of `[key, value]` pairs (in sorted key order), so `|list`, `|length` and printing work.
 
 ### Deprecated
 

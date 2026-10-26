@@ -412,7 +412,7 @@ func (e *DefaultEvaluator) EvalIdentifierNode(node *parser.IdentifierNode, ctx C
 		// Fallback to original behavior
 		return nil, NewUndefinedVariableError(node.Name, node)
 	}
-	return value, nil
+	return Unbox(value), nil
 }
 
 func (e *DefaultEvaluator) EvalLiteralNode(node *parser.LiteralNode, ctx Context) (interface{}, error) {
@@ -448,6 +448,14 @@ func (e *DefaultEvaluator) EvalDictNode(node *parser.DictNode, ctx Context) (int
 }
 
 func (e *DefaultEvaluator) EvalAttributeNode(node *parser.AttributeNode, ctx Context) (interface{}, error) {
+	if isListMethodName(node.Attribute) {
+		if raw, ok := e.rawOperand(node.Object, ctx); ok {
+			if b, ok := raw.(*listBox); ok {
+				return b.method(e, node.Attribute), nil
+			}
+		}
+	}
+
 	obj, err := e.EvalNode(node.Object, ctx)
 	if err != nil {
 		return nil, err
@@ -456,6 +464,10 @@ func (e *DefaultEvaluator) EvalAttributeNode(node *parser.AttributeNode, ctx Con
 	// Handle undefined values with chained access
 	if undefined, ok := obj.(*Undefined); ok && e.undefinedHandler != nil {
 		return e.undefinedHandler.HandleAttributeAccess(undefined, node.Attribute, node)
+	}
+
+	if m, ok := e.builtinMethodFor(obj, node.Attribute); ok {
+		return m, nil
 	}
 
 	if usesReflectLookup(obj) {
@@ -939,7 +951,7 @@ func (e *DefaultEvaluator) EvalSetNode(node *parser.SetNode, ctx Context) (inter
 
 	if len(node.Targets) == 1 {
 		// Single assignment - could be simple variable or attribute
-		return e.assignToTarget(node.Targets[0], value, ctx)
+		return e.assignToTarget(node.Targets[0], value, node.Value, ctx)
 	} else {
 		// Multiple assignment - unpack the value
 		items, err := e.makeIterable(value)
@@ -953,7 +965,7 @@ func (e *DefaultEvaluator) EvalSetNode(node *parser.SetNode, ctx Context) (inter
 
 		// Assign each value to its corresponding target
 		for i, target := range node.Targets {
-			if _, err := e.assignToTarget(target, items[i], ctx); err != nil {
+			if _, err := e.assignToTarget(target, items[i], nil, ctx); err != nil {
 				return nil, err
 			}
 		}
@@ -963,11 +975,11 @@ func (e *DefaultEvaluator) EvalSetNode(node *parser.SetNode, ctx Context) (inter
 }
 
 // assignToTarget assigns a value to a target expression (identifier, attribute, or subscript)
-func (e *DefaultEvaluator) assignToTarget(target parser.ExpressionNode, value interface{}, ctx Context) (interface{}, error) {
+func (e *DefaultEvaluator) assignToTarget(target parser.ExpressionNode, value interface{}, valueExpr parser.ExpressionNode, ctx Context) (interface{}, error) {
 	switch t := target.(type) {
 	case *parser.IdentifierNode:
 		// Simple variable assignment
-		ctx.SetVariable(t.Name, value)
+		ctx.SetVariable(t.Name, e.bindValue(valueExpr, value, ctx))
 		return "", nil
 
 	case *parser.AttributeNode:
@@ -975,6 +987,9 @@ func (e *DefaultEvaluator) assignToTarget(target parser.ExpressionNode, value in
 		obj, err := e.EvalNode(t.Object, ctx)
 		if err != nil {
 			return nil, err
+		}
+		if _, ok := obj.(assignableNamespace); ok {
+			value = e.bindValue(valueExpr, value, ctx)
 		}
 		return nil, e.setAttribute(obj, t.Attribute, value)
 
@@ -1473,6 +1488,9 @@ func (e *DefaultEvaluator) attributeExists(obj interface{}, attr string) bool {
 	if obj == nil {
 		return false
 	}
+	if _, ok := e.builtinMethodFor(obj, attr); ok {
+		return true
+	}
 
 	switch v := obj.(type) {
 	case NamespaceInterface:
@@ -1495,10 +1513,12 @@ func (e *DefaultEvaluator) attributeExists(obj interface{}, attr string) bool {
 			return true
 		}
 		// If key doesn't exist, check for special dictionary methods
-		return attr == "items" || attr == "keys" || attr == "values"
+		return isDictMethodName(attr)
 	case map[string]string:
-		_, ok := v[attr]
-		return ok
+		if _, ok := v[attr]; ok {
+			return true
+		}
+		return isDictMethodName(attr)
 	case GroupTuple:
 		return attr == "grouper" || attr == "list"
 	default:
@@ -1562,6 +1582,9 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 	if obj == nil {
 		return nil
 	}
+	if m, ok := e.builtinMethodFor(obj, attr); ok {
+		return m
+	}
 
 	switch v := obj.(type) {
 	case NamespaceInterface:
@@ -1569,7 +1592,7 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 		if !ok {
 			return nil
 		}
-		return val
+		return Unbox(val)
 	case *Cycler:
 		// Handle Cycler methods
 		switch attr {
@@ -1607,10 +1630,17 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 		}
 		// If key doesn't exist, check for special dictionary methods
 		switch attr {
+		case "get":
+			return mapGetMethod(v)
 		case "items":
-			// Return a callable function that returns DictItems (Python-style behavior)
+			// Return a callable function that returns the [key, value] pairs
 			return func(args ...interface{}) (interface{}, error) {
-				return &DictItems{data: v}, nil
+				sorted := sortedKeys(v)
+				pairs := make([]interface{}, 0, len(sorted))
+				for _, k := range sorted {
+					pairs = append(pairs, []interface{}{k, v[k]})
+				}
+				return pairs, nil
 			}
 		case "keys":
 			// Return a callable function that returns the keys
@@ -1635,7 +1665,13 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 			return nil
 		}
 	case map[string]string:
-		return v[attr]
+		if val, ok := v[attr]; ok {
+			return val
+		}
+		if isDictMethodName(attr) {
+			return e.getAttribute(stringMap(v), attr)
+		}
+		return ""
 	case GroupTuple:
 		switch attr {
 		case "grouper":
@@ -1959,6 +1995,8 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 		return r, nil
 	case *Macro:
 		return fn.Call(args, kwargs)
+	case *builtinMethod:
+		return fn.fn(args, kwargs)
 	case *Undefined:
 		if fn.Hint != "" {
 			return nil, fmt.Errorf("cannot call undefined %s: %s", fn.Name, fn.Hint)
@@ -2573,6 +2611,23 @@ func (e *DefaultEvaluator) subtractWithNode(a, b interface{}, node parser.Node) 
 }
 
 func (e *DefaultEvaluator) multiplyWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
+	// A string literal operand repeats even when it looks like a number
+	if op, ok := node.(*parser.BinaryOpNode); ok {
+		isStrLit := func(n parser.ExpressionNode) bool {
+			lit, ok := n.(*parser.LiteralNode)
+			if !ok {
+				return false
+			}
+			_, isStr := lit.Value.(string)
+			return isStr
+		}
+		if isStrLit(op.Left) {
+			return repeatValue(a, b)
+		}
+		if isStrLit(op.Right) {
+			return repeatValue(b, a)
+		}
+	}
 	return e.multiply(a, b)
 }
 
@@ -2660,6 +2715,9 @@ func (e *DefaultEvaluator) multiply(a, b interface{}) (interface{}, error) {
 	bFloat, bErr := e.toFloat(b)
 	if aErr == nil && bErr == nil {
 		return aFloat * bFloat, nil
+	}
+	if seq, count, ok := sequenceOperands(a, b); ok {
+		return repeatValue(seq, count)
 	}
 	return nil, fmt.Errorf("cannot multiply %T and %T", a, b)
 }
@@ -3489,7 +3547,7 @@ func (e *DefaultEvaluator) EvalWithNode(node *parser.WithNode, ctx Context) (int
 		if err != nil {
 			return nil, fmt.Errorf("error evaluating with assignment %s: %w", varName, err)
 		}
-		withCtx.SetVariable(varName, value)
+		withCtx.SetVariable(varName, e.bindValue(expr, value, withCtx))
 	}
 
 	// Evaluate the body with the new context

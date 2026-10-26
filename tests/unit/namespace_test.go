@@ -121,7 +121,7 @@ func TestDictFunction(t *testing.T) {
 		{
 			name:     "EmptyDict",
 			template: `{% set d = dict() %}{{ d }}`,
-			expected: "map[]",
+			expected: "{}",
 		},
 		{
 			name:     "DictWithKwargs",
@@ -181,7 +181,7 @@ Count: {{ ns.count }}, Items: {{ ns.items }}
 		t.Fatalf("Failed to render template: %v", err)
 	}
 
-	expected := "Count: 3, Items: [1 2]"
+	expected := "Count: 3, Items: [1, 2]"
 	if result != expected {
 		t.Errorf("Expected '%s', got '%s'", expected, result)
 	}

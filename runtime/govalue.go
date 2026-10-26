@@ -263,9 +263,9 @@ func sortedMapPairs(rv reflect.Value) []interface{} {
 }
 
 // isDictMethodName reports whether attr names a dict method that the
-// map[string]interface{} case of getAttribute provides (items, keys, values).
+// map[string]interface{} case of getAttribute provides (get, items, keys, values).
 func isDictMethodName(attr string) bool {
-	return attr == "items" || attr == "keys" || attr == "values"
+	return attr == "get" || attr == "items" || attr == "keys" || attr == "values"
 }
 
 // usesReflectLookup reports whether attribute access on obj goes through

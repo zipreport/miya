@@ -1,0 +1,348 @@
+package runtime
+
+import (
+	"fmt"
+	"math"
+	"reflect"
+	"strconv"
+	"strings"
+	"unsafe"
+)
+
+// maxReprBytes bounds the printed form of one container (same bound as the
+// filters' maxRepeatBytes, plan 030); output past it ends in "...".
+const maxReprBytes = 64 << 20
+
+// reprKey identifies a slice (data pointer and length) or map (pointer, n 0)
+// on the current repr path.
+type reprKey struct {
+	ptr uintptr
+	n   int
+}
+
+// reprState carries the containers on the current path (to print [...] for
+// self-reference, like Python) and the bytes written so far.
+type reprState struct {
+	stack []reprKey        // containers on the current path
+	set   map[reprKey]bool // the same, once the path is deep
+	b     []byte
+	full  bool
+}
+
+// reprContainer prints a slice, array or map the way Python's repr does
+// (Decisions 1-3 and 2a-2b in plan 048); ok is false for any other value.
+func reprContainer(v interface{}) (string, bool) {
+	v = Indirect(v)
+	if v == nil {
+		return "", false
+	}
+	switch reflect.ValueOf(v).Kind() {
+	case reflect.Slice, reflect.Array, reflect.Map:
+	default:
+		return "", false
+	}
+	s := &reprState{}
+	s.repr(v)
+	return string(s.b), true
+}
+
+// reprOf is Python's repr of a template value: strings are quoted, containers
+// print their elements with repr.
+func reprOf(v interface{}) string {
+	s := &reprState{}
+	s.repr(v)
+	return string(s.b)
+}
+
+// write appends str unless it would pass the size bound, in which case it
+// ends the output with "...".
+func (s *reprState) write(str string) {
+	if s.full {
+		return
+	}
+	if len(s.b)+len(str) > maxReprBytes {
+		s.b = append(s.b, "..."...)
+		s.full = true
+		return
+	}
+	s.b = append(s.b, str...)
+}
+
+func reprQuote(str string) string {
+	q := byte('\'')
+	if strings.Contains(str, "'") && !strings.Contains(str, `"`) {
+		q = '"'
+	}
+	var b strings.Builder
+	b.Grow(len(str) + 2)
+	b.WriteByte(q)
+	for _, r := range str {
+		switch {
+		case r == '\\':
+			b.WriteString(`\\`)
+		case r == rune(q):
+			b.WriteByte('\\')
+			b.WriteByte(q)
+		case r == '\n':
+			b.WriteString(`\n`)
+		case r == '\r':
+			b.WriteString(`\r`)
+		case r == '\t':
+			b.WriteString(`\t`)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte(q)
+	return b.String()
+}
+
+// repr writes one element inside a container.
+func (s *reprState) repr(v interface{}) {
+	if s.full {
+		return
+	}
+	switch x := v.(type) {
+	case int:
+		if len(s.b) > maxReprBytes-24 {
+			s.write(strconv.Itoa(x))
+			return
+		}
+		s.b = strconv.AppendInt(s.b, int64(x), 10)
+		return
+	case string:
+		s.write(reprQuote(x))
+		return
+	case []interface{}:
+		s.reprItems(x)
+		return
+	}
+	v = Unbox(v)
+	switch sv := v.(type) {
+	case SafeValue:
+		s.repr(sv.Value)
+		return
+	case *SafeValue:
+		if sv != nil {
+			s.repr(sv.Value)
+			return
+		}
+	case Markup:
+		s.write(reprQuote(string(sv)))
+		return
+	}
+	v = Indirect(v)
+	if v == nil {
+		s.write("None")
+		return
+	}
+	if b, ok := v.([]byte); ok {
+		s.write(reprQuote(string(b)))
+		return
+	}
+	if e, ok := v.(error); ok {
+		s.write(e.Error())
+		return
+	}
+	if st, ok := v.(fmt.Stringer); ok {
+		s.write(st.String())
+		return
+	}
+	switch bv := basicValue(v).(type) {
+	case bool:
+		if bv {
+			s.write("True")
+		} else {
+			s.write("False")
+		}
+		return
+	case string:
+		s.write(reprQuote(bv))
+		return
+	}
+
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		s.write(strconv.FormatInt(rv.Int(), 10))
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		s.write(strconv.FormatUint(rv.Uint(), 10))
+	case reflect.Float32, reflect.Float64:
+		f := rv.Float()
+		switch {
+		case math.IsInf(f, 1):
+			s.write("inf")
+		case math.IsInf(f, -1):
+			s.write("-inf")
+		case math.IsNaN(f):
+			s.write("nan")
+		default:
+			bits := 64
+			if rv.Kind() == reflect.Float32 {
+				bits = 32
+			}
+			s.write(FormatFloat(f, bits))
+		}
+	case reflect.Slice, reflect.Array:
+		s.reprSeq(rv)
+	case reflect.Map:
+		s.reprMap(rv, v)
+	default:
+		s.write(ToString(v))
+	}
+}
+
+// maxLinearPath is the path depth up to which a self-reference is found by
+// scanning the path instead of a map lookup.
+const maxLinearPath = 16
+
+func (s *reprState) enter(key reprKey) (tracked, cyclic bool) {
+	if key.ptr == 0 {
+		return false, false
+	}
+	if s.set != nil {
+		if s.set[key] {
+			return false, true
+		}
+	} else {
+		for _, k := range s.stack {
+			if k == key {
+				return false, true
+			}
+		}
+	}
+	s.stack = append(s.stack, key)
+	if s.set != nil {
+		s.set[key] = true
+	} else if len(s.stack) > maxLinearPath {
+		s.set = make(map[reprKey]bool, 2*maxLinearPath)
+		for _, k := range s.stack {
+			s.set[k] = true
+		}
+	}
+	return true, false
+}
+
+func (s *reprState) leave(key reprKey) {
+	s.stack = s.stack[:len(s.stack)-1]
+	if s.set != nil {
+		delete(s.set, key)
+	}
+}
+
+// reprItems prints a []interface{}. The list joins the path only when it
+// holds something that could contain it again, so lists of plain values (the
+// bulk of any large structure) cost no path bookkeeping.
+func (s *reprState) reprItems(items []interface{}) {
+	start := len(s.b)
+	if len(s.b) < maxReprBytes-1 {
+		s.b = append(s.b, '[')
+	} else {
+		s.write("[")
+	}
+	var key reprKey
+	tracked := false
+	for i, it := range items {
+		if s.full {
+			break
+		}
+		if !tracked {
+			switch it.(type) {
+			case nil, int, string, bool, float64:
+			default:
+				if len(items) > 0 {
+					key = reprKey{uintptr(unsafe.Pointer(unsafe.SliceData(items))), len(items)}
+					var cyclic bool
+					tracked, cyclic = s.enter(key)
+					if cyclic {
+						s.b = s.b[:start]
+						s.write("[...]")
+						return
+					}
+				}
+			}
+		}
+		if i > 0 {
+			if len(s.b) > maxReprBytes-2 {
+				s.write(", ")
+				break
+			}
+			s.b = append(s.b, ',', ' ')
+		}
+		if n, ok := it.(int); ok && len(s.b) <= maxReprBytes-24 {
+			s.b = strconv.AppendInt(s.b, int64(n), 10)
+			continue
+		}
+		s.repr(it)
+	}
+	s.write("]")
+	if tracked {
+		s.leave(key)
+	}
+}
+
+func (s *reprState) reprSeq(rv reflect.Value) {
+	var key reprKey
+	if rv.Kind() == reflect.Slice && rv.Len() > 0 {
+		key = reprKey{rv.Pointer(), rv.Len()}
+	}
+	tracked, cyclic := s.enter(key)
+	if cyclic {
+		s.write("[...]")
+		return
+	}
+	s.write("[")
+	for i := 0; i < rv.Len() && !s.full; i++ {
+		if i > 0 {
+			s.write(", ")
+		}
+		s.repr(rv.Index(i).Interface())
+	}
+	s.write("]")
+	if tracked {
+		s.leave(key)
+	}
+}
+
+func (s *reprState) reprMap(rv reflect.Value, v interface{}) {
+	var key reprKey
+	if rv.Len() > 0 {
+		key = reprKey{ptr: rv.Pointer()}
+	}
+	tracked, cyclic := s.enter(key)
+	if cyclic {
+		s.write("{...}")
+		return
+	}
+	s.write("{")
+	if m, ok := StringKeyMap(v); ok {
+		for i, k := range sortedKeys(m) {
+			if s.full {
+				break
+			}
+			if i > 0 {
+				s.write(", ")
+			}
+			s.write(reprQuote(k))
+			s.write(": ")
+			s.repr(m[k])
+		}
+	} else {
+		for i, p := range sortedMapPairs(rv) {
+			if s.full {
+				break
+			}
+			if i > 0 {
+				s.write(", ")
+			}
+			kv := p.([]interface{})
+			s.repr(kv[0])
+			s.write(": ")
+			s.repr(kv[1])
+		}
+	}
+	s.write("}")
+	if tracked {
+		s.leave(key)
+	}
+}

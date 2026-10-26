@@ -239,12 +239,18 @@ func ToString(value interface{}) string {
 		return ToString(sv.Value)
 	}
 
-	value = Indirect(value)
+	value = Unbox(Indirect(value))
 	if value == nil {
 		return ""
 	}
 	if str, ok := value.(string); ok {
 		return str
+	}
+	if e, ok := value.(error); ok {
+		return e.Error()
+	}
+	if st, ok := value.(fmt.Stringer); ok {
+		return st.String()
 	}
 
 	switch v := value.(type) {
@@ -254,6 +260,9 @@ func ToString(value interface{}) string {
 		return FormatFloat(float64(v), 32)
 	}
 
+	if s, ok := reprContainer(value); ok {
+		return s
+	}
 	return fmt.Sprintf("%v", value)
 }
 

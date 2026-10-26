@@ -34,7 +34,7 @@ func TestAutoescapeOutput(t *testing.T) {
 		{name: "named_string", tmpl: `{{ v }}`, data: data{"v": namedString(u)}, want: esc},
 		{name: "error_value", tmpl: `{{ v }}`, data: data{"v": errors.New(u)}, want: esc},
 		{name: "stringer", tmpl: `{{ v }}`, data: data{"v": stringer{u}}, want: esc},
-		{name: "list", tmpl: `{{ v }}`, data: data{"v": []interface{}{u}}, want: "[" + esc + "]"},
+		{name: "list", tmpl: `{{ v }}`, data: data{"v": []interface{}{u}}, want: "[&#34;" + esc + "&#34;]"},
 		{name: "map", tmpl: `{{ v }}`, data: data{"v": map[string]interface{}{"k": u}}, check: true, contains: []string{esc}, notContains: []string{"<script>"}},
 		{name: "number_bool", tmpl: `{{ n }}{{ b }}`, data: data{"n": 3.5, "b": true}, want: "3.5true"},
 		{name: "string_unchanged", tmpl: `{{ v }}`, data: data{"v": u}, want: esc},

@@ -9,16 +9,6 @@
   "plan": "054",
   "reason": "want \"see <a href=\\\"http://a.com/&lt;b&gt;\\\" rel=\\\"noopener\\\">http://a.com/&lt;b&gt;</a> now\", got \"see <a href=\\\"http://a.com/\\\">http://a.com/</a>&lt;b&gt; now\""
  },
- "esc-008": {
-  "kind": "output",
-  "plan": "048",
-  "reason": "want \"[&#39;&lt;&#39;]\", got \"[&lt;]\""
- },
- "esc-009": {
-  "kind": "output",
-  "plan": "048",
-  "reason": "want \"[&#39;&lt;i&gt;&#39;]\", got \"[&lt;i&gt;]\""
- },
  "esc-016": {
   "kind": "output",
   "plan": "054",
@@ -104,11 +94,6 @@
   "plan": "050",
   "reason": "want \"                                       x                                        |\", got render-time error: center filter requires width argument"
  },
- "fsem-026": {
-  "kind": "output",
-  "plan": "048",
-  "reason": "want \"[1, 2]\", got \"[1 2]\""
- },
  "fsem-028": {
   "kind": "output",
   "plan": "deviation",
@@ -134,30 +119,10 @@
   "plan": "unplanned",
   "reason": "want \"T|T\", got render-time error: cannot call non-function value of type *runtime.Undefined"
  },
- "nopanic-002": {
-  "kind": "output",
-  "plan": "048",
-  "reason": "want \"[[1, 2], [3]]\", got \"[[1 2] [3]]\""
- },
  "parse-015": {
   "kind": "error",
   "plan": "unplanned",
   "reason": "want \"1-2\", got render-time error: cannot modulo string and []interface {}"
- },
- "parse-025": {
-  "kind": "error",
-  "plan": "048",
-  "reason": "want \"ABC\", got render-time error: cannot call non-function value of type *runtime.Undefined"
- },
- "parse-026": {
-  "kind": "error",
-  "plan": "048",
-  "reason": "want \"1\", got render-time error: cannot call non-function value of type *runtime.Undefined"
- },
- "parse-027": {
-  "kind": "error",
-  "plan": "048",
-  "reason": "want \"aaa\", got render-time error: cannot multiply string and int"
  },
  "undef-001": {
   "kind": "error",

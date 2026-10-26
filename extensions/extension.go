@@ -658,7 +658,8 @@ type extensionContextAdapter struct {
 }
 
 func (eca *extensionContextAdapter) GetVariable(name string) (interface{}, bool) {
-	return eca.ctx.GetVariable(name)
+	v, ok := eca.ctx.GetVariable(name)
+	return runtime.Unbox(v), ok
 }
 
 func (eca *extensionContextAdapter) SetVariable(name string, value interface{}) {
@@ -672,7 +673,7 @@ func (eca *extensionContextAdapter) GetGlobal(name string) (interface{}, bool) {
 	}); ok {
 		return envCtx.GetGlobal(name)
 	}
-	return eca.ctx.GetVariable(name) // Fallback to regular variable lookup
+	return eca.GetVariable(name) // Fallback to regular variable lookup
 }
 
 func (eca *extensionContextAdapter) ApplyFilter(name string, value interface{}, args ...interface{}) (interface{}, error) {

@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 	"testing"
+	"time"
 
 	miya "github.com/zipreport/miya"
 	"github.com/zipreport/miya/runtime"
@@ -300,12 +301,28 @@ func TestPythonReprCycle(t *testing.T) {
 		}
 	})
 	t.Run("doubling_budget", func(t *testing.T) {
-		out, err := render(t, `{% set ns = namespace(l=[1]) %}{% for i in range(40) %}{% set ns.l = [ns.l, ns.l] %}{% endfor %}{{ ns.l }}`, nil)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+		// printing 64 MiB takes seconds under the race detector, so this
+		// subtest has a longer limit than renderGo's 5 seconds
+		type res struct {
+			out string
+			err error
 		}
-		if len(out) > 64<<20+3 || !strings.HasSuffix(out, "...") {
-			t.Fatalf("len=%d, suffix=%q", len(out), out[len(out)-min(10, len(out)):])
+		done := make(chan res, 1)
+		go func() {
+			env := miya.NewEnvironment(miya.WithAutoEscape(false))
+			out, err := env.RenderString(`{% set ns = namespace(l=[1]) %}{% for i in range(40) %}{% set ns.l = [ns.l, ns.l] %}{% endfor %}{{ ns.l }}`, miya.NewContext())
+			done <- res{out, err}
+		}()
+		select {
+		case r := <-done:
+			if r.err != nil {
+				t.Fatalf("unexpected error: %v", r.err)
+			}
+			if len(r.out) > 64<<20+3 || !strings.HasSuffix(r.out, "...") {
+				t.Fatalf("len=%d, suffix=%q", len(r.out), r.out[max(0, len(r.out)-10):])
+			}
+		case <-time.After(60 * time.Second):
+			t.Fatalf("timed out")
 		}
 	})
 }

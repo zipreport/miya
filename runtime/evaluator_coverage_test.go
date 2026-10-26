@@ -122,8 +122,12 @@ func TestGetAttribute(t *testing.T) {
 		if err != nil {
 			t.Errorf("items() returned error: %v", err)
 		}
-		if _, ok := result.(*DictItems); !ok {
-			t.Errorf("items() should return *DictItems, got %T", result)
+		pairs, ok := result.([]interface{})
+		if !ok || len(pairs) != 1 {
+			t.Fatalf("items() should return a list of one pair, got %#v", result)
+		}
+		if pair, ok := pairs[0].([]interface{}); !ok || len(pair) != 2 || pair[0] != "key" || pair[1] != "value" {
+			t.Errorf("items() pair = %#v, want [key value]", pairs[0])
 		}
 	}
 

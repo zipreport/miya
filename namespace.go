@@ -77,7 +77,11 @@ func (ns *Namespace) Clear() {
 func (ns *Namespace) String() string {
 	ns.mu.RLock()
 	defer ns.mu.RUnlock()
-	return fmt.Sprintf("namespace(%v)", ns.data)
+	data := make(map[string]interface{}, len(ns.data))
+	for k, v := range ns.data {
+		data[k] = runtime.Unbox(v)
+	}
+	return fmt.Sprintf("namespace(%v)", data)
 }
 
 // namespaceFunction is the global namespace() function for templates
@@ -88,7 +92,7 @@ func namespaceFunction(args ...interface{}) (interface{}, error) {
 	if len(args) == 1 {
 		if kwargs, ok := args[0].(map[string]interface{}); ok {
 			for k, v := range kwargs {
-				ns.Set(k, v)
+				ns.Set(k, runtime.BoxList(v))
 			}
 		}
 	}
