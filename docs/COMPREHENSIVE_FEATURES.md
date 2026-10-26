@@ -314,7 +314,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 {{ user.email|default("No email") }}        → fallback value
 {{ user.email|d("No email") }}              → alias
 {{ user|attr("name") }}                     → get attribute
-{{ "Hello {0}"|format("World") }}           → "Hello World"
+{{ "Hello %s"|format("World") }}           → "Hello World"
 {{ data|pprint }}                           → pretty print
 {{ dict|dictsort }}                         → sort by keys
 {{ items|groupby("category") }}             → group by attribute

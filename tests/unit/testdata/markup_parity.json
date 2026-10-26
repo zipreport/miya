@@ -909,8 +909,7 @@
     "ctx": {
       "u": "<s>"
     },
-    "want": "<b>&lt;s&gt;</b>",
-    "known_unrelated": "format keyword arguments (plans 036 and 053); drop this field once both have landed, and it must then pass (escapeArgs KwArgs case)"
+    "want": "<b>&lt;s&gt;</b>"
   },
   {
     "name": "IM1_import_in_ae_off",

@@ -238,13 +238,13 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 
 | Filter | Description | Example |
 |--------|-------------|---------|
-| `format` | String formatting | `{{"Hello {0}"\|format("World")}}` |
+| `format` | String formatting | `{{"Hello %s"\|format("World")}}` |
 | `tojson` | Convert to JSON | `{{data\|tojson}}` |
 | `filesizeformat` | Format file size | `{{1536\|filesizeformat}}` → `1.5 kB` |
 
 **Examples:**
 ```html+jinja
-{{ "Hello {0}, you have {1} messages"|format(name, count) }}
+{{ "Hello %s, you have %d messages"|format(name, count) }}
 → "Hello Alice, you have 5 messages"
 
 {{ {"id": 123, "name": "Product"}|tojson }}

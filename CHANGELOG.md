@@ -204,6 +204,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Unbalanced brackets are now reported by the lexer, with Jinja2's wording: `{{ (1 }}` gives `lexer error in template ...: unexpected '}', expected ')'` (was `parser error ...: expected ')' after expression`), and a stray closer such as `{{ x) }}` or the typo `{{ x }<div>` gives `unexpected ')'` / `unexpected '}'`. A bracket left open at the end of the template, or at an end delimiter that cannot close it (such as `%>`), is reported where it was opened: `unexpected '%>', expected ')' (opened at line 2, column ...)`. Code that matches on the old error text needs updating.
 - Custom extension tags whose arguments contain unbalanced punctuation (for example `:-)`) now fail in the lexer. Jinja2 rejects them too.
 - Error columns on lines after the first are one higher than the actual column (an existing quirk, unchanged here); line numbers are exact.
+- **Breaking:** `format` uses Python `%` formatting instead of Go's `fmt`. `'%d'|format(x)` works for JSON numbers, `%(name)s` takes keyword arguments, and `%r`, `%i`, `%u` and `%a` work. Too few or too many arguments, `%d` of a string and a lone `%` are errors instead of printing `%!` text. Go-only verbs such as `%v` and `%q` are errors. miya differences: `%x`/`%o`/`%X`/`%c` and `*` accept whole floats, and `%s` prints `None` as empty and booleans as `true`/`false`.
 
 ### Deprecated
 

@@ -2,7 +2,6 @@ package filters
 
 import (
 	"fmt"
-	"math"
 	"regexp"
 	"strings"
 	"unicode"
@@ -358,84 +357,20 @@ func StringFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	return ToString(value), nil
 }
 
-// FormatFilter formats string using Printf-style formatting
-// Note: This safely handles format strings by recovering from panics
-// and validating that the format doesn't cause issues
-func FormatFilter(value interface{}, args ...interface{}) (result interface{}, err error) {
-	s := ToString(value)
-	if len(args) == 0 {
-		return s, nil
+// FormatFilter formats the string with Python's % operator: positional
+// arguments, or keyword arguments for %(name)s conversions.
+func FormatFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	var kwargs map[string]interface{}
+	if n := len(args); n > 0 {
+		if kw, ok := args[n-1].(KwArgs); ok {
+			kwargs = map[string]interface{}(kw)
+			args = args[:n-1]
+		}
 	}
-
-	// Recover from any panics caused by malformed format strings
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("format error: %v", r)
-			result = s
-		}
-	}()
-
-	// Use the string as format and args as values
-	s, args = pyIntVerbs(s, args)
-	return fmt.Sprintf(s, args...), nil
-}
-
-// pyIntVerbs makes %d and %i accept float operands as Python's % operator
-// does (truncating like int()), and rewrites %i, which Go lacks, to %d.
-// Other verbs and their arguments are left unchanged. A format using Go's
-// explicit argument indexes (%[1]d) is returned untouched.
-func pyIntVerbs(format string, args []interface{}) (string, []interface{}) {
-	if strings.Contains(format, "%[") {
-		return format, args
+	if len(kwargs) > 0 && len(args) > 0 {
+		return nil, fmt.Errorf("format: can't handle positional and keyword arguments at the same time")
 	}
-	out := append([]interface{}(nil), args...)
-	var b strings.Builder
-	argi := 0
-	for i := 0; i < len(format); i++ {
-		if format[i] != '%' {
-			b.WriteByte(format[i])
-			continue
-		}
-		j := i + 1
-		for j < len(format) && strings.IndexByte("+-# 0123456789.*", format[j]) >= 0 {
-			if format[j] == '*' {
-				argi++
-			}
-			j++
-		}
-		if j >= len(format) {
-			b.WriteString(format[i:])
-			break
-		}
-		verb := format[j]
-		b.WriteString(format[i:j])
-		i = j
-		if verb == '%' {
-			b.WriteByte('%')
-			continue
-		}
-		if verb == 'i' {
-			verb = 'd'
-		}
-		if verb == 'd' && argi < len(out) {
-			var f float64
-			isFloat := true
-			switch v := out[argi].(type) {
-			case float64:
-				f = v
-			case float32:
-				f = float64(v)
-			default:
-				isFloat = false
-			}
-			if isFloat && !math.IsNaN(f) && math.Abs(f) < 9e18 {
-				out[argi] = int64(f)
-			}
-		}
-		b.WriteByte(verb)
-		argi++
-	}
-	return b.String(), out
+	return pyFormat(ToString(value), args, kwargs)
 }
 
 // Helper function to convert regex patterns for case-insensitive matching

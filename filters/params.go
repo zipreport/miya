@@ -63,7 +63,7 @@ var builtinParams = map[string][]Param{
 	"strip": {{Name: "chars"}},
 }
 
-var kwargsFilters = map[string]bool{"map": true}
+var kwargsFilters = map[string]bool{"map": true, "format": true}
 
 // bindKwargs places keyword arguments after the positional ones, by parameter
 // name, filling skipped positions with each parameter's Default.

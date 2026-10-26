@@ -450,7 +450,7 @@ This document provides a comprehensive list of all features demonstrated in the 
 #### **Object Manipulation**
 ```jinja2
 {{ user|attr("Name") }}                        → get attribute
-{{ "Hello {0}"|format("World") }}              → "Hello World"
+{{ "Hello %s"|format("World") }}              → "Hello World"
 ```
 
 #### **Data Processing**
