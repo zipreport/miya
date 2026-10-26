@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `d.get(key, default)`, and `get`/`items`/`keys`/`values` on string-to-string maps.
 - List methods `index` and `count`, plus `append`, `extend` and `pop` on lists stored with `{% set %}`, `{% with %}` or in a `namespace()` (`{% do ns.items.append(x) %}`). The mutating methods copy the list on the first write and never change the application's data. On any other list they fail with a hint to store it first (`{% set items = items|list %}`).
 - `'ab' * 3` and `[1] * 2` repeat.
+- `runtime.ErrTemplateNotFound` and `runtime.TemplateNotFoundError` (with the missing template's `Name`), returned for templates the loader cannot find. A custom `runtime.TemplateLoader` that returns its own errors keeps the old rule (`TemplateExists` decides).
 
 ### Fixed
 
@@ -83,6 +84,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Deeply nested `not`/`-` chains return `template nesting too deep` instead of crashing.
 - Long flat chains (`1 + 1 + ...`, `a or b or ...`, `~`, `**`, `x|f|f|...`, `a.b.b...`) count towards the 500-level parse limit and return `template nesting too deep` instead of overflowing the stack when the template is rendered.
 - Printing a self-referencing list or dict prints `[...]` instead of crashing the process. Printing one container is capped at 64 MiB.
+- Strict mode: `default`, `d`, `is defined`, `is undefined` and `is none` accept undefined values; `{{ a|default }}` prints empty.
+- `x['k'] is defined` and `x['k']|default(…)` no longer fail when `x` is `None` or not subscriptable; the item counts as undefined, as in Jinja2.
+- `include none ignore missing` renders nothing.
+- `is defined` is true for a key whose value is `None`, and `None is undefined` is false.
+- An undefined value is an empty sequence for `length`, `join`, `sum`, `sort`, `list`, `in`, `items` and the other collection filters (by filter name, so a custom filter registered under one of these names also receives `[]`); `max`/`min`/`random` of it are undefined; `tojson` of it is an error instead of internal fields.
+- `include` accepts a list of names and renders the first that exists.
+- `{% with %}` without assignments is accepted.
+- `lower`/`upper` tests follow Python (`'' is lower` is false, numbers are neither); `true is number`; a dict is a sequence.
 
 ### Changed
 
@@ -168,6 +177,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** values with an `Error()` or `String()` method print through it inside lists and dicts too, and a `[]byte` inside a list prints as a quoted string.
 - **Breaking:** `*` with a string literal repeats it, as in Python, even when it looks like a number: `'0' * 3` is `000` and `'3' * 2` is `33` (it used to be `6`). A numeric string from data still multiplies as a number.
 - `d.items()` returns a list of `[key, value]` pairs (in sorted key order), so `|list`, `|length` and printing work.
+- **Breaking:** `{% include %}` renders in a copy of the includer's context: `{% set %}` inside the included template no longer changes the includer.
+- **Breaking:** `include … ignore missing` ignores only a template that does not exist. An included template that fails to compile or to render, or that includes a missing template itself, is an error.
+- **Breaking:** `{% with a = …, b = … %}` evaluates every value in the scope outside the block, as Jinja2 does: `b = a` sees the outer `a`. The order used to be random.
+- **Breaking:** `lt`/`le`/`gt`/`ge` tests fail on `None` and on a string compared with a number; `even`/`odd`/`divisibleby` fail on strings and no longer truncate floats.
+- **Breaking:** in strict mode, `o['missing']` and an out-of-range index are errors, and so is `a.b is defined` when `a` is undefined.
 
 ### Deprecated
 
