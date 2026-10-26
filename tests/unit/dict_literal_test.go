@@ -161,13 +161,3 @@ func TestDictLiteralSyntaxErrors(t *testing.T) {
 		})
 	}
 }
-
-// Known divergence until plan 051 balances brackets in the lexer: "}}"
-// inside an open "{" of a print tag still ends the tag. Jinja2 renders "2".
-// Plan 051 deletes this test; its TestLexerBracketBalancing asserts "2".
-func TestDictLiteralNestedInPrintTagBeforePlan051(t *testing.T) {
-	_, err := miya.NewEnvironment().RenderString("{{ {'a': {'b': 2}}.a.b }}", miya.NewContext())
-	if err == nil || !strings.Contains(err.Error(), "expected '}' after dictionary elements") {
-		t.Fatalf("expected the pre-051 parse error, got %v", err)
-	}
-}
