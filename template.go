@@ -162,6 +162,12 @@ func (a *TemplateContextAdapter) ApplyFilter(name string, value interface{}, arg
 	return a.env.ApplyFilter(name, value, args...)
 }
 
+// HasFilter reports whether the environment has a filter named name.
+func (a *TemplateContextAdapter) HasFilter(name string) bool {
+	_, ok := a.env.GetFilter(name)
+	return ok
+}
+
 func (a *TemplateContextAdapter) ApplyTest(name string, value interface{}, args ...interface{}) (bool, error) {
 	return a.env.ApplyTest(name, value, args...)
 }

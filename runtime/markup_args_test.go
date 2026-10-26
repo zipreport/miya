@@ -46,3 +46,27 @@ func TestWordwrapKeepsMarkupArgs(t *testing.T) {
 		}
 	}
 }
+
+// A context that cannot tell whether a filter exists gets the whole-list
+// apply, then a re-apply per item.
+func TestMapMarkupWithoutFilterLookup(t *testing.T) {
+	ctx := &autoescapeContext{Context: &mockContext{data: map[string]interface{}{}}, autoescape: true}
+	if _, ok := filterLookup(ctx); ok {
+		t.Fatal("mockContext must not implement FilterLookup")
+	}
+	var calls [][]interface{}
+	apply := func(v interface{}, a []interface{}) (interface{}, error) {
+		calls = append(calls, v.([]interface{}))
+		return []interface{}{"W", "W"}, nil
+	}
+	out, err := NewEvaluator().mapMarkup(ctx, []interface{}{1, "a"}, []interface{}{"f"}, apply)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(calls) != 1 || len(calls[0]) != 2 {
+		t.Errorf("apply calls = %v, want one call with the whole list", calls)
+	}
+	if got := out.([]interface{}); got[0] != 1 || got[1] != "a" {
+		t.Errorf("out = %v, want the items re-applied through ApplyFilter", got)
+	}
+}

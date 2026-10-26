@@ -3,6 +3,7 @@ package runtime
 import (
 	"html"
 	"reflect"
+	"strings"
 )
 
 // Markup is a string marked safe for HTML output, the equivalent of Jinja2's
@@ -362,14 +363,29 @@ func isReplaceInput(v interface{}) bool {
 	return isStringValue(b) || isNumberKind(b)
 }
 
+// FilterLookup is implemented by contexts that can tell whether a filter is
+// registered.
+type FilterLookup interface {
+	HasFilter(name string) bool
+}
+
+// filterLookup finds a FilterLookup behind context wrappers.
+func filterLookup(ctx Context) (FilterLookup, bool) {
+	fl, ok := filterContext(ctx).(FilterLookup)
+	return fl, ok
+}
+
 // mapItemReappliable reports whether no attribute of the filter's name can
 // win over the filter for this item, so the markup policy may be re-applied.
-func mapItemReappliable(it interface{}) bool {
+// A slice or array takes a name whose first segment is all digits as an index.
+func mapItemReappliable(it interface{}, name string) bool {
 	switch it.(type) {
 	case GroupTuple, []byte:
 		return false
-	case RoundedFloat, []interface{}:
+	case RoundedFloat:
 		return true
+	case []interface{}:
+		return !digitSegment(name)
 	}
 	switch b := basicValue(it).(type) {
 	case string, nil, *Undefined, bool:
@@ -380,10 +396,24 @@ func mapItemReappliable(it interface{}) bool {
 		}
 		switch reflect.ValueOf(b).Kind() {
 		case reflect.Slice, reflect.Array:
-			return true
+			return !digitSegment(name)
 		}
 	}
 	return false
+}
+
+// digitSegment reports whether the first '.'-separated segment of name is all digits.
+func digitSegment(name string) bool {
+	seg, _, _ := strings.Cut(name, ".")
+	if seg == "" {
+		return false
+	}
+	for _, c := range seg {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
 }
 
 // anySafeArg reports whether any argument, including the values of a trailing
@@ -441,26 +471,79 @@ func keepDefault(args []interface{}) []interface{} {
 }
 
 // mapMarkup applies the markup policy to each item of map(filter) and keeps
-// the safe default of map(attribute=, default=).
+// the safe default of map(attribute=, default=). The filter runs once per item:
+// items whose markup policy is re-applied are filtered one by one, the others
+// together through apply.
 func (e *DefaultEvaluator) mapMarkup(ctx Context, value interface{}, args []interface{}, apply func(interface{}, []interface{}) (interface{}, error)) (interface{}, error) {
-	result, err := apply(value, keepDefault(args))
-	if err != nil {
-		return nil, err
-	}
-	list, ok := result.([]interface{})
-	if !ok || len(args) == 0 {
-		return result, nil
+	whole := func() (interface{}, error) { return apply(value, keepDefault(args)) }
+	if len(args) == 0 {
+		return whole()
 	}
 	if _, kw := args[0].(KwArgs); kw {
-		return result, nil
-	}
-	items, err := e.makeIterable(value)
-	if err != nil || len(items) != len(list) {
-		return result, nil
+		return whole()
 	}
 	inner := ToString(args[0])
-	innerArgs := args[1:]
-	innerApply := func(v interface{}, a []interface{}) (interface{}, error) {
+	lookup, haveLookup := filterLookup(ctx)
+	if !haveLookup {
+		return e.mapMarkupWhole(ctx, value, args, inner, apply)
+	}
+	if !lookup.HasFilter(inner) {
+		return whole()
+	}
+	items, err := e.makeIterable(value)
+	if err != nil {
+		return whole()
+	}
+	again := make([]bool, len(items))
+	var rest []interface{}
+	anyAgain := false
+	for i, it := range items {
+		_, safe := AsMarkup(it)
+		if safe || mapItemReappliable(it, inner) {
+			again[i] = true
+			anyAgain = true
+		} else {
+			rest = append(rest, it)
+		}
+	}
+	if !anyAgain {
+		return whole()
+	}
+	out := make([]interface{}, len(items))
+	if len(rest) > 0 {
+		res, err := apply(rest, keepDefault(args))
+		if err != nil {
+			return nil, err
+		}
+		list, ok := res.([]interface{})
+		if !ok || len(list) != len(rest) {
+			return whole()
+		}
+		j := 0
+		for i := range items {
+			if !again[i] {
+				out[i] = list[j]
+				j++
+			}
+		}
+	}
+	innerApply := e.mapInnerApply(ctx, inner)
+	for i, it := range items {
+		if !again[i] {
+			continue
+		}
+		r, err := e.applyFilterWithMarkup(inner, it, args[1:], ctx, innerApply)
+		if err != nil {
+			return nil, err
+		}
+		out[i] = r
+	}
+	return out, nil
+}
+
+// mapInnerApply applies the filter named inner to a single item of map(filter).
+func (e *DefaultEvaluator) mapInnerApply(ctx Context, inner string) func(interface{}, []interface{}) (interface{}, error) {
+	return func(v interface{}, a []interface{}) (interface{}, error) {
 		env, ok := envContext(ctx)
 		if !ok {
 			return e.applyFilter(inner, v, a)
@@ -474,18 +557,35 @@ func (e *DefaultEvaluator) mapMarkup(ctx Context, value interface{}, args []inte
 		}
 		return env.ApplyFilter(inner, v, a...)
 	}
+}
+
+// mapMarkupWhole is mapMarkup for contexts that cannot tell whether a filter
+// is registered: the filter runs over the whole list, then again for each
+// item the markup policy applies to.
+func (e *DefaultEvaluator) mapMarkupWhole(ctx Context, value interface{}, args []interface{}, inner string, apply func(interface{}, []interface{}) (interface{}, error)) (interface{}, error) {
+	result, err := apply(value, keepDefault(args))
+	if err != nil {
+		return nil, err
+	}
+	list, ok := result.([]interface{})
+	if !ok {
+		return result, nil
+	}
+	items, err := e.makeIterable(value)
+	if err != nil || len(items) != len(list) {
+		return result, nil
+	}
+	innerApply := e.mapInnerApply(ctx, inner)
 	out := list
 	for i, it := range items {
 		if _, undef := list[i].(*Undefined); undef {
 			continue
 		}
 		_, safe := AsMarkup(it)
-		if !safe {
-			if !mapItemReappliable(it) {
-				continue
-			}
+		if !safe && !mapItemReappliable(it, inner) {
+			continue
 		}
-		r, err := e.applyFilterWithMarkup(inner, it, innerArgs, ctx, innerApply)
+		r, err := e.applyFilterWithMarkup(inner, it, args[1:], ctx, innerApply)
 		if err != nil {
 			return nil, err
 		}
