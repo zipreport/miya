@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `replace` with a safe argument on a number or boolean, and `map` with safe arguments over number and list items, keep the safe text, as in Jinja2.
 - Typed Go maps with string keys look keys up the same way through `[]`, `in` and `.get()` (`none` is `"None"`); maps with interface keys find `1.0` under `1` with `[]` as `.get()` does; `range`, `lipsum`, list `+`, `batch`, `slice` and `format` width/precision limit errors wrap `ErrOutputTooLarge`; interface-key maps with string keys (as decoded from YAML) look keys up like `.get()`; `wordwrap` accepts a `{% set %}` block as its width again.
 - Under autoescape, safe values stay safe through `map` with a filter (`[s]|map('upper')`), `map(attribute=…, default=s)`, `default(s)`, `loop.cycle(s, …)`, `join(d=s)` and `join(…, attribute=…)`, and through `+` with a Go named string type.
 - `v|replace(old, new)` with a safe `old` or `new` escapes `v` first, as Jinja2 does.
@@ -139,6 +140,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Breaking:** a `{% block %}` body and an `{% include %}`d template render with the environment's autoescape setting, as in Jinja2. An `{% autoescape %}` tag around the block or include no longer applies to it, in the template that defines it or in a child's override. Tags inside the block body or included template still apply. Move such a tag inside to keep the old output. A block inside a `{% call %}` body under `{% autoescape false %}` is now escaped twice, as in Jinja2.
 - **Breaking:** an error in an imported module's top-level code (for example an undefined attribute in `{{ }}`) now fails the import, where it used to be skipped.
 - Go functions that take a `runtime.Context` receive a wrapper that unboxes lists; reach the original context with `interface{ Unwrap() runtime.Context }`. Code that type-asserts the context to `*miya.TemplateContextAdapter`, `*runtime.ContextWrapper` or `runtime.ContextAwareContext` now gets `ok == false`.
 - Docs: a section on [memory and untrusted templates](docs/MIYA_LIMITATIONS.md#memory-and-untrusted-templates).
