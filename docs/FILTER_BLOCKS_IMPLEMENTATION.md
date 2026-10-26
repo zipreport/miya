@@ -175,7 +175,6 @@ The implementation supports the following patterns:
 ### Performance Considerations
 
 - **Content Buffering**: Block content is rendered once and cached
-- **Filter Chain Optimization**: Sequential application without intermediate allocations
 - **Memory Management**: Efficient string handling for large content blocks
 
 ### Integration Points
