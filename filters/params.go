@@ -3,6 +3,8 @@ package filters
 import (
 	"fmt"
 	"sort"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 // Param describes one parameter of a filter, in positional order. Keyword
@@ -23,7 +25,7 @@ type Param struct {
 
 // KwArgs carries keyword arguments, as the last positional argument, to the
 // filters listed in kwargsFilters (whose Jinja2 signature is *args/**kwargs).
-type KwArgs map[string]interface{}
+type KwArgs = runtime.KwArgs
 
 var builtinParams = map[string][]Param{
 	"default": {{Name: "default_value", Default: ""}, {Name: "boolean", Default: false}},

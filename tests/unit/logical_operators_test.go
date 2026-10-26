@@ -101,15 +101,14 @@ func TestLogicalOperatorsKnownDivergences(t *testing.T) {
 		}
 	})
 
-	// owner: plan 027 (Markup); Jinja2 gives R.
 	t.Run("safe_empty_or", func(t *testing.T) {
 		env := miya.NewEnvironment()
 		got, err := env.RenderString(`{{ (''|safe) or 'R' }}`, miya.NewContext())
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if got != "" {
-			t.Errorf("got %q, want empty", got)
+		if got != "R" {
+			t.Errorf("got %q, want %q", got, "R")
 		}
 	})
 

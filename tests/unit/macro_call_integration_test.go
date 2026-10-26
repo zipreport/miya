@@ -21,12 +21,12 @@ func TestMacroCallIntegration(t *testing.T) {
 		{
 			name:     "Macro with parameters and call block",
 			template: `{% macro wrapper(title, class) %}<div class="{{ class }}"><h1>{{ title }}</h1>{{ caller() }}</div>{% endmacro %}{% call wrapper('Hello', 'main') %}<p>World</p>{% endcall %}`,
-			expected: `<div class="main"><h1>Hello</h1>&lt;p&gt;World&lt;/p&gt;</div>`,
+			expected: `<div class="main"><h1>Hello</h1><p>World</p></div>`,
 		},
 		{
 			name:     "Multiple macros and calls",
 			template: `{% macro bold(text) %}<b>{{ text }}: {{ caller() }}</b>{% endmacro %}{% macro italic(text) %}<i>{{ text }}: {{ caller() }}</i>{% endmacro %}{% call bold('Important') %}{% call italic('Note') %}Message{% endcall %}{% endcall %}`,
-			expected: `<b>Important: &lt;i&gt;Note: Message&lt;/i&gt;</b>`,
+			expected: `<b>Important: <i>Note: Message</i></b>`,
 		},
 		{
 			name:     "Macro with no parameters but using caller",

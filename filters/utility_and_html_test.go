@@ -183,14 +183,14 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 			t.Errorf("UrlizeFilter failed: %v", err)
 		}
 
-		// Result may be SafeValue or string
+		// Result may be Markup or string
 		var resultStr string
-		if safeVal, ok := result.(SafeValue); ok {
+		if safeVal, ok := result.(runtime.Markup); ok {
 			resultStr = safeVal.String()
 		} else if str, ok := result.(string); ok {
 			resultStr = str
 		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
+			t.Errorf("Expected string or Markup, got %T", result)
 			return
 		}
 
@@ -208,14 +208,14 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 			t.Errorf("UrlizeTargetFilter failed: %v", err)
 		}
 
-		// Result may be SafeValue or string
+		// Result may be Markup or string
 		var resultStr string
-		if safeVal, ok := result.(SafeValue); ok {
+		if safeVal, ok := result.(runtime.Markup); ok {
 			resultStr = safeVal.String()
 		} else if str, ok := result.(string); ok {
 			resultStr = str
 		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
+			t.Errorf("Expected string or Markup, got %T", result)
 			return
 		}
 
@@ -232,8 +232,8 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 		if err != nil {
 			t.Fatalf("TruncateHTMLFilter failed: %v", err)
 		}
-		if _, ok := result.(SafeValue); !ok {
-			t.Errorf("truncated result: expected SafeValue, got %T", result)
+		if _, ok := result.(runtime.Markup); !ok {
+			t.Errorf("truncated result: expected Markup, got %T", result)
 		}
 
 		// Test with ellipsis
@@ -241,8 +241,8 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 		if err != nil {
 			t.Fatalf("TruncateHTMLFilter with ellipsis failed: %v", err)
 		}
-		if _, ok := result.(SafeValue); !ok {
-			t.Errorf("truncated result with ellipsis: expected SafeValue, got %T", result)
+		if _, ok := result.(runtime.Markup); !ok {
+			t.Errorf("truncated result with ellipsis: expected Markup, got %T", result)
 		}
 
 		// A short non-safe input comes back as a plain string for autoescape to escape
@@ -291,14 +291,14 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 			t.Errorf("ForceEscapeFilter failed: %v", err)
 		}
 
-		// Result may be SafeValue or string
+		// Result may be Markup or string
 		var resultStr string
-		if safeVal, ok := result.(SafeValue); ok {
+		if safeVal, ok := result.(runtime.Markup); ok {
 			resultStr = safeVal.String()
 		} else if str, ok := result.(string); ok {
 			resultStr = str
 		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
+			t.Errorf("Expected string or Markup, got %T", result)
 			return
 		}
 
@@ -316,14 +316,14 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 			t.Errorf("UrlizeTruncateFilter failed: %v", err)
 		}
 
-		// Result may be SafeValue or string
+		// Result may be Markup or string
 		var resultStr string
-		if safeVal, ok := result.(SafeValue); ok {
+		if safeVal, ok := result.(runtime.Markup); ok {
 			resultStr = safeVal.String()
 		} else if str, ok := result.(string); ok {
 			resultStr = str
 		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
+			t.Errorf("Expected string or Markup, got %T", result)
 			return
 		}
 

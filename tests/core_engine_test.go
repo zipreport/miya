@@ -218,7 +218,7 @@ func TestCoreTemplateEngine(t *testing.T) {
 			Name:     "HTML filters",
 			Template: `{{ html|escape }}, {{ html|safe }}, {{ html|striptags }}`,
 			Context:  map[string]interface{}{"html": "<b>test</b>"},
-			Expected: "&amp;lt;b&amp;gt;test&amp;lt;/b&amp;gt;, <b>test</b>, test",
+			Expected: "&lt;b&gt;test&lt;/b&gt;, <b>test</b>, test",
 		},
 		{
 			Name:     "URL filters",
@@ -373,7 +373,7 @@ func TestCoreTemplateEngine(t *testing.T) {
 			Name:     "Macro with defaults",
 			Template: `{% macro alert(msg, type="info") %}<div class="{{ type }}">{{ msg }}</div>{% endmacro %}{{ alert("Test") }}{{ alert("Error", "danger") }}`,
 			Context:  map[string]interface{}{},
-			Expected: `&lt;div class=&#34;info&#34;&gt;Test&lt;/div&gt;&lt;div class=&#34;danger&#34;&gt;Error&lt;/div&gt;`,
+			Expected: `<div class="info">Test</div><div class="danger">Error</div>`,
 		},
 		{
 			Name:     "Call blocks",

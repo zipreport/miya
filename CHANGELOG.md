@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Environment.SetFilterParams(name, params...)`, `Environment.AddFilterWithParams(name, fn, params...)` and `filters.Param` declare a custom filter's parameter names so templates can pass them as keyword arguments. Keywords reach the filter as ordinary positional arguments; an unfilled earlier position receives its `Param.Default`, which is `nil` when unset. Also `filters.KwArgs` and `runtime.KwargsFilterApplier`.
 - `runtime.InheritanceProcessor.ResolveInheritanceWith`, which takes the evaluator for dynamic `{% extends %}`.
 - `runtime.CompareNumbers`, `runtime.Equal`, `runtime.GroupTuple`, `filters.TestLookup` and `(*filters.FilterRegistry).SetTestLookup`.
+- `runtime.Markup`, `runtime.AsMarkup`, `runtime.Unmark`, `runtime.EscapeMarkup`, `runtime.KeepMarkupFunc` and `runtime.KwArgs` (`filters.KwArgs` is now an alias of it). Go code that type-asserted `filters.SafeValue` on a `|safe` result should use `runtime.AsMarkup`.
 
 ### Fixed
 
@@ -62,6 +63,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The `true` and `false` tests exist (`selectattr("paid", "true")`); the `in` test compares numbers by value.
 - Collection filters accept strings, dicts (their keys, sorted) and typed Go slices.
 - The `eq`/`equalto`/`ne` tests compare like `==` (JSON `1` equals `1`, lists element by element); the aliases `==`, `!=`, `<`, `<=`, `>`, `>=`, `lessthan`, `greaterthan` exist.
+- `{% filter %}` blocks no longer write filter arguments unescaped (`{% filter format(u) %}%s{% endfilter %}`).
+- **Breaking:** in non-HTML escape contexts (`ContextWrapper` with JS, CSS, URL or JSON), only `|safe`/`|marksafe` results bypass the context escaper. `nl2br`, `urlize`, `|e`, `tojson` and the other HTML filters are escaped for the context; `{{ d|tojson }}` in a JS context, raw before, is now JS-escaped. Use `|tojson|safe` to emit JSON raw there.
+- An `{% autoescape %}` block inside a non-HTML `ContextWrapper` keeps that context's escaper.
+- In XML/XHTML contexts, concatenation, `join` and filter arguments escape with the XML escaper.
+- An imported template (also `with context`) escapes by its own setting, not the importer's `{% autoescape %}` block.
 
 ### Changed
 
@@ -131,6 +137,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** attribute names are paths, as in Jinja2: `attribute="c.name"` looks up `name` inside `c`, and `"0"` indexes a list. A map key that itself contains a `.` is no longer found.
 - `==` and the `eq` test still do not equate `true` with `1` (Python does), while `sort` and `unique` treat booleans as 0/1.
 - **Breaking (Go API):** `SortFilter` and `UniqueFilter` return `[]interface{}` for `[]string` input; `GroupByFilter` returns `[]interface{}` of `runtime.GroupTuple` instead of `[][]interface{}`.
+- **Breaking:** under autoescape, the output of macros, `caller()`, recursive `loop()`, `{% set %}...{% endset %}` and `{% filter %}` blocks is safe Markup, as in Jinja2. It is no longer escaped a second time, so templates can drop `|safe` on macro calls (keeping it is harmless).
+- **Breaking:** `|safe`, `|e`/`|escape`, `|forceescape`, `|urlize`, `|nl2br`, `|truncatehtml`, `|xmlattr`, `|tojson` (and the other safe-producing filters) return `runtime.Markup` instead of `filters.SafeValue` or `string`. `{{ "<"|e }}` is no longer double-escaped.
+- **Breaking:** a `{% filter %}` block's result is escaped unless it is Markup. Jinja2 writes it raw. A custom filter that produces HTML for a filter block must return `runtime.Markup` or `runtime.SafeValue`.
+- Filters applied to a safe value escape their arguments where the result stays safe (`replace`, `format`, `center`, `default`, ...), as markupsafe does: `{{ ('<b>%s</b>'|safe)|format(u) }}` escapes `u`.
+- A macro's output is safe only if autoescape was on where the macro is defined. Jinja2 decides at the call site.
+- Go filters, tests and Go global functions receive a plain `string` for safe values; macros and the built-in `namespace`, `dict`, `cycler` and `joiner` keep receiving Markup.
+- A Go filter that returns `runtime.SafeValue` or `*runtime.SafeValue` still works; the value becomes Markup.
 
 ### Deprecated
 

@@ -120,8 +120,8 @@ func TestHTMLFilters(t *testing.T) {
 		expected interface{}
 		hasError bool
 	}{
-		{"escape", EscapeFilter, "<script>alert('xss')</script>", nil, "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;", false},
-		{"safe", SafeFilter, "<b>bold</b>", nil, SafeValue{Value: "<b>bold</b>"}, false},
+		{"escape", EscapeFilter, "<script>alert('xss')</script>", nil, runtime.Markup("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;"), false},
+		{"safe", SafeFilter, "<b>bold</b>", nil, runtime.Markup("<b>bold</b>"), false},
 		{"urlencode", URLEncodeFilter, "hello world", nil, "hello+world", false},
 		{"striptags", StripTagsFilter, "<p>Hello <b>world</b></p>", nil, "Hello world", false},
 		{"filesizeformat", FileSizeFormatFilter, 1024, nil, "1.0 KB", false},
@@ -255,8 +255,8 @@ func TestUtilityFilters(t *testing.T) {
 		{"default without value", DefaultFilter, "", []interface{}{"fallback"}, "fallback", false},
 		{"default boolean true", DefaultFilter, true, []interface{}{"fallback", true}, true, false},
 		{"default boolean false", DefaultFilter, false, []interface{}{"fallback", true}, "fallback", false},
-		{"tojson", ToJSONFilter, map[string]interface{}{"key": "value"}, nil, runtime.SafeValue{Value: `{"key":"value"}`}, false},
-		{"tojson indent", ToJSONFilter, map[string]interface{}{"key": "value"}, []interface{}{2}, runtime.SafeValue{Value: "{\n  \"key\": \"value\"\n}"}, false},
+		{"tojson", ToJSONFilter, map[string]interface{}{"key": "value"}, nil, runtime.Markup(`{"key":"value"}`), false},
+		{"tojson indent", ToJSONFilter, map[string]interface{}{"key": "value"}, []interface{}{2}, runtime.Markup("{\n  \"key\": \"value\"\n}"), false},
 		{"fromjson", FromJSONFilter, `{"key":"value"}`, nil, map[string]interface{}{"key": "value"}, false},
 		{"string", StringFilter, 123, nil, "123", false},
 	}
@@ -374,8 +374,8 @@ func TestXMLAttrFilter(t *testing.T) {
 				return
 			}
 
-			if sv, ok := result.(SafeValue); ok {
-				result = sv.Value
+			if m, ok := result.(runtime.Markup); ok {
+				result = string(m)
 			}
 			if result != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, result)
