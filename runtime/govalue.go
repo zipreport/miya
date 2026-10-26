@@ -350,9 +350,83 @@ func SortedMapPairs(v interface{}) ([]interface{}, bool) {
 	return sortedMapPairs(rv), true
 }
 
+// interfaceMapLookup finds key in a map with interface keys the way a template
+// compares keys, with a bounded number of MapIndex calls and no scan: the key
+// itself, the same number in another numeric type (a bool is 0 or 1), or its
+// DictKey spelling.
+func interfaceMapLookup(rv reflect.Value, key interface{}) (reflect.Value, bool) {
+	kt := rv.Type().Key()
+	try := func(c interface{}) (reflect.Value, bool) {
+		cv := reflect.ValueOf(c)
+		if !cv.IsValid() || !cv.Type().AssignableTo(kt) || !cv.Comparable() {
+			return reflect.Value{}, false
+		}
+		if val := rv.MapIndex(cv); val.IsValid() {
+			return val, true
+		}
+		return reflect.Value{}, false
+	}
+	key = Indirect(key)
+	if key == nil {
+		if val := rv.MapIndex(reflect.Zero(kt)); val.IsValid() {
+			return val, true
+		}
+	} else if val, ok := try(key); ok {
+		return val, true
+	}
+	var cands []interface{}
+	if b, ok := key.(bool); ok {
+		n := 0
+		if b {
+			n = 1
+		}
+		cands = []interface{}{n, int64(n), float64(n)}
+	} else if i, u, f, kind, ok := numericValue(key); ok {
+		switch kind {
+		case 'i':
+			cands = []interface{}{int(i), i, float64(i)}
+			if i >= 0 {
+				cands = append(cands, uint64(i))
+			}
+			if i == 0 || i == 1 {
+				cands = append(cands, i == 1)
+			}
+		case 'u':
+			cands = []interface{}{u, float64(u)}
+			if u <= math.MaxInt64 {
+				cands = append(cands, int(u), int64(u))
+			}
+			if u <= 1 {
+				cands = append(cands, u == 1)
+			}
+		case 'f':
+			if f == math.Trunc(f) && f >= -(1<<63) && f < 1<<63 {
+				cands = append(cands, int(f), int64(f))
+				if f >= 0 {
+					cands = append(cands, uint64(f))
+				}
+				if f == 0 || f == 1 {
+					cands = append(cands, f == 1)
+				}
+			} else if f == math.Trunc(f) && f >= 0 && f < 1<<64 {
+				cands = append(cands, uint64(f))
+			}
+			cands = append(cands, f)
+		}
+	}
+	for _, c := range cands {
+		if val, ok := try(c); ok {
+			return val, true
+		}
+	}
+	return try(DictKey(key))
+}
+
 // dictMethodOver builds the dict method attr (get, items, keys, values) of a
-// map with non-string keys, in the order of sortedMapPairs. get tries the key
-// as a typed map key first, then scans with Equal, so 1.0 finds the key 1.
+// map with non-string keys, in the order of sortedMapPairs. get looks the key
+// up without scanning when it can: interfaceMapLookup for interface keys,
+// mapKey for typed keys; only key kinds mapKey cannot build are scanned with
+// Equal.
 func dictMethodOver(rv reflect.Value, attr string) interface{} {
 	if attr == "get" {
 		return &builtinMethod{name: "get", fn: func(args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
@@ -362,15 +436,20 @@ func dictMethodOver(rv reflect.Value, attr string) interface{} {
 			if len(args) < 1 || len(args) > 2 {
 				return nil, fmt.Errorf("get() takes 1 or 2 arguments (%d given)", len(args))
 			}
-			if k, ok := mapKey(args[0], rv.Type().Key()); ok {
+			if rv.Type().Key().Kind() == reflect.Interface {
+				if val, ok := interfaceMapLookup(rv, args[0]); ok {
+					return val.Interface(), nil
+				}
+			} else if k, ok := mapKey(args[0], rv.Type().Key()); ok {
 				if val := rv.MapIndex(k); val.IsValid() {
 					return val.Interface(), nil
 				}
-			}
-			for _, p := range sortedMapPairs(rv) {
-				pair := p.([]interface{})
-				if Equal(pair[0], args[0]) {
-					return pair[1], nil
+			} else {
+				for _, p := range sortedMapPairs(rv) {
+					pair := p.([]interface{})
+					if Equal(pair[0], args[0]) {
+						return pair[1], nil
+					}
 				}
 			}
 			if len(args) == 2 {

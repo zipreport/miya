@@ -1896,6 +1896,9 @@ func (e *DefaultEvaluator) lookupReflect(obj interface{}, attr string) (interfac
 			return val.Interface(), true
 		}
 		if isDictMethodName(attr) {
+			if attr == "get" && kt.Kind() == reflect.Interface {
+				return dictMethodOver(rv, attr), true
+			}
 			if m, ok := StringKeyMap(obj); ok && e.attributeExists(m, attr) {
 				return e.getAttribute(m, attr), true
 			}
@@ -1933,6 +1936,7 @@ func structField(rv reflect.Value, name string, fallback bool) (interface{}, boo
 // DictKey is the string a dict literal, subscript, `in` test or .get() uses
 // for key.
 func DictKey(key interface{}) string {
+	key = Indirect(key)
 	switch k := key.(type) {
 	case nil:
 		return "None"
@@ -2020,24 +2024,13 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 			}
 			return rv.Index(keyInt).Interface(), nil
 		case reflect.Map:
-			k, ok := mapKey(key, rv.Type().Key())
-			if ok {
-				if val := rv.MapIndex(k); val.IsValid() {
+			if rv.Type().Key().Kind() == reflect.Interface {
+				if val, ok := interfaceMapLookup(rv, key); ok {
 					return val.Interface(), nil
 				}
-			}
-			if rv.Type().Key().Kind() == reflect.Interface {
-				if m, ok := StringKeyMap(obj); ok {
-					if val, ok := m[DictKey(key)]; ok {
-						return val, nil
-					}
-				} else {
-					for _, p := range sortedMapPairs(rv) {
-						pair := p.([]interface{})
-						if Equal(pair[0], key) {
-							return pair[1], nil
-						}
-					}
+			} else if k, ok := mapKey(key, rv.Type().Key()); ok {
+				if val := rv.MapIndex(k); val.IsValid() {
+					return val.Interface(), nil
 				}
 			}
 			return NewUndefined(fmt.Sprintf("%v", key), UndefinedSilent, nil), nil
@@ -3286,10 +3279,11 @@ func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
 				return rv.MapIndex(reflect.ValueOf(stringMapKey(item)).Convert(kt)).IsValid(), nil
 			}
 			if kt.Kind() == reflect.Interface {
-				if m, ok := StringKeyMap(container); ok {
-					_, found := m[DictKey(item)]
-					return found, nil
-				}
+				_, found := interfaceMapLookup(rv, item)
+				return found, nil
+			}
+			if k, ok := mapKey(item, kt); ok {
+				return rv.MapIndex(k).IsValid(), nil
 			}
 			keys := rv.MapKeys()
 			itemValue := reflect.ValueOf(item)

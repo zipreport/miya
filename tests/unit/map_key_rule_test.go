@@ -35,7 +35,8 @@ func TestMapKeyRule(t *testing.T) {
 		{"bytes_key", `{{ ms[bs] }}`, `one`},
 		{"mixed_num", `{{ ifm[1.0] }}|{{ ifm.get(1.0) }}|{{ 1.0 in ifm }}`, `one|one|true`},
 		{"mixed_miss", `[{{ ifm[2] }}|{{ ifm.get(2) }}|{{ 2 in ifm }}]`, `[||false]`},
-		{"ptr_dict_literal", `{{ {p: 1}|list }}`, `['1']`},
+		{"slice_key", `[{{ ifm[[1]] }}|{{ ifm.get([1]) }}|{{ [1] in ifm }}]`, `[||false]`},
+		{"ptr_dict_literal", `{{ {p: 1}|list }}`, `[&#39;1&#39;]`},
 		{"bool_int_key", `{{ ifm1[true] }}|{{ ift[1] }}`, `one|T`},
 	}
 	env := miya.NewEnvironment()
