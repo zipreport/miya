@@ -2,11 +2,13 @@ package branching
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/zipreport/miya/runtime"
 )
@@ -181,12 +183,12 @@ func testString(value interface{}, args ...interface{}) (bool, error) {
 	return valueKind(value) == reflect.String, nil
 }
 
-// testNumber checks if a value is a number (int or float)
+// testNumber checks if a value is a number (int, float or bool, as in Python)
 func testNumber(value interface{}, args ...interface{}) (bool, error) {
 	switch valueKind(value) {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Float32, reflect.Float64:
+		reflect.Float32, reflect.Float64, reflect.Bool:
 		return true, nil
 	default:
 		return false, nil
@@ -225,7 +227,7 @@ func testSequence(value interface{}, args ...interface{}) (bool, error) {
 
 	rv := reflect.ValueOf(value)
 	switch rv.Kind() {
-	case reflect.Slice, reflect.Array:
+	case reflect.Slice, reflect.Array, reflect.Map:
 		return true, nil
 	case reflect.String:
 		return true, nil // strings are sequences in Jinja2
@@ -275,22 +277,61 @@ func testCallable(value interface{}, args ...interface{}) (bool, error) {
 	return rv.Kind() == reflect.Func, nil
 }
 
+// pyNumber classifies v as Python sees a number: every Go integer kind and
+// bool (Python's bool is an int) as an integer, float kinds as a float.
+// Strings are not numbers.
+func pyNumber(v interface{}) (i int64, f float64, isInt, ok bool) {
+	v = runtime.Indirect(v)
+	if v == nil {
+		return
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return rv.Int(), 0, true, true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return int64(rv.Uint()), 0, true, true
+	case reflect.Float32, reflect.Float64:
+		return 0, rv.Float(), false, true
+	case reflect.Bool:
+		if rv.Bool() {
+			return 1, 0, true, true
+		}
+		return 0, 0, true, true
+	}
+	return
+}
+
+// pyAsFloat returns the number as a float64.
+func pyAsFloat(i int64, f float64, isInt bool) float64 {
+	if isInt {
+		return float64(i)
+	}
+	return f
+}
+
 // testEven checks if a number is even
 func testEven(value interface{}, args ...interface{}) (bool, error) {
-	num, err := toInt(value)
-	if err != nil {
-		return false, fmt.Errorf("even test requires an integer, got %T", value)
+	i, f, isInt, ok := pyNumber(value)
+	if !ok {
+		return false, fmt.Errorf("even test requires a number, got %T", value)
 	}
-	return num%2 == 0, nil
+	if isInt {
+		return i%2 == 0, nil
+	}
+	return math.Mod(f, 2) == 0, nil
 }
 
 // testOdd checks if a number is odd
 func testOdd(value interface{}, args ...interface{}) (bool, error) {
-	num, err := toInt(value)
-	if err != nil {
-		return false, fmt.Errorf("odd test requires an integer, got %T", value)
+	i, f, isInt, ok := pyNumber(value)
+	if !ok {
+		return false, fmt.Errorf("odd test requires a number, got %T", value)
 	}
-	return num%2 != 0, nil
+	if isInt {
+		return i%2 != 0, nil
+	}
+	return math.Abs(math.Mod(f, 2)) == 1, nil
 }
 
 // testDivisibleBy checks if a number is divisible by another number
@@ -299,39 +340,72 @@ func testDivisibleBy(value interface{}, args ...interface{}) (bool, error) {
 		return false, fmt.Errorf("divisibleby test requires exactly one argument")
 	}
 
-	num, err := toInt(value)
-	if err != nil {
-		return false, fmt.Errorf("divisibleby test requires an integer, got %T", value)
+	i, f, isInt, ok := pyNumber(value)
+	if !ok {
+		return false, fmt.Errorf("divisibleby test requires a number, got %T", value)
 	}
 
-	divisor, err := toInt(args[0])
-	if err != nil {
-		return false, fmt.Errorf("divisibleby test requires an integer divisor, got %T", args[0])
+	di, df, dIsInt, dok := pyNumber(args[0])
+	if !dok {
+		return false, fmt.Errorf("divisibleby test requires a number divisor, got %T", args[0])
 	}
 
-	if divisor == 0 {
+	if (dIsInt && di == 0) || (!dIsInt && df == 0) {
 		return false, fmt.Errorf("division by zero")
 	}
 
-	return num%divisor == 0, nil
+	if isInt && dIsInt {
+		return i%di == 0, nil
+	}
+	return math.Mod(pyAsFloat(i, f, isInt), pyAsFloat(di, df, dIsInt)) == 0, nil
+}
+
+// pyCaseTest follows Python's str.islower (lower) and str.isupper: false if
+// any rune has the opposite case (title case counts as upper), otherwise true
+// only if at least one rune is cased.
+func pyCaseTest(s string, lower bool) bool {
+	cased := false
+	for _, r := range s {
+		switch {
+		case unicode.IsUpper(r) || unicode.IsTitle(r):
+			if lower {
+				return false
+			}
+			cased = true
+		case unicode.IsLower(r):
+			if !lower {
+				return false
+			}
+			cased = true
+		}
+	}
+	return cased
+}
+
+// pyCaseValue applies pyCaseTest to a value: nil, bool and numbers are not
+// cased; other non-strings are tested on their string form.
+func pyCaseValue(value interface{}, lower bool) bool {
+	value = runtime.Indirect(value)
+	if value == nil {
+		return false
+	}
+	if _, _, _, ok := pyNumber(value); ok {
+		return false
+	}
+	if s, ok := value.(string); ok {
+		return pyCaseTest(s, lower)
+	}
+	return pyCaseTest(fmt.Sprintf("%v", value), lower)
 }
 
 // testLower checks if a string is all lowercase
 func testLower(value interface{}, args ...interface{}) (bool, error) {
-	str, ok := value.(string)
-	if !ok {
-		return false, fmt.Errorf("lower test requires a string, got %T", value)
-	}
-	return str == strings.ToLower(str), nil
+	return pyCaseValue(value, true), nil
 }
 
 // testUpper checks if a string is all uppercase
 func testUpper(value interface{}, args ...interface{}) (bool, error) {
-	str, ok := value.(string)
-	if !ok {
-		return false, fmt.Errorf("upper test requires a string, got %T", value)
-	}
-	return str == strings.ToUpper(str), nil
+	return pyCaseValue(value, false), nil
 }
 
 // testStartsWith checks if a string starts with a prefix
@@ -682,28 +756,23 @@ func contains(container, item interface{}) (bool, error) {
 
 // compareValues compares two values and applies a comparison function
 func compareValues(v1, v2 interface{}, compFunc func(int) bool) (bool, error) {
-	// Handle nil values
+	// nil only compares equal to nil; ordering it is a TypeError in Python
 	if v1 == nil && v2 == nil {
 		return compFunc(0), nil
 	}
-	if v1 == nil {
-		return compFunc(-1), nil
-	}
-	if v2 == nil {
+	if v1 == nil || v2 == nil {
+		if compFunc(-1) != compFunc(1) {
+			return false, fmt.Errorf("'<' not supported between %T and %T", v1, v2)
+		}
+		if v1 == nil {
+			return compFunc(-1), nil
+		}
 		return compFunc(1), nil
 	}
 
-	// Try numeric comparison first
-	if num1, err1 := toFloat(v1); err1 == nil {
-		if num2, err2 := toFloat(v2); err2 == nil {
-			if num1 < num2 {
-				return compFunc(-1), nil
-			} else if num1 > num2 {
-				return compFunc(1), nil
-			} else {
-				return compFunc(0), nil
-			}
-		}
+	// Numbers compare by value; a numeric string is not a number
+	if cmp, ok := runtime.CompareNumbers(v1, v2); ok {
+		return compFunc(cmp), nil
 	}
 
 	// Try string comparison

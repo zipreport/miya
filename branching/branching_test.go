@@ -22,8 +22,8 @@ func TestBuiltinTests(t *testing.T) {
 		if err != nil {
 			t.Fatalf("defined test failed: %v", err)
 		}
-		if result {
-			t.Error("expected defined test to return false for nil value")
+		if !result {
+			t.Error("expected defined test to return true for nil value (None is defined)")
 		}
 	})
 
@@ -740,7 +740,7 @@ func TestTypeCheckFunctions(t *testing.T) {
 			value    interface{}
 			expected bool
 		}{
-			{"nil is undefined", nil, true},
+			{"nil is defined", nil, false},
 			{"string is defined", "hello", false},
 			{"int is defined", 42, false},
 			{"empty string is defined", "", false},
