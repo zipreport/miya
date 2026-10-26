@@ -1046,7 +1046,7 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 func (e *DefaultEvaluator) EvalBlockNode(node *parser.BlockNode, ctx Context) (interface{}, error) {
 	// Block evaluation is handled by the template inheritance system
 	// For now, just evaluate the body
-	return e.evalNodeList(node.Body, ctx)
+	return e.evalNodeList(node.Body, withBaseAutoescape(ctx))
 }
 
 func (e *DefaultEvaluator) EvalSetNode(node *parser.SetNode, ctx Context) (interface{}, error) {
@@ -1277,6 +1277,8 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 			}
 		}
 	}
+
+	includeCtx = withBaseAutoescape(includeCtx)
 
 	leave, err := e.enter("include " + strconv.Quote(templateName))
 	if err != nil {

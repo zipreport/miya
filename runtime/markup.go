@@ -97,6 +97,37 @@ func resolveEscape(ctx Context) (on bool, ec EscapeContext, esc *AutoEscaper) {
 	return on, EscapeContextHTML, nil
 }
 
+// baseAutoescape is the escape setting of ctx ignoring every {% autoescape %} tag.
+func baseAutoescape(ctx Context) bool {
+	for c := ctx; c != nil; {
+		switch w := c.(type) {
+		case *autoescapeContext:
+		case *goAutoescapeContext, *goEnvContext:
+		case ContextAwareContext:
+			if a := w.GetAutoEscaper(); a != nil {
+				return a.config.Enabled
+			}
+		case AutoescapeContext:
+			return w.IsAutoescapeEnabled()
+		}
+		u, ok := c.(interface{ Unwrap() Context })
+		if !ok {
+			break
+		}
+		c = u.Unwrap()
+	}
+	return false
+}
+
+// withBaseAutoescape wraps ctx so that the environment's escape setting
+// applies, whatever {% autoescape %} tag surrounds it.
+func withBaseAutoescape(ctx Context) Context {
+	if on, _, _ := resolveEscape(ctx); on != baseAutoescape(ctx) {
+		return &autoescapeContext{Context: ctx, autoescape: !on}
+	}
+	return ctx
+}
+
 // markupContext reports whether Markup is meaningful in ctx: escaping is on
 // and the escape context is in the HTML family.
 func markupContext(ctx Context) bool {
@@ -276,7 +307,7 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 		result, err = e.mapMarkup(ctx, value, args, apply)
 	case !safe && markupPassthroughFilters[name]:
 		result, err = apply(value, args)
-	case !safe && name == "replace" && markupContext(ctx) && isStringValue(value) && anySafeArg(args):
+	case !safe && name == "replace" && markupContext(ctx) && isReplaceInput(value) && anySafeArg(args):
 		result, err = apply(escapeFor(ctx, value), replaceArgs(ctx, args))
 		if s, ok := result.(string); ok {
 			result = Markup(s)
@@ -317,6 +348,42 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 func isStringValue(v interface{}) bool {
 	_, ok := basicValue(v).(string)
 	return ok
+}
+
+// isReplaceInput reports whether v is a string, number, RoundedFloat or bool.
+func isReplaceInput(v interface{}) bool {
+	if _, ok := v.(RoundedFloat); ok {
+		return true
+	}
+	b := basicValue(v)
+	if _, ok := b.(bool); ok {
+		return true
+	}
+	return isStringValue(b) || isNumberKind(b)
+}
+
+// mapItemReappliable reports whether no attribute of the filter's name can
+// win over the filter for this item, so the markup policy may be re-applied.
+func mapItemReappliable(it interface{}) bool {
+	switch it.(type) {
+	case GroupTuple, []byte:
+		return false
+	case RoundedFloat, []interface{}:
+		return true
+	}
+	switch b := basicValue(it).(type) {
+	case string, nil, *Undefined, bool:
+		return true
+	default:
+		if isNumberKind(b) {
+			return true
+		}
+		switch reflect.ValueOf(b).Kind() {
+		case reflect.Slice, reflect.Array:
+			return true
+		}
+	}
+	return false
 }
 
 // anySafeArg reports whether any argument, including the values of a trailing
@@ -414,10 +481,7 @@ func (e *DefaultEvaluator) mapMarkup(ctx Context, value interface{}, args []inte
 		}
 		_, safe := AsMarkup(it)
 		if !safe {
-			switch b := basicValue(it).(type) {
-			case string, nil, *Undefined:
-				_ = b
-			default:
+			if !mapItemReappliable(it) {
 				continue
 			}
 		}
