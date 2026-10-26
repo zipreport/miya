@@ -52,4 +52,3 @@ func TestRoundedFloatFormat(t *testing.T) {
 		}
 	}
 }
-

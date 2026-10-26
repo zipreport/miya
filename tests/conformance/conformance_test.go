@@ -74,9 +74,7 @@ func loadJSON(t *testing.T, path string, v interface{}) {
 }
 
 // mapLoader serves templates from memory through GetSource only, the path
-// zipreport-go's ReportFileLoader takes. miya's StringLoader is an
-// AdvancedLoader that parses templates itself and so skips the environment's
-// trim_blocks, lstrip_blocks and "-" whitespace handling.
+// zipreport-go's ReportFileLoader takes.
 type mapLoader map[string]string
 
 func (m mapLoader) GetSource(name string) (string, error) {
