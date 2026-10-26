@@ -4296,6 +4296,81 @@
    "context": {},
    "entry": "main",
    "expect": {
+    "output": "1"
+   },
+   "id": "lexb-001",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ [{'a': {'b': 1}}][0].a.b }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateSyntaxError",
+    "phase": "compile"
+   },
+   "id": "lexb-002",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ (1 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateSyntaxError",
+    "phase": "compile"
+   },
+   "id": "lexb-003",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x }<div>{{ y }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateSyntaxError",
+    "phase": "compile"
+   },
+   "id": "lexb-004",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% set x = 1) %}x"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
     "output": "x"
    },
    "id": "undef-001",

@@ -32,7 +32,6 @@ PLAN_BY_ID = {
     # string filters split out of 050: wordwrap 052, format 053, urlencode/striptags 054.
     "fsem-021": "052", "fsem-030": "053", "fsem-031": "053", "fsem-016": "054", "fsem-017": "054",
     "dlit-003": "035",
-    "dlit-004": "051",
     "parse-023": "033",
     "err-006": "034",
     # deferred by the plans that would own them

@@ -1,9 +1,4 @@
 {
- "dlit-004": {
-  "kind": "error",
-  "plan": "051",
-  "reason": "want \"2\", got compile-time error: parser error in template main: expected '}' after dictionary elements at line 1, column 18"
- },
  "esc-005": {
   "kind": "output",
   "plan": "054",

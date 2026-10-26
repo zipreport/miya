@@ -299,6 +299,12 @@ case("dlit-005", "{{ {'a': 1, 'b': 2}.b }}")
 case("dlit-006", "{{ {1: 'one'}[1] }}")
 case("dlit-007", "{{ {'a': 1, 'a': 2}.a }}")
 
+# --- bracket balancing in tags (plan 051) -----------------------------------
+case("lexb-001", "{{ [{'a': {'b': 1}}][0].a.b }}")
+case("lexb-002", "{{ (1 }}")
+case("lexb-003", "{{ x }<div>{{ y }}")
+case("lexb-004", "{% set x = 1) %}x")
+
 # --- undefined / None (plan 049) --------------------------------------------
 case("undef-001", "{{ a|default('x') }}", strict=True)
 case("undef-002", "{{ a is undefined }}", strict=True)
