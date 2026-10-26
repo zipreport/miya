@@ -101,6 +101,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Breaking:** `wordwrap(width, break_long_words, wrapstring, break_on_hyphens)` follows Python's `textwrap`, as Jinja2 does. Long words are broken (pass `break_long_words=false` to keep them), words split after hyphens, runs of spaces inside a line are kept, and `width` defaults to 79. The second argument is `break_long_words`; it used to be `break_on_hyphens`.
 - **Breaking:** a nil pointer prints as empty, is false in `{% if %}`, is `none`, and is treated like `none` by `default`; it printed `<nil>` and was true. A non-nil pointer to a string, number, bool, slice or map behaves as the value it points to (it printed a memory address). Zero values of named bool, string and number types (`type Flag bool`) are false in `{% if %}` and in `default(x, true)`, named bools and strings compare equal to plain ones, and named strings and numbers pass `is string` / `is number`.
 - **Breaking:** booleans are numbers in arithmetic and comparison, as in Python: `true + 1` is `2` and `true == 1` is true (both used to fail or be false).
 - Go methods are not callable from templates. The docs used to promise zero-argument method calls, which never worked; they now say so. Pass computed values as data, or register a global function.

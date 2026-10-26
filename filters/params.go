@@ -55,6 +55,10 @@ var builtinParams = map[string][]Param{
 		{Name: "attribute", Required: true}, {Name: "default"},
 		{Name: "case_sensitive", Default: false},
 	},
+	"wordwrap": {
+		{Name: "width", Default: 79}, {Name: "break_long_words", Default: true},
+		{Name: "wrapstring"}, {Name: "break_on_hyphens", Default: true},
+	},
 	"trim":  {{Name: "chars"}},
 	"strip": {{Name: "chars"}},
 }

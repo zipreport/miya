@@ -39,11 +39,6 @@
   "plan": "054",
   "reason": "want \"a b\", got \"a  b\""
  },
- "fsem-021": {
-  "kind": "output",
-  "plan": "052",
-  "reason": "want \"abc\\ndef\\ngh\\nij\", got \"abcdefgh\\nij\""
- },
  "fsem-028": {
   "kind": "output",
   "plan": "deviation",

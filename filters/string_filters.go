@@ -7,6 +7,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 // Pre-compiled regex patterns for string filters (performance optimization)
@@ -198,70 +200,56 @@ func truncate(defaultLeeway int, value interface{}, args ...interface{}) (interf
 	return prefix + end, nil
 }
 
-// WordwrapFilter wraps words at specified width
+// WordwrapFilter wraps text like Jinja2's wordwrap, which uses Python's
+// textwrap: (width=79, break_long_words=true, wrapstring="\n", break_on_hyphens=true).
 func WordwrapFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	if len(args) < 1 {
-		return nil, fmt.Errorf("wordwrap filter requires width argument")
-	}
-
-	s := ToString(value)
-	width, err := ToInt(args[0])
-	if err != nil {
-		return nil, fmt.Errorf("wordwrap width must be integer: %v", err)
-	}
-
-	breakOnHyphens := true
-	wrapString := "\n"
-
-	if len(args) > 1 {
-		breakOnHyphens = ToBool(args[1])
-	}
-	if len(args) > 2 {
-		wrapString = ToString(args[2])
-	}
-
-	words := strings.Fields(s)
-	if len(words) == 0 {
-		return s, nil
-	}
-
-	var lines []string
-	var currentLine strings.Builder
-
-	for _, word := range words {
-		if breakOnHyphens && strings.Contains(word, "-") {
-			// Split on hyphens too
-			parts := strings.Split(word, "-")
-			for i, part := range parts {
-				if i > 0 {
-					part = "-" + part
-				}
-				if currentLine.Len()+len(part)+1 > width && currentLine.Len() > 0 {
-					lines = append(lines, currentLine.String())
-					currentLine.Reset()
-				}
-				if currentLine.Len() > 0 {
-					currentLine.WriteString(" ")
-				}
-				currentLine.WriteString(part)
-			}
-		} else {
-			if currentLine.Len()+len(word)+1 > width && currentLine.Len() > 0 {
-				lines = append(lines, currentLine.String())
-				currentLine.Reset()
-			}
-			if currentLine.Len() > 0 {
-				currentLine.WriteString(" ")
-			}
-			currentLine.WriteString(word)
+	arg := func(i int) interface{} {
+		if i < len(args) {
+			return args[i]
 		}
+		return nil
+	}
+	width := 79
+	if arg(0) != nil {
+		w, err := ToInt(arg(0))
+		if err != nil {
+			return nil, fmt.Errorf("wordwrap width must be integer: %v", err)
+		}
+		width = w
+	}
+	breakLongWords := arg(1) == nil || ToBool(arg(1))
+	breakOnHyphens := arg(3) == nil || ToBool(arg(3))
+
+	wrapMarkup, safeWrap := runtime.AsMarkup(arg(2))
+	wrapString := "\n"
+	if safeWrap {
+		wrapString = string(wrapMarkup)
+	} else if arg(2) != nil {
+		wrapString = ToString(arg(2))
 	}
 
-	if currentLine.Len() > 0 {
-		lines = append(lines, currentLine.String())
+	input := pySplitlines(ToString(value))
+	if len(input) == 0 {
+		return "", nil
 	}
-
-	return strings.Join(lines, wrapString), nil
+	if width <= 0 {
+		return nil, fmt.Errorf("wordwrap: invalid width %d (must be > 0)", width)
+	}
+	var out []string
+	for _, line := range input {
+		wrapped := textwrapLines(line, width, breakLongWords, breakOnHyphens)
+		if safeWrap {
+			for i, l := range wrapped {
+				wrapped[i] = string(runtime.EscapeMarkup(l))
+			}
+		}
+		out = append(out, strings.Join(wrapped, wrapString))
+	}
+	result := strings.Join(out, wrapString)
+	if safeWrap {
+		return runtime.Markup(result), nil
+	}
+	return result, nil
 }
 
 // maxRepeatBytes bounds the padding a template can ask a filter to build.
