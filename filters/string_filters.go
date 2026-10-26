@@ -18,19 +18,33 @@ var (
 	reRegexReplaceTest = regexp.MustCompile(`^/(.+)/([gimsuy]*)$`)
 )
 
-// titleCase converts a string to title case (capitalize first letter of each word).
-// This replaces the deprecated strings.Title function.
+// reTitleSep splits on Jinja2's title separators: '-', Python whitespace and
+// the opening brackets ( { [ <.
+var reTitleSep = regexp.MustCompile(`[-\p{Z}\t-\r\x{1c}-\x{1f}\x{85}({\[<]+`)
+
+// reWord matches a Unicode-aware \w+ run, as counted by Jinja2's wordcount.
+var reWord = regexp.MustCompile(`[\p{L}\p{N}_]+`)
+
+// titleCase converts a string to title case like Jinja2: the first rune of each
+// piece between separators is upper-cased and the rest lower-cased.
 func titleCase(s string) string {
-	// Use a simple state machine to capitalize letters after spaces
-	prev := ' '
-	return strings.Map(func(r rune) rune {
-		if unicode.IsSpace(prev) {
-			prev = r
-			return unicode.ToTitle(r)
+	var b strings.Builder
+	last := 0
+	word := func(w string) {
+		if w == "" {
+			return
 		}
-		prev = r
-		return r
-	}, s)
+		r, size := utf8.DecodeRuneInString(w)
+		b.WriteString(strings.ToUpper(string(r)))
+		b.WriteString(strings.ToLower(w[size:]))
+	}
+	for _, m := range reTitleSep.FindAllStringIndex(s, -1) {
+		word(s[last:m[0]])
+		b.WriteString(s[m[0]:m[1]])
+		last = m[1]
+	}
+	word(s[last:])
+	return b.String()
 }
 
 // capitalizeFirst capitalizes only the first letter of a string.
@@ -621,15 +635,7 @@ func PadRightFilter(value interface{}, args ...interface{}) (interface{}, error)
 
 // WordcountFilter counts words in a string
 func WordcountFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	s := ToString(value)
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return 0, nil
-	}
-
-	// Split on whitespace and count non-empty parts
-	words := strings.Fields(s)
-	return len(words), nil
+	return len(reWord.FindAllString(ToString(value), -1)), nil
 }
 
 // Helper function to extract regex flags from string

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"html"
 	"math"
-	"net/url"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -14,8 +14,13 @@ import (
 
 // Pre-compiled regex patterns for HTML filters (performance optimization)
 var (
-	reHTMLTags = regexp.MustCompile(`<[^>]*>`)
-	reURLs     = regexp.MustCompile(`https?://[^\s<>"']+`)
+	reURLs = regexp.MustCompile(`https?://[^\s<>"']+`)
+
+	// Jinja2's urlize patterns; \w is Unicode-aware there and \d matches any decimal digit.
+	reUrlizeHTTP   = regexp.MustCompile(`(?i)^(?:(?:https?://|www\.)(?:(?:[\p{L}\p{N}_%-]+\.)+)?(?:[a-z]{2,63}|xn--[\p{L}\p{N}_%]{2,59})|(?:[\p{L}\p{N}_%-]{2,63}\.)+(?:com|net|int|edu|gov|org|info|mil)|https?://(?:\p{Nd}{1,3}(?:\.\p{Nd}{1,3}){3}|\[(?:[\p{Nd}a-f]{0,4}:){2}(?:[\p{Nd}a-f]{0,4}:?){1,6}\]))(?::\p{Nd}{1,5})?(?:[/?#]\S*)?$`)
+	reUrlizeEmail  = regexp.MustCompile(`^\S+@[\p{L}\p{N}_][\p{L}\p{N}_.-]*\.[\p{L}\p{N}_]+$`)
+	reUrlizeScheme = regexp.MustCompile(`^[\p{L}\p{N}_.+-]{2,}:/{0,2}$`)
+	reUrlizeSplit  = regexp.MustCompile("(" + pySpaceClass + "+)")
 )
 
 // SafeValue marks a value that must not be escaped. It is runtime.SafeValue,
@@ -41,10 +46,71 @@ func SafeFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	return runtime.Markup(ToString(value)), nil
 }
 
-// URLEncodeFilter URL-encodes a string
+// urlQuote percent-encodes the UTF-8 bytes of s like Jinja2's url_quote,
+// keeping A-Za-z0-9_.-~ (and / unless forQS, where a space becomes +).
+func urlQuote(s string, forQS bool) string {
+	const hex = "0123456789ABCDEF"
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		switch {
+		case c >= 'A' && c <= 'Z', c >= 'a' && c <= 'z', c >= '0' && c <= '9',
+			c == '_', c == '.', c == '-', c == '~', c == '/' && !forQS:
+			b.WriteByte(c)
+		case c == ' ' && forQS:
+			b.WriteByte('+')
+		default:
+			b.WriteByte('%')
+			b.WriteByte(hex[c>>4])
+			b.WriteByte(hex[c&15])
+		}
+	}
+	return b.String()
+}
+
+// URLEncodeFilter percent-encodes a string, or turns a mapping or a list of
+// pairs into a query string, like Jinja2.
 func URLEncodeFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	s := ToString(value)
-	return url.QueryEscape(s), nil
+	if m, ok := runtime.AsMarkup(value); ok {
+		return urlQuote(string(m), false), nil
+	}
+	rv := reflect.ValueOf(runtime.Indirect(value))
+	var pairs [][2]interface{}
+	switch rv.Kind() {
+	case reflect.Map:
+		type kv struct {
+			k string
+			v interface{}
+		}
+		items := make([]kv, 0, rv.Len())
+		iter := rv.MapRange()
+		for iter.Next() {
+			items = append(items, kv{ToString(iter.Key().Interface()), iter.Value().Interface()})
+		}
+		sort.Slice(items, func(i, j int) bool { return items[i].k < items[j].k })
+		for _, it := range items {
+			pairs = append(pairs, [2]interface{}{it.k, it.v})
+		}
+	case reflect.Slice, reflect.Array:
+		if rv.Type().Elem().Kind() == reflect.Uint8 {
+			return urlQuote(ToString(value), false), nil
+		}
+		for i := 0; i < rv.Len(); i++ {
+			el := rv.Index(i).Interface()
+			ev := reflect.ValueOf(runtime.Indirect(el))
+			if (ev.Kind() != reflect.Slice && ev.Kind() != reflect.Array) || ev.Len() != 2 {
+				return nil, fmt.Errorf("urlencode: expected a string, a mapping or a list of pairs, got element %T", el)
+			}
+			pairs = append(pairs, [2]interface{}{ev.Index(0).Interface(), ev.Index(1).Interface()})
+		}
+	default:
+		return urlQuote(ToString(value), false), nil
+	}
+	parts := make([]string, len(pairs))
+	for i, p := range pairs {
+		parts[i] = urlQuote(ToString(p[0]), true) + "=" + urlQuote(ToString(p[1]), true)
+	}
+	return strings.Join(parts, "&"), nil
 }
 
 // XMLAttrFilter formats attributes for XML/HTML
@@ -138,17 +204,28 @@ func XMLAttrFilter(value interface{}, args ...interface{}) (interface{}, error) 
 	return runtime.Markup(" " + result.String()), nil
 }
 
-// StripTagsFilter removes HTML/XML tags
+// stripBetween removes every open...close span, stopping when no close follows.
+func stripBetween(s, open, closing string) string {
+	for {
+		i := strings.Index(s, open)
+		if i < 0 {
+			return s
+		}
+		j := strings.Index(s[i+len(open):], closing)
+		if j < 0 {
+			return s
+		}
+		s = s[:i] + s[i+len(open)+j+len(closing):]
+	}
+}
+
+// StripTagsFilter removes HTML/XML tags and comments, collapses whitespace and
+// decodes entities, like markupsafe's Markup.striptags.
 func StripTagsFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	s := ToString(value)
-
-	// Simple HTML tag removal using pre-compiled regex
-	result := reHTMLTags.ReplaceAllString(s, "")
-
-	// Decode HTML entities
-	result = html.UnescapeString(result)
-
-	return result, nil
+	s := stripBetween(ToString(value), "<!--", "-->")
+	s = stripBetween(s, "<", ">")
+	s = strings.Join(strings.FieldsFunc(s, isPySpace), " ")
+	return html.UnescapeString(s), nil
 }
 
 // isSafe reports whether value is already marked safe.
@@ -178,61 +255,184 @@ func linkify(s string, safe bool, link func(string) string) string {
 	return b.String()
 }
 
-// UrlizeFilter converts URLs in text to clickable links
+// urlizeTrim shortens x to limit runes plus "..." when it is longer, with
+// Python's slice rules for a negative limit.
+func urlizeTrim(x string, limit *int) string {
+	if limit == nil {
+		return x
+	}
+	r := []rune(x)
+	if len(r) <= *limit {
+		return x
+	}
+	end := *limit
+	if end < 0 {
+		end += len(r)
+		if end < 0 {
+			end = 0
+		}
+	}
+	return string(r[:end]) + "..."
+}
+
+var (
+	urlizeHeads = []string{"(", "<", "&lt;"}
+	urlizeTails = []string{")", ">", ".", ",", "\n", "&gt;"}
+	urlizePairs = [][2]string{{"(", ")"}, {"<", ">"}, {"&lt;", "&gt;"}}
+)
+
+// stripRun removes a leading (or trailing) run of any of the tokens from s.
+func stripRun(s string, tokens []string, leading bool) (rest, run string) {
+	for {
+		matched := false
+		for _, t := range tokens {
+			if leading && strings.HasPrefix(s, t) {
+				s, run = s[len(t):], run+t
+				matched = true
+				break
+			}
+			if !leading && strings.HasSuffix(s, t) {
+				s, run = s[:len(s)-len(t)], t+run
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return s, run
+		}
+	}
+}
+
+// UrlizeFilter converts URLs in text to clickable links like Jinja2:
+// urlize(trim_url_limit=None, nofollow=False, target=None, rel=None, extra_schemes=None).
 func UrlizeFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	s := ToString(value)
-
-	trimURLs := true
-	nofollow := false
-	target := ""
-	rel := ""
-
-	if len(args) > 0 {
-		trimURLs = ToBool(args[0])
-	}
-	if len(args) > 1 {
-		nofollow = ToBool(args[1])
-	}
-	if len(args) > 2 {
-		target = ToString(args[2])
-	}
-	if len(args) > 3 {
-		rel = ToString(args[3])
+	arg := func(i int) interface{} {
+		if i < len(args) {
+			return args[i]
+		}
+		return nil
 	}
 
-	if nofollow {
-		if rel != "" {
-			rel = "nofollow " + rel
-		} else {
-			rel = "nofollow"
+	var limit *int
+	switch v := arg(0).(type) {
+	case nil:
+	case bool:
+		n := 0
+		if v {
+			n = 1
+		}
+		limit = &n
+	default:
+		n, err := ToInt(v)
+		if err != nil {
+			return nil, fmt.Errorf("urlize: trim_url_limit must be an integer: %v", err)
+		}
+		limit = &n
+	}
+
+	relWords := map[string]bool{"noopener": true}
+	if r := arg(3); r != nil {
+		for _, w := range strings.FieldsFunc(ToString(r), isPySpace) {
+			relWords[w] = true
+		}
+	}
+	if ToBool(arg(1)) {
+		relWords["nofollow"] = true
+	}
+	sortedRel := make([]string, 0, len(relWords))
+	for w := range relWords {
+		sortedRel = append(sortedRel, w)
+	}
+	sort.Strings(sortedRel)
+	attrs := ` rel="` + html.EscapeString(strings.Join(sortedRel, " ")) + `"`
+	if t := arg(2); t != nil {
+		if ts := ToString(t); ts != "" {
+			attrs += ` target="` + html.EscapeString(ts) + `"`
 		}
 	}
 
-	// Use pre-compiled URL regex
-	link := func(match string) string {
-		displayURL := match
-
-		// Trim long URLs
-		if trimURLs && len(match) > 40 {
-			displayURL = match[:37] + "..."
+	var schemes []string
+	if es := arg(4); es != nil {
+		rv := reflect.ValueOf(runtime.Indirect(es))
+		if rv.Kind() != reflect.Slice && rv.Kind() != reflect.Array {
+			return nil, fmt.Errorf("urlize: extra_schemes must be a list")
 		}
-
-		// Build link attributes
-		var attrs []string
-		attrs = append(attrs, fmt.Sprintf(`href="%s"`, html.EscapeString(match)))
-
-		if target != "" {
-			attrs = append(attrs, fmt.Sprintf(`target="%s"`, html.EscapeString(target)))
+		for i := 0; i < rv.Len(); i++ {
+			sc := ToString(rv.Index(i).Interface())
+			if !reUrlizeScheme.MatchString(sc) {
+				return nil, fmt.Errorf("urlize: invalid extra scheme %q", sc)
+			}
+			schemes = append(schemes, sc)
 		}
-
-		if rel != "" {
-			attrs = append(attrs, fmt.Sprintf(`rel="%s"`, html.EscapeString(rel)))
-		}
-
-		return fmt.Sprintf(`<a %s>%s</a>`, strings.Join(attrs, " "), html.EscapeString(displayURL))
 	}
 
-	return runtime.Markup(linkify(s, isSafe(value), link)), nil
+	text := ToString(value)
+	if !isSafe(value) {
+		text = html.EscapeString(text)
+	}
+
+	var out strings.Builder
+	process := func(word string) string {
+		middle, head := stripRun(word, urlizeHeads, true)
+		middle, tail := stripRun(middle, urlizeTails, false)
+		for _, p := range urlizePairs {
+			open, closing := p[0], p[1]
+			startCount := strings.Count(middle, open)
+			if startCount <= strings.Count(middle, closing) {
+				continue
+			}
+			for n := minInt(startCount, strings.Count(tail, closing)); n > 0; n-- {
+				i := strings.Index(tail, closing)
+				if i < 0 {
+					break
+				}
+				middle += tail[:i+len(closing)]
+				tail = tail[i+len(closing):]
+			}
+		}
+
+		var link string
+		switch {
+		case reUrlizeHTTP.MatchString(middle):
+			href := middle
+			if !strings.HasPrefix(href, "http://") && !strings.HasPrefix(href, "https://") {
+				href = "https://" + href
+			}
+			link = `<a href="` + href + `"` + attrs + `>` + urlizeTrim(middle, limit) + `</a>`
+		case strings.HasPrefix(middle, "mailto:") && reUrlizeEmail.MatchString(middle[len("mailto:"):]):
+			link = `<a href="` + middle + `">` + middle[len("mailto:"):] + `</a>`
+		case strings.Contains(middle, "@") && !strings.HasPrefix(middle, "www.") && !strings.HasPrefix(middle, "@") &&
+			!strings.Contains(middle, ":") && reUrlizeEmail.MatchString(middle):
+			link = `<a href="mailto:` + middle + `">` + middle + `</a>`
+		default:
+			for _, sc := range schemes {
+				if strings.HasPrefix(middle, sc) && middle != sc {
+					link = `<a href="` + middle + `"` + attrs + `>` + middle + `</a>`
+					break
+				}
+			}
+		}
+		if link == "" {
+			return word
+		}
+		return head + link + tail
+	}
+
+	last := 0
+	for _, m := range reUrlizeSplit.FindAllStringIndex(text, -1) {
+		out.WriteString(process(text[last:m[0]]))
+		out.WriteString(text[m[0]:m[1]])
+		last = m[1]
+	}
+	out.WriteString(process(text[last:]))
+	return runtime.Markup(out.String()), nil
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // UrlizeTargetFilter is like urlize but with a specific target
@@ -242,13 +442,11 @@ func UrlizeTargetFilter(value interface{}, args ...interface{}) (interface{}, er
 		target = ToString(args[0])
 	}
 
-	// Call urlize with target parameter
-	newArgs := []interface{}{true, false, target}
+	var rel interface{}
 	if len(args) > 1 {
-		newArgs = append(newArgs, args[1:]...)
+		rel = args[1]
 	}
-
-	return UrlizeFilter(value, newArgs...)
+	return UrlizeFilter(value, nil, false, target, rel)
 }
 
 // TruncateHTMLFilter truncates HTML content safely

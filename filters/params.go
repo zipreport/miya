@@ -59,6 +59,10 @@ var builtinParams = map[string][]Param{
 		{Name: "width", Default: 79}, {Name: "break_long_words", Default: true},
 		{Name: "wrapstring"}, {Name: "break_on_hyphens", Default: true},
 	},
+	"urlize": {
+		{Name: "trim_url_limit"}, {Name: "nofollow", Default: false}, {Name: "target"},
+		{Name: "rel"}, {Name: "extra_schemes"},
+	},
 	"trim":  {{Name: "chars"}},
 	"strip": {{Name: "chars"}},
 }
