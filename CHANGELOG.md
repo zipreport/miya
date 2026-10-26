@@ -23,10 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `runtime.Number`, `runtime.BasicValue`, `runtime.SortedMapKeys`, `runtime.SortedMapPairs` and `runtime.UsesReflectLookup`.
 
 ### Fixed
+
 - Under autoescape, safe values stay safe through `map` with a filter (`[s]|map('upper')`), `map(attribute=…, default=s)`, `default(s)`, `loop.cycle(s, …)`, `join(d=s)` and `join(…, attribute=…)`, and through `+` with a Go named string type.
 - `v|replace(old, new)` with a safe `old` or `new` escapes `v` first, as Jinja2 does.
 - A safe value repeated with `*` stays safe under autoescape.
-
 - Undefined values print as `Undefined` inside lists and dicts, and make `tojson` fail as in Jinja2 instead of emitting miya's internal fields.
 - `-7` is an integer.
 - The data strings `inf`, `nan` and `infinity` are not numbers in arithmetic or in numeric filters (`w * 2` repeats them, `w - 1` and `w|abs` are errors; `w + 1` concatenates in lenient mode).
