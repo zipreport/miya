@@ -29,6 +29,13 @@ func (p *Parser) enterNesting() error {
 	return nil
 }
 
+// nest counts one more level for a chain that wraps its left operand in a new
+// node on each iteration (1 + 1 + 1 ...); the caller gives back *added levels.
+func (p *Parser) nest(added *int) error {
+	*added++
+	return p.enterNesting()
+}
+
 // NewParser creates a new parser with the given tokens
 func NewParser(tokens []*lexer.Token) *Parser {
 	return &Parser{
@@ -1004,12 +1011,17 @@ func (p *Parser) parseConditional() (ExpressionNode, error) {
 
 // parseOr parses logical OR expressions
 func (p *Parser) parseOr() (ExpressionNode, error) {
+	added := 0
+	defer func() { p.depth -= added }()
 	expr, err := p.parseAnd()
 	if err != nil {
 		return nil, err
 	}
 
 	for p.check(lexer.TokenOr) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
 		right, err := p.parseAnd()
 		if err != nil {
@@ -1023,12 +1035,17 @@ func (p *Parser) parseOr() (ExpressionNode, error) {
 
 // parseAnd parses logical AND expressions
 func (p *Parser) parseAnd() (ExpressionNode, error) {
+	added := 0
+	defer func() { p.depth -= added }()
 	expr, err := p.parseNot()
 	if err != nil {
 		return nil, err
 	}
 
 	for p.check(lexer.TokenAnd) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
 		right, err := p.parseNot()
 		if err != nil {
@@ -1094,12 +1111,17 @@ func (p *Parser) parseComparison() (ExpressionNode, error) {
 
 // parseAddition parses addition and subtraction
 func (p *Parser) parseAddition() (ExpressionNode, error) {
+	added := 0
+	defer func() { p.depth -= added }()
 	expr, err := p.parseConcatenation()
 	if err != nil {
 		return nil, err
 	}
 
 	for p.checkAny(lexer.TokenPlus, lexer.TokenMinus) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
 		right, err := p.parseConcatenation()
 		if err != nil {
@@ -1114,12 +1136,17 @@ func (p *Parser) parseAddition() (ExpressionNode, error) {
 // parseConcatenation parses string concatenation (~), which binds tighter
 // than + and - and looser than *, as in Jinja2
 func (p *Parser) parseConcatenation() (ExpressionNode, error) {
+	added := 0
+	defer func() { p.depth -= added }()
 	expr, err := p.parseMultiplication()
 	if err != nil {
 		return nil, err
 	}
 
 	for p.check(lexer.TokenTilde) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
 		right, err := p.parseMultiplication()
 		if err != nil {
@@ -1133,12 +1160,17 @@ func (p *Parser) parseConcatenation() (ExpressionNode, error) {
 
 // parseMultiplication parses multiplication, division, and modulo
 func (p *Parser) parseMultiplication() (ExpressionNode, error) {
+	added := 0
+	defer func() { p.depth -= added }()
 	expr, err := p.parsePower()
 	if err != nil {
 		return nil, err
 	}
 
 	for p.checkAny(lexer.TokenMultiply, lexer.TokenDivide, lexer.TokenFloorDivide, lexer.TokenModulo) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
 		right, err := p.parsePower()
 		if err != nil {
@@ -1153,12 +1185,17 @@ func (p *Parser) parseMultiplication() (ExpressionNode, error) {
 // parsePower parses **. As in Jinja2 it is left-associative and its operands
 // are unary expressions: 2 ** 3 ** 2 is 64 and -2 ** 2 is 4.
 func (p *Parser) parsePower() (ExpressionNode, error) {
+	added := 0
+	defer func() { p.depth -= added }()
 	expr, err := p.parseUnary(true)
 	if err != nil {
 		return nil, err
 	}
 
 	for p.check(lexer.TokenPower) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
 		right, err := p.parseUnary(true)
 		if err != nil {
@@ -1210,7 +1247,15 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 // and, with withFilters, filters and tests) to expr.
 func (p *Parser) parsePostfixOps(expr ExpressionNode, withFilters bool) (ExpressionNode, error) {
 	var err error
+	added := 0
+	defer func() { p.depth -= added }()
 	for {
+		// every postfix operator wraps expr in a deeper node
+		if p.checkAny(lexer.TokenDot, lexer.TokenLeftBracket, lexer.TokenLeftParen) || (withFilters && p.checkAny(lexer.TokenPipe, lexer.TokenIs)) {
+			if err := p.nest(&added); err != nil {
+				return nil, err
+			}
+		}
 		if p.check(lexer.TokenDot) {
 			p.advance() // consume '.'
 			if p.check(lexer.TokenInteger) {

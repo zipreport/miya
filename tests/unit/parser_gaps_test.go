@@ -1,6 +1,7 @@
 package miya_test
 
 import (
+	"strings"
 	"testing"
 
 	miya "github.com/zipreport/miya"
@@ -267,5 +268,18 @@ func TestParserGapsChainMarkup(t *testing.T) {
 		if err != nil || got != want {
 			t.Errorf("%s: got %q, %v; want %q", src, got, err, want)
 		}
+	}
+}
+
+// TestParserGapsLongChainNoCrash: a very long operator chain is a parse error,
+// not a stack overflow while the left-deep tree is evaluated.
+func TestParserGapsLongChainNoCrash(t *testing.T) {
+	src := "{{ " + strings.Repeat("1 + ", 3000000) + "1 }}"
+	tmpl, err := miya.NewEnvironment().FromString(src)
+	if err == nil {
+		_, err = tmpl.Render(miya.NewContext())
+	}
+	if err == nil || !strings.Contains(err.Error(), "nesting too deep") {
+		t.Fatalf("want a nesting too deep error, got %v", err)
 	}
 }

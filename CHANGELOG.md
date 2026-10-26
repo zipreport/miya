@@ -77,6 +77,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A comparison chain evaluates each operand once and stops at the first false comparison.
 - `include` accepts Jinja2's `ignore missing` before `with context`/`without context`; `without context` hides the render's variables.
 - Deeply nested `not`/`-` chains return `template nesting too deep` instead of crashing.
+- Long flat chains (`1 + 1 + ...`, `a or b or ...`, `~`, `**`, `x|f|f|...`, `a.b.b...`) count towards the 500-level parse limit and return `template nesting too deep` instead of overflowing the stack when the template is rendered.
 
 ### Changed
 
