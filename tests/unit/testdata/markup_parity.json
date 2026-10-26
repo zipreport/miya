@@ -1,0 +1,995 @@
+[
+  {
+    "name": "T0_base",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"a&\") }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>a&amp;</b>"
+  },
+  {
+    "name": "T1_length",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|length }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "8"
+  },
+  {
+    "name": "T2_upper",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|upper }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<B>X</B>"
+  },
+  {
+    "name": "T3_concat",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\") ~ \"!\" }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>!"
+  },
+  {
+    "name": "T4_if_empty",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% if e() %}yes{% else %}no{% endif %}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "no"
+  },
+  {
+    "name": "T5_is_string",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"T\" if b(\"x\") is string else \"F\" }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "T"
+  },
+  {
+    "name": "T6_eq",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"T\" if b(\"x\") == \"<b>x</b>\" else \"F\" }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "T"
+  },
+  {
+    "name": "T7_in",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"T\" if \"x\" in b(\"x\") else \"F\" }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "T"
+  },
+  {
+    "name": "T8a_index",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")[0] }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<"
+  },
+  {
+    "name": "T8b_slice",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")[1:3] }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "b>"
+  },
+  {
+    "name": "T8c_for",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% for c in b(\"x\") %}[{{ c }}]{% endfor %}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "[&lt;][b][&gt;][x][&lt;][/][b][&gt;]"
+  },
+  {
+    "name": "T8d_first",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|first }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "&lt;"
+  },
+  {
+    "name": "T8e_reverse",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|reverse }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": ">b/<x>b<"
+  },
+  {
+    "name": "T9_tojson",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|tojson }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "\"\\u003cb\\u003ex\\u003c/b\\u003e\""
+  },
+  {
+    "name": "S1_blockset",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% set s %}<i>{% endset %}{{ s }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<i>"
+  },
+  {
+    "name": "S2_blockset_var",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% set s %}<i>{{ u }}</i>{% endset %}{{ s }}|{{ s|length }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<i>&lt;s&gt;</i>|16"
+  },
+  {
+    "name": "C1_caller",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% macro w() %}<div>{{ caller() }}</div>{% endmacro %}{% call w() %}<p>{{ u }}</p>{% endcall %}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<div><p>&lt;s&gt;</p></div>"
+  },
+  {
+    "name": "C2_caller_upper",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% macro w() %}{{ caller()|upper }}{% endmacro %}{% call w() %}<p>{% endcall %}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<P>"
+  },
+  {
+    "name": "W1_replace",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|replace(\"x\", \"<y>\") }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>&lt;y&gt;</b>"
+  },
+  {
+    "name": "W2_trim",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ (\" \" ~ b(\"x\") ~ \" \")|trim }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>"
+  },
+  {
+    "name": "W3_join_safe",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ [b(\"x\"), \"<\"]|join }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>&lt;"
+  },
+  {
+    "name": "W4_plus",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\") + \"<\" }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>&lt;"
+  },
+  {
+    "name": "W5_concat_left",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"<\" ~ b(\"x\") }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "&lt;<b>x</b>"
+  },
+  {
+    "name": "W6_lower",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"X\")|lower }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>"
+  },
+  {
+    "name": "W7_capitalize",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|capitalize }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>"
+  },
+  {
+    "name": "W8_title",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|title }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "&lt;B&gt;x&lt;/b&gt;",
+    "known_unrelated": "title word-boundary algorithm (control K10; plan 039)"
+  },
+  {
+    "name": "W9_string",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|string }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>"
+  },
+  {
+    "name": "W10_escape",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|escape }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>"
+  },
+  {
+    "name": "W11_set_expr",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% set m = b(\"x\") %}{{ m }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>"
+  },
+  {
+    "name": "W12_default",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ e()|default(\"d\") }}|{{ e()|default(\"d\", true) }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "|d",
+    "known_unrelated": "default treats \"\" as missing without boolean=true (control K4; plan 039)"
+  },
+  {
+    "name": "W13_striptags",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"a&amp;\")|striptags }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "a&amp;amp;"
+  },
+  {
+    "name": "W14_join_chars",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|join(\",\") }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "&lt;,b,&gt;,x,&lt;,/,b,&gt;",
+    "known_unrelated": "join rejects a string (control K11; plan 039)"
+  },
+  {
+    "name": "W15_list",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|list }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "[&#39;&lt;&#39;, &#39;b&#39;, &#39;&gt;&#39;, &#39;x&#39;, &#39;&lt;&#39;, &#39;/&#39;, &#39;b&#39;, &#39;&gt;&#39;]",
+    "known_unrelated": "lists print Go-style (control K5; plan 035)"
+  },
+  {
+    "name": "W16_neq_lt",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"T\" if b(\"x\") != \"<b>x</b>\" else \"F\" }}{{ \"T\" if b(\"x\") < \"z\" else \"F\" }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "FT"
+  },
+  {
+    "name": "W17_count",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|count }}|{{ b(\"x\")|wordcount }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "8|3",
+    "known_unrelated": "wordcount splits on whitespace, not \\w+ (control K1; plan 039)"
+  },
+  {
+    "name": "W18_filterblock",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% filter upper %}{{ b(\"x\") }}{% endfilter %}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<B>X</B>"
+  },
+  {
+    "name": "W19_int",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% macro n() %}{{ 1 }}{% endmacro %}{{ n()|int + 1 }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "2"
+  },
+  {
+    "name": "W20_center",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|center(12) }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "  <b>x</b>  "
+  },
+  {
+    "name": "W21_truncate",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"xxxxxxxxxxxxxxxxxxxxxxxxx\")|truncate(10) }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>xxxx...",
+    "known_unrelated": "truncate leeway algorithm (control K3; plan 039)"
+  },
+  {
+    "name": "W22_format",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"%s<\"|format(b(\"x\")) }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "&lt;b&gt;x&lt;/b&gt;&lt;"
+  },
+  {
+    "name": "W23_safe",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|safe }}|{{ b(\"x\")|e|length }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>|8"
+  },
+  {
+    "name": "W24_dict_val",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% set d = {\"k\": b(\"x\")} %}{{ d.k }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>",
+    "known_unrelated": "dict literal .k attribute renders empty (control K7; plan 035)"
+  },
+  {
+    "name": "W25_nested_macro",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% macro o() %}<o>{{ b(\"&\") }}</o>{% endmacro %}{{ o() }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<o><b>&amp;</b></o>"
+  },
+  {
+    "name": "W26_list_repr",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ [b(\"x\")] }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "[Markup(&#39;&lt;b&gt;x&lt;/b&gt;&#39;)]",
+    "known_unrelated": "lists print Go-style (control K5; plan 035)"
+  },
+  {
+    "name": "W28_wordwrap",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|indent(2) }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>"
+  },
+  {
+    "name": "W29_mul",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\") * 2 }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b><b>x</b>",
+    "known_unrelated": "str * int unsupported (control K6; plan 038/039)"
+  },
+  {
+    "name": "W30_startswith",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"T\" if b(\"x\").startswith(\"<b\") else \"F\" }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "T",
+    "known_unrelated": "no string methods (control K2; plan 038)"
+  },
+  {
+    "name": "W31_upper_method",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\").upper() }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<B>X</B>",
+    "known_unrelated": "no string methods (control K2; plan 038)"
+  },
+  {
+    "name": "W32_sort",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ [b(\"y\"), b(\"x\")]|sort|join }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b><b>y</b>"
+  },
+  {
+    "name": "W33_unique",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ [b(\"x\"), \"<b>x</b>\"]|unique|list|length }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "1"
+  },
+  {
+    "name": "K1_ctl_wordcount",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"<b>x</b>\"|wordcount }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "3",
+    "known_unrelated": "control: wordcount on a plain string (plan 039)"
+  },
+  {
+    "name": "K2_ctl_method",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"abc\".upper() }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "ABC",
+    "known_unrelated": "control: string methods (plan 038)"
+  },
+  {
+    "name": "K3_ctl_truncate",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"<b>xxxxxxxxxxxxxxxxxxxxxxxxx</b>\"|truncate(10) }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "&lt;b&gt;xxxx...",
+    "known_unrelated": "control: truncate on a plain string (plan 039)"
+  },
+  {
+    "name": "K4_ctl_default",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"\"|default(\"d\") }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "",
+    "known_unrelated": "control: default on a plain string (plan 039)"
+  },
+  {
+    "name": "K5_ctl_list",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"ab\"|list }}|{{ [\"<\"] }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "[&#39;a&#39;, &#39;b&#39;]|[&#39;&lt;&#39;]",
+    "known_unrelated": "control: list printing (plan 035)"
+  },
+  {
+    "name": "K6_ctl_mul",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"ab\" * 2 }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "abab",
+    "known_unrelated": "control: str * int (plan 038/039)"
+  },
+  {
+    "name": "K7_ctl_dict_val",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% set d = {\"k\": \"v\"} %}{{ d.k }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "v",
+    "known_unrelated": "control: dict literal attribute (plan 035)"
+  },
+  {
+    "name": "K8_ctl_safe_upper",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ h|safe|upper }}|{{ (h|safe) ~ \"<\" }}|{{ h|safe|length }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<B>|<b>&lt;|3"
+  },
+  {
+    "name": "K10_ctl_title",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"<b>x</b>\"|title }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "&lt;B&gt;x&lt;/b&gt;",
+    "known_unrelated": "control: title algorithm on a plain string (plan 039)"
+  },
+  {
+    "name": "K11_ctl_join_str",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"abc\"|join(\",\") }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "a,b,c",
+    "known_unrelated": "control: join on a plain string (plan 039)"
+  },
+  {
+    "name": "K12_ctl_e_plain",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ u|e }}|{{ u|e|length }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "&lt;s&gt;|9"
+  },
+  {
+    "name": "X1_filterblock_title",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% filter title %}{{ b(\"x\") }}<i>{% endfilter %}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<B>x</b><I>",
+    "known_unrelated": "title word-boundary algorithm (control K10; plan 039)"
+  },
+  {
+    "name": "X2_goarg_filter",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"v\"|argtype(b(\"x\")) }}|{{ b(\"x\")|argtype(\"y\") }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "value:string,arg:string|value:string,arg:string",
+    "deviation": "miya divergence, not Jinja2 output: Go filters and Go globals receive safe values as plain strings (Jinja2 passes Markup: value:string,arg:Markup|value:Markup,arg:string)."
+  },
+  {
+    "name": "X3_macro_arg_to_macro",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% macro w(c) %}<w>{{ c }}</w>{% endmacro %}{{ w(b(u)) }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<w><b>&lt;s&gt;</b></w>"
+  },
+  {
+    "name": "X4_safe_var_ops",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"T\" if h|safe == h else \"F\" }}|{{ (h|safe)[0] }}|{{ h|safe ~ u }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "T|<|<b>&lt;s&gt;"
+  },
+  {
+    "name": "X5_in_list",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"T\" if b(\"x\") in [\"<b>x</b>\"] else \"F\" }}|{{ \"T\" if \"<b>x</b>\" in [b(\"x\")] else \"F\" }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "T|T"
+  },
+  {
+    "name": "X6_tojson_list",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ [b(\"x\")]|tojson }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "[\"\\u003cb\\u003ex\\u003c/b\\u003e\"]"
+  },
+  {
+    "name": "X7_replace_unsafe_arg",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"x\")|replace(\"x\", u) }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>&lt;s&gt;</b>"
+  },
+  {
+    "name": "X8_truncate_end_arg",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(\"xxxxxxxxxxxxxxxxxxxxxxxx\")|truncate(12, true, u) }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>xxxxxx&lt;s&gt;",
+    "known_unrelated": "truncate leeway algorithm (control K3; plan 039)"
+  },
+  {
+    "name": "X9_join_sep",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ [b(\"x\"), b(\"y\")]|join(u) }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "<b>x</b>&lt;s&gt;<b>y</b>"
+  },
+  {
+    "name": "K9_ctl_safe_if",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ \"T\" if \"\"|safe else \"F\" }}|{{ \"T\" if \"<b>\"|safe is string else \"F\" }}|{{ \"T\" if \"<b>\"|safe == \"<b>\" else \"F\" }}",
+    "ctx": {
+      "u": "<s>",
+      "h": "<b>"
+    },
+    "want": "F|T|T"
+  },
+  {
+    "name": "A5_ae_off_concat_safe",
+    "tpl": "{{ (u|safe) ~ u }}|{{ [u|safe, u]|join }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "autoescape": false,
+    "want": "<s><s>|<s><s>"
+  },
+  {
+    "name": "A6_ae_off_blockset",
+    "tpl": "{% set s %}<i>{{ u }}{% endset %}{{ s }}|{{ s|upper }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "autoescape": false,
+    "want": "<i><s>|<I><S>"
+  },
+  {
+    "name": "A7_ae_off_caller",
+    "tpl": "{% macro w() %}<d>{{ caller() }}</d>{% endmacro %}{% call w() %}{{ u }}{% endcall %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "autoescape": false,
+    "want": "<d><s></d>"
+  },
+  {
+    "name": "A1_ae_off_block_on",
+    "tpl": "{% autoescape true %}{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{{ b(u) }}{% endautoescape %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "autoescape": false,
+    "want": "<b>&lt;s&gt;</b>"
+  },
+  {
+    "name": "A2_ae_off_plain",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{{ b(u) }}|{{ b(u)|upper }}|{{ b(u) ~ u }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "autoescape": false,
+    "want": "<b><s></b>|<B><S></B>|<b><s></b><s>"
+  },
+  {
+    "name": "A3_ae_on_block_off",
+    "tpl": "{% autoescape false %}{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{{ b(u) }}{% endautoescape %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "<b><s></b>"
+  },
+  {
+    "name": "A4_block_on_call_outside",
+    "tpl": "{% autoescape true %}{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% endautoescape %}{{ b(u) }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "autoescape": false,
+    "want": "ERROR: UndefinedError: 'b' is undefined",
+    "known_unrelated": "macros defined inside {% autoescape %} leak out of the block; Jinja2 raises UndefinedError"
+  },
+  {
+    "name": "I1_import_macro",
+    "tpl": "{% import \"m.html\" as m %}{{ m.b(u) }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "files": {
+      "m.html": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}"
+    },
+    "want": "<b>&lt;s&gt;</b>"
+  },
+  {
+    "name": "I2_from_import",
+    "tpl": "{% from \"m.html\" import b %}{{ b(u) }}|{{ b(u)|length }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "files": {
+      "m.html": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}"
+    },
+    "want": "<b>&lt;s&gt;</b>|16"
+  },
+  {
+    "name": "I3_import_callblock",
+    "tpl": "{% import \"w.html\" as w %}{% call w.wrap() %}<p>{{ u }}</p>{% endcall %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "files": {
+      "w.html": "{% macro wrap() %}<div>{{ caller() }}</div>{% endmacro %}"
+    },
+    "want": "<div><p>&lt;s&gt;</p></div>"
+  },
+  {
+    "name": "I4_import_sibling",
+    "tpl": "{% import \"m.html\" as m %}{{ m.b(u) }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "files": {
+      "m.html": "{% macro i(x) %}<i>{{ x }}</i>{% endmacro %}{% macro b(x) %}<b>{{ i(x) }}</b>{% endmacro %}"
+    },
+    "want": "<b><i>&lt;s&gt;</i></b>"
+  },
+  {
+    "name": "I5_from_callblock",
+    "tpl": "{% from \"w.html\" import wrap %}{% call wrap() %}<p>{{ u }}</p>{% endcall %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "files": {
+      "w.html": "{% macro wrap() %}<div>{{ caller() }}</div>{% endmacro %}"
+    },
+    "want": "<div><p>&lt;s&gt;</p></div>"
+  },
+  {
+    "name": "I6_include_macro",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% macro e() %}{% endmacro %}{% include \"inc.html\" %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "files": {
+      "inc.html": "{{ b(u) }}"
+    },
+    "want": "<b>&lt;s&gt;</b>"
+  },
+  {
+    "name": "FB1_filterblock_format",
+    "tpl": "{% filter format(u) %}%s{% endfilter %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "&lt;s&gt;"
+  },
+  {
+    "name": "FB2_filterblock_format_macro",
+    "tpl": "{% macro m() %}{% filter format(u) %}%s{% endfilter %}{% endmacro %}{{ m() }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "&lt;s&gt;"
+  },
+  {
+    "name": "FB3_filterblock_format_set",
+    "tpl": "{% set x %}{% filter format(u) %}%s{% endfilter %}{% endset %}{{ x }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "&lt;s&gt;"
+  },
+  {
+    "name": "FB4_filterblock_format_caller",
+    "tpl": "{% macro w() %}{{ caller() }}{% endmacro %}{% call w() %}{% filter format(u) %}%s{% endfilter %}{% endcall %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "&lt;s&gt;"
+  },
+  {
+    "name": "FB5_filterblock_format_upper",
+    "tpl": "{% filter format(u)|upper %}%s{% endfilter %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "&LT;S&GT;"
+  },
+  {
+    "name": "FB6_filterblock_default_bool",
+    "tpl": "{% filter default(u, true) %}{% endfilter %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "&lt;s&gt;",
+    "deviation": "Jinja2 writes a filter block's non-Markup result raw and prints <s> here (the default argument flows out unescaped). miya escapes default's argument when the value is safe, so the result is &lt;s&gt;."
+  },
+  {
+    "name": "FB7_filterblock_replace_body",
+    "tpl": "{% filter replace('X', u) %}<i>X</i>{% endfilter %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "<i>&lt;s&gt;</i>"
+  },
+  {
+    "name": "FB8_filterblock_upper_body",
+    "tpl": "{% filter upper %}<b>{{ u }}</b>{% endfilter %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "<B>&LT;S&GT;</B>"
+  },
+  {
+    "name": "FB9_filterblock_striptags",
+    "tpl": "{% filter striptags %}<b>{{ u }}</b>{% endfilter %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "&lt;s&gt;",
+    "deviation": "Jinja2 prints <s>: striptags decodes &lt;s&gt; and Jinja2 writes a filter block's plain result raw. miya escapes any non-Markup filter-block result."
+  },
+  {
+    "name": "FB10_filterblock_title_replace",
+    "tpl": "{% filter title|replace('X', u) %}x{% endfilter %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "&lt;s&gt;",
+    "deviation": "Jinja2 prints <s>: its title returns a plain string, so replace inserts the argument unescaped and the block writes it raw. In miya title keeps Markup and replace escapes its arguments."
+  },
+  {
+    "name": "FB11_filterblock_wordwrap",
+    "tpl": "{% filter wordwrap(80) %}<p>{{ u }}</p>{% endfilter %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "<p>&lt;s&gt;</p>"
+  },
+  {
+    "name": "FM1_markup_format",
+    "tpl": "{{ ('<b>%s</b>'|safe)|format(u) }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "<b>&lt;s&gt;</b>"
+  },
+  {
+    "name": "FM2_plain_format",
+    "tpl": "{{ '<b>%s</b>'|format(u) }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "&lt;b&gt;&lt;s&gt;&lt;/b&gt;"
+  },
+  {
+    "name": "FM3_format_safe_arg",
+    "tpl": "{{ ('<b>%s</b>'|safe)|format(u|safe) }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "<b><s></b>"
+  },
+  {
+    "name": "FM4_markup_format_kwargs",
+    "tpl": "{{ ('<b>%(n)s</b>'|safe)|format(n=u) }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "<b>&lt;s&gt;</b>",
+    "known_unrelated": "format keyword arguments (plans 036 and 053); drop this field once both have landed, and it must then pass (escapeArgs KwArgs case)"
+  },
+  {
+    "name": "IM1_import_in_ae_off",
+    "tpl": "{% autoescape false %}{% import 'm.html' as l %}{{ l.b(u) }}{% endautoescape %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "files": {
+      "m.html": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}"
+    },
+    "want": "<b>&lt;s&gt;</b>"
+  },
+  {
+    "name": "IM2_import_with_context_in_ae_off",
+    "tpl": "{% autoescape false %}{% import 'm.html' as l with context %}{{ l.b(u) }}{% endautoescape %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "files": {
+      "m.html": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}"
+    },
+    "want": "<b>&lt;s&gt;</b>"
+  },
+  {
+    "name": "IM3_from_in_ae_off",
+    "tpl": "{% autoescape false %}{% from 'm.html' import b %}{{ b(u) }}{% endautoescape %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "files": {
+      "m.html": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}"
+    },
+    "want": "<b>&lt;s&gt;</b>"
+  },
+  {
+    "name": "R1_recursive_loop",
+    "tpl": "{% for n in t recursive %}<li>{{ n.v }}{% if n.c %}<ul>{{ loop(n.c) }}</ul>{% endif %}</li>{% endfor %}",
+    "ctx": {
+      "t": [
+        {
+          "v": "<a>",
+          "c": [
+            {
+              "v": "<b>"
+            }
+          ]
+        }
+      ]
+    },
+    "want": "<li>&lt;a&gt;<ul><li>&lt;b&gt;</li></ul></li>"
+  },
+  {
+    "name": "NS1_namespace_markup",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% set ns = namespace(h=b('x')) %}{{ ns.h }}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "want": "<b>x</b>"
+  },
+  {
+    "name": "DK1_markup_key",
+    "tpl": "{% set h = '<i>'|safe %}{{ d[h] }}",
+    "ctx": {
+      "d": {
+        "<i>": "1"
+      }
+    },
+    "want": "1"
+  },
+  {
+    "name": "DS1_defsite_rule",
+    "tpl": "{% macro b(x) %}<b>{{ x }}</b>{% endmacro %}{% autoescape true %}{{ b(u) }}{% endautoescape %}",
+    "ctx": {
+      "u": "<s>"
+    },
+    "autoescape": false,
+    "want": "&lt;b&gt;&lt;s&gt;&lt;/b&gt;",
+    "deviation": "miya decides macro safeness at the definition site (autoescape off here), so the output is a plain string escaped at the call site. Jinja2 decides at the call site and prints <b><s></b> (the argument unescaped); the miya rule never emits unescaped data."
+  }
+]
