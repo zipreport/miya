@@ -51,6 +51,17 @@ type Lexer struct {
 	stripNext   bool // the tag ended with "-": strip all leading whitespace
 	trimNewline bool // trim_blocks applies: drop one leading newline
 	sawTag      bool // false until the first tag, so the first text starts a line
+
+	// brackets holds the ( [ { open in the current tag, innermost last. A tag
+	// only ends when it is empty, as in Jinja2's lexer.
+	brackets []openBracket
+}
+
+// openBracket is a bracket opened in the current tag: the closer it expects
+// and where it was opened, for error messages.
+type openBracket struct {
+	closer       byte
+	line, column int
 }
 
 type lexerState int
@@ -315,7 +326,7 @@ func (l *Lexer) lexVariable() (*Token, error) {
 	l.skipWhitespace()
 
 	// Check for variable end
-	if l.peekString("-" + l.config.VarEndString) {
+	if len(l.brackets) == 0 && l.peekString("-"+l.config.VarEndString) {
 		line := l.line
 		column := l.column
 		l.consumeString("-" + l.config.VarEndString)
@@ -330,7 +341,7 @@ func (l *Lexer) lexVariable() (*Token, error) {
 		}, nil
 	}
 
-	if l.peekString(l.config.VarEndString) {
+	if len(l.brackets) == 0 && l.peekString(l.config.VarEndString) {
 		line := l.line
 		column := l.column
 		l.consumeString(l.config.VarEndString)
@@ -343,6 +354,10 @@ func (l *Lexer) lexVariable() (*Token, error) {
 		}, nil
 	}
 
+	if len(l.brackets) > 0 && !strings.ContainsAny(l.config.VarEndString, ")]}") && l.peekString(l.config.VarEndString) {
+		return nil, l.unclosedBracket("'" + l.config.VarEndString + "'")
+	}
+
 	return l.lexExpression()
 }
 
@@ -350,7 +365,7 @@ func (l *Lexer) lexBlock() (*Token, error) {
 	l.skipWhitespace()
 
 	// Check for block end
-	if l.peekString("-" + l.config.BlockEndString) {
+	if len(l.brackets) == 0 && l.peekString("-"+l.config.BlockEndString) {
 		line := l.line
 		column := l.column
 		l.consumeString("-" + l.config.BlockEndString)
@@ -365,7 +380,7 @@ func (l *Lexer) lexBlock() (*Token, error) {
 		}, nil
 	}
 
-	if l.peekString("+" + l.config.BlockEndString) {
+	if len(l.brackets) == 0 && l.peekString("+"+l.config.BlockEndString) {
 		line := l.line
 		column := l.column
 		l.consumeString("+" + l.config.BlockEndString)
@@ -379,7 +394,7 @@ func (l *Lexer) lexBlock() (*Token, error) {
 		}, nil
 	}
 
-	if l.peekString(l.config.BlockEndString) {
+	if len(l.brackets) == 0 && l.peekString(l.config.BlockEndString) {
 		line := l.line
 		column := l.column
 		l.consumeString(l.config.BlockEndString)
@@ -391,6 +406,10 @@ func (l *Lexer) lexBlock() (*Token, error) {
 			Line:   line,
 			Column: column,
 		}, nil
+	}
+
+	if len(l.brackets) > 0 && !strings.ContainsAny(l.config.BlockEndString, ")]}") && l.peekString(l.config.BlockEndString) {
+		return nil, l.unclosedBracket("'" + l.config.BlockEndString + "'")
 	}
 
 	return l.lexExpression()
@@ -409,6 +428,9 @@ func (l *Lexer) lexExpression() (*Token, error) {
 
 	switch l.ch {
 	case 0:
+		if len(l.brackets) > 0 {
+			return nil, l.unclosedBracket("end of template")
+		}
 		return nil, fmt.Errorf("unexpected EOF in expression at line %d, column %d", line, column)
 
 	// Single character tokens
@@ -426,7 +448,7 @@ func (l *Lexer) lexExpression() (*Token, error) {
 
 	case '-':
 		// Could be minus or start of end delimiter trim
-		if l.peekString("-"+l.config.VarEndString) || l.peekString("-"+l.config.BlockEndString) {
+		if len(l.brackets) == 0 && (l.peekString("-"+l.config.VarEndString) || l.peekString("-"+l.config.BlockEndString)) {
 			// The matching end delimiter is handled by lexVariable/lexBlock before
 			// reaching here, so this is the wrong end delimiter for the open tag.
 			return nil, fmt.Errorf("unexpected '-' before end delimiter at line %d, column %d", line, column)
@@ -504,25 +526,37 @@ func (l *Lexer) lexExpression() (*Token, error) {
 
 	case '(':
 		l.readChar()
+		l.brackets = append(l.brackets, openBracket{')', line, column})
 		return l.makeTokenAt(TokenLeftParen, "(", line, column), nil
 
 	case ')':
+		if err := l.closeBracket(')', line, column); err != nil {
+			return nil, err
+		}
 		l.readChar()
 		return l.makeTokenAt(TokenRightParen, ")", line, column), nil
 
 	case '[':
 		l.readChar()
+		l.brackets = append(l.brackets, openBracket{']', line, column})
 		return l.makeTokenAt(TokenLeftBracket, "[", line, column), nil
 
 	case ']':
+		if err := l.closeBracket(']', line, column); err != nil {
+			return nil, err
+		}
 		l.readChar()
 		return l.makeTokenAt(TokenRightBracket, "]", line, column), nil
 
 	case '{':
 		l.readChar()
+		l.brackets = append(l.brackets, openBracket{'}', line, column})
 		return l.makeTokenAt(TokenLeftBrace, "{", line, column), nil
 
 	case '}':
+		if err := l.closeBracket('}', line, column); err != nil {
+			return nil, err
+		}
 		l.readChar()
 		return l.makeTokenAt(TokenRightBrace, "}", line, column), nil
 
@@ -539,6 +573,27 @@ func (l *Lexer) lexExpression() (*Token, error) {
 	}
 
 	return nil, fmt.Errorf("unexpected character %q at line %d, column %d", l.ch, line, column)
+}
+
+// unclosedBracket reports the innermost bracket still open in the current tag,
+// at the position where it was opened.
+func (l *Lexer) unclosedBracket(found string) error {
+	top := l.brackets[len(l.brackets)-1]
+	return fmt.Errorf("unexpected %s, expected '%c' (opened at line %d, column %d)", found, top.closer, top.line, top.column)
+}
+
+// closeBracket pops the innermost open bracket of the current tag. A closer
+// that matches nothing, or the wrong opener, is an error with Jinja2's wording.
+func (l *Lexer) closeBracket(ch byte, line, column int) error {
+	if len(l.brackets) == 0 {
+		return fmt.Errorf("unexpected '%c' at line %d, column %d", ch, line, column)
+	}
+	want := l.brackets[len(l.brackets)-1].closer
+	if ch != want {
+		return fmt.Errorf("unexpected '%c', expected '%c' at line %d, column %d", ch, want, line, column)
+	}
+	l.brackets = l.brackets[:len(l.brackets)-1]
+	return nil
 }
 
 func (l *Lexer) lexString() (*Token, error) {
