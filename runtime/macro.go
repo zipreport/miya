@@ -53,19 +53,19 @@ func (m *Macro) Call(args []interface{}, kwargs map[string]interface{}) (interfa
 			if _, dup := rest[name]; dup {
 				return nil, fmt.Errorf("macro %q got multiple values for argument %q", m.Name, name)
 			}
-			ctx.SetVariable(name, args[i])
+			ctx.SetVariable(name, bindArg(args[i]))
 		} else if v, ok := rest[name]; ok {
 			delete(rest, name)
-			ctx.SetVariable(name, v)
+			ctx.SetVariable(name, bindArg(v))
 		} else if def, ok := m.Defaults[name]; ok {
 			if expr, isExpr := def.(parser.ExpressionNode); isExpr {
-				v, err := e.EvalNode(expr, ctx)
+				v, err := e.callArg(expr, ctx)
 				if err != nil {
 					return nil, fmt.Errorf("error evaluating default value for parameter %s: %w", name, err)
 				}
 				def = v
 			}
-			ctx.SetVariable(name, def)
+			ctx.SetVariable(name, bindArg(def))
 		} else {
 			ctx.SetVariable(name, NewUndefined(name, behavior, nil))
 		}
@@ -84,11 +84,16 @@ func (m *Macro) Call(args []interface{}, kwargs map[string]interface{}) (interfa
 	if m.CatchVarargs {
 		varargs := []interface{}{}
 		if len(args) > len(m.Parameters) {
-			varargs = append(varargs, args[len(m.Parameters):]...)
+			for _, a := range args[len(m.Parameters):] {
+				varargs = append(varargs, Unbox(a))
+			}
 		}
 		ctx.SetVariable("varargs", varargs)
 	}
 	if m.CatchKwargs {
+		for k, v := range rest {
+			rest[k] = Unbox(v)
+		}
 		ctx.SetVariable("kwargs", rest)
 	} else if len(rest) > 0 {
 		names := make([]string, 0, len(rest))

@@ -24,8 +24,15 @@ func NewNamespace() *Namespace {
 	}
 }
 
-// Get retrieves a value from the namespace
+// Get retrieves a value from the namespace. A list is returned as a plain
+// slice; RawGet returns the stored value.
 func (ns *Namespace) Get(key string) (interface{}, bool) {
+	val, ok := ns.RawGet(key)
+	return runtime.Unbox(val), ok
+}
+
+// RawGet retrieves the stored value, which can be an internal list box.
+func (ns *Namespace) RawGet(key string) (interface{}, bool) {
 	ns.mu.RLock()
 	defer ns.mu.RUnlock()
 	val, ok := ns.data[key]
@@ -47,14 +54,14 @@ func (ns *Namespace) Has(key string) bool {
 	return ok
 }
 
-// All returns a copy of all data in the namespace
+// All returns a copy of all data in the namespace; lists are plain slices.
 func (ns *Namespace) All() map[string]interface{} {
 	ns.mu.RLock()
 	defer ns.mu.RUnlock()
 
-	result := make(map[string]interface{})
+	result := make(map[string]interface{}, len(ns.data))
 	for k, v := range ns.data {
-		result[k] = v
+		result[k] = runtime.Unbox(v)
 	}
 	return result
 }
@@ -75,7 +82,14 @@ func (ns *Namespace) Clear() {
 
 // ReprData returns a copy of the namespace's data for runtime.Repr.
 func (ns *Namespace) ReprData() map[string]interface{} {
-	return ns.All()
+	ns.mu.RLock()
+	defer ns.mu.RUnlock()
+
+	result := make(map[string]interface{}, len(ns.data))
+	for k, v := range ns.data {
+		result[k] = v
+	}
+	return result
 }
 
 // String returns a string representation of the namespace

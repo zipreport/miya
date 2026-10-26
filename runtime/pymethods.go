@@ -225,27 +225,73 @@ func listSearch(e *DefaultEvaluator, name string, items []interface{}, args []in
 	return n, nil
 }
 
+// isPureChain reports whether node is a variable or an attribute chain rooted
+// at one, so that evaluating it has no side effects.
+func isPureChain(node parser.ExpressionNode) bool {
+	for {
+		switch n := node.(type) {
+		case *parser.IdentifierNode:
+			return true
+		case *parser.AttributeNode:
+			node = n.Object
+		default:
+			return false
+		}
+	}
+}
+
+// rawGetter is implemented by namespaces that can return a stored value
+// without unboxing it.
+type rawGetter interface {
+	RawGet(name string) (interface{}, bool)
+}
+
+// nsRawGet returns the raw (possibly boxed) value of a namespace attribute.
+func nsRawGet(ns NamespaceInterface, name string) (interface{}, bool) {
+	if r, ok := ns.(rawGetter); ok {
+		return r.RawGet(name)
+	}
+	return ns.Get(name)
+}
+
 // rawOperand returns the raw (possibly boxed) value of a variable or of a
 // namespace attribute, without evaluating anything with side effects.
 func (e *DefaultEvaluator) rawOperand(node parser.ExpressionNode, ctx Context) (interface{}, bool) {
+	if !isPureChain(node) {
+		return nil, false
+	}
 	switch n := node.(type) {
 	case *parser.IdentifierNode:
 		return ctx.GetVariable(n.Name)
 	case *parser.AttributeNode:
-		switch n.Object.(type) {
-		case *parser.IdentifierNode, *parser.AttributeNode:
-		default:
-			return nil, false
-		}
 		obj, err := e.EvalNode(n.Object, ctx)
 		if err != nil {
 			return nil, false
 		}
 		if ns, ok := obj.(NamespaceInterface); ok {
-			return ns.Get(n.Attribute)
+			return nsRawGet(ns, n.Attribute)
 		}
 	}
 	return nil, false
+}
+
+// callArg evaluates a macro argument or default. A stored list keeps its box,
+// so the macro can change the caller's list; anything else is evaluated once.
+func (e *DefaultEvaluator) callArg(expr parser.ExpressionNode, ctx Context) (interface{}, error) {
+	if raw, ok := e.rawOperand(expr, ctx); ok {
+		if b, ok := raw.(*listBox); ok {
+			return b, nil
+		}
+	}
+	return e.EvalNode(expr, ctx)
+}
+
+// bindArg prepares a macro parameter: a list the macro may change.
+func bindArg(v interface{}) interface{} {
+	if b, ok := v.(*listBox); ok {
+		return b
+	}
+	return BoxList(v)
 }
 
 // bindValue prepares the value stored by {% set %}, {% with %} or a

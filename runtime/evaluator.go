@@ -1131,10 +1131,22 @@ func (e *DefaultEvaluator) evalCall(node *parser.CallNode, ctx Context, caller *
 		return nil, err
 	}
 
+	// A macro keeps the identity of the lists it is given
+	_, isMacro := function.(*Macro)
+	evalArg := e.EvalNode
+	if isMacro {
+		evalArg = func(n parser.Node, c Context) (interface{}, error) {
+			if x, ok := n.(parser.ExpressionNode); ok {
+				return e.callArg(x, c)
+			}
+			return e.EvalNode(n, c)
+		}
+	}
+
 	// Evaluate arguments with pre-allocated capacity
 	args := make([]interface{}, 0, len(node.Arguments))
 	for _, arg := range node.Arguments {
-		argValue, err := e.EvalNode(arg, ctx)
+		argValue, err := evalArg(arg, ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -1144,7 +1156,7 @@ func (e *DefaultEvaluator) evalCall(node *parser.CallNode, ctx Context, caller *
 	// Evaluate keyword arguments with pre-allocated capacity
 	kwargs := make(map[string]interface{}, len(node.Keywords))
 	for key, value := range node.Keywords {
-		argValue, err := e.EvalNode(value, ctx)
+		argValue, err := evalArg(value, ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -2151,11 +2163,11 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 	case func(Context, ...interface{}) (interface{}, error):
 		// Macro function that takes context as first parameter
 		if ctx != nil {
-			return fn(ctx, args...)
+			return fn(newGoContext(ctx), args...)
 		}
 		// If no context provided, use a default empty context
 		emptyCtx := &simpleContext{variables: make(map[string]interface{})}
-		return fn(emptyCtx, args...)
+		return fn(newGoContext(emptyCtx), args...)
 
 	case func(...interface{}) (interface{}, error):
 		// Variable argument function - append kwargs as last argument if present
@@ -3531,6 +3543,75 @@ func (e *DefaultEvaluator) sliceReflect(rv reflect.Value, start, end, step *int)
 type autoescapeContext struct {
 	Context
 	autoescape bool
+}
+
+// goContext is the context a Go function receives: it never hands out a
+// listBox. Unwrap lets filterContext and resolveEscape find the real context.
+type goContext struct{ inner Context }
+
+func (g *goContext) GetVariable(key string) (interface{}, bool) {
+	v, ok := g.inner.GetVariable(key)
+	return Unbox(v), ok
+}
+
+func (g *goContext) SetVariable(key string, value interface{}) { g.inner.SetVariable(key, value) }
+
+func (g *goContext) Clone() Context { return newGoContext(g.inner.Clone()) }
+
+// All returns a new map: the inner map may be shared or cached.
+func (g *goContext) All() map[string]interface{} {
+	all := g.inner.All()
+	out := make(map[string]interface{}, len(all))
+	for k, v := range all {
+		out[k] = Unbox(v)
+	}
+	return out
+}
+
+func (g *goContext) Unwrap() Context { return g.inner }
+
+// goAutoescapeContext also reports the inner context's autoescape setting.
+type goAutoescapeContext struct{ goContext }
+
+func (g *goAutoescapeContext) Clone() Context { return newGoContext(g.inner.Clone()) }
+
+func (g *goAutoescapeContext) IsAutoescapeEnabled() bool {
+	return g.inner.(AutoescapeContext).IsAutoescapeEnabled()
+}
+
+// goEnvContext also forwards the environment-aware interfaces.
+type goEnvContext struct{ goAutoescapeContext }
+
+func (g *goEnvContext) Clone() Context { return newGoContext(g.inner.Clone()) }
+
+func (g *goEnvContext) ApplyFilter(name string, value interface{}, args ...interface{}) (interface{}, error) {
+	return g.inner.(EnvironmentContext).ApplyFilter(name, value, args...)
+}
+
+func (g *goEnvContext) ApplyTest(name string, value interface{}, args ...interface{}) (bool, error) {
+	return g.inner.(EnvironmentContext).ApplyTest(name, value, args...)
+}
+
+func (g *goEnvContext) ApplyFilterKwargs(name string, value interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+	return g.inner.(KwargsFilterApplier).ApplyFilterKwargs(name, value, args, kwargs)
+}
+
+// newGoContext wraps ctx for a Go function. Go cannot add methods
+// conditionally, so the wrapper forwards the optional interfaces only for the
+// combinations the library's own contexts have; any other is reachable
+// through Unwrap.
+func newGoContext(ctx Context) Context {
+	_, esc := ctx.(AutoescapeContext)
+	_, env := ctx.(EnvironmentContext)
+	_, kw := ctx.(KwargsFilterApplier)
+	g := goContext{inner: ctx}
+	switch {
+	case esc && env && kw:
+		return &goEnvContext{goAutoescapeContext{g}}
+	case esc && !env && !kw:
+		return &goAutoescapeContext{g}
+	}
+	return &g
 }
 
 // filterContext peels context wrappers (autoescapeContext, ContextWrapper) so

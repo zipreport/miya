@@ -214,7 +214,7 @@ func TestListMethods(t *testing.T) {
 		{name: "temporary_rejected", tpl: `{% do [1].append(2) %}`, errHas: notStored},
 		{name: "loop_item_rejected", tpl: `{% for row in rows %}{% do row.append(1) %}{% endfor %}`, data: pvD{"rows": []interface{}{[]interface{}{1}}}, errHas: notStored},
 		{name: "nested_rejected", tpl: `{% set l = [[1]] %}{% do l[0].append(2) %}`, errHas: notStored},
-		{name: "macro_arg_rejected", tpl: `{% macro m(x) %}{% do x.append(1) %}{% endmacro %}{% set a = [] %}{{ m(a) }}`, errHas: notStored},
+		{name: "macro_arg_append", tpl: `{% macro m(x) %}{% do x.append(1) %}{% endmacro %}{% set a = [] %}{{ m(a) }}{{ a }}`, want: "[1]"},
 	}
 	for _, tc := range cases {
 		tc := tc

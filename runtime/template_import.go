@@ -23,8 +23,15 @@ type ImportedNamespace struct {
 	evaluator *DefaultEvaluator
 }
 
-// Get returns an attribute from the namespace (used for macro/variable access)
+// Get returns an attribute from the namespace (used for macro/variable access).
+// A list is returned as a plain slice; RawGet returns the stored value.
 func (in *ImportedNamespace) Get(name string) (interface{}, bool) {
+	v, ok := in.RawGet(name)
+	return Unbox(v), ok
+}
+
+// RawGet returns the stored value, which can be a list box.
+func (in *ImportedNamespace) RawGet(name string) (interface{}, bool) {
 	// Check if it's a macro
 	if macro, ok := in.namespace.Macros[name]; ok {
 		return macro.bind(in.evaluator), true
