@@ -912,7 +912,7 @@ func TestCoreEvaluator(t *testing.T) {
 			t.Fatalf("Unexpected error for negation: %v", err)
 		}
 		if result != int64(-5) {
-			t.Errorf("Expected -5.0, got %v", result)
+			t.Errorf("Expected -5, got %v", result)
 		}
 
 		// Test logical NOT

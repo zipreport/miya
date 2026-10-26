@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `runtime.ErrTemplateNotFound` and `runtime.TemplateNotFoundError` (with the missing template's `Name`), returned for templates the loader cannot find. A custom `runtime.TemplateLoader` that returns its own errors keeps the old rule (`TemplateExists` decides).
 - `WithTruncateLeeway(n)` environment option: the default `leeway` of `truncate` (Jinja2's `truncate.leeway` policy). Also `filters.TruncateFilterWithLeeway`, `(*filters.FilterRegistry).Replace` and `runtime.RoundedFloat`.
 - `runtime.ErrOutputTooLarge` and `runtime.SizeError`, wrapped by every size-limit error.
+- `runtime.Unbox` and `runtime.ImportedNamespace.RawGet`, and `Namespace.RawGet` in the root package, return the stored value without unboxing lists.
 - `runtime.Number`, `runtime.BasicValue`, `runtime.SortedMapKeys`, `runtime.SortedMapPairs` and `runtime.UsesReflectLookup`.
 - `runtime`: `DictKey` (the string a dict literal, subscript, `in` test or `.get()` uses for a key), `Repr` (Python's repr of a template value) with the `ReprNamespace` interface, `Indirect` (dereferences pointers to values), `StringKeyMap` (views a map with string keys as `map[string]interface{}`), `BoxList`, `ModuleContexter` (a context that can create an empty context sharing its environment, used by imports without context), `EvalCompareNode` and `EvalDictNode`.
 - `parser`: `CompareNode`, `CompareOperand` and `NewCompareNode` (chained comparisons such as `a < b < c`), `DictNode` and `NewDictNode`, `DiscardNode` and `NewDiscardNode`, `MacroUsage` (the special names a macro body references), and the tree helpers `WalkStatements`, `ChildBodies`, `CloneStatement` and `CheckDuplicateBlocks` (errors on duplicate block names, as Jinja2 does).
@@ -27,13 +28,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- Typed Go maps with string keys look keys up the same way through `[]`, `in` and `.get()` (`none` is `"None"`); maps with interface keys find `1.0` under `1` with `[]` as `.get()` does; `range`, `lipsum`, list `+`, `batch`, `slice` and `format` width/precision limit errors wrap `ErrOutputTooLarge`; interface-key maps with string keys (as decoded from YAML) look keys up like `.get()`; `wordwrap` accepts a `{% set %}` block as its width again.
 - Under autoescape, safe values stay safe through `map` with a filter (`[s]|map('upper')`), `map(attribute=…, default=s)`, `default(s)`, `loop.cycle(s, …)`, `join(d=s)` and `join(…, attribute=…)`, and through `+` with a Go named string type.
 - `v|replace(old, new)` with a safe `old` or `new` escapes `v` first, as Jinja2 does.
 - A safe value repeated with `*` stays safe under autoescape.
 - Undefined values print as `Undefined` inside lists and dicts, and make `tojson` fail as in Jinja2 instead of emitting miya's internal fields.
 - `-7` is an integer.
 - The data strings `inf`, `nan` and `infinity` are not numbers in arithmetic or in numeric filters (`w * 2` repeats them, `w - 1` and `w|abs` are errors; `w + 1` concatenates in lenient mode).
-- zipreport-go's own `json` filter swallows errors (`pkg/template/filters.go:194-199`), so `{{ {'a': nope}|json }}` now prints `null` instead of miya's internal fields.
+- zipreport-go's own `json` filter swallows errors, so `{{ {'a': nope}|json }}` now prints `null` instead of miya's internal fields.
 - A `none` dict key prints `None`, and a rounded number finds its integer key.
 - `RoundedFloat`'s Go fields are no longer template attributes.
 - `{{ super() }}` renders the parent block with the parent's autoescape setting.
@@ -44,10 +46,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - tuple and attribute `{% set %}`, `{% do %}` and `for` loops take effect;
   - only the taken `{% if %}` branch runs;
   - module macros can append to the module's lists;
-  - names starting with `_` are not exported, and `from ... import _x` is an error.
+  - names starting with `_` (macros included) are not exported, and `from ... import _x` is an error.
 - Macros and `{% set %}` inside `{% for %}`, `{% with %}` and `{% block %}` bodies of a module are no longer exported, as in Jinja2.
-- `_`-prefixed macros are no longer exported.
-- Output the module prints is still discarded. An error in a module's top-level code (for example an undefined attribute in `{{ }}`) now fails the import, where it used to be skipped.
+- Output the module prints is still discarded.
 - Filters now treat Go pointers, named types (`type Status string`, `type Score float64`, `type Flag bool`) and typed maps the way expressions already did:
   - `map`/`sort`/`sum`/`groupby`/`selectattr`/`attr` on lists of struct pointers used to give empty or zero results silently;
   - `int`/`float`/`round`/`abs`/`sum` on named numbers gave 0 or an error;
@@ -138,7 +139,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
-- Extension tags inside a macro that evaluate with `CreateEvaluateFunc`'s raw context now see the internal box for list parameters (they saw a plain slice before); unbox with `runtime.Unbox`. Lists passed through the deprecated `env.CallMacro` path (`macros/macros.go:92-133`) still cannot be appended to.
+- **Breaking:** an error in an imported module's top-level code (for example an undefined attribute in `{{ }}`) now fails the import, where it used to be skipped.
+- Go functions that take a `runtime.Context` receive a wrapper that unboxes lists; reach the original context with `interface{ Unwrap() runtime.Context }`. Code that type-asserts the context to `*miya.TemplateContextAdapter`, `*runtime.ContextWrapper` or `runtime.ContextAwareContext` now gets `ok == false`.
+- Docs: a section on [memory and untrusted templates](docs/MIYA_LIMITATIONS.md#memory-and-untrusted-templates).
+- Extension tags inside a macro that evaluate with `CreateEvaluateFunc`'s raw context now see the internal box for list parameters (they saw a plain slice before); unbox with `runtime.Unbox`. Lists passed through the deprecated `env.CallMacro` path still cannot be appended to.
 - The list model is now documented: see "Lists" in `docs/DO_STATEMENTS_IMPLEMENTATION.md`.
 - `time.Duration` and other named integers are numbers in `int`, `float`, `sum` and `round` (a duration gives nanoseconds instead of 0).
 - `%c` in a safe format string (`'%c'|safe|format(60)`) is now an error, as in Jinja2; it used to turn a number from data into a raw `<`.
@@ -161,7 +165,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Template.Release()` now removes the template from the environment's template cache and leaves it usable. A later `FromString`/`GetTemplate` of the same source or name parses it again. The parser no longer pools AST nodes.
 - **Breaking:** a filter, global or data value that relied on a non-string type to bypass autoescape (for example Go's `html/template.HTML`) is now escaped; return `runtime.SafeValue` instead. `filters.SafeValue` is now an alias of `runtime.SafeValue`. `xmlattr` rejects attribute names containing whitespace, `/`, `>` or `=`. `nl2br` and `urlize` escape their input text even with autoescape off (filters cannot see the setting; `urlize` matches Jinja2). A truncated `truncatehtml` result is escaped text, including the `end` argument.
 - **Breaking:** `and`/`or` return one of their operands and skip the right side when the left decides, as in Jinja2: `{{ name or 'default' }}` prints the name, not `true`; `{% if x != 0 and 10 / x %}` no longer raises; templates that printed `{{ a or b }}` expecting `true`/`false` now print a value.
-- **Breaking:** imported templates run without the importer's context, as in Jinja2. `{% import %}` and `{% from %}` macros no longer see render variables or variables set before the import. Write `{% import "x.html" as x with context %}` (or `from ... import ... with context`) to keep the old visibility. Each import builds its own namespace, so a loop no longer reuses the first iteration's values.
+- **Breaking:** imported templates run without the importer's context, as in Jinja2. `{% import %}` and `{% from %}` macros no longer see render variables or variables set before the import. Write `{% import "x.html" as x with context %}` (or `from ... import ... with context`) to keep the old visibility. Imports with context are built fresh each time, so a loop no longer reuses the first iteration's values.
 - **Breaking:** importing a template that does not exist, or one with a syntax error, is an error. Previously both rendered silently.
 - **Breaking:** a top-level `{% set %}` in an imported template that fails to evaluate (for example a strict-mode undefined variable) fails the render. Previously the variable silently held the text `[Variable x from file]`.
 - Within one render, every import of a template *without* context shares one module, as in Jinja2 (an imported `namespace()` counter keeps counting across imports in a loop). Imports with context are built fresh each time. Unlike Jinja2, modules are never shared between renders.
@@ -264,7 +268,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Environment.GetMacro`, `ListMacros`, `CallMacro` and `ClearMacros`, and the `macros` package behind them. The registry mixes macros from every compiled template and binds arguments differently from template calls. They will be removed in a later minor release. To call a macro, render a template that imports it (`{% from "lib.html" import m %}{{ m(x) }}`), or walk `Template.AST()`.
 - `parser.ReleaseAST`, `parser.ReleaseNode`, the `parser.Release*Node` functions, `parser.GetNodePoolStats` and `parser.NodePoolStats` do nothing.
 - `filters.SelectFilter`, `RejectFilter`, `SelectAttrFilter` and `RejectAttrFilter`: templates no longer use them (the registered filters apply tests); they keep their old value-comparing behaviour for direct Go callers.
-- Docs: a section on [memory and untrusted templates](docs/MIYA_LIMITATIONS.md#memory-and-untrusted-templates).
 
 ## [v0.2.0]
 

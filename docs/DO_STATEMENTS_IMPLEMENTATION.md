@@ -208,7 +208,7 @@ Most do statements will work identically:
 - A macro argument that is not a stored variable or a namespace attribute is a copy for the macro: a loop variable, `a[0]`, `varargs[0]`, `kwargs.l`, `f(l)` and `l if c else []`.
 - Render data is read-only: a macro that changes a list from render data changes a copy. Use `{% set mine = data|list %}` to get a changeable copy in the template.
 - A `for` loop iterates a snapshot of the list.
-- Go code never sees the internal list box: Go functions that take a `runtime.Context`, `Namespace.Get`, `GetAttr` and `All()` return plain slices. `RawGet` returns the stored value. A `Get` followed by `Set` replaces a list with a plain slice.
+- Go code does not see the internal list box, except that extension tags evaluating with `CreateEvaluateFunc`'s raw context inside a macro do (see the CHANGELOG; unbox with `runtime.Unbox`): Go functions that take a `runtime.Context`, `Namespace.Get`, `GetAttr` and `All()` return plain slices. `RawGet` returns the stored value. A `Get` followed by `Set` replaces a list with a plain slice.
 
 ## Testing
 
