@@ -287,6 +287,10 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 		if !markupContext(ctx) && name != "safe" && name != "marksafe" {
 			return string(rm), nil
 		}
+	} else if list, ok := result.([]interface{}); ok && !markupContext(ctx) && name != "safe" && name != "marksafe" {
+		// map('e') and friends: Markup items must not reach a non-HTML context raw.
+		// Only lists are walked; maps are left alone.
+		result = unmarkItems(list)
 	}
 	return result, nil
 }
@@ -346,4 +350,32 @@ func concatMarkup(ctx Context, left, right interface{}) (Markup, bool) {
 		return "", false
 	}
 	return Markup(escapeFor(ctx, left) + escapeFor(ctx, right)), true
+}
+
+// unmarkItems returns a copy of list with Markup elements turned into plain
+// strings, recursing into nested lists. It returns list itself when nothing changes.
+func unmarkItems(list []interface{}) []interface{} {
+	var out []interface{}
+	for i, it := range list {
+		var n interface{}
+		if sub, ok := it.([]interface{}); ok {
+			r := unmarkItems(sub)
+			if len(r) == 0 || len(sub) == 0 || &r[0] == &sub[0] {
+				continue
+			}
+			n = r
+		} else if m, ok := AsMarkup(it); ok {
+			n = string(m)
+		} else {
+			continue
+		}
+		if out == nil {
+			out = append([]interface{}(nil), list...)
+		}
+		out[i] = n
+	}
+	if out == nil {
+		return list
+	}
+	return out
 }

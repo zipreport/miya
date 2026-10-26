@@ -231,8 +231,11 @@ func cyclerFunction(args ...interface{}) (interface{}, error) {
 // joinerFunction creates a joiner object that joins values with separators
 func joinerFunction(args ...interface{}) (interface{}, error) {
 	separator := ", " // default separator
+	safe := false
 	if len(args) > 0 {
-		if sep, ok := args[0].(string); ok {
+		if m, ok := runtime.AsMarkup(args[0]); ok {
+			separator, safe = string(m), true
+		} else if sep, ok := args[0].(string); ok {
 			separator = sep
 		}
 	}
@@ -240,6 +243,7 @@ func joinerFunction(args ...interface{}) (interface{}, error) {
 	return &runtime.Joiner{
 		Separator: separator,
 		Used:      false,
+		Safe:      safe,
 	}, nil
 }
 

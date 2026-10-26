@@ -68,6 +68,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - An `{% autoescape %}` block inside a non-HTML `ContextWrapper` keeps that context's escaper.
 - In XML/XHTML contexts, concatenation, `join` and filter arguments escape with the XML escaper.
 - An imported template (also `with context`) escapes by its own setting, not the importer's `{% autoescape %}` block.
+- A recursive `loop()` result is safe or plain according to the context of the loop itself, not of the call site (`{% autoescape true %}{{ loop(x.c) }}{% endautoescape %}` in an autoescape-off loop escapes the inner output).
+- In non-HTML escape contexts, Markup items in a list returned by a filter (`[u]|map('e')`) are plain strings, so the context escaper runs on them.
+- `joiner()` keeps a safe separator (`joiner('<br>'|safe)`) instead of falling back to `, `.
 
 ### Changed
 

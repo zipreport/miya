@@ -131,6 +131,10 @@ func TestMarkupEscapeContexts(t *testing.T) {
 		{"xml_concat", xml, `{{ (u|safe) ~ u }}`, ctxU + esc.Escape(ctxU, xml)},
 		{"xml_join", xml, `{{ [u|safe, u]|join }}`, ctxU + esc.Escape(ctxU, xml)},
 		{"xml_filterblock_replace", xml, `{% filter replace('X', u) %}<i>X</i>{% endfilter %}`, "<i>" + esc.Escape(ctxU, xml) + "</i>"},
+		{"js_map_e_loop", js, `{% for x in [u]|map('e') %}{{ x }}{% endfor %}`, esc.Escape(html.EscapeString(ctxU), js)},
+		{"js_map_e_index", js, `{{ ([u]|map('e'))[0] }}`, esc.Escape(html.EscapeString(ctxU), js)},
+		{"js_map_tojson", js, `{{ ([u]|map('tojson'))[0] }}`, esc.Escape(tojson, js)},
+		{"html_map_e_join", runtime.EscapeContextHTML, `{{ [u]|map('e')|join }}`, html.EscapeString(ctxU)},
 		{"html_e", runtime.EscapeContextHTML, `{{ u|e }}`, html.EscapeString(ctxU)},
 	}
 	for _, tt := range tests {
@@ -191,6 +195,7 @@ func TestMarkupGoInterop(t *testing.T) {
 		{"go_test_gets_string_select", `{{ [('<b>'|safe)]|select('isplain')|list|length }}`, "1", nil, func(env *miya.Environment) {
 			_ = env.AddTest("isplain", func(v interface{}, args ...interface{}) (bool, error) { _, ok := v.(string); return ok, nil })
 		}},
+		{"joiner_safe_sep", `{% set j = joiner("<br>"|safe) %}{% for i in [1,2,3] %}{{ j() }}{{ i }}{% endfor %}`, "1<br>2<br>3", nil, nil},
 		{"escaped_test", m + `{{ "T" if b("x") is escaped else "F" }}`, "T", nil, nil},
 		{"forceescape_length", `{{ u|forceescape|length }}`, "9", map[string]interface{}{"u": "<s>"}, nil},
 		{"format_named_arg", `{{ ("<b>%s</b>"|safe)|format(n) }}`, "<b>&lt;s&gt;</b>", map[string]interface{}{"n": namedString("<s>")}, nil},
@@ -231,4 +236,29 @@ func TestMarkupFilterBlocks(t *testing.T) {
 			t.Errorf("got %q", got)
 		}
 	})
+}
+
+func TestMarkupRecursiveLoopBlocks(t *testing.T) {
+	tree := []interface{}{map[string]interface{}{"n": "<a>", "c": []interface{}{map[string]interface{}{"n": "<b>", "c": []interface{}{}}}}}
+	data := map[string]interface{}{"tree": tree}
+	const head = `{% for x in tree recursive %}[{{ x.n }}`
+	const tail = `]{% endfor %}`
+	tests := []struct {
+		name string
+		ae   bool
+		src  string
+		want string
+	}{
+		{"recursive_loop_ae_off_body_in_ae_block", false, head + `{% autoescape true %}{{ loop(x.c) }}{% endautoescape %}` + tail, `[<a>[&lt;b&gt;]]`},
+		{"recursive_loop_ae_on_body_in_ae_off_block", true, head + `{% autoescape false %}{{ loop(x.c) }}{% endautoescape %}` + tail, `[&lt;a&gt;[&lt;b&gt;]]`},
+		{"recursive_loop_concat", false, head + `{% autoescape true %}{{ loop(x.c) ~ '' }}{% endautoescape %}` + tail, `[<a>[&lt;b&gt;]]`},
+		{"recursive_loop_set", false, head + `{% autoescape true %}{% set r = loop(x.c) %}{{ r }}{% endautoescape %}` + tail, `[<a>[&lt;b&gt;]]`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := renderAE(t, tt.ae, tt.src, data, nil); got != tt.want {
+				t.Errorf("got %q want %q", got, tt.want)
+			}
+		})
+	}
 }

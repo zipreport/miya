@@ -91,6 +91,8 @@ func (c *Cycler) Reset() {
 type Joiner struct {
 	Separator string
 	Used      bool
+	// Safe marks a separator that was given as Markup.
+	Safe bool
 }
 
 // Join returns the separator if this is not the first call, empty string otherwise
@@ -824,7 +826,7 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 
 				// Handle undefined or nil iterables - just return empty string
 				if IsUndefined(newIterable) || newIterable == nil {
-					return "", nil
+					return markIfSafe("", ctx), nil
 				}
 
 				// Create a new for node with the same structure but new iterable
@@ -840,7 +842,13 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 					Recursive: true,
 					Condition: node.Condition,
 				}
-				return e.evalFor(recursiveNode, ctx, depth+1)
+				r, err := e.evalFor(recursiveNode, ctx, depth+1)
+				if err != nil {
+					return r, err
+				}
+				// The iteration output is template output of the loop's own context;
+				// the call site must not decide again.
+				return markIfSafe(ToString(r), ctx), nil
 			}
 
 			// Create a callable loop object that supports both property access and function calls
@@ -1899,6 +1907,9 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 	switch fn := function.(type) {
 	case *Joiner:
 		// Joiner objects are directly callable
+		if fn.Safe && markupContext(ctx) {
+			return Markup(fn.Join()), nil
+		}
 		return fn.Join(), nil
 	case *CallableLoop:
 		// CallableLoop objects support function calls for recursion
@@ -1906,8 +1917,8 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 		if err != nil {
 			return r, err
 		}
-		// A recursive iteration's output is template output, like a macro's
-		return markIfSafe(ToString(r), ctx), nil
+		// recursiveFunc already marked the output with the loop's own context
+		return r, nil
 	case *Macro:
 		return fn.Call(args, kwargs)
 	case *Undefined:
