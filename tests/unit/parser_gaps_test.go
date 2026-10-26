@@ -249,3 +249,23 @@ func TestParserGapsUserTestWins(t *testing.T) {
 		t.Errorf("got %q, %v; want \"true\"", got, err)
 	}
 }
+
+// TestParserGapsChainMarkup: a safe string compares like its plain text through
+// a chain, as it does for a single comparison (Jinja2 3.1.6 prints True, True, False).
+func TestParserGapsChainMarkup(t *testing.T) {
+	for src, want := range map[string]string{
+		"{{ ('a'|safe) == 'a' == 'a' }}": "true",
+		"{{ 'a' < ('b'|safe) < 'c' }}":   "true",
+		"{{ 'a' < ('b'|safe) < 'b' }}":   "false",
+	} {
+		env := miya.NewEnvironment(miya.WithAutoEscape(true))
+		tmpl, err := env.FromString(src)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, err := tmpl.Render(miya.NewContext())
+		if err != nil || got != want {
+			t.Errorf("%s: got %q, %v; want %q", src, got, err, want)
+		}
+	}
+}
