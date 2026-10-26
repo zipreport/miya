@@ -1181,9 +1181,24 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 		return nil, fmt.Errorf("error evaluating template name in include: %w", err)
 	}
 
-	templateName, ok := templateNameExpr.(string)
-	if !ok {
-		return nil, fmt.Errorf("include template name must be a string, got %T", templateNameExpr)
+	var names []string
+	switch v := templateNameExpr.(type) {
+	case string:
+		names = []string{v}
+	case nil, *Undefined:
+		// no name: nothing to find
+	case []string:
+		names = v
+	case []interface{}:
+		for _, item := range v {
+			name, ok := item.(string)
+			if !ok {
+				return nil, fmt.Errorf("include template name must be a string or a list of strings, got %T in list", item)
+			}
+			names = append(names, name)
+		}
+	default:
+		return nil, fmt.Errorf("include template name must be a string or a list of strings, got %T", templateNameExpr)
 	}
 
 	// Get the import system
@@ -1191,31 +1206,44 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 		return nil, fmt.Errorf("import system not initialized for includes")
 	}
 
-	// Check if template exists
-	if !e.importSystem.loader.TemplateExists(templateName) {
+	// Load the first template that exists
+	var templateAST *parser.TemplateNode
+	var templateName string
+	var lastErr error
+	for _, name := range names {
+		ast, err := e.importSystem.loader.LoadTemplate(name)
+		if err == nil {
+			templateAST, templateName = ast, name
+			break
+		}
+		if !e.notFound(err, name) {
+			return nil, fmt.Errorf("failed to load included template %q: %w", name, err)
+		}
+		lastErr = err
+	}
+	if templateAST == nil {
 		if node.IgnoreMissing {
-			// If ignore_missing is true, return empty string for missing templates
 			return "", nil
 		}
-		return nil, fmt.Errorf("included template %q not found", templateName)
-	}
-
-	// Load the template AST
-	templateAST, err := e.importSystem.loader.LoadTemplate(templateName)
-	if err != nil {
-		if node.IgnoreMissing {
-			return "", nil
+		switch len(names) {
+		case 0:
+			return nil, fmt.Errorf("none of the included templates %q were found: %w", names, ErrTemplateNotFound)
+		case 1:
+			return nil, fmt.Errorf("included template %q not found: %w", names[0], lastErr)
 		}
-		return nil, fmt.Errorf("failed to load included template %q: %w", templateName, err)
+		return nil, fmt.Errorf("none of the included templates %q were found: %w", names, lastErr)
 	}
 
-	// Determine which context to use
-	includeCtx := ctx
+	// The include runs in a copy of the includer's scope: it reads the
+	// includer's variables, and its own {% set %} stays inside.
+	var includeCtx Context
+	if c, ok := ctx.(childScoper); ok {
+		includeCtx = c.Child()
+	} else {
+		includeCtx = ctx.Clone()
+	}
 	if node.WithoutContext {
 		includeCtx = importContext(ctx, false)
-	} else if node.WithContext {
-		// A copy, as before, so {% set %} inside the include stays there
-		includeCtx = ctx.Clone()
 	} else if node.Context != nil {
 		// If a context expression is provided, evaluate it
 		contextValue, err := e.EvalNode(node.Context, ctx)
@@ -1223,8 +1251,7 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 			return nil, fmt.Errorf("error evaluating context for include: %w", err)
 		}
 
-		// Create a new context with the provided values
-		includeCtx = ctx.Clone()
+		// Add the provided values to the include's scope
 		if contextMap, ok := contextValue.(map[string]interface{}); ok {
 			for key, value := range contextMap {
 				includeCtx.SetVariable(key, value)
@@ -1241,13 +1268,26 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 	// Execute the included template with the appropriate context
 	result, err := e.EvalNode(templateAST, includeCtx)
 	if err != nil {
-		if node.IgnoreMissing && !errors.Is(err, ErrMaxRecursion) {
-			return "", nil
-		}
 		return nil, fmt.Errorf("error executing included template %q: %w", templateName, err)
 	}
 
 	return result, nil
+}
+
+// notFound reports whether err means that template name itself does not
+// exist. A TemplateNotFoundError for another name (a missing parent of an
+// included template) is a real error, as in Jinja2. A custom TemplateLoader
+// that does not use TemplateNotFoundError keeps the old rule: it is "not
+// found" when the loader says the template does not exist.
+func (e *DefaultEvaluator) notFound(err error, name string) bool {
+	var nf *TemplateNotFoundError
+	if errors.As(err, &nf) {
+		return nf.Name == name
+	}
+	if _, builtin := e.importSystem.loader.(*SimpleTemplateLoader); builtin {
+		return false
+	}
+	return !e.importSystem.loader.TemplateExists(name)
 }
 
 func (e *DefaultEvaluator) EvalSuperNode(node *parser.SuperNode, ctx Context) (interface{}, error) {

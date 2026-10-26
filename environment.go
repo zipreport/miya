@@ -161,7 +161,7 @@ func (e *Environment) GetTemplate(name string) (*Template, error) {
 
 	source, err := e.loader.GetSource(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load template %q: %w", name, err)
+		return nil, &runtime.TemplateNotFoundError{Name: name, Err: err}
 	}
 
 	tmpl, err := e.compile(name, source)
