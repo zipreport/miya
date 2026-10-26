@@ -275,7 +275,7 @@ func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	}
 
 	if fillWith != nil && size > maxBatchFill {
-		return nil, fmt.Errorf("batch size too large to fill")
+		return nil, &runtime.SizeError{Msg: "batch size too large to fill"}
 	}
 
 	switch v := value.(type) {
@@ -792,7 +792,7 @@ func SliceFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("slice filter requires a positive number of slices")
 	}
 	if slices > maxBatchFill {
-		return nil, fmt.Errorf("slice count too large (max %d)", maxBatchFill)
+		return nil, &runtime.SizeError{Msg: fmt.Sprintf("slice count too large (max %d)", maxBatchFill)}
 	}
 	var fill interface{}
 	hasFill := false

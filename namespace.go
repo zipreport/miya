@@ -183,7 +183,7 @@ func rangeFunction(args ...interface{}) (interface{}, error) {
 		}
 	}
 	if n > maxRangeLength {
-		return nil, fmt.Errorf("range() too large: %d items (limit %d)", n, maxRangeLength)
+		return nil, &runtime.SizeError{Msg: fmt.Sprintf("range() too large: %d items (limit %d)", n, maxRangeLength)}
 	}
 
 	// Generate the sequence
@@ -294,7 +294,7 @@ func lipsumFunction(args ...interface{}) (interface{}, error) {
 	}
 
 	if paragraphs > 1000 || minSentences > 1000 || maxSentences > 1000 {
-		return nil, fmt.Errorf("lipsum() too large")
+		return nil, &runtime.SizeError{Msg: "lipsum() too large"}
 	}
 
 	// Lorem ipsum words

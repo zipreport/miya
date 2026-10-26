@@ -2762,7 +2762,7 @@ func (e *DefaultEvaluator) addWithNode(a, b interface{}, node parser.Node) (inte
 		av := reflect.ValueOf(a)
 		bv := reflect.ValueOf(b)
 		if av.Len()+bv.Len() > maxConcatLength {
-			return nil, fmt.Errorf("list concatenation too large: %d items (limit %d)", av.Len()+bv.Len(), maxConcatLength)
+			return nil, &SizeError{Msg: fmt.Sprintf("list concatenation too large: %d items (limit %d)", av.Len()+bv.Len(), maxConcatLength)}
 		}
 		if av.Type() != bv.Type() {
 			merged := make([]interface{}, 0, av.Len()+bv.Len())

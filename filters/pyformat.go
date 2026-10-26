@@ -60,7 +60,7 @@ func pyFormat(format string, args []interface{}, kwargs map[string]interface{}, 
 			return 0, pyFormatErr("* wants int")
 		}
 		if !n.IsInt64() || n.Int64() > maxFormatWidth || n.Int64() < -maxFormatWidth {
-			return 0, pyFormatErr("width too big")
+			return 0, &runtime.SizeError{Msg: "format: width too big"}
 		}
 		return n.Int64(), nil
 	}
@@ -144,7 +144,7 @@ func pyFormat(format string, args []interface{}, kwargs map[string]interface{}, 
 			for i < len(rs) && rs[i] >= '0' && rs[i] <= '9' {
 				width = width*10 + int(rs[i]-'0')
 				if width > maxFormatWidth {
-					return "", pyFormatErr("width too big")
+					return "", &runtime.SizeError{Msg: "format: width too big"}
 				}
 				i++
 			}
@@ -166,7 +166,7 @@ func pyFormat(format string, args []interface{}, kwargs map[string]interface{}, 
 				for i < len(rs) && rs[i] >= '0' && rs[i] <= '9' {
 					prec = prec*10 + int(rs[i]-'0')
 					if prec > maxFormatWidth {
-						return "", pyFormatErr("precision too big")
+						return "", &runtime.SizeError{Msg: "format: precision too big"}
 					}
 					i++
 				}
