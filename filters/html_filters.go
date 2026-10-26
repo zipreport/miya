@@ -204,18 +204,38 @@ func XMLAttrFilter(value interface{}, args ...interface{}) (interface{}, error) 
 	return runtime.Markup(" " + result.String()), nil
 }
 
-// stripBetween removes every open...close span, stopping when no close follows.
+// stripBetween removes every open...closing span, stopping when no closing
+// follows the next open. It matches repeated find-and-cut from the start of
+// the string (a removal can join text into a new open), in one linear pass:
+// out holds the text that contains no open, and a new open can only begin in
+// its last len(open)-1 bytes.
 func stripBetween(s, open, closing string) string {
+	out := make([]byte, 0, len(s))
+	pos := 0
 	for {
-		i := strings.Index(s, open)
-		if i < 0 {
-			return s
+		rest := s[pos:]
+		start, consumed := -1, 0 // start: offset in out; consumed: bytes of rest the open uses
+		for o := max(0, len(out)-(len(open)-1)); o < len(out); o++ {
+			n := len(out) - o
+			if string(out[o:]) == open[:n] && strings.HasPrefix(rest, open[n:]) {
+				start, consumed = o, len(open)-n
+				break
+			}
 		}
-		j := strings.Index(s[i+len(open):], closing)
+		if start < 0 {
+			i := strings.Index(rest, open)
+			if i < 0 {
+				return string(out) + rest
+			}
+			out = append(out, rest[:i]...)
+			start, consumed, rest, pos = len(out), len(open), rest[i:], pos+i
+		}
+		j := strings.Index(rest[consumed:], closing)
 		if j < 0 {
-			return s
+			return string(out) + rest
 		}
-		s = s[:i] + s[i+len(open)+j+len(closing):]
+		out = out[:start]
+		pos += consumed + j + len(closing)
 	}
 }
 
