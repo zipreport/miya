@@ -98,8 +98,8 @@ func TestWithStatementErrors(t *testing.T) {
 		errMsg   string
 	}{
 		{
-			name:     "Missing assignment",
-			template: `{% with %}{{ x }}{% endwith %}`,
+			name:     "Trailing comma",
+			template: `{% with x = 1, %}{{ x }}{% endwith %}`,
 			errMsg:   "expected variable name",
 		},
 		{

@@ -3639,15 +3639,32 @@ func (e *DefaultEvaluator) EvalWithNode(node *parser.WithNode, ctx Context) (int
 	// Create a new context scope for the with block
 	withCtx := ctx.Clone()
 
-	// Evaluate and set assignments in order (so later assignments can reference earlier ones)
-	// Note: In Go, map iteration order is not guaranteed, but for most use cases this will work
-	// In a production implementation, we'd need to preserve assignment order in the parser
-	for varName, expr := range node.Assignments {
-		value, err := e.EvalNode(expr, withCtx) // Use with context so assignments can reference each other
+	names, exprs := node.Names, node.Exprs
+	if len(names) != len(exprs) || (len(names) == 0 && len(node.Assignments) > 0) {
+		// an AST built without the parser: fall back to sorted keys
+		names = make([]string, 0, len(node.Assignments))
+		for n := range node.Assignments {
+			names = append(names, n)
+		}
+		sort.Strings(names)
+		exprs = make([]parser.ExpressionNode, len(names))
+		for i, n := range names {
+			exprs[i] = node.Assignments[n]
+		}
+	}
+
+	// Jinja2 evaluates every value in the scope outside the with block, in
+	// order (duplicates too), and only then binds the names; the last one wins.
+	values := make([]interface{}, len(names))
+	for i, varName := range names {
+		value, err := e.EvalNode(exprs[i], ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error evaluating with assignment %s: %w", varName, err)
 		}
-		withCtx.SetVariable(varName, e.bindValue(expr, value, withCtx))
+		values[i] = e.bindValue(exprs[i], value, ctx)
+	}
+	for i, varName := range names {
+		withCtx.SetVariable(varName, values[i])
 	}
 
 	// Evaluate the body with the new context

@@ -2206,8 +2206,11 @@ func (p *Parser) parseWithStatement() (Node, error) {
 
 	// Parse assignments (var1=expr1, var2=expr2, ...)
 	assignments := make(map[string]ExpressionNode)
+	var names []string
+	var exprs []ExpressionNode
 
-	for {
+	// A bare {% with %} has no assignments
+	for !(len(names) == 0 && (p.check(lexer.TokenBlockEnd) || p.check(lexer.TokenBlockEndTrim))) {
 		// Parse variable name
 		if !p.check(lexer.TokenIdentifier) {
 			return nil, p.error("expected variable name in with statement")
@@ -2227,6 +2230,8 @@ func (p *Parser) parseWithStatement() (Node, error) {
 		}
 
 		assignments[varName] = expr
+		names = append(names, varName)
+		exprs = append(exprs, expr)
 
 		// Check for more assignments
 		if p.check(lexer.TokenComma) {
@@ -2277,7 +2282,10 @@ func (p *Parser) parseWithStatement() (Node, error) {
 	}
 	p.advance() // consume '%}'
 
-	return NewWithNode(assignments, body, startToken.Line, startToken.Column), nil
+	node := NewWithNode(assignments, body, startToken.Line, startToken.Column)
+	node.Names = names
+	node.Exprs = exprs
+	return node, nil
 }
 
 // parseDoStatement parses do statements {% do expression %}

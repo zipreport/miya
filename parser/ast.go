@@ -755,6 +755,8 @@ func (n *CallBlockNode) StatementNode() {}
 type WithNode struct {
 	baseNode
 	Assignments map[string]ExpressionNode // Variable assignments like var1=expr1, var2=expr2
+	Names       []string                  // assignment targets in source order, duplicates kept (Assignments is a map)
+	Exprs       []ExpressionNode          // Exprs[i] is the value assigned to Names[i]
 	Body        []Node                    // The content between {% with %} and {% endwith %}
 }
 
