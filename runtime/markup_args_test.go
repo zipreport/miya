@@ -69,4 +69,49 @@ func TestMapMarkupWithoutFilterLookup(t *testing.T) {
 	if got := out.([]interface{}); got[0] != 1 || got[1] != "a" {
 		t.Errorf("out = %v, want the items re-applied through ApplyFilter", got)
 	}
+
+	// An Undefined result of the whole-list apply is kept as it is.
+	undef := NewUndefined("x", UndefinedSilent, nil)
+	apply = func(v interface{}, a []interface{}) (interface{}, error) {
+		return []interface{}{undef, "W"}, nil
+	}
+	out, err = NewEvaluator().mapMarkup(ctx, []interface{}{1, "a"}, []interface{}{"f"}, apply)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := out.([]interface{}); got[0] != undef {
+		t.Errorf("out[0] = %#v, want the Undefined kept", got[0])
+	}
+}
+
+type lookupCtx struct{ *mockContext }
+
+func (lookupCtx) HasFilter(string) bool { return true }
+
+// When the filter over the items that are not re-applied returns a list of
+// another length, the whole list is filtered instead.
+func TestMapMarkupSubListMismatch(t *testing.T) {
+	ctx := lookupCtx{&mockContext{data: map[string]interface{}{}}}
+	if _, ok := filterLookup(ctx); !ok {
+		t.Fatal("lookupCtx must implement FilterLookup")
+	}
+	var calls [][]interface{}
+	apply := func(v interface{}, a []interface{}) (interface{}, error) {
+		list := v.([]interface{})
+		calls = append(calls, list)
+		if len(list) == 1 {
+			return []interface{}{"X", "Y"}, nil
+		}
+		return []interface{}{"W1", "W2"}, nil
+	}
+	out, err := NewEvaluator().mapMarkup(ctx, []interface{}{1, []byte("x")}, []interface{}{"f"}, apply)
+	if len(calls) != 2 || len(calls[1]) != 2 {
+		t.Fatalf("apply calls = %v, want a sub-list call then a call with the whole 2-item list", calls)
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := out.([]interface{}); len(got) != 2 || got[0] != "W1" || got[1] != "W2" {
+		t.Errorf("out = %v, want [W1 W2]", got)
+	}
 }
