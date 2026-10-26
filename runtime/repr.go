@@ -31,18 +31,26 @@ type reprState struct {
 
 // reprContainer prints a slice, array or map the way Python's repr does
 // (Decisions 1-3 and 2a-2b in plan 048); ok is false for any other value.
+// ToString checks error and fmt.Stringer before calling it.
 func reprContainer(v interface{}) (string, bool) {
 	v = Indirect(v)
 	if v == nil {
 		return "", false
 	}
-	switch reflect.ValueOf(v).Kind() {
-	case reflect.Slice, reflect.Array, reflect.Map:
+	rv := reflect.ValueOf(v)
+	s := &reprState{}
+	switch rv.Kind() {
+	case reflect.Slice, reflect.Array:
+		if items, ok := v.([]interface{}); ok {
+			s.reprItems(items)
+		} else {
+			s.reprSeq(rv)
+		}
+	case reflect.Map:
+		s.reprMap(rv, v)
 	default:
 		return "", false
 	}
-	s := &reprState{}
-	s.repr(v)
 	return string(s.b), true
 }
 
