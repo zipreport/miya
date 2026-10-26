@@ -159,6 +159,18 @@ go test ./tests/
 make test
 ```
 
+### Jinja2 conformance suite
+
+`tests/conformance/` renders `cases.json` (produced by Jinja2 3.1.6) with miya; cases miya still gets wrong are listed in `known_divergences.json`. A change that fixes a case must delete its entry. To dump and rebuild the allow-list:
+
+```bash
+echo '{}' > tests/conformance/known_divergences.json
+go test ./tests/conformance/ -run '^TestConformance$' -count=1 -args -conformance.dump=/tmp/dump.json
+python3 tests/conformance/build_allowlist.py /tmp/dump.json > tests/conformance/known_divergences.json
+```
+
+See `tests/conformance/README.md`.
+
 ## Common Development Tasks
 
 ### Adding a New Filter

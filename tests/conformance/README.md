@@ -38,12 +38,13 @@ match deletes it. A change that alters how an allow-listed case diverges (its
 `reason` in the same change and list it in its report; the `reason` text alone
 is not compared. Entries are never added to hide a regression.
 
-## Why mapLoader, not loader.StringLoader
+## Why mapLoader
 
-`loader.StringLoader` is an `AdvancedLoader`: miya uses its own parse and never
-runs `Environment.compile`, so `trim_blocks`, `lstrip_blocks` and `{{-`/`-}}`
-are silently ignored. The test uses `mapLoader` (GetSource only), the path
-zipreport-go's loader takes, so whitespace options are exercised for real.
+`mapLoader` implements only `GetSource`, the path zipreport-go's loader takes.
+`loader.StringLoader` also compiles through `Environment` and honours
+`trim_blocks`, `lstrip_blocks` and `{{-`/`-}}` (since plan 044), so either would
+exercise whitespace options; the suite keeps `mapLoader` so the plain
+`GetSource` path stays covered.
 
 ## Whitespace matrix
 
