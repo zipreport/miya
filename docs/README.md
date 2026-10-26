@@ -19,19 +19,19 @@ Complete documentation for Miya Engine - a blazing-fast Jinja2-compatible templa
 
 | Guide | Description | Compatibility |
 |-------|-------------|---------------|
-| **[Template Inheritance](TEMPLATE_INHERITANCE.md)** | Extends, blocks, super() |  100% Jinja2 |
-| **[Control Structures](CONTROL_STRUCTURES_GUIDE.md)** | If/elif/else, for loops, set, with |  100% Jinja2 |
-| **[Filters](FILTERS_GUIDE.md)** | 70+ filters for data transformation |  100% Jinja2 |
-| **[Tests & Operators](TESTS_AND_OPERATORS.md)** | 26+ tests, all operators |  100% Jinja2 |
+| **[Template Inheritance](TEMPLATE_INHERITANCE.md)** | Extends, blocks, super() |  see compatibility page |
+| **[Control Structures](CONTROL_STRUCTURES_GUIDE.md)** | If/elif/else, for loops, set, with |  see compatibility page |
+| **[Filters](FILTERS_GUIDE.md)** | 70+ filters for data transformation |  see compatibility page |
+| **[Tests & Operators](TESTS_AND_OPERATORS.md)** | 26+ tests, all operators |  see compatibility page |
 
 ### Advanced Features
 
 | Guide | Description | Compatibility |
 |-------|-------------|---------------|
-| **[Macros & Includes](MACROS_AND_INCLUDES.md)** | Reusable components, template composition |  95% (no caller()) |
-| **[Global Functions](GLOBAL_FUNCTIONS.md)** | range, dict, cycler, joiner, namespace, etc. |  100% Jinja2 |
-| **[Comprehensions](COMPREHENSIONS_GUIDE.md)** | List and dict comprehensions |  70% (no inline if) |
-| **[Advanced Features](ADVANCED_FEATURES_GUIDE.md)** | Filter blocks, whitespace control, autoescape, performance |  100% Jinja2 |
+| **[Macros & Includes](MACROS_AND_INCLUDES.md)** | Reusable components, template composition |  see compatibility page |
+| **[Global Functions](GLOBAL_FUNCTIONS.md)** | range, dict, cycler, joiner, namespace, etc. |  see compatibility page |
+| **[Comprehensions](COMPREHENSIONS_GUIDE.md)** | List and dict comprehensions |  see compatibility page |
+| **[Advanced Features](ADVANCED_FEATURES_GUIDE.md)** | Filter blocks, whitespace control, autoescape, performance |  see compatibility page |
 
 ### Reference
 
@@ -213,7 +213,6 @@ Build reusable components:
 - Selective imports (from)
 - Template includes
 - Practical component libraries
-- Limitation: caller() not supported
 
 ---
 
@@ -371,15 +370,15 @@ Professional template control:
 
 ##  Important Limitations
 
-Miya Engine is ~95% compatible with Jinja2. Key differences:
+Known differences are listed in [Limitations](MIYA_LIMITATIONS.md). The main ones:
 
 | Feature | Jinja2 | Miya Engine | Workaround |
 |---------|--------|-------------|------------|
-| List comprehension with if |  Supported |  Not supported | Use `selectattr` filter |
-| Dict comprehension with .items() |  Supported |  Not supported | Loop over list instead |
-| Inline conditional without else |  Supported |  Not supported | Always include `else` |
-| Macro caller() |  Supported |  Not supported | Pass content as parameter |
-| Nested comprehensions |  Supported |  Not supported | Use nested loops |
+| `self.block()` | Supported | Not supported | Repeat the content or use a macro |
+| Include of a template that extends a base | Inheritance applied | Not applied | Include a template without `extends` |
+| `'%s' % value` | Supported | Not supported | Use the `format` filter |
+| Dict comprehension with `.items()` | Not Jinja2 syntax | Not supported | Loop instead |
+| Nested comprehensions | Not Jinja2 syntax | Not supported | Use nested loops |
 
  **[Read Full Details: Miya Limitations](MIYA_LIMITATIONS.md)**
 
@@ -472,26 +471,7 @@ When adding new documentation:
 
 ##  Compatibility Summary
 
-**Miya Engine: ~95% Jinja2 Compatible**
-
- **100% Compatible:**
-- Template inheritance (extends, blocks, super)
-- Control structures (if/for/set/with)
-- All filters (70+)
-- All tests (26+)
-- All operators
-- Global functions (9)
-- Advanced features (filter blocks, whitespace, etc.)
-- Performance optimizations (evaluator pooling, caching)
-
- **Partial Compatibility:**
-- Macros (95% - no caller())
-- Comprehensions (70% - no inline if, no nested)
-
- **Not Supported:**
-- Import from parent scope
-- Async/await
-- Some advanced Jinja2 extensions
+miya's conformance suite (`tests/conformance/`) holds 289 small templates written to probe edge cases and known bugs; they are not a sample of real templates. At this commit miya matches Jinja2 3.1.6 on 283 of them (same output, or failing in the same phase for the cases that expect an error), after normalising the printing differences listed in [the feature matrix](JINJA2_VS_MIYA_FEATURE_MATRIX.md). 4 of the remaining cases are deliberate differences. Every divergence and its reason is listed in `tests/conformance/known_divergences.json`. This is a regression net, not a compatibility percentage.
 
 See [MIYA_LIMITATIONS.md](MIYA_LIMITATIONS.md) for complete details.
 
