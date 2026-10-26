@@ -178,9 +178,9 @@ type DoNode struct {
 | Whitespace control | `{%- do ... -%}` | `{%- do ... -%}` |  Full |
 | Error handling | Standard errors | Standard errors |  Full |
 | Integration | All control flow | All control flow |  Full |
-| Side effects | Method calls, etc. | Expression evaluation |  Different* |
+| Side effects | Method calls, etc. | List methods (`append`, `extend`, `pop`) on lists the template created; no Go methods |  Different* |
 
-*Note: Miya Engine focuses on expression evaluation rather than method-based side effects due to Go's type system differences.
+*Note: miya does not call methods of Go values, and `append`/`extend`/`pop` refuse lists passed in as render data (see below).
 
 ## Migration from Python Jinja2
 
@@ -193,10 +193,12 @@ Most do statements will work identically:
 {% do text|filter %}
 {% do complex_expression %}
 
-{# Python-specific method calls may need adaptation #}
-{# Python: {% do items.append("value") %} #}
-{# Miya Engine: Use set statements for variable modification #}
+{# List methods work on lists the template created #}
+{% set items = [] %}
+{% do items.append("value") %}
 ```
+
+`append` works on lists created with `set`/`with` or held in a `namespace()`. To change a list passed in as render data, copy it first: `{% set items = items|list %}`. Methods of Go values are not callable from templates.
 
 ## Testing
 
