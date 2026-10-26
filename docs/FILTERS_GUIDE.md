@@ -234,6 +234,8 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 {{ var|d("default") }}                      → "default"
 ```
 
+Deliberate difference from Jinja2: `default` also replaces `None` and the empty string, not only undefined values. Jinja2 replaces only undefined values unless you pass `true` as the second argument.
+
 ### Data Formatting
 
 | Filter | Description | Example |
