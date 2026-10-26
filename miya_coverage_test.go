@@ -500,6 +500,17 @@ func TestEnvironmentMacros(t *testing.T) {
 		// Should not panic
 		env.ClearMacros()
 	})
+
+	t.Run("CallMacro calls a compiled macro", func(t *testing.T) {
+		env := NewEnvironment()
+		if _, err := env.FromString("{% macro m(x) %}[{{ x }}]{% endmacro %}"); err != nil {
+			t.Fatal(err)
+		}
+		got, err := env.CallMacro("m", NewContext(), []interface{}{"a"}, nil)
+		if err != nil || got != "[a]" {
+			t.Fatalf("CallMacro = %q, %v; want \"[a]\", nil", got, err)
+		}
+	})
 }
 
 // TestCapitalizeFirst tests the capitalizeFirst helper

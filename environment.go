@@ -10,9 +10,7 @@ import (
 	"github.com/zipreport/miya/branching"
 	"github.com/zipreport/miya/extensions"
 	"github.com/zipreport/miya/filters"
-	"github.com/zipreport/miya/inheritance"
 	"github.com/zipreport/miya/lexer"
-	"github.com/zipreport/miya/loader"
 	"github.com/zipreport/miya/macros"
 	"github.com/zipreport/miya/parser"
 	"github.com/zipreport/miya/runtime"
@@ -33,17 +31,16 @@ import (
 //	    miya.WithTrimBlocks(true),
 //	)
 type Environment struct {
-	loader              Loader
-	filterRegistry      *filters.FilterRegistry
-	inheritanceResolver *inheritance.InheritanceResolver
-	macroRegistry       *macros.MacroRegistry
-	testRegistry        *branching.TestRegistry
-	extensionRegistry   *extensions.Registry
-	globals             map[string]interface{}
-	globalsMu           sync.RWMutex
-	tests               map[string]TestFunc // deprecated, use testRegistry
-	cache               map[string]*Template
-	cacheMutex          sync.RWMutex
+	loader            Loader
+	filterRegistry    *filters.FilterRegistry
+	macroRegistry     *macros.MacroRegistry
+	testRegistry      *branching.TestRegistry
+	extensionRegistry *extensions.Registry
+	globals           map[string]interface{}
+	globalsMu         sync.RWMutex
+	tests             map[string]TestFunc // deprecated, use testRegistry
+	cache             map[string]*Template
+	cacheMutex        sync.RWMutex
 
 	// New inheritance caching system
 	inheritanceCache      *runtime.InheritanceCache
@@ -129,11 +126,6 @@ func NewEnvironment(opts ...EnvironmentOption) *Environment {
 	templateLoader := runtime.NewSimpleTemplateLoader(env)
 	env.importSystem = runtime.NewImportSystem(templateLoader, nil)
 
-	// Create inheritance resolver if we have a loader
-	if env.loader != nil {
-		env.inheritanceResolver = inheritance.NewInheritanceResolver(&loaderAdapter{env.loader})
-	}
-
 	registerBuiltinTests(env)
 	registerBuiltinGlobals(env)
 
@@ -206,15 +198,9 @@ func (e *Environment) FromString(source string) (*Template, error) {
 	return tmpl, nil
 }
 
-// SetLoader sets the template loader for the environment and reinitializes the inheritance resolver.
+// SetLoader sets the template loader for the environment.
 func (e *Environment) SetLoader(loader Loader) {
 	e.loader = loader
-	// Create inheritance resolver if we have a loader
-	if loader != nil {
-		e.inheritanceResolver = inheritance.NewInheritanceResolver(&loaderAdapter{loader})
-	} else {
-		e.inheritanceResolver = nil
-	}
 }
 
 func (e *Environment) AddFilterLegacy(name string, filter FilterFunc) error {
@@ -421,16 +407,31 @@ func (e *Environment) ListFilters() []string {
 // Macro management methods
 
 // GetMacro retrieves a macro by name
+//
+// Deprecated: the environment-wide macro registry mixes macros from every
+// compiled template and binds arguments differently from template calls. It
+// will be removed in a later minor release. Call macros from a template
+// ({% import %} or {% from %}) instead.
 func (e *Environment) GetMacro(name string) (*macros.Macro, bool) {
 	return e.macroRegistry.Get(name)
 }
 
 // ListMacros returns all available macro names
+//
+// Deprecated: the environment-wide macro registry mixes macros from every
+// compiled template and binds arguments differently from template calls. It
+// will be removed in a later minor release. Call macros from a template
+// ({% import %} or {% from %}) instead.
 func (e *Environment) ListMacros() []string {
 	return e.macroRegistry.List()
 }
 
 // CallMacro calls a macro with the given arguments
+//
+// Deprecated: the environment-wide macro registry mixes macros from every
+// compiled template and binds arguments differently from template calls. It
+// will be removed in a later minor release. Call macros from a template
+// ({% import %} or {% from %}) instead.
 func (e *Environment) CallMacro(name string, ctx Context, args []interface{}, kwargs map[string]interface{}) (result interface{}, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -454,6 +455,11 @@ func (e *Environment) CallMacro(name string, ctx Context, args []interface{}, kw
 }
 
 // ClearMacros clears all registered macros
+//
+// Deprecated: the environment-wide macro registry mixes macros from every
+// compiled template and binds arguments differently from template calls. It
+// will be removed in a later minor release. Call macros from a template
+// ({% import %} or {% from %}) instead.
 func (e *Environment) ClearMacros() {
 	e.macroRegistry.Clear()
 }
@@ -576,10 +582,6 @@ func (e *Environment) compile(name, source string) (*Template, error) {
 func WithLoader(loader Loader) EnvironmentOption {
 	return func(e *Environment) {
 		e.loader = loader
-		// Create inheritance resolver if we have a loader
-		if loader != nil {
-			e.inheritanceResolver = inheritance.NewInheritanceResolver(&loaderAdapter{loader})
-		}
 	}
 }
 
@@ -744,39 +746,6 @@ func (e *Environment) RenderTemplate(name string, context Context) (string, erro
 		return "", err
 	}
 	return template.Render(context)
-}
-
-// loaderAdapter adapts loader.Loader to inheritance.TemplateLoader interface
-type loaderAdapter struct {
-	loader Loader
-}
-
-func (la *loaderAdapter) LoadTemplate(name string) (*parser.TemplateNode, error) {
-	// Try advanced loader first
-	if advancedLoader, ok := la.loader.(loader.AdvancedLoader); ok {
-		return advancedLoader.LoadTemplate(name)
-	}
-
-	// Fallback to basic loader - for now just return a simple template
-	source, err := la.loader.GetSource(name)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a simple template node with the source as text
-	return &parser.TemplateNode{
-		Name:     name,
-		Children: []parser.Node{&parser.TextNode{Content: source}},
-	}, nil
-}
-
-func (la *loaderAdapter) ResolveTemplateName(name string) string {
-	// Try advanced loader first
-	if advancedLoader, ok := la.loader.(loader.AdvancedLoader); ok {
-		return advancedLoader.ResolveTemplateName(name)
-	}
-	// Simple fallback - just return the name as-is
-	return name
 }
 
 func registerBuiltinTests(env *Environment) {
