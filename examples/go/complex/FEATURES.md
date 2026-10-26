@@ -296,7 +296,7 @@ This document provides a comprehensive list of all features demonstrated in the 
 #### **String Transformation**
 ```jinja2
 {{ "Hello World"|replace("World", "Go") }}       → "Hello Go"
-{{ "Very long text here"|truncate(10) }}         → "Very lo..."
+{{ "Very long text here"|truncate(10) }}         → "Very..."
 {{ "Long text"|wordwrap(5) }}                    → "Long\ntext"
 {{ "hello"|center(10, "-") }}                    → "--hello---"
 {{ "text"|indent(4) }}                           → "    text"
@@ -469,7 +469,7 @@ This document provides a comprehensive list of all features demonstrated in the 
 
 #### **File Operations**
 ```jinja2
-{{ 1536|filesizeformat }}                      → "1.5 KB"
+{{ 1536|filesizeformat }}                      → "1.5 kB"
 ```
 - **File**: `templates/filters_demo.html`
 

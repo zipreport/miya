@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - List methods `index` and `count`, plus `append`, `extend` and `pop` on lists stored with `{% set %}`, `{% with %}` or in a `namespace()` (`{% do ns.items.append(x) %}`). The mutating methods copy the list on the first write and never change the application's data. On any other list they fail with a hint to store it first (`{% set items = items|list %}`).
 - `'ab' * 3` and `[1] * 2` repeat.
 - `runtime.ErrTemplateNotFound` and `runtime.TemplateNotFoundError` (with the missing template's `Name`), returned for templates the loader cannot find. A custom `runtime.TemplateLoader` that returns its own errors keeps the old rule (`TemplateExists` decides).
+- `WithTruncateLeeway(n)` environment option: the default `leeway` of `truncate` (Jinja2's `truncate.leeway` policy). Also `filters.TruncateFilterWithLeeway`, `(*filters.FilterRegistry).Replace` and `runtime.RoundedFloat`.
 
 ### Fixed
 
@@ -92,6 +93,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `include` accepts a list of names and renders the first that exists.
 - `{% with %}` without assignments is accepted.
 - `lower`/`upper` tests follow Python (`'' is lower` is false, numbers are neither); `true is number`; a dict is a sequence.
+- `int` parses `'3.7'`, `' 7 '`, `'1e3'`, `'1_000'` and base prefixes like Jinja2, and returns the default for floats outside the 64-bit range (they printed `-9223372036854775808`); an invalid base falls back like Jinja2 instead of erroring; `float` accepts surrounding whitespace and returns `inf` for `'1e400'`.
+- `format_number` returns an error for infinite or NaN values instead of printing `+,Inf`.
+- `center` defaults to 80 and pads like Python.
+- `format_number` and `currency` no longer put a separator after the minus sign (`-123456|format_number` printed `-,123,456`).
 
 ### Changed
 
@@ -182,6 +187,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Breaking:** `{% with a = …, b = … %}` evaluates every value in the scope outside the block, as Jinja2 does: `b = a` sees the outer `a`. The order used to be random.
 - **Breaking:** `lt`/`le`/`gt`/`ge` tests fail on `None` and on a string compared with a number; `even`/`odd`/`divisibleby` fail on strings and no longer truncate floats.
 - **Breaking:** in strict mode, `o['missing']` and an out-of-range index are errors, and so is `a.b is defined` when `a` is undefined.
+- **Breaking:** `truncate` follows Jinja2. Strings up to 5 characters over the length are kept whole (`leeway`), so output can be up to `length + 5` characters; pass `leeway=0` where the text must fit, such as a table cell in a PDF, or set it for the whole environment with `miya.WithTruncateLeeway(0)`. The end marker counts toward the length, the default length is 255, and a length shorter than the marker is an error. The word cut no longer stops at half the length: `'A Supercalifragilistic order'|truncate(16)` is `A...`.
+- **Breaking:** `indent(width, first, blank)`: the third argument is Jinja2's `blank` (it used to be an indent string; pass a string as `width` instead), blank lines are not indented unless `blank`, and `width` defaults to 4.
+- **Breaking:** `round` with a precision returns a number instead of a string.
+  - It prints exactly as before: `10|round(2)` is `10.00`, and rounding is half away from zero.
+  - It now works in comparisons, arithmetic, `is number` and `|int`.
+  - `tojson` emits `2.68`, not `"2.68"`.
+  - Go code calling `filters.RoundFilter` gets a `runtime.RoundedFloat`; so do custom filters and global functions that receive a rounded value.
+  - Templates that treated the result as a string change: `x|round(2) == '0.00'` is now false (compare with `0`), `x|round(2) < 'a'` is an error, `|length` is an error, `|first` and `|list` no longer split it into characters, and `is string`/`is iterable`/`is sequence` turn false.
+  - `inf|round(2)|tojson` is an error (JSON has no infinity; it was `"+Inf"`).
+  - `round(0)` (or no precision) of a value of 1e16 or more prints in exponent form, like any float (`1e20|round` prints `1e+20`; it printed `100000000000000000000`).
+  - An unknown `method` is an error. A precision above 308, or one that overflows the value, returns it unchanged (it printed `NaN` or `+Inf`), and a value whose scaled form is beyond 2^53 is no longer distorted (`1e20|round(3)` printed `99999999999999983616.000`).
+- `filesizeformat` prints `kB` and `1 Byte`, truncates below 1 kB, and goes up to YB/YiB.
 
 ### Deprecated
 

@@ -3,6 +3,7 @@ package filters
 import (
 	"fmt"
 	"html"
+	"math"
 	"net/url"
 	"regexp"
 	"sort"
@@ -301,41 +302,49 @@ func TruncateHTMLFilter(value interface{}, args ...interface{}) (interface{}, er
 	return runtime.Markup(html.EscapeString(truncated) + html.EscapeString(end)), nil
 }
 
-// FileSizeFormatFilter formats file sizes in human-readable format
+// FileSizeFormatFilter formats file sizes in human-readable format, following
+// Jinja2's do_filesizeformat.
 func FileSizeFormatFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	size, err := ToFloat(value)
-	if err != nil {
-		return nil, fmt.Errorf("filesizeformat requires numeric value: %v", err)
-	}
-
-	binary := false
-	if len(args) > 0 {
-		binary = ToBool(args[0])
-	}
-
-	var units []string
-	var base float64
-
-	if binary {
-		units = []string{"Bytes", "KiB", "MiB", "GiB", "TiB", "PiB"}
-		base = 1024
-	} else {
-		units = []string{"Bytes", "KB", "MB", "GB", "TB", "PB"}
-		base = 1000
-	}
-
-	if size < base {
-		return fmt.Sprintf("%.0f %s", size, units[0]), nil
-	}
-
-	for i := 1; i < len(units); i++ {
-		if size < base*base {
-			return fmt.Sprintf("%.1f %s", size/base, units[i]), nil
+	var size float64
+	if str, ok := value.(string); ok {
+		f, parsed := pyParseFloat(str)
+		if !parsed {
+			return nil, fmt.Errorf("filesizeformat requires numeric value: cannot convert %q to float", str)
 		}
-		size /= base
+		size = f
+	} else {
+		f, err := ToFloat(value)
+		if err != nil {
+			return nil, fmt.Errorf("filesizeformat requires numeric value: %v", err)
+		}
+		size = f
 	}
 
-	return fmt.Sprintf("%.1f %s", size, units[len(units)-1]), nil
+	binary := len(args) > 0 && ToBool(args[0])
+
+	base := 1000.0
+	prefixes := []string{"kB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"}
+	if binary {
+		base = 1024
+		prefixes = []string{"KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB"}
+	}
+
+	if size == 1 {
+		return "1 Byte", nil
+	}
+	if size < base {
+		return fmt.Sprintf("%d Bytes", int64(size)), nil
+	}
+	var unit float64
+	prefix := ""
+	for i, p := range prefixes {
+		unit = math.Pow(base, float64(i+2))
+		prefix = p
+		if size < unit {
+			break
+		}
+	}
+	return fmt.Sprintf("%.1f %s", base*size/unit, prefix), nil
 }
 
 // AutoEscapeFilter conditionally escapes based on context

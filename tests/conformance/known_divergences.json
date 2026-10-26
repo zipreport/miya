@@ -19,31 +19,6 @@
   "plan": "054",
   "reason": "want \"go <a href=\\\"http://x.com\\\" rel=\\\"noopener\\\">http://x.com</a> &lt;b&gt;\", got \"go <a href=\\\"http://x.com\\\">http://x.com</a> &lt;b&gt;\""
  },
- "fkw-011": {
-  "kind": "output",
-  "plan": "050",
-  "reason": "want \"He...\", got \"Hello...\""
- },
- "fsem-001": {
-  "kind": "output",
-  "plan": "050",
-  "reason": "want \"Hello World\", got \"Hello...\""
- },
- "fsem-002": {
-  "kind": "output",
-  "plan": "050",
-  "reason": "want \"He...\", got \"Hello...\""
- },
- "fsem-003": {
-  "kind": "output",
-  "plan": "050",
-  "reason": "want \"The quick brown fox jumps o...\", got \"The quick brown fox jumps over...\""
- },
- "fsem-004": {
-  "kind": "output",
-  "plan": "050",
-  "reason": "want \"a\\n\\n  b\", got \"a\\n  \\n  b\""
- },
  "fsem-005": {
   "kind": "output",
   "plan": "deviation",
@@ -59,16 +34,6 @@
   "plan": "deviation",
   "reason": "want \"2.67\", got \"2.68\""
  },
- "fsem-014": {
-  "kind": "output",
-  "plan": "050",
-  "reason": "want \"3\", got \"0\""
- },
- "fsem-015": {
-  "kind": "output",
-  "plan": "050",
-  "reason": "want \"7\", got \"0\""
- },
  "fsem-016": {
   "kind": "output",
   "plan": "054",
@@ -79,20 +44,10 @@
   "plan": "054",
   "reason": "want \"a b\", got \"a  b\""
  },
- "fsem-020": {
-  "kind": "output",
-  "plan": "050",
-  "reason": "want \"1.0 kB\", got \"1.0 KB\""
- },
  "fsem-021": {
   "kind": "output",
   "plan": "052",
   "reason": "want \"abc\\ndef\\ngh\\nij\", got \"abcdefgh\\nij\""
- },
- "fsem-022": {
-  "kind": "error",
-  "plan": "050",
-  "reason": "want \"                                       x                                        |\", got render-time error: center filter requires width argument"
  },
  "fsem-028": {
   "kind": "output",

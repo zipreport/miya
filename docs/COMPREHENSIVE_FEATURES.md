@@ -248,7 +248,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 {{ "hello world"|capitalize }}               → "Hello world"
 {{ "  text  "|trim }}                        → "text"
 {{ "Hello World"|replace("World", "Go") }}   → "Hello Go"
-{{ "Very long text"|truncate(10) }}          → "Very lo..."
+{{ "Very long text"|truncate(10, leeway=0) }} → "Very..."
 {{ "hello"|center(10, "-") }}                → "--hello---"
 {{ "text"|indent(4) }}                       → "    text"
 {{ "hello world"|wordwrap(5) }}              → "hello\nworld"
@@ -321,7 +321,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 {{ data|tojson }}                           → JSON string
 {{ json_string|fromjson }}                  → parsed object
 {{ value|string }}                          → string conversion
-{{ 1536|filesizeformat }}                  → "1.5 KB"
+{{ 1536|filesizeformat }}                  → "1.5 kB"
 ```
 
 ### **Date/Time Filters (8 filters)**

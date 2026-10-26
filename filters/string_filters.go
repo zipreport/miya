@@ -137,47 +137,65 @@ func ReplaceFilter(value interface{}, args ...interface{}) (interface{}, error) 
 
 // TruncateFilter truncates string to specified length
 func TruncateFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	if len(args) < 1 {
-		return nil, fmt.Errorf("truncate filter requires length argument")
-	}
+	return truncate(5, value, args...)
+}
 
+// TruncateFilterWithLeeway returns a truncate filter whose default leeway is
+// the given value (Jinja2's truncate.leeway policy).
+func TruncateFilterWithLeeway(leeway int) FilterFunc {
+	return func(value interface{}, args ...interface{}) (interface{}, error) {
+		return truncate(leeway, value, args...)
+	}
+}
+
+// truncate follows Jinja2's do_truncate(s, length=255, killwords=False,
+// end="...", leeway=5).
+func truncate(defaultLeeway int, value interface{}, args ...interface{}) (interface{}, error) {
 	s := ToString(value)
-	length, err := ToInt(args[0])
-	if err != nil {
-		return nil, fmt.Errorf("truncate length must be integer: %v", err)
-	}
-	if length < 0 {
-		return nil, fmt.Errorf("truncate length must not be negative")
-	}
 
-	killwords := false
+	length := 255
+	if len(args) > 0 && args[0] != nil {
+		l, err := ToInt(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("truncate length must be integer: %v", err)
+		}
+		length = l
+	}
+	killwords := len(args) > 1 && ToBool(args[1])
 	end := "..."
-
-	if len(args) > 1 {
-		killwords = ToBool(args[1])
-	}
 	if len(args) > 2 {
 		end = ToString(args[2])
 	}
+	leeway := defaultLeeway
+	if len(args) > 3 && args[3] != nil {
+		l, err := ToInt(args[3])
+		if err != nil {
+			return nil, fmt.Errorf("truncate leeway must be integer: %v", err)
+		}
+		leeway = l
+	}
+
+	endRunes := []rune(end)
+	if length < len(endRunes) {
+		return nil, fmt.Errorf("truncate: expected length >= %d, got %d", len(endRunes), length)
+	}
+	if leeway < 0 {
+		return nil, fmt.Errorf("truncate: expected leeway >= 0, got %d", leeway)
+	}
 
 	runes := []rune(s)
-	if len(runes) <= length {
+	if len(runes) <= length+leeway {
 		return s, nil
 	}
 
+	prefix := string(runes[:length-len(endRunes)])
 	if killwords {
-		// Cut at exact length
-		return string(runes[:length]) + end, nil
+		return prefix + end, nil
 	}
-
-	// Try to break at word boundary
-	truncated := string(runes[:length])
-	lastSpace := strings.LastIndex(truncated, " ")
-	if lastSpace > 0 && lastSpace > length/2 {
-		truncated = truncated[:lastSpace]
+	if i := strings.LastIndex(prefix, " "); i >= 0 {
+		prefix = prefix[:i]
 	}
-
-	return truncated + end, nil
+	return prefix + end, nil
 }
 
 // WordwrapFilter wraps words at specified width
@@ -261,14 +279,14 @@ func repeatBounded(s string, count int) (string, error) {
 
 // CenterFilter centers string in field of given width
 func CenterFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	if len(args) < 1 {
-		return nil, fmt.Errorf("center filter requires width argument")
-	}
-
 	s := ToString(value)
-	width, err := ToInt(args[0])
-	if err != nil {
-		return nil, fmt.Errorf("center width must be integer: %v", err)
+	width := 80
+	if len(args) > 0 && args[0] != nil {
+		w, err := ToInt(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("center width must be integer: %v", err)
+		}
+		width = w
 	}
 
 	fillchar := " "
@@ -279,15 +297,14 @@ func CenterFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		}
 	}
 
-	sLen := len([]rune(s))
-	if sLen >= width {
+	marg := width - len([]rune(s))
+	if marg <= 0 {
 		return s, nil
 	}
+	// Python's str.center puts the odd space on the left when width is odd.
+	leftPad := marg/2 + (marg & width & 1)
 
-	padding := width - sLen
-	leftPad := padding / 2
-
-	pad, err := repeatBounded(fillchar, padding)
+	pad, err := repeatBounded(fillchar, marg)
 	if err != nil {
 		return nil, err
 	}
@@ -295,47 +312,57 @@ func CenterFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	return pad[:split] + s + pad[split:], nil
 }
 
-// IndentFilter indents each line
+// IndentFilter indents each line, following Jinja2's do_indent(s, width=4,
+// first=False, blank=False).
 func IndentFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	if len(args) < 1 {
-		return nil, fmt.Errorf("indent filter requires width argument")
-	}
-
 	s := ToString(value)
-	width, err := ToInt(args[0])
-	if err != nil {
-		return nil, fmt.Errorf("indent width must be integer: %v", err)
-	}
 
-	indentFirst := false
-	indentString := " "
+	var indention string
+	if len(args) > 0 && args[0] != nil {
+		if str, ok := args[0].(string); ok {
+			indention = str
+		} else {
+			width, err := ToInt(args[0])
+			if err != nil {
+				return nil, fmt.Errorf("indent width must be integer: %v", err)
+			}
+			indention, err = repeatBounded(" ", width)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		indention = "    "
+	}
+	first := len(args) > 1 && ToBool(args[1])
+	blank := len(args) > 2 && ToBool(args[2])
 
-	if len(args) > 1 {
-		indentFirst = ToBool(args[1])
-	}
-	if len(args) > 2 {
-		indentString = ToString(args[2])
-	}
-
-	lines := strings.Split(s, "\n")
-	prefix, err := repeatBounded(indentString, width)
-	if err != nil {
-		return nil, err
-	}
-	if len(prefix) > 0 && len(lines) > maxRepeatBytes/len(prefix) {
+	lines := strings.Split(strings.NewReplacer("\r\n", "\n", "\r", "\n").Replace(s+"\n"), "\n")
+	lines = lines[:len(lines)-1]
+	if len(indention) > 0 && len(lines) > maxRepeatBytes/len(indention) {
 		return nil, fmt.Errorf("indent output too large")
 	}
 
-	for i, line := range lines {
-		if i == 0 && !indentFirst {
-			continue
-		}
-		if line != "" || i < len(lines)-1 {
-			lines[i] = prefix + line
+	var rv string
+	if blank {
+		rv = strings.Join(lines, "\n"+indention)
+	} else {
+		rv = lines[0]
+		if len(lines) > 1 {
+			rest := make([]string, len(lines)-1)
+			for i, line := range lines[1:] {
+				if line != "" {
+					line = indention + line
+				}
+				rest[i] = line
+			}
+			rv += "\n" + strings.Join(rest, "\n")
 		}
 	}
-
-	return strings.Join(lines, "\n"), nil
+	if first {
+		rv = indention + rv
+	}
+	return rv, nil
 }
 
 // StringFilter converts value to string

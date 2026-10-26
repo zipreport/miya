@@ -225,6 +225,9 @@ func escapeArg(ctx Context, a interface{}) interface{} {
 	if m, ok := AsMarkup(a); ok {
 		return string(m)
 	}
+	if _, ok := a.(RoundedFloat); ok {
+		return a
+	}
 	if a == nil || isNumberKind(a) || reflect.ValueOf(a).Kind() == reflect.Bool {
 		return a
 	}

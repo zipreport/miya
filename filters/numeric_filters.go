@@ -52,21 +52,24 @@ func AbsFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	}
 }
 
-// RoundFilter rounds a number to specified precision
+// RoundFilter rounds a number to specified precision. A precision of 1 or more
+// returns a runtime.RoundedFloat, a number that prints with that many decimals.
 func RoundFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	precision := 0
-	method := "common" // common, ceil, floor
+	method := "common"
 
-	if len(args) > 0 {
+	if len(args) > 0 && args[0] != nil {
 		p, err := ToInt(args[0])
 		if err != nil {
 			return nil, fmt.Errorf("round precision must be integer: %v", err)
 		}
 		precision = p
 	}
-
-	if len(args) > 1 {
+	if len(args) > 1 && args[1] != nil {
 		method = ToString(args[1])
+	}
+	if method != "common" && method != "ceil" && method != "floor" {
+		return nil, fmt.Errorf("round: method must be common, ceil or floor")
 	}
 
 	f, err := ToFloat(value)
@@ -74,45 +77,43 @@ func RoundFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("round filter requires a number: %v", err)
 	}
 
-	multiplier := math.Pow(10, float64(precision))
-
+	if precision > 308 || math.IsInf(f, 0) || math.IsNaN(f) {
+		return f, nil
+	}
+	if precision < -308 {
+		return math.Copysign(0, f), nil
+	}
+	m := math.Pow(10, float64(precision))
+	scaled := f * m
+	if math.IsInf(scaled, 0) {
+		return f, nil
+	}
 	var result float64
-	switch method {
-	case "ceil":
-		result = math.Ceil(f*multiplier) / multiplier
-	case "floor":
-		result = math.Floor(f*multiplier) / multiplier
-	default: // common
-		result = math.Round(f*multiplier) / multiplier
+	switch {
+	case math.Abs(scaled) >= 1<<53:
+		result = f
+	case method == "ceil":
+		result = math.Ceil(scaled) / m
+	case method == "floor":
+		result = math.Floor(scaled) / m
+	default:
+		result = math.Round(scaled) / m
 	}
 
-	// If precision was specified, format as string to preserve decimal places
-	if len(args) > 0 && precision >= 0 {
-		formatted := fmt.Sprintf("%."+fmt.Sprintf("%d", precision)+"f", result)
-		// Special handling: For precision=1, remove trailing zeros if result is whole number
-		// This allows percentages to show as "70%" instead of "70.0%"
-		// But keep precision=2 (currency) as-is to show "$200.00"
-		if precision == 1 && strings.HasSuffix(formatted, ".0") {
-			return fmt.Sprintf("%.0f", result), nil
-		}
-		return formatted, nil
+	if precision <= 0 || (precision == 1 && result == math.Trunc(result)) {
+		return result, nil
 	}
-	return result, nil
+	return runtime.RoundedFloat{Value: result, Places: precision}, nil
 }
 
-// IntFilter converts value to integer
+// IntFilter converts value to integer, following Jinja2's do_int.
 func IntFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	defaultValue := 0
+	var defaultValue interface{} = 0
 	base := 10
 
 	if len(args) > 0 {
-		d, err := ToInt(args[0])
-		if err != nil {
-			return nil, fmt.Errorf("int default value must be integer: %v", err)
-		}
-		defaultValue = d
+		defaultValue = args[0]
 	}
-
 	if len(args) > 1 {
 		b, err := ToInt(args[1])
 		if err != nil {
@@ -121,29 +122,25 @@ func IntFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		base = b
 	}
 
+	if r, ok := value.(runtime.RoundedFloat); ok {
+		value = r.Value
+	}
+
 	switch v := value.(type) {
 	case int, int8, int16, int32, int64:
 		return reflect.ValueOf(v).Int(), nil
 	case uint, uint8, uint16, uint32, uint64:
 		return int64(reflect.ValueOf(v).Uint()), nil
 	case float32, float64:
-		return int64(reflect.ValueOf(v).Float()), nil
+		return floatToInt(reflect.ValueOf(v).Float(), defaultValue), nil
 	case string:
-		if v == "" {
-			return defaultValue, nil
+		if n, ok := pyParseInt(v, base); ok {
+			return n, nil
 		}
-		if base == 10 {
-			i, err := strconv.Atoi(v)
-			if err != nil {
-				return defaultValue, nil
-			}
-			return i, nil
+		if f, ok := pyParseFloat(v); ok {
+			return floatToInt(f, defaultValue), nil
 		}
-		i, err := strconv.ParseInt(v, base, 64)
-		if err != nil {
-			return defaultValue, nil
-		}
-		return int(i), nil
+		return defaultValue, nil
 	case bool:
 		if v {
 			return 1, nil
@@ -152,6 +149,15 @@ func IntFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	default:
 		return defaultValue, nil
 	}
+}
+
+// floatToInt truncates f toward zero, or returns def when f is NaN, infinite
+// or outside the int64 range.
+func floatToInt(f float64, def interface{}) interface{} {
+	if math.IsNaN(f) || math.IsInf(f, 0) || f < -9223372036854775808 || f >= 9223372036854775808 {
+		return def
+	}
+	return int64(math.Trunc(f))
 }
 
 // FloatFilter converts value to float
@@ -166,6 +172,10 @@ func FloatFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		defaultValue = d
 	}
 
+	if r, ok := value.(runtime.RoundedFloat); ok {
+		value = r.Value
+	}
+
 	switch v := value.(type) {
 	case int, int8, int16, int32, int64:
 		return float64(reflect.ValueOf(v).Int()), nil
@@ -174,11 +184,8 @@ func FloatFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	case float32, float64:
 		return reflect.ValueOf(v).Float(), nil
 	case string:
-		if v == "" {
-			return defaultValue, nil
-		}
-		f, err := strconv.ParseFloat(v, 64)
-		if err != nil {
+		f, ok := pyParseFloat(v)
+		if !ok {
 			return defaultValue, nil
 		}
 		return f, nil
@@ -427,7 +434,10 @@ func CurrencyFilter(value interface{}, args ...interface{}) (interface{}, error)
 
 	// Split integer and decimal parts
 	parts := strings.Split(formatted, ".")
-	integerPart := parts[0]
+	sign, integerPart := "", parts[0]
+	if strings.HasPrefix(integerPart, "-") {
+		sign, integerPart = "-", integerPart[1:]
+	}
 
 	// Add thousands separators to integer part
 	if len(integerPart) > 3 {
@@ -440,6 +450,7 @@ func CurrencyFilter(value interface{}, args ...interface{}) (interface{}, error)
 		}
 		integerPart = result.String()
 	}
+	integerPart = sign + integerPart
 
 	// Reconstruct the number
 	if decimals > 0 {
@@ -471,6 +482,9 @@ func FormatNumberFilter(value interface{}, args ...interface{}) (interface{}, er
 	if err != nil {
 		return nil, fmt.Errorf("format_number filter requires a number: %v", err)
 	}
+	if math.IsNaN(f) || math.IsInf(f, 0) {
+		return nil, fmt.Errorf("format_number filter requires a finite number")
+	}
 
 	// Format with specified or preserved decimals
 	var formatted string
@@ -482,7 +496,10 @@ func FormatNumberFilter(value interface{}, args ...interface{}) (interface{}, er
 
 	// Split integer and decimal parts
 	parts := strings.Split(formatted, ".")
-	integerPart := parts[0]
+	sign, integerPart := "", parts[0]
+	if strings.HasPrefix(integerPart, "-") {
+		sign, integerPart = "-", integerPart[1:]
+	}
 
 	// Add thousands separators to integer part
 	if len(integerPart) > 3 {
@@ -495,6 +512,7 @@ func FormatNumberFilter(value interface{}, args ...interface{}) (interface{}, er
 		}
 		integerPart = result.String()
 	}
+	integerPart = sign + integerPart
 
 	// Reconstruct the number
 	if len(parts) > 1 {
@@ -506,6 +524,8 @@ func FormatNumberFilter(value interface{}, args ...interface{}) (interface{}, er
 // Helper function for numeric filters
 func ToFloat(value interface{}) (float64, error) {
 	switch v := value.(type) {
+	case runtime.RoundedFloat:
+		return v.Value, nil
 	case int:
 		return float64(v), nil
 	case int8:

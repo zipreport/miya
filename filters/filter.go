@@ -82,6 +82,15 @@ func (r *FilterRegistry) Register(name string, fn FilterFunc) error {
 	return nil
 }
 
+// Replace swaps the function of an already registered filter, keeping its
+// declared parameters.
+func (r *FilterRegistry) Replace(name string, fn FilterFunc) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
+	r.filters[name] = fn
+}
+
 func (r *FilterRegistry) Get(name string) (FilterFunc, bool) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
@@ -351,6 +360,8 @@ func ToString(value interface{}) string {
 
 func ToInt(value interface{}) (int, error) {
 	switch v := value.(type) {
+	case runtime.RoundedFloat:
+		return int(v.Value), nil
 	case int:
 		return v, nil
 	case int8:
@@ -391,6 +402,8 @@ func ToBool(value interface{}) bool {
 	}
 
 	switch v := value.(type) {
+	case runtime.RoundedFloat:
+		return v.Value != 0
 	case bool:
 		return v
 	case string:

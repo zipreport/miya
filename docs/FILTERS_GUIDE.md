@@ -65,7 +65,7 @@ Filters transform variables and expressions in templates. Miya Engine supports 7
 |--------|-------------|---------|
 | `trim` | Remove whitespace | `{{"  text  "\|trim}}` → `text` |
 | `replace` | Replace substring | `{{"hello"\|replace("l", "L")}}` → `heLLo` |
-| `truncate` | Truncate to length | `{{"long text"\|truncate(5)}}` → `lo...` |
+| `truncate` | Truncate to length | `{{"long text"\|truncate(5, leeway=0)}}` → `lo...` |
 | `center` | Center in width | `{{"x"\|center(5, "-")}}` → `--x--` |
 | `slugify` | URL-safe slug | `{{"Hello World!"\|slugify}}` → `hello-world` |
 
@@ -73,7 +73,7 @@ Filters transform variables and expressions in templates. Miya Engine supports 7
 ```html+jinja
 {{ "   hello world   "|trim }}         → "hello world"
 {{ "Hello World"|replace("World", "Miya") }}  → "Hello Miya"
-{{ long_text|truncate(30) }}           → "This is a very long text..."
+{{ long_text|truncate(30, leeway=0) }}  → "This is a very long text..."
 {{ "Title"|center(20, "-") }}          → "-------Title--------"
 {{ "Product Name!"|slugify }}          → "product-name"
 ```
@@ -240,7 +240,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 |--------|-------------|---------|
 | `format` | String formatting | `{{"Hello {0}"\|format("World")}}` |
 | `tojson` | Convert to JSON | `{{data\|tojson}}` |
-| `filesizeformat` | Format file size | `{{1536\|filesizeformat}}` → `1.5 KB` |
+| `filesizeformat` | Format file size | `{{1536\|filesizeformat}}` → `1.5 kB` |
 
 **Examples:**
 ```html+jinja
@@ -251,7 +251,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 → '{"id":123,"name":"Product"}'
 
 {{ 1536|filesizeformat }}
-→ "1.5 KB"
+→ "1.5 kB"
 
 {{ 1048576|filesizeformat }}
 → "1.0 MB"

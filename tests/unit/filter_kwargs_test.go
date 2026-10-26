@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	miya "github.com/zipreport/miya"
+	"github.com/zipreport/miya/filters"
 )
 
 const filterKwargsContextJSON = `{"l":[3,1,2],"ld":[{"n":2,"g":"a"},{"n":1,"g":"b"},{"n":3,"g":"a"}],"f":3.14159,"h":3.7,"s":"a\nb","z":0,"dd":{"b":1,"a":2},"one":{"a":1}}`
@@ -22,6 +23,11 @@ func filterKwargsContext(t *testing.T) miya.Context {
 
 func TestFilterKeywordArgs(t *testing.T) {
 	env := miya.NewEnvironment(miya.WithAutoEscape(false))
+	err := env.AddFilterWithParams("unsupported_demo", func(v interface{}, args ...interface{}) (interface{}, error) { return v, nil },
+		filters.Param{Name: "a"}, filters.Param{Name: "leeway", Unsupported: true})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	outputs := []struct {
 		name     string
@@ -41,7 +47,7 @@ func TestFilterKeywordArgs(t *testing.T) {
 		{"join_d", `{{ l|join(d='-') }}`, "3-1-2"},
 		{"join_attribute", `{{ ld|join(',', attribute='n') }}`, "2,1,3"},
 		{"default_boolean", `{{ z|default('x', boolean=true) }}`, "x"},
-		{"truncate_defaults_gap", `{{ long|truncate(end='+') }}`, strings.Repeat("a", 255) + "+"},
+		{"truncate_defaults_gap", `{{ long|truncate(end='+') }}`, strings.Repeat("a", 254) + "+"},
 		{"round_method_gap", `{{ h|round(method='floor') }}`, "3"},
 		{"indent_first", `{{ s|indent(first=true) }}`, "    a\n    b"},
 		{"int_base", `{{ 'ff'|int(base=16) }}`, "255"},
@@ -77,7 +83,7 @@ func TestFilterKeywordArgs(t *testing.T) {
 		{"unknown_kwarg", `{{ l|join(bogus=1) }}`, `unexpected keyword argument "bogus"`},
 		{"duplicate_kwarg", `{{ l|join(',', d='-') }}`, `multiple values for argument "d"`},
 		{"no_params", `{{ 'a'|upper(x=1) }}`, "does not accept keyword arguments"},
-		{"unsupported_param", `{{ 'abc'|truncate(5, leeway=0) }}`, `keyword argument "leeway" is not supported`},
+		{"unsupported_param", `{{ 'abc'|unsupported_demo(5, leeway=0) }}`, `keyword argument "leeway" is not supported`},
 		{"missing_required", `{{ l|batch(fill_with=0) }}`, `missing required argument "linecount"`},
 		{"sum_positional_number", `{{ l|sum(10) }}`, "first positional argument is the attribute"},
 		{"positional_after_keyword", `{{ l|join(d='-', ',') }}`, "positional argument follows keyword argument"},

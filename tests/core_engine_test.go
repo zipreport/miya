@@ -164,7 +164,7 @@ func TestCoreTemplateEngine(t *testing.T) {
 			Name:     "Advanced string filters",
 			Template: `{{ text|truncate(10) }}, "{{ 'test'|center(10) }}", {{ 'hello-world'|slugify }}`,
 			Context:  map[string]interface{}{"text": "This is a long text"},
-			Expected: `This is a..., "   test   ", hello-world`,
+			Expected: `This..., "   test   ", hello-world`,
 		},
 
 		// =================== MATH FILTERS ===================

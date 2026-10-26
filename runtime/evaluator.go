@@ -2606,6 +2606,8 @@ func (e *DefaultEvaluator) isTruthy(obj interface{}) bool {
 
 	// Fast path: direct type comparisons without reflection
 	switch v := obj.(type) {
+	case RoundedFloat:
+		return v.Value != 0
 	case bool:
 		return v
 	case string:
@@ -2968,6 +2970,9 @@ func numericValue(v interface{}) (i int64, u uint64, f float64, kind byte, ok bo
 	v = Indirect(v)
 	if v == nil {
 		return
+	}
+	if r, isR := v.(RoundedFloat); isR {
+		return 0, 0, r.Value, 'f', true
 	}
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
@@ -3358,6 +3363,8 @@ func (e *DefaultEvaluator) htmlEscape(s string) string {
 // Type conversion helpers
 func (e *DefaultEvaluator) toInt(obj interface{}) (int, error) {
 	switch v := obj.(type) {
+	case RoundedFloat:
+		return int(v.Value), nil
 	case int:
 		return v, nil
 	case int64:
@@ -3386,6 +3393,8 @@ func (e *DefaultEvaluator) toInt(obj interface{}) (int, error) {
 
 func (e *DefaultEvaluator) toFloat(obj interface{}) (float64, error) {
 	switch v := obj.(type) {
+	case RoundedFloat:
+		return v.Value, nil
 	case int:
 		return float64(v), nil
 	case int64:

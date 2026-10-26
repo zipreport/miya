@@ -345,6 +345,8 @@ func lipsumFunction(args ...interface{}) (interface{}, error) {
 // toInt converts an interface to int
 func toInt(v interface{}) int {
 	switch val := v.(type) {
+	case runtime.RoundedFloat:
+		return int(val.Value)
 	case int:
 		return val
 	case int64:

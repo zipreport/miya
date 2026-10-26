@@ -169,7 +169,7 @@ func TestRuntimeFilterApplication(t *testing.T) {
 			name:     "filter with runtime arguments",
 			template: "{{ text|truncate(max_length) }}",
 			data:     map[string]interface{}{"text": "Hello World!", "max_length": 5},
-			expected: "Hello...",
+			expected: "He...",
 		},
 		{
 			name:     "conditional filter application",

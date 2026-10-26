@@ -615,6 +615,14 @@ func WithKeepTrailingNewline(enabled bool) EnvironmentOption {
 	}
 }
 
+// WithTruncateLeeway sets the default leeway of the truncate filter (Jinja2's
+// truncate.leeway policy, default 5). Use 0 when truncated text must fit.
+func WithTruncateLeeway(n int) EnvironmentOption {
+	return func(e *Environment) {
+		e.filterRegistry.Replace("truncate", filters.TruncateFilterWithLeeway(n))
+	}
+}
+
 // WithStrictUndefined enables strict undefined variable handling
 func WithStrictUndefined(enabled bool) EnvironmentOption {
 	return func(e *Environment) {

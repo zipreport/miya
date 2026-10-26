@@ -27,7 +27,6 @@ PLAN_BY_ID = {
     "fsem-008": "039", "fsem-009": "039", "fsem-010": "039", "fsem-011": "039",
     "fsem-012": "039", "fsem-013": "039", "fsem-018": "039", "fsem-019": "039",
     "fsem-024": "039", "fsem-029": "039", "fkw-006": "039", "fkw-009": "039",
-    "fkw-011": "050",
     # round keeps miya's fixed decimals and half-away rounding (050's deliberate deviation).
     "fsem-005": "deviation", "fsem-006": "deviation", "fsem-007": "deviation", "fsem-028": "deviation",
     # string filters split out of 050: wordwrap 052, format 053, urlencode/striptags 054.

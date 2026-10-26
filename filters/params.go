@@ -37,10 +37,10 @@ var builtinParams = map[string][]Param{
 	"slice":   {{Name: "slices", Required: true}, {Name: "fill_with"}},
 	"truncate": {
 		{Name: "length", Default: 255}, {Name: "killwords", Default: false},
-		{Name: "end", Default: "..."}, {Name: "leeway", Unsupported: true},
+		{Name: "end", Default: "..."}, {Name: "leeway"},
 	},
 	"center":         {{Name: "width", Default: 80}},
-	"indent":         {{Name: "width", Default: 4}, {Name: "first", Default: false}, {Name: "blank", Unsupported: true}},
+	"indent":         {{Name: "width", Default: 4}, {Name: "first", Default: false}, {Name: "blank", Default: false}},
 	"round":          {{Name: "precision", Default: 0}, {Name: "method", Default: "common"}},
 	"int":            {{Name: "default", Default: 0}, {Name: "base", Default: 10}},
 	"float":          {{Name: "default", Default: 0.0}},

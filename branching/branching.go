@@ -185,6 +185,9 @@ func testString(value interface{}, args ...interface{}) (bool, error) {
 
 // testNumber checks if a value is a number (int, float or bool, as in Python)
 func testNumber(value interface{}, args ...interface{}) (bool, error) {
+	if _, ok := runtime.Indirect(value).(runtime.RoundedFloat); ok {
+		return true, nil
+	}
 	switch valueKind(value) {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
@@ -208,6 +211,9 @@ func testInteger(value interface{}, args ...interface{}) (bool, error) {
 
 // testFloat checks if a value is a float
 func testFloat(value interface{}, args ...interface{}) (bool, error) {
+	if _, ok := runtime.Indirect(value).(runtime.RoundedFloat); ok {
+		return true, nil
+	}
 	switch valueKind(value) {
 	case reflect.Float32, reflect.Float64:
 		return true, nil
@@ -284,6 +290,9 @@ func pyNumber(v interface{}) (i int64, f float64, isInt, ok bool) {
 	v = runtime.Indirect(v)
 	if v == nil {
 		return
+	}
+	if r, isR := v.(runtime.RoundedFloat); isR {
+		return 0, r.Value, false, true
 	}
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
@@ -531,6 +540,8 @@ func testEmpty(value interface{}, args ...interface{}) (bool, error) {
 		return v == 0.0, nil
 	case float64:
 		return v == 0.0, nil
+	case runtime.RoundedFloat:
+		return v.Value == 0, nil
 	case bool:
 		return !v, nil
 	default:
@@ -680,6 +691,8 @@ func testGreaterThanOrEqual(value interface{}, args ...interface{}) (bool, error
 // toInt converts a value to int
 func toInt(value interface{}) (int, error) {
 	switch v := value.(type) {
+	case runtime.RoundedFloat:
+		return int(v.Value), nil
 	case int:
 		return v, nil
 	case int8:
@@ -806,6 +819,8 @@ func compareValues(v1, v2 interface{}, compFunc func(int) bool) (bool, error) {
 // toFloat converts a value to float64 for numeric comparison
 func toFloat(value interface{}) (float64, error) {
 	switch v := value.(type) {
+	case runtime.RoundedFloat:
+		return v.Value, nil
 	case int:
 		return float64(v), nil
 	case int8:
