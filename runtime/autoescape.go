@@ -272,15 +272,6 @@ func escapeOutput(value interface{}) interface{} {
 	if m, ok := AsMarkup(value); ok {
 		return m
 	}
-	switch sv := value.(type) {
-	case SafeValue:
-		return sv
-	case *SafeValue:
-		if sv == nil {
-			return ""
-		}
-		return *sv
-	}
 	return html.EscapeString(ToString(value))
 }
 

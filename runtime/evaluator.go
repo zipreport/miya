@@ -1715,6 +1715,8 @@ func (e *DefaultEvaluator) getObjectName(obj interface{}) string {
 }
 
 // DictItems represents a dictionary items iterator for .items() method support
+//
+// Deprecated: nothing creates DictItems since d.items() returns a list; it will be removed in a future release.
 type DictItems struct {
 	data map[string]interface{}
 }
