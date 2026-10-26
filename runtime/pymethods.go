@@ -135,6 +135,9 @@ func (b *listBox) method(e *DefaultEvaluator, name string) *builtinMethod {
 				return nil, fmt.Errorf("append() takes exactly one argument (%d given)", len(args))
 			}
 			b.own()
+			if err := checkListGrowth(len(b.items), 1); err != nil {
+				return nil, err
+			}
 			b.items = append(b.items, args[0])
 			return nil, nil
 		case "extend":
@@ -146,6 +149,9 @@ func (b *listBox) method(e *DefaultEvaluator, name string) *builtinMethod {
 				return nil, fmt.Errorf("extend() argument is not iterable: %w", err)
 			}
 			b.own()
+			if err := checkListGrowth(len(b.items), len(more)); err != nil {
+				return nil, err
+			}
 			b.items = append(b.items, more...)
 			return nil, nil
 		case "pop":
@@ -189,6 +195,13 @@ func (b *listBox) method(e *DefaultEvaluator, name string) *builtinMethod {
 		}
 	}
 	return &builtinMethod{name: name, fn: fn}
+}
+
+func checkListGrowth(have, add int) error {
+	if have+add > maxConcatLength {
+		return fmt.Errorf("list too large: %d items (limit %d)", have+add, maxConcatLength)
+	}
+	return nil
 }
 
 func listSearch(e *DefaultEvaluator, name string, items []interface{}, args []interface{}) (interface{}, error) {

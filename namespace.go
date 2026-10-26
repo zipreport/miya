@@ -73,15 +73,14 @@ func (ns *Namespace) Clear() {
 	ns.data = make(map[string]interface{})
 }
 
+// ReprData returns a copy of the namespace's data for runtime.Repr.
+func (ns *Namespace) ReprData() map[string]interface{} {
+	return ns.All()
+}
+
 // String returns a string representation of the namespace
 func (ns *Namespace) String() string {
-	ns.mu.RLock()
-	defer ns.mu.RUnlock()
-	data := make(map[string]interface{}, len(ns.data))
-	for k, v := range ns.data {
-		data[k] = runtime.Unbox(v)
-	}
-	return fmt.Sprintf("namespace(%v)", data)
+	return runtime.Repr(ns)
 }
 
 // namespaceFunction is the global namespace() function for templates

@@ -148,6 +148,10 @@ func (s *reprState) repr(v interface{}) {
 		s.write(reprQuote(string(b)))
 		return
 	}
+	if ns, ok := v.(ReprNamespace); ok {
+		s.reprNamespace(ns, v)
+		return
+	}
 	if e, ok := v.(error); ok {
 		s.write(e.Error())
 		return
@@ -350,6 +354,34 @@ func (s *reprState) reprMap(rv reflect.Value, v interface{}) {
 		}
 	}
 	s.write("}")
+	if tracked {
+		s.leave(key)
+	}
+}
+
+// ReprNamespace is implemented by namespace() objects so that repr prints
+// their data inside the cycle tracking and size budget.
+type ReprNamespace interface {
+	ReprData() map[string]interface{}
+}
+
+// Repr is Python's repr of a template value, with the cycle tracking and size
+// bound of printed containers.
+func Repr(v interface{}) string { return reprOf(v) }
+
+func (s *reprState) reprNamespace(ns ReprNamespace, v interface{}) {
+	var key reprKey
+	if rv := reflect.ValueOf(v); rv.Kind() == reflect.Ptr {
+		key = reprKey{ptr: rv.Pointer()}
+	}
+	tracked, cyclic := s.enter(key)
+	if cyclic {
+		s.write("namespace(...)")
+		return
+	}
+	s.write("namespace(")
+	s.repr(ns.ReprData())
+	s.write(")")
 	if tracked {
 		s.leave(key)
 	}

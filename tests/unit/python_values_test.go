@@ -192,6 +192,7 @@ func TestListMethods(t *testing.T) {
 		{name: "append_in_loops", tpl: `{% set l = [] %}{% for x in [1, 2] %}{% for y in [3, 4] %}{% do l.append(x * y) %}{% endfor %}{% endfor %}{{ l }}`, want: `[3, 4, 6, 8]`},
 		{name: "append_set_underscore", tpl: `{% set l = [] %}{% for x in [1, 2] %}{% set _ = l.append(x) %}{% endfor %}{{ l }}`, want: `[1, 2]`},
 		{name: "unbox_read", tpl: `{% set l = [3, 4] %}{{ l|length }}|{{ l[1] }}|{% for x in l %}{{ x }}{% endfor %}|{{ l|join(',') }}`, want: `2|4|34|3,4`},
+		{name: "extend_doubling_capped", tpl: `{% set l = [1] %}{% for i in range(40) %}{% do l.extend(l) %}{% endfor %}`, errHas: "too large"},
 		{name: "extend", tpl: `{% set l = [1] %}{% do l.extend([2, 3]) %}{{ l }}`, want: `[1, 2, 3]`},
 		{name: "pop", tpl: `{% set l = [1, 2, 3] %}{{ l.pop() }}{{ l }}|{% set m = [1, 2, 3] %}{{ m.pop(0) }}{{ m }}`, want: `3[1, 2]|1[2, 3]`},
 		{name: "pop_empty", tpl: `{% set l = [] %}{{ l.pop() }}`, errHas: "empty"},
@@ -324,6 +325,26 @@ func TestPythonReprCycle(t *testing.T) {
 			}
 		case <-time.After(60 * time.Second):
 			t.Fatalf("timed out")
+		}
+	})
+}
+
+func TestNamespacePrinting(t *testing.T) {
+	t.Run("namespace_self_reference_prints", func(t *testing.T) {
+		env := miya.NewEnvironment(miya.WithAutoEscape(false))
+		out, err := renderGo(t, env, `{% set ns = namespace(a=1) %}{% set ns.me = ns %}{{ ns }}`, nil)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if out != "namespace({'a': 1, 'me': namespace(...)})" {
+			t.Fatalf("got %q", out)
+		}
+	})
+	t.Run("namespace_plain", func(t *testing.T) {
+		env := miya.NewEnvironment(miya.WithAutoEscape(false))
+		out, err := renderGo(t, env, `{% set ns = namespace(a=[1, 'x']) %}{{ ns }}`, nil)
+		if err != nil || out != "namespace({'a': [1, 'x']})" {
+			t.Fatalf("got %q err=%v", out, err)
 		}
 	})
 }
