@@ -272,6 +272,15 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 		result, err = e.joinMarkup(ctx, value, args, apply)
 	case markupMixingFilters[name] && markupContext(ctx):
 		result, err = apply(value, args)
+	case name == "map" && !safe && markupContext(ctx):
+		result, err = e.mapMarkup(ctx, value, args, apply)
+	case !safe && markupPassthroughFilters[name]:
+		result, err = apply(value, args)
+	case !safe && name == "replace" && markupContext(ctx) && isStringValue(value) && anySafeArg(args):
+		result, err = apply(escapeFor(ctx, value), replaceArgs(ctx, args))
+		if s, ok := result.(string); ok {
+			result = Markup(s)
+		}
 	case !safe:
 		result, err = apply(value, unmarkArgs(args))
 	case markupAwareFilters[name]:
@@ -304,22 +313,182 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 	return result, nil
 }
 
+// isStringValue reports whether v is a string or a named string type.
+func isStringValue(v interface{}) bool {
+	_, ok := basicValue(v).(string)
+	return ok
+}
+
+// anySafeArg reports whether any argument, including the values of a trailing
+// KwArgs, is safe.
+func anySafeArg(args []interface{}) bool {
+	for _, a := range args {
+		if kw, ok := a.(KwArgs); ok {
+			for _, v := range kw {
+				if _, ok := AsMarkup(v); ok {
+					return true
+				}
+			}
+		} else if _, ok := AsMarkup(a); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// replaceArgs prepares replace's arguments as markupsafe's Markup.replace gets
+// them: old is searched as given, new is escaped.
+func replaceArgs(ctx Context, args []interface{}) []interface{} {
+	out := make([]interface{}, len(args))
+	for i, a := range args {
+		if kw, ok := a.(KwArgs); ok {
+			nk := make(KwArgs, len(kw))
+			for k, v := range kw {
+				if k == "new" {
+					nk[k] = escapeArg(ctx, v)
+				} else {
+					nk[k] = Unmark(v)
+				}
+			}
+			out[i] = nk
+		} else if i == 1 {
+			out[i] = escapeArg(ctx, a)
+		} else {
+			out[i] = Unmark(a)
+		}
+	}
+	return out
+}
+
+// keepDefault un-marks every argument except the value of a KwArgs "default".
+func keepDefault(args []interface{}) []interface{} {
+	out := unmarkArgs(args)
+	for i, a := range args {
+		if kw, ok := a.(KwArgs); ok {
+			if d, ok := kw["default"]; ok {
+				out[i].(KwArgs)["default"] = d
+			}
+		}
+	}
+	return out
+}
+
+// mapMarkup applies the markup policy to each item of map(filter) and keeps
+// the safe default of map(attribute=, default=).
+func (e *DefaultEvaluator) mapMarkup(ctx Context, value interface{}, args []interface{}, apply func(interface{}, []interface{}) (interface{}, error)) (interface{}, error) {
+	result, err := apply(value, keepDefault(args))
+	if err != nil {
+		return nil, err
+	}
+	list, ok := result.([]interface{})
+	if !ok || len(args) == 0 {
+		return result, nil
+	}
+	if _, kw := args[0].(KwArgs); kw {
+		return result, nil
+	}
+	items, err := e.makeIterable(value)
+	if err != nil || len(items) != len(list) {
+		return result, nil
+	}
+	inner := ToString(args[0])
+	innerArgs := args[1:]
+	innerApply := func(v interface{}, a []interface{}) (interface{}, error) {
+		env, ok := envContext(ctx)
+		if !ok {
+			return e.applyFilter(inner, v, a)
+		}
+		if n := len(a); n > 0 {
+			if kw, ok := a[n-1].(KwArgs); ok {
+				if applier, ok := env.(KwargsFilterApplier); ok {
+					return applier.ApplyFilterKwargs(inner, v, a[:n-1], map[string]interface{}(kw))
+				}
+			}
+		}
+		return env.ApplyFilter(inner, v, a...)
+	}
+	out := list
+	for i, it := range items {
+		if _, undef := list[i].(*Undefined); undef {
+			continue
+		}
+		_, safe := AsMarkup(it)
+		if !safe {
+			switch b := basicValue(it).(type) {
+			case string, nil, *Undefined:
+				_ = b
+			default:
+				continue
+			}
+		}
+		r, err := e.applyFilterWithMarkup(inner, it, innerArgs, ctx, innerApply)
+		if err != nil {
+			return nil, err
+		}
+		if &out[0] == &list[0] {
+			out = append([]interface{}(nil), list...)
+		}
+		out[i] = r
+	}
+	return out, nil
+}
+
 // joinMarkup is Jinja2's do_join under autoescape: if any item or the
 // separator is safe, escape the rest and return Markup.
 func (e *DefaultEvaluator) joinMarkup(ctx Context, value interface{}, args []interface{}, apply func(interface{}, []interface{}) (interface{}, error)) (interface{}, error) {
 	plain := func() (interface{}, error) { return apply(value, unmarkArgs(args)) }
-	// join(sep, attribute) reads attributes of the items; leave it to the filter
-	if len(args) > 1 {
-		return plain()
-	}
-	if len(args) == 1 {
-		if _, kw := args[0].(KwArgs); kw {
+	var sep interface{} = ""
+	var attr interface{}
+	var trailingKw bool
+	if n := len(args); n > 0 {
+		pos := args
+		if kw, ok := args[n-1].(KwArgs); ok {
+			trailingKw = true
+			pos = args[:n-1]
+			for k := range kw {
+				if k != "d" && k != "attribute" {
+					return plain()
+				}
+			}
+			if d, ok := kw["d"]; ok {
+				if len(pos) > 0 {
+					return plain()
+				}
+				sep = d
+			}
+			attr = kw["attribute"]
+			if _, ok := kw["attribute"]; ok && len(pos) > 1 {
+				return plain()
+			}
+		}
+		if len(pos) > 2 || (len(pos) == 2 && attr != nil) {
 			return plain()
+		}
+		if len(pos) > 0 {
+			sep = pos[0]
+		}
+		if len(pos) == 2 {
+			attr = pos[1]
 		}
 	}
 	items, err := e.makeIterable(value)
 	if err != nil {
 		return plain()
+	}
+	if attr != nil {
+		applier, ok := filterContext(ctx).(KwargsFilterApplier)
+		if !ok {
+			return plain()
+		}
+		mapped, err := applier.ApplyFilterKwargs("map", value, nil, map[string]interface{}{"attribute": Unmark(attr)})
+		if err != nil {
+			return plain()
+		}
+		list, ok := mapped.([]interface{})
+		if !ok {
+			return plain()
+		}
+		items = list
 	}
 	anySafe := false
 	for _, it := range items {
@@ -328,19 +497,30 @@ func (e *DefaultEvaluator) joinMarkup(ctx Context, value interface{}, args []int
 			break
 		}
 	}
-	if len(args) > 0 {
-		if _, ok := AsMarkup(args[0]); ok {
-			anySafe = true
-		}
+	if _, ok := AsMarkup(sep); ok {
+		anySafe = true
 	}
 	if !anySafe {
 		return plain()
 	}
 	escaped := make([]interface{}, len(items))
 	for i, it := range items {
+		if attr != nil {
+			if _, undef := it.(*Undefined); undef || it == nil {
+				escaped[i] = ""
+				continue
+			}
+		}
 		escaped[i] = escapeFor(ctx, it)
 	}
-	r, err := apply(escaped, escapeArgs(ctx, args))
+	shaped := []interface{}{}
+	if len(args) > 0 {
+		shaped = append(shaped, escapeArg(ctx, sep))
+	}
+	if trailingKw {
+		shaped = append(shaped, KwArgs{})
+	}
+	r, err := apply(escaped, shaped)
 	if err != nil {
 		return nil, err
 	}

@@ -415,8 +415,7 @@
       "u": "<s>",
       "h": "<b>"
     },
-    "want": "<b>x</b><b>x</b>",
-    "known_unrelated": "str * int unsupported (control K6; plan 038/039)"
+    "want": "<b>x</b><b>x</b>"
   },
   {
     "name": "W30_startswith",

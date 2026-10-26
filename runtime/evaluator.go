@@ -689,8 +689,8 @@ func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Conte
 			left, right = Unmark(left), Unmark(right)
 			break
 		}
-		_, ls := left.(string)
-		_, rs := right.(string)
+		_, ls := basicValue(left).(string)
+		_, rs := basicValue(right).(string)
 		_, lm := AsMarkup(left)
 		_, rm := AsMarkup(right)
 		if (lm || rm) && (ls || lm) && (rs || rm) {
@@ -698,6 +698,18 @@ func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Conte
 			return m, nil
 		}
 		left, right = Unmark(left), Unmark(right)
+	case "*":
+		_, lm := AsMarkup(left)
+		_, rm := AsMarkup(right)
+		if !markupContext(ctx) {
+			left, right = Unmark(left), Unmark(right)
+		} else if lm != rm {
+			r, err := e.applyBinaryOpWithNode(node.Operator, Unmark(left), Unmark(right), node)
+			if s, ok := r.(string); ok && err == nil {
+				return Markup(s), nil
+			}
+			return r, err
+		}
 	case "==", "!=", "<", "<=", ">", ">=", "in", "not in":
 		left, right = Unmark(left), Unmark(right)
 	}
@@ -941,7 +953,11 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 		loopInfo["depth0"] = depth - 1
 		loopInfo["previtem"] = previtem
 		loopInfo["nextitem"] = nextitem
-		loopInfo["cycle"] = cycleFunc
+		if markupContext(ctx) {
+			loopInfo["cycle"] = KeepMarkupFunc(cycleFunc)
+		} else {
+			loopInfo["cycle"] = cycleFunc
+		}
 		loopInfo["changed"] = changedFunc
 
 		// Add recursive loop function if this is a recursive loop
