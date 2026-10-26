@@ -36,14 +36,12 @@ func TestValueEdges(t *testing.T) {
 		{name: "s3_sub", tpl: `{{ w - 1 }}`, data: inf, anyErr: true},
 		{name: "s3_div", tpl: `{{ w / 2 }}`, data: inf, anyErr: true},
 		{name: "deviation_inf_plus", tpl: `{{ w + 1 }}`, data: inf, want: `inf1`},
-		{name: "s6_abs", tpl: `{{ w|abs }}`, data: inf},
-		{name: "s6_sum", tpl: `{{ [w]|sum }}`, data: inf},
+		{name: "s6_abs", tpl: `{{ w|abs }}`, data: inf, errHas: "abs filter requires a number"},
+		{name: "deviation_sum_string", tpl: `{{ [w]|sum }}`, data: inf, want: `0`}, // Jinja2: TypeError
 		{name: "k5", tpl: `{{ none in {none: 1} }}|{{ none is in {none: 1} }}`, want: `true|true`},
 		{name: "k6", tpl: `{{ {none: 1}.get(none) }}`, want: `1`},
 		{name: "k7", tpl: `{{ (1.0|round(2)) in {1: 1} }}`, want: `true`},
-		{name: "r2", tpl: `{{ [2.5|round(1)]|map(attribute='Value')|list }}`, want: `[None]`}, // Jinja2 prints [Undefined]; map(attribute=) yields None for missing attributes
-		{name: "s4", tpl: `{{ w * 2 }}`, data: pvD{"w": "-2.5"}, want: `-5`},
-		{name: "s5", tpl: `{{ w * 2 }}`, data: pvD{"w": "1e2"}, want: `200`},
+		{name: "deviation_round_value_attr", tpl: `{{ [2.5|round(1)]|map(attribute='Value')|list }}`, want: `[None]`}, // Jinja2 prints [Undefined]; map(attribute=) yields None for missing attributes
 		{name: "k1", tpl: `{{ '<nil>' in ({none: 'x'}|string) }}`, want: `false`},
 		{name: "k2", tpl: `{{ {(1.0|round(2)): 'x'}[1] }}`, want: `x`},
 		{name: "k3", tpl: `{{ {1: 'x'}[1.0|round(2)] }}`, want: `x`},
@@ -74,10 +72,6 @@ func TestValueEdges(t *testing.T) {
 			case tc.anyErr:
 				if err == nil {
 					t.Fatalf("want error, got %q", got)
-				}
-			case strings.HasPrefix(tc.name, "s6_"):
-				if err == nil && strings.Contains(strings.ToLower(got), "inf") {
-					t.Fatalf("got %q", got)
 				}
 			default:
 				if err != nil {

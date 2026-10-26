@@ -98,8 +98,8 @@ func TestWordwrapMarkup(t *testing.T) {
 		{"wwm_safe_wrapstring", `{{ lt|wordwrap(5, wrapstring='<br>'|safe) }}`, "ab cd<br>&lt;i&gt;"},
 		{"wwm_plain_wrapstring", `{{ lt|wordwrap(5, wrapstring='<br>') }}`, "ab cd&lt;br&gt;&lt;i&gt;"},
 		{"wwm_default", `{{ lt|wordwrap(5) }}`, "ab cd\n&lt;i&gt;"},
-		{"wwm_safe_input", `{{ lt|safe|wordwrap(5) }}`, "ab cd\n<i>"},
-		{"wwm_safe_both", `{{ lt|safe|wordwrap(5, wrapstring='<br>'|safe) }}`, "ab cd<br><i>"},
+		{"deviation_wwm_safe_input", `{{ lt|safe|wordwrap(5) }}`, "ab cd\n<i>"},
+		{"deviation_wwm_safe_both", `{{ lt|safe|wordwrap(5, wrapstring='<br>'|safe) }}`, "ab cd<br><i>"},
 		{"wwm_amp", `{{ amp|wordwrap(5, wrapstring='<br>'|safe) }}`, "a&amp;b<br>cd"},
 	}
 	runWordwrapRows(t, env, ctx, rows)

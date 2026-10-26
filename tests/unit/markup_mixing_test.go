@@ -15,7 +15,7 @@ func (mixSt) String() string { return "<img onerror=x>" }
 
 type mixSp int
 
-func (mixSp) String() string { return " onerror=x " }
+func (mixSp) String() string { return " <x> " }
 
 type mixFt int
 
@@ -26,7 +26,7 @@ func mixCtx() miya.Context {
 	return miya.NewContextFrom(map[string]interface{}{
 		"x": "<x>", "q": "it's", "u": "é<",
 		"m": M("<b>"), "e": "<s>", "sm": M("<s>"), "card": M("<img src=/a.png alt=photo>"),
-		"sep": " onerror=alert(1) ", "br": M("<br>"),
+		"sep": " onerror=alert(1) ", "sepx": " <x> ", "br": M("<br>"),
 		"fs": M("%s"), "fr": M("%r"), "fa": M("%a"), "fc": M("%c"), "fw": M("%5s|"),
 		"ff": M("%.2f"), "fx": M("%x"), "fd": M("%d"), "fka": M("%(a)s"), "fkr": M("%(a)r"),
 		"fp": M("%.2s"), "fl": M("%-6s|"),
@@ -60,7 +60,7 @@ func TestMarkupMixing(t *testing.T) {
 		{"r18", `{{ mb20|truncate(12, true, sm) }}`, `<b>xxxxxx<s>`},
 		{"r19", `{{ mb3|truncate(12) }}`, `<b>xxx`},
 		{"r20", `{{ card|wordwrap(5, false, sep) }}`, `&lt;img onerror=alert(1) src=/a.png onerror=alert(1) alt=photo&gt;`},
-		{"r21", `{{ mab|wordwrap(1, wrapstring=sep) }}`, `a onerror=alert(1) b`},
+		{"r21", `{{ mab|wordwrap(1, wrapstring=sepx) }}`, `a &lt;x&gt; b`},
 		{"r22", `{{ pab|wordwrap(1, wrapstring=br) }}`, `a<br>b`},
 		{"deviation_safe_input_safe_wrapstring", `{{ miab|wordwrap(1, wrapstring=br) }}`, `<<br>i<br>><br>a<br>b`},
 		{"r24", `{{ mab|wordwrap(10) }}`, `a b`},
@@ -70,16 +70,16 @@ func TestMarkupMixing(t *testing.T) {
 		{"s4", `{{ [m,'c']|join(st) }}`, `<b>&lt;img onerror=x&gt;c`},
 		{"s5", `{{ st }}`, `&lt;img onerror=x&gt;`},
 		{"s5_formatter", `{{ bx|replace('X', ft) }}`, `<b>&lt;img onerror=x&gt;`},
-		{"s6_wordwrap_stringer", `{{ mab|wordwrap(1, wrapstring=sp) }}`, `a onerror=x b`},
+		{"s6_wordwrap_stringer", `{{ mab|wordwrap(1, wrapstring=sp) }}`, `a &lt;x&gt; b`},
 		{"kw_truncate", `{{ mb20|truncate(12, true, end=e) }}`, `<b>xxxxxx&lt;s&gt;`},
 		{"precision_escapes_first", `{{ fp|format(x) }}`, `&l`},
 		{"width_after_escape", `{{ fl|format(lt) }}`, `&lt;  |`},
 		{"fb11_guard", `{% filter wordwrap(80) %}<p>{{ x }}</p>{% endfilter %}`, `<p>&lt;x&gt;</p>`},
 		{"fb_wordwrap_newline", `{% filter wordwrap(72, true, '\n') %}<p>{{ x }}</p>{% endfilter %}`, `<p>&lt;x&gt;</p>`},
-		{"wordwrap_newline_safe", `{{ card|wordwrap(5, false, '\n') }}`, "<img\nsrc=/a.png\nalt=photo>"},
+		{"deviation_wordwrap_newline_safe", `{{ card|wordwrap(5, false, '\n') }}`, "<img\nsrc=/a.png\nalt=photo>"},
 		{"deviation_fb_wordwrap_br", `{% filter wordwrap(72, true, '<br>') %}<p>{{ x }}</p>{% endfilter %}`, `&lt;p&gt;&amp;lt;x&amp;gt;&lt;/p&gt;`},
-		{"setblock_length", `{% set n %}20{% endset %}{{ t|truncate(n) }}`, strings.Repeat("y", 17) + `...`},
-		{"setblock_width", `{% set n %}5{% endset %}{{ m|wordwrap(n) }}`, `<b>`},
+		{"deviation_setblock_length", `{% set n %}20{% endset %}{{ t|truncate(n) }}`, strings.Repeat("y", 17) + `...`},
+		{"deviation_setblock_width", `{% set n %}5{% endset %}{{ m|wordwrap(n) }}`, `<b>`},
 	}
 	for _, tc := range rows {
 		t.Run(tc.name, func(t *testing.T) {

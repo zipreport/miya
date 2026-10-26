@@ -23,7 +23,7 @@ func TestMacroListArgs(t *testing.T) {
 		{"macro_literal_arg", `{% macro m(l) %}{% do l.append(3) %}{{ l }}{% endmacro %}{{ m([1]) }}`, `[1, 3]`},
 		{"caller_arg", `{% macro m() %}{{ caller([1]) }}{% endmacro %}{% call(l) m() %}{% do l.append(2) %}{{ l }}{% endcall %}`, `[1, 2]`},
 		{"default_alias", `{% macro m(a, b=a) %}{% do b.append(1) %}{% endmacro %}{% set l=[] %}{{ m(l) }}{{ l }}`, `[1]`},
-		{"pure_chain_once", `{% macro m(x) %}{% endmacro %}{% set l=[1,2,3] %}{{ m(l.pop().a.b) }}{{ l }}`, `[1, 2]`},
+		{"deviation_pure_chain_once", `{% macro m(x) %}{% endmacro %}{% set l=[1,2,3] %}{{ m(l.pop().a.b) }}{{ l }}`, `[1, 2]`},
 
 		// kept differences, pinned
 		{"deviation_nested_after", `{% set a=[] %}{% set inner=[] %}{% do a.append(inner) %}{% do inner.append(1) %}{{ a }}`, `[[]]`},

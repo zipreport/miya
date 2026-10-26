@@ -25,6 +25,8 @@ func TestImportModuleBody(t *testing.T) {
 		"m15": `{% do acc.append(1) %}`,
 		"m16": `{% set h = 1 %}{% import 'm1' as h %}`,
 		"m17": `{% for i in [1] %}{% macro fm() %}F{% endmacro %}{% endfor %}`,
+		"mi":  `{% if false %}{% set x = 1 %}{% elif true %}{% set x = 3 %}{% else %}{% set x = 4 %}{% endif %}{% if false %}{% set y = 1 %}{% else %}{% set y = 2 %}{% endif %}`,
+		"mf":  `{% set x = 0 %}{% from "mi" import x %}{% set z = 1 %}`,
 	}
 	cases := []struct {
 		name, src, want, errHas string
@@ -44,10 +46,13 @@ func TestImportModuleBody(t *testing.T) {
 		{"m12", `{% import 'm12' as m %}{{ m.p() }}|{{ m._h is defined }}`, `H|false`, ""},
 		{"m13", `{% import 'm13' as m %}{{ m.x }}|{{ m.g() }}|{{ m.bm is defined }}`, `1|1|false`, ""},
 		{"m14", `{% import 'm14' as m %}{{ m.s() }}|{{ m.ev is defined }}`, `S|true`, ""},
-		{"m14_parent_not_run", `{% import 'm14' as m %}{{ m.bm is defined }}|{{ m.bv is defined }}`, `false|false`, ""},
+		// Jinja2 runs the parent's top level too: True|True
+		{"deviation_import_extends_parent", `{% import 'm14' as m %}{{ m.bm is defined }}|{{ m.bv is defined }}`, `false|false`, ""},
 		{"m15", `{% set acc = [] %}{% for i in [1,2] %}{% import 'm15' as m with context %}{% endfor %}{{ acc }}`, `[1, 1]`, ""},
 		{"m16", `{% import 'm16' as m %}{{ m.h is defined }}`, `false`, ""},
 		{"m17", `{% import 'm17' as m %}{{ m.fm is defined }}`, `false`, ""},
+		{"m18_elif", `{% import 'mi' as m %}{{ m.x }}|{{ m.y }}`, `3|2`, ""},
+		{"m19_from_not_exported", `{% import 'mf' as m %}{{ m.x is defined }}|{{ m.z }}`, `false|1`, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

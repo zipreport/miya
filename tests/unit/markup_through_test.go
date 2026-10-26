@@ -1,6 +1,7 @@
 package miya_test
 
 import (
+	"strings"
 	"testing"
 
 	miya "github.com/zipreport/miya"
@@ -21,7 +22,8 @@ func TestMarkupThrough(t *testing.T) {
 		{"M3", `{{ [s]|map('trim')|join }}`, false, "", `<b>`},
 		{"M4", `{{ [s]|map('replace', 'b', 'i')|join }}`, false, "", `<i>`},
 		{"M5", `{{ [s]|map('string')|join }}`, false, "", `<b>`},
-		{"M6", `{{ [s]|map('format')|join }}`, false, "", `<b>`},
+		// decided by plan 059's mixing case, not the map arm
+		{"M6_control_mixing", `{{ [s]|map('format')|join }}`, false, "", `<b>`},
 		{"M7", `{{ [s]|select|join }}`, false, "", `<b>`},
 		{"D1", `{{ nope|default(s) }}`, false, "", `<b>`},
 		{"D2", `{{ none|default(s, true) }}`, false, "", `<b>`},
@@ -39,7 +41,8 @@ func TestMarkupThrough(t *testing.T) {
 		{"R2", `{{ v|replace(s, 'x') }}`, false, "", `&lt;b&gt;`},
 		{"R3", `{{ [s, v]|map('replace', 'b', s)|join }}`, false, "", `<<b>>&lt;<b>&gt;`},
 		{"R4", `{{ v|replace('b', s) }}|{{ [s]|map('upper')|join }}|{{ nope|default(s) }}`, true, "", `<<b>>|<B>|<b>`},
-		{"R5", `{{ v|replace('b', new=s) }}`, false, "", `&lt;<b>&gt;`},
+		{"R5", `{{ v|replace(sb, new='<i>') }}`, false, "", `&lt;&lt;i&gt;&gt;`},
+		{"R5_positional", `{{ v|replace(sb, '<i>') }}`, false, "", `&lt;&lt;i&gt;&gt;`},
 		{"R6", `{{ v|replace('<', s) }}`, false, "", `&lt;b&gt;`},
 		{"N1", `{{ n + s }}|{{ s + n }}`, false, "", `&lt;t&gt;<b>|<b>&lt;t&gt;`},
 		{"N2", `{{ n ~ s }}|{{ [n, s]|join }}`, false, "", `&lt;t&gt;<b>|&lt;t&gt;<b>`},
@@ -67,7 +70,7 @@ func TestMarkupThrough(t *testing.T) {
 			if v == "" {
 				v = "<b>"
 			}
-			tmpl, err := env.FromString(`{% set s = v|safe %}` + tc.tpl)
+			tmpl, err := env.FromString(`{% set s = v|safe %}{% set sb = 'b'|safe %}` + tc.tpl)
 			var got string
 			if err == nil {
 				got, err = tmpl.Render(miya.NewContextFrom(map[string]interface{}{"v": v, "t": "<t>", "n": Name("<t>")}))
@@ -75,6 +78,9 @@ func TestMarkupThrough(t *testing.T) {
 			if len(tc.want) > 4 && tc.want[:4] == "ERR:" {
 				if err == nil {
 					t.Fatalf("want error, got %q", got)
+				}
+				if !strings.Contains(err.Error(), tc.want[4:]) {
+					t.Fatalf("want error containing %q, got %v", tc.want[4:], err)
 				}
 				return
 			}

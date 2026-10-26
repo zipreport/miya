@@ -9,7 +9,7 @@ import (
 
 func TestTextFiltersLinear(t *testing.T) {
 	for _, tc := range []struct{ name, tpl, want string }{
-		{"ww_long_word", `{{ ('a' * 400000)|wordwrap|length }}`, "405063"},
+		{"ww_long_word", `{{ ('a' * 800000)|wordwrap|length }}`, "810126"},
 		{"ww_dashes", `{{ ('a-' * 100000)|wordwrap(3)|length }}`, "299998"},
 		{"ww_hyphen_splits", `{{ ('ab-' * 66666)|wordwrap(300)|length }}`, "200664"},
 		{"ww_hyphen_splits_narrow", `{{ ('ab-' * 66666)|wordwrap(3)|length }}`, "266663"},
