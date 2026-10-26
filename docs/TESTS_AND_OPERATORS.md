@@ -1,6 +1,6 @@
 # Tests and Operators Guide
 
-Tests and operators enable conditional logic and comparisons in templates. Miya Engine provides comprehensive operator support and 26+ test expressions with 100% Jinja2 compatibility.
+Tests and operators enable conditional logic and comparisons in templates. Miya Engine provides comprehensive operator support and 26+ test expressions.
 
 > **Working Example:** See `examples/features/tests-operators/` for complete examples.
 
@@ -670,7 +670,7 @@ Use `is not` to negate any test:
 
 ## Summary
 
-**Complete operator and test support - 100% Jinja2 Compatible**
+**Complete operator and test support**
 
  **All Operators:**
 - Arithmetic: `+`, `-`, `*`, `/`, `//`, `%`, `**`, `~`
