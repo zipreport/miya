@@ -3664,6 +3664,10 @@ func (e *DefaultEvaluator) EvalFromNode(node *parser.FromNode, ctx Context) (int
 			varName = alias
 		}
 
+		if strings.HasPrefix(name, "_") {
+			return nil, fmt.Errorf("names starting with an underline can not be imported: %q", name)
+		}
+
 		// Get the item from the namespace
 		if item, exists := namespaceMap[name]; exists {
 			ctx.SetVariable(varName, item)

@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/zipreport/miya/parser"
 )
@@ -112,7 +113,9 @@ func NewImportSystem(loader TemplateLoader, evaluator *DefaultEvaluator) *Import
 // becomes the module's context and is written to (top-level sets and the
 // file's own imports land in it), so pass a context you own. The loader must
 // return an error for a template that does not exist; TemplateExists is not
-// consulted.
+// consulted. The module's top-level code runs, so an {% include %} in it calls
+// TemplateExists and needs the evaluator's import system: a bare
+// NewEvaluator() without one fails on a module that includes.
 func (is *ImportSystem) LoadTemplateNamespace(templateName string, moduleCtx Context, evaluator *DefaultEvaluator) (*TemplateNamespace, error) {
 	ast, err := is.loader.LoadTemplate(templateName)
 	if err != nil {
@@ -138,117 +141,155 @@ func (is *ImportSystem) LoadTemplateNamespace(templateName string, moduleCtx Con
 	return namespace, nil
 }
 
-// extractNamespaceContent walks the AST and extracts macros and global variables
+// extractNamespaceContent runs the template's top-level code in the module
+// context, as Jinja2 does when it builds a module: macros are registered, the
+// taken branch of an if runs, and every other statement is evaluated with its
+// output discarded. The names the top level assigned are then exported.
 func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *TemplateNamespace, evaluator *DefaultEvaluator) error {
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		for _, child := range n.Children {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
-				return err
+	tmpl, ok := node.(*parser.TemplateNode)
+	if !ok {
+		return nil
+	}
+	nodes := tmpl.Children
+	for _, child := range nodes {
+		if _, ok := child.(*parser.ExtendsNode); ok {
+			// Only the child's own top-level code runs; the parent's does not.
+			nodes = topLevelCode(tmpl)
+			break
+		}
+	}
+	assigned := make(map[string]bool)
+	if err := is.runModuleNodes(nodes, namespace, evaluator, assigned); err != nil {
+		return err
+	}
+	for name := range assigned {
+		if strings.HasPrefix(name, "_") {
+			continue
+		}
+		if value, ok := namespace.Context.GetVariable(name); ok {
+			namespace.Variables[name] = value
+		}
+	}
+	return nil
+}
+
+func (is *ImportSystem) runModuleNodes(nodes []parser.Node, namespace *TemplateNamespace, evaluator *DefaultEvaluator, assigned map[string]bool) error {
+	for _, child := range nodes {
+		switch n := child.(type) {
+		case *parser.MacroNode:
+			// Convert defaults from parser expressions to evaluated values
+			defaults := make(map[string]interface{})
+			for key, expr := range n.Defaults {
+				// For now, store the expression itself - in a full implementation
+				// we'd evaluate constant expressions
+				defaults[key] = expr
 			}
-		}
 
-	case *parser.MacroNode:
-		// Convert defaults from parser expressions to evaluated values
-		defaults := make(map[string]interface{})
-		for key, expr := range n.Defaults {
-			// For now, store the expression itself - in a full implementation
-			// we'd evaluate constant expressions
-			defaults[key] = expr
-		}
+			macro := &TemplateMacro{
+				Name:       n.Name,
+				Parameters: n.Parameters,
+				Defaults:   defaults,
+				Body:       n.Body,
+				Context:    namespace.Context,
+				MacroUsage: n.MacroUsage,
+			}
 
-		macro := &TemplateMacro{
-			Name:       n.Name,
-			Parameters: n.Parameters,
-			Defaults:   defaults,
-			Body:       n.Body,
-			Context:    namespace.Context,
-			MacroUsage: n.MacroUsage,
-		}
+			if !strings.HasPrefix(n.Name, "_") {
+				namespace.Macros[n.Name] = macro
+			}
+			// Register the macro in its own module so it can call itself and its siblings.
+			namespace.Context.SetVariable(n.Name, macro.bind(evaluator))
 
-		namespace.Macros[n.Name] = macro
-		// Register the macro in its own module so it can call itself and its siblings.
-		namespace.Context.SetVariable(n.Name, macro.bind(evaluator))
-
-	case *parser.SetNode:
-		// Extract global variable assignments
-		if len(n.Targets) == 1 {
-			if identNode, ok := n.Targets[0].(*parser.IdentifierNode); ok {
-				// Evaluate the value in the namespace context
-				value, err := evaluator.EvalNode(n.Value, namespace.Context)
-				if err != nil {
-					return fmt.Errorf("{%% set %s %%}: %w", identNode.Name, err)
+		case *parser.SetNode:
+			if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
+				names := make([]string, 0, len(n.Targets))
+				for _, t := range n.Targets {
+					switch t := t.(type) {
+					case *parser.IdentifierNode:
+						names = append(names, t.Name)
+						assigned[t.Name] = true
+					case *parser.AttributeNode:
+						if o, ok := t.Object.(*parser.IdentifierNode); ok {
+							names = append(names, o.Name+"."+t.Attribute)
+						}
+					}
 				}
-				namespace.Variables[identNode.Name] = value
-				namespace.Context.SetVariable(identNode.Name, value)
+				return fmt.Errorf("{%% set %s %%}: %w", strings.Join(names, ", "), err)
 			}
-		}
-
-	case *parser.BlockSetNode:
-		if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
-			return fmt.Errorf("{%% set %s %%}: %w", n.Variable, err)
-		}
-		if value, ok := namespace.Context.GetVariable(n.Variable); ok {
-			namespace.Variables[n.Variable] = value
-		}
-
-	case *parser.ImportNode, *parser.FromNode:
-		// The file's own imports run in its module context, so its macros can
-		// call them. As in Jinja2, they are not exported.
-		if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
-			return err
-		}
-
-	case *parser.IfNode:
-		// Recursively process if blocks
-		for _, child := range n.Body {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
-				return err
-			}
-		}
-		for _, elif := range n.ElseIfs {
-			for _, child := range elif.Body {
-				err := is.extractNamespaceContent(child, namespace, evaluator)
-				if err != nil {
-					return err
+			for _, t := range n.Targets {
+				if id, ok := t.(*parser.IdentifierNode); ok {
+					assigned[id.Name] = true
 				}
 			}
-		}
-		for _, child := range n.Else {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
-				return err
-			}
-		}
 
-	case *parser.ForNode:
-		// Recursively process for loop bodies
-		for _, child := range n.Body {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
-				return err
+		case *parser.BlockSetNode:
+			if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
+				return fmt.Errorf("{%% set %s %%}: %w", n.Variable, err)
 			}
-		}
-		for _, child := range n.Else {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
-				return err
-			}
-		}
+			assigned[n.Variable] = true
 
-	case *parser.BlockNode:
-		// Recursively process block contents
-		for _, child := range n.Body {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
+		case *parser.ImportNode:
+			// The file's own imports run in its module context, so its macros can
+			// call them. As in Jinja2, they are not exported.
+			if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
 				return err
+			}
+			delete(assigned, n.Alias)
+
+		case *parser.FromNode:
+			if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
+				return err
+			}
+			for _, name := range n.Names {
+				if alias, ok := n.Aliases[name]; ok {
+					name = alias
+				}
+				delete(assigned, name)
+			}
+
+		case *parser.BlockNode:
+			// A block is its own scope: its sets and macros are not exported.
+			if _, err := evaluator.EvalNode(n, namespace.Context.Clone()); err != nil {
+				return fmt.Errorf("import: %w", err)
+			}
+
+		case *parser.IfNode:
+			body, err := is.chooseBranch(n, namespace, evaluator)
+			if err != nil {
+				return fmt.Errorf("import: %w", err)
+			}
+			if err := is.runModuleNodes(body, namespace, evaluator, assigned); err != nil {
+				return err
+			}
+
+		default:
+			if _, err := evaluator.EvalNode(child, namespace.Context); err != nil {
+				return fmt.Errorf("import: %w", err)
 			}
 		}
 	}
-
 	return nil
+}
+
+// chooseBranch returns the body of the if/elif/else branch that is taken.
+func (is *ImportSystem) chooseBranch(n *parser.IfNode, namespace *TemplateNamespace, evaluator *DefaultEvaluator) ([]parser.Node, error) {
+	cond, err := evaluator.EvalNode(n.Condition, namespace.Context)
+	if err != nil {
+		return nil, err
+	}
+	if evaluator.isTruthy(cond) {
+		return n.Body, nil
+	}
+	for _, elif := range n.ElseIfs {
+		cond, err := evaluator.EvalNode(elif.Condition, namespace.Context)
+		if err != nil {
+			return nil, err
+		}
+		if evaluator.isTruthy(cond) {
+			return elif.Body, nil
+		}
+	}
+	return n.Else, nil
 }
 
 // GetImportedNamespace returns an ImportedNamespace wrapper for the namespace

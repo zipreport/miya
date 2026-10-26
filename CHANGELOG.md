@@ -24,6 +24,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- An imported template now runs its whole top-level body, as Jinja2 does:
+  - tuple and attribute `{% set %}`, `{% do %}` and `for` loops take effect;
+  - only the taken `{% if %}` branch runs;
+  - module macros can append to the module's lists;
+  - names starting with `_` are not exported, and `from ... import _x` is an error.
+- Macros and `{% set %}` inside `{% for %}`, `{% with %}` and `{% block %}` bodies of a module are no longer exported, as in Jinja2.
+- `_`-prefixed macros are no longer exported.
+- Output the module prints is still discarded. An error in a module's top-level code (for example an undefined attribute in `{{ }}`) now fails the import, where it used to be skipped.
 - Filters now treat Go pointers, named types (`type Status string`, `type Score float64`, `type Flag bool`) and typed maps the way expressions already did (plan 047):
   - `map`/`sort`/`sum`/`groupby`/`selectattr`/`attr` on lists of struct pointers used to give empty or zero results silently;
   - `int`/`float`/`round`/`abs`/`sum` on named numbers gave 0 or an error;
