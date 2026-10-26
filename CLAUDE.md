@@ -67,8 +67,7 @@ Template Source → Lexer → Parser → AST → Runtime Evaluator → Output
 | `filters/` | Built-in filter functions (100+ filters) |
 | `branching/` | Test functions for conditionals (`is`, `is not`) |
 | `loader/` | Template loading from filesystem/memory |
-| `inheritance/` | Template inheritance (`{% extends %}`, `{% block %}`) |
-| `macros/` | Macro definition and invocation |
+| `macros/` | Deprecated macro registry behind Environment.GetMacro/CallMacro |
 | `extensions/` | Custom tag/extension system |
 
 ### Key Types
