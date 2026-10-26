@@ -3,30 +3,25 @@
 This document provides a comprehensive mapping of all template engine features between Python Jinja2 and Go Miya,
 including implementation differences and compatibility notes.
 
-##  Executive Summary
+## How compatible is miya?
 
-** Production Ready with 95.4% Jinja2 Compatibility**
+miya's conformance suite (`tests/conformance/`) holds 289 small templates written to probe edge cases and known bugs; they are not a sample of real templates. At this commit miya matches Jinja2 3.1.6 on 283 of them (same output, or failing in the same phase for the cases that expect an error), after normalising the printing differences listed below. 4 of the remaining cases are deliberate differences. Every divergence and its reason is listed in `tests/conformance/known_divergences.json`. This is a regression net, not a compatibility percentage.
 
-- **131+ Features Implemented** and fully functional
-- **95.4% Feature Compatibility** with Python Jinja2
-- **Complete Template System**: inheritance, macros, filters, tests
-- **Enterprise Grade**: caching, performance, thread safety
-- **Comprehensive Demo**: Working examples of all features
+A second suite checks whitespace control (`trim_blocks`, `lstrip_blocks`, `-`/`+` markers, `keep_trailing_newline`) against Jinja2 on 3240 generated templates, with no allowed divergences.
 
-##  Quick Compatibility Overview
+**Deliberate differences** from Jinja2 3.1.6:
 
-| Category | Features | Compatibility | Status |
-|----------|----------|---------------|---------|
-| **Template Inheritance** | 4/4 | 100% |  |
-| **Control Structures** | 7/7 | 100% |  |
-| **Include/Import** | 3/3 | 100% |  |
-| **Macros** | 5/6 | 90% |  |
-| **Filters** | 73/75 | 98% |  |
-| **Tests** | 25/26 | 95% |  |
-| **Advanced Features** | 7/8 | 85% |  |
-| **Performance** | 8/8 | 100% |  |
+- At the top level, booleans print `true`/`false` and `None` prints empty. Inside lists and dicts they print as in Python (`True`, `False`, `None`).
+- Whole floats print without `.0` everywhere, including inside lists and after `string`: `{{ 1.0 }}` and `{{ [1.0] }}` print `1` and `[1]`.
+- `round` rounds half away from zero and prints exactly the requested number of decimals: `2.5|round` prints `3` (Jinja2: `2.0`), `2.5|round(2)` prints `2.50` and `2.675|round(2)` prints `2.68`.
+- `default` also replaces `None` and the empty string, not only undefined values.
+- Dicts iterate and print in sorted key order, not insertion order.
+- Integers are 64-bit: `9223372036854775807 + 1` becomes a float.
+- Methods on Go values are not callable from templates. Pass computed values as data or register a global function.
+- `None` sorts before every other value in `sort`, where Jinja2 raises an error.
+- `map` with an unknown filter name yields empty values where Jinja2 raises an error.
 
-**Overall: 131/136 features = 95.4% compatibility**
+Differences that are not deliberate, and miya-only extensions, are listed in [MIYA_LIMITATIONS.md](MIYA_LIMITATIONS.md).
 
 ## Overview
 
@@ -69,10 +64,10 @@ including implementation differences and compatibility notes.
 | Feature            | Python Jinja2                       | Go Miya                           | Status | Notes                         |
 |--------------------|-------------------------------------|-------------------------------------|--------|-------------------------------|
 | For loops          | `{% for item in items %}`           | `{% for item in items %}`           |       | Full support                  |
-| Variable unpacking | `{% for k, v in dict.items() %}`    | `{% for k, v in dict %}`            |       | Native dict iteration support |
+| Variable unpacking | `{% for k, v in dict.items() %}`    | `{% for k, v in dict %}`            |       | miya-only; Jinja2 requires `.items()` (`.items()` also works in miya) |
 | Loop variables     | `loop.index`, `loop.first`, etc.    | `loop.index`, `loop.first`, etc.    |       | All loop vars supported       |
 | Empty clause       | `{% else %}` in for loops           | `{% else %}` in for loops           |       | Full support                  |
-| Loop control       | `{% break %}`, `{% continue %}`     | `{% break %}`, `{% continue %}`     |       | Full support                  |
+| Loop control       | `{% break %}`, `{% continue %}`     | `{% break %}`, `{% continue %}`     |       | Jinja2 needs the `jinja2.ext.loopcontrols` extension |
 | Recursive loops    | `{% for item in items recursive %}` | `{% for item in items recursive %}` |       | Full support                  |
 
 ---
@@ -94,7 +89,7 @@ including implementation differences and compatibility notes.
 
 | Feature             | Python Jinja2                             | Go Miya                                 | Status | Notes        |
 |---------------------|-------------------------------------------|-------------------------------------------|--------|--------------|
-| Import templates    | `{% import "macros.html" as m %}`         | `{% import "macros.html" as m %}`         |       | Full support |
+| Import templates    | `{% import "macros.html" as m %}`         | `{% import "macros.html" as m %}`         |       | Full support. Imports are without context, as in Jinja2 |
 | Selective import    | `{% from "macros.html" import macro %}`   | `{% from "macros.html" import macro %}`   |       | Full support |
 | Import with context | `{% import "m.html" as m with context %}` | `{% import "m.html" as m with context %}` |       | Full support |
 
@@ -106,9 +101,9 @@ including implementation differences and compatibility notes.
 |------------------|------------------------------------------|------------------------------------------|--------|------------------------------|
 | Macro definition | `{% macro name(args) %}`                 | `{% macro name(args) %}`                 |       | Full support                 |
 | Macro calls      | `{{ macro_name(args) }}`                 | `{{ macro_name(args) }}`                 |       | Full support                 |
-| Call blocks      | `{% call macro() %}content{% endcall %}` | `{% call macro() %}content{% endcall %}` |       | Full support with `caller()` |
+| Call blocks      | `{% call macro() %}content{% endcall %}` | `{% call macro() %}content{% endcall %}` |       | Full support with `caller()`; `{% call(v) macro() %}` also works |
 | Caller function  | `{{ caller() }}` in macros               | `{{ caller() }}` in macros               |       | Full support                 |
-| Varargs macros   | `{% macro m(*args, **kwargs) %}`         | `{% macro m(*args, **kwargs) %}`         |       | Full support                 |
+| Varargs macros   | implicit `varargs` / `kwargs` inside the macro body (`*args` is not Jinja2 syntax) | implicit `varargs` / `kwargs` inside the macro body (`*args` is not miya syntax) |       | Full support |
 
 ---
 
@@ -141,12 +136,11 @@ including implementation differences and compatibility notes.
 | Comment blocks    | `{# multiline comments #}`              | `{# multiline comments #}`              |       | Full support                                              |
 | Autoescape blocks | `{% autoescape false %}`                | `{% autoescape false %}`                |       | Full support                                              |
 | Filter blocks     | `{% filter upper %}text{% endfilter %}` | `{% filter upper %}text{% endfilter %}` |       |  FULLY IMPLEMENTED with chaining support                 |
-| Do statements     | `{% do expression %}`                   | `{% do expression %}`                   |       | Fully implemented - executes expressions for side effects |
+| Do statements     | `{% do expression %}`                   | `{% do expression %}`                   |       | Jinja2 needs the `jinja2.ext.do` extension |
 
 ### 8.1 Filter Blocks Implementation Details
 
-**Filter blocks** in Go Miya provide the same functionality as Python Jinja2, with full compatibility and additional
-optimizations.
+**Filter blocks** in Go Miya provide the same functionality as Python Jinja2.
 
 **Basic Usage:**
 
@@ -169,10 +163,8 @@ optimizations.
 **Filters with Arguments:**
 
 ```html+jinja
-{% filter truncate(10) %}
-  This is a very long text that will be truncated
-{% endfilter %}
-<!-- Output: This is... -->
+{% filter truncate(10) %}This is a very long text that will be truncated{% endfilter %}
+<!-- Output: This... -->
 ```
 
 **Complex Content Support:**
@@ -206,18 +198,17 @@ optimizations.
 -  Filter chaining with proper left-to-right evaluation
 -  Complex template content (variables, loops, conditionals)
 -  Nested filter blocks with correct scope handling
--  Performance optimized for high-throughput scenarios
 
 ### 8.2 Do Statements Implementation Details
 
-**Do statements** in Go Miya provide identical functionality to Python Jinja2, allowing execution of expressions
-purely for side effects without producing template output.
+**Do statements** in Go Miya behave like the `jinja2.ext.do` extension of Python Jinja2 (stock Jinja2 rejects `{% do %}`),
+allowing execution of expressions purely for side effects without producing template output.
 
 **Basic Usage:**
 
 ```html+jinja
 {% set items = [] %}
-{% do items.append("hello") %}  {# Python-style method calls #}
+{% do items.append("hello") %}  {# Python-style method calls; only on a list created with {% set %} #}
 {{ items[0] }}  <!-- Output: hello -->
 
 {# Miya Engine equivalent using expressions #}
@@ -286,9 +277,7 @@ Clean input: {{ user_input|trim|lower }}
 -  Support for complex expressions (arithmetic, filters, function calls)
 -  Proper integration with control flow structures
 -  Whitespace control support (`{%- do ... -%}`)
--  Complete error propagation and reporting
 -  Zero impact on template output (true side-effects only)
--  Compatible with all Miya Engine expression features
 
 **Error Handling:**
 
@@ -324,9 +313,9 @@ Clean input: {{ user_input|trim|lower }}
 |-------------------------|---------------------------------|---------------------------------|--------|--------------------------------------|
 | Attribute access        | `object.attribute`              | `object.attribute`              |       | Full support                         |
 | Item access             | `dict['key']`                   | `dict['key']`                   |       | Full support                         |
-| Method calls            | `string.upper()`                | `string.upper()`                |       | Runtime error - methods not callable |
+| Method calls            | `string.upper()`                | `string.upper()`                |       | Python string, list and dict methods are supported (`upper`, `split`, `get`, `append`, ...); Go methods on your data are not callable |
 | List slicing            | `list[1:3]`                     | `list[1:3]`                     |       | Native slice syntax support          |
-| List comprehensions     | `[x for x in items]`            | `[x for x in items]`            |       | Full support                         |
+| List comprehensions     | `[x for x in items]`            | `[x for x in items]`            |       | miya-only; not Jinja2 syntax. Nested `for` clauses and `.items()` unpacking in dict comprehensions are not supported |
 | Conditional expressions | `value if condition else other` | `value if condition else other` |       | Full support                         |
 
 ---
@@ -375,7 +364,7 @@ Clean input: {{ user_input|trim|lower }}
 
 ---
 
-## 11. Built-in Filters (73 Implemented, 98% Compatible)
+## 11. Built-in Filters
 
 ### 11.1 String Filters
 
@@ -392,12 +381,12 @@ Clean input: {{ user_input|trim|lower }}
 | center        |              |          |       | Identical                  |
 | indent        |              |          |       | Identical                  |
 | slugify       |              |          |      | Go-specific implementation |
-| split         |              |          |       | Identical                  |
+| split         |              |          |       | miya only (not a Jinja2 filter) |
 | startswith    |              |          |      | Go-specific implementation |
 | endswith      |              |          |      | Go-specific implementation |
 | contains      |              |          |      | Go-specific implementation |
-| regex_replace |              |          |       | Identical                  |
-| regex_search  |              |          |       | Identical                  |
+| regex_replace |              |          |       | miya only (not a Jinja2 filter) |
+| regex_search  |              |          |       | miya only (not a Jinja2 filter) |
 | wordcount     |              |          |      | Go-specific implementation |
 
 ### 11.2 Math Filters
@@ -405,7 +394,7 @@ Clean input: {{ user_input|trim|lower }}
 | Filter | Python Jinja2 | Go Miya | Status | Notes                      |
 |--------|---------------|-----------|--------|----------------------------|
 | abs    |              |          |       | Identical                  |
-| round  |              |          |       | Identical                  |
+| round  |              |          |       | Differs on purpose: half away from zero, prints exactly n decimals |
 | int    |              |          |       | Identical                  |
 | float  |              |          |       | Identical                  |
 | sum    |              |          |       | Identical                  |
@@ -423,7 +412,7 @@ Clean input: {{ user_input|trim|lower }}
 | last         |              |          |       | Identical         |
 | length/count |              |          |       | Identical         |
 | join         |              |          |       | Identical         |
-| sort         |              |          |       | Identical         |
+| sort         |              |          |       | `None` sorts first (Jinja2 raises an error) |
 | reverse      |              |          |       | Identical         |
 | unique       |              |          |       | Identical         |
 | list         |              |          |       | Identical         |
@@ -434,11 +423,11 @@ Clean input: {{ user_input|trim|lower }}
 | reject       |              |          |       | Identical         |
 | selectattr   |              |          |       | Identical         |
 | rejectattr   |              |          |       | Identical         |
-| map          |              |          |       | Identical         |
+| map          |              |          |       | An unknown filter name yields empty values (Jinja2 raises an error) |
 | groupby      |              |          |       | Identical         |
 | items        |              |          |       | Dictionary items  |
-| keys         |              |          |       | Dictionary keys   |
-| values       |              |          |       | Dictionary values |
+| keys         |              |          |       | Dictionary keys (miya only) |
+| values       |              |          |       | Dictionary values (miya only) |
 
 ### 11.4 HTML & URL Filters
 
@@ -449,7 +438,7 @@ Clean input: {{ user_input|trim|lower }}
 | striptags      |              |          |       | Identical |
 | urlencode      |              |          |       | Identical |
 | urlize         |              |          |       | Identical |
-| urlizetruncate |              |          |       | Identical |
+| urlizetruncate |              |          |       | miya only (not a Jinja2 filter) |
 | xmlattr        |              |          |       | Identical |
 | forceescape    |              |          |       | Identical |
 
@@ -457,7 +446,7 @@ Clean input: {{ user_input|trim|lower }}
 
 | Filter        | Python Jinja2 | Go Miya | Status | Notes                      |
 |---------------|---------------|-----------|--------|----------------------------|
-| strftime      |              |          |       | Identical                  |
+| strftime      |              |          |       | miya only (not a Jinja2 filter) |
 | date          |              |          |      | Go-specific implementation |
 | time          |              |          |      | Go-specific implementation |
 | datetime      |              |          |      | Go-specific implementation |
@@ -470,15 +459,15 @@ Clean input: {{ user_input|trim|lower }}
 
 | Filter         | Python Jinja2 | Go Miya | Status | Notes                      |
 |----------------|---------------|-----------|--------|----------------------------|
-| default/d      |              |          |       | Identical                  |
+| default/d      |              |          |       | Differs on purpose: also replaces `None` and the empty string |
 | format         |              |          |       | Identical                  |
 | string         |              |          |       | Identical                  |
 | attr           |              |          |       | Identical                  |
 | filesizeformat |              |          |       | Identical                  |
-| pprint         |              |          |       | Identical                  |
-| tojson         |              |          |       | Identical                  |
+| pprint         |              |          |       | Output format differs from Python `pprint` |
+| tojson         |              |          |       | Compact separators: `{"a":1}` where Jinja2 prints `{"a": 1}` |
 | fromjson       |              |          |      | Go-specific implementation |
-| dictsort       |              |          |       | Identical                  |
+| dictsort       |              |          |       | Pairs print as lists (`[a, 2]`), where Jinja2 prints tuples |
 
 ---
 
@@ -515,8 +504,8 @@ Clean input: {{ user_input|trim|lower }}
 |------------|---------------|-----------|--------|----------------------------|
 | lower      |              |          |       | Identical                  |
 | upper      |              |          |       | Identical                  |
-| startswith |              |          |       | Identical                  |
-| endswith   |              |          |       | Identical                  |
+| startswith |              |          |       | miya only (not a Jinja2 test) |
+| endswith   |              |          |       | miya only (not a Jinja2 test) |
 | match      |              |          |       | Regex matching             |
 | alpha      |              |          |      | Go-specific implementation |
 | alnum      |              |          |      | Go-specific implementation |
@@ -527,7 +516,7 @@ Clean input: {{ user_input|trim|lower }}
 | Test     | Python Jinja2 | Go Miya | Status | Notes     |
 |----------|---------------|-----------|--------|-----------|
 | in       |              |          |       | Identical |
-| contains |              |          |       | Identical |
+| contains |              |          |       | miya only (not a Jinja2 test) |
 | sameas   |              |          |       | Identical |
 | escaped  |              |          |       | Identical |
 
@@ -555,8 +544,8 @@ Clean input: {{ user_input|trim|lower }}
 | joiner()    |              |          |       | Join values with separator           |
 | namespace() |              |          |       | Create namespace object              |
 | url_for()   |              |          |       | URL generation (framework dependent) |
-| zip()       |              |          |       | Zip multiple sequences               |
-| enumerate() |              |          |       | Enumerate with index                 |
+| zip()       |              |          |       | Zip multiple sequences (miya only; not a Jinja2 global) |
+| enumerate() |              |          |       | Enumerate with index (miya only); the `start=` keyword is ignored, use `enumerate(items, 1)` |
 
 ---
 
@@ -588,9 +577,7 @@ Clean input: {{ user_input|trim|lower }}
 |---------------------------|---------------|-----------|--------|---------------------------|
 | Template caching          |              |          |       | LRU cache with TTL        |
 | Compiled templates        |              |          |       | AST caching               |
-| Concurrent safety         |              |          |       | Thread-safe execution     |
-| Memory optimization       |              |          |      | Go-specific optimizations |
-| Filter chain optimization |              |          |      | Go-specific optimization  |
+| Concurrent safety         |              |          |       | An `Environment` is safe for concurrent use; configure it (`SetConfig`, `SetLoader`, loader templates) before rendering starts |
 
 ### 14.4 Loader System
 
@@ -611,7 +598,7 @@ Clean input: {{ user_input|trim|lower }}
 | Aspect         | Python Jinja2    | Go Miya         | Notes                                      |
 |----------------|------------------|-------------------|--------------------------------------------|
 | Dynamic typing | Native Python    | Interface{} based | Go uses static typing with interfaces      |
-| Method calls   | `string.upper()` | Not supported     | Go doesn't support runtime method dispatch |
+| Method calls   | `string.upper()` | Python string, list and dict methods | Go methods on caller data are not callable from templates; pass computed values as data or register a global function |
 | Duck typing    | Full support     | Limited           | Go's type system limitations               |
 | Reflection     | Runtime          | Compile-time      | Different reflection models                |
 
@@ -620,9 +607,7 @@ Clean input: {{ user_input|trim|lower }}
 | Aspect               | Python Jinja2   | Go Miya         | Notes                            |
 |----------------------|-----------------|-------------------|----------------------------------|
 | Template compilation | Runtime         | AST-based         | Go uses parsed AST trees         |
-| Memory usage         | Higher          | Lower             | Go's efficient memory management |
-| Concurrency          | GIL limitations | Native goroutines | Go's superior concurrency        |
-| Startup time         | Slower          | Faster            | Go's compilation advantages      |
+| Concurrency          | GIL limitations | Native goroutines | An `Environment` is safe for concurrent use |
 
 ### 15.3 Ecosystem Integration
 
@@ -638,20 +623,20 @@ Clean input: {{ user_input|trim|lower }}
 
 ### 16.1 Python to Go Migration
 
-**Fully Compatible:**
+**Behaves as in Jinja2** (see the conformance numbers at the top for what is checked):
 
-- All basic template syntax
+- Basic template syntax
 - Control structures (if/for/with)
-- Template inheritance
-- Macros and includes
+- Template inheritance (but see [Limitations](MIYA_LIMITATIONS.md) for `self.block()` and `include` of a child template)
+- Macros, `caller()`, imports and includes
 - Filter blocks (`{% filter %}`)
 - Most filters and tests
-- Variable assignments
+- Variable assignments, including `{% set a, b = ... %}`
 
 **Requires Adaptation:**
 
-- Method calls: `obj.method()` → Use filters instead
-- Some Python-specific filters → Use Go equivalents
+- Methods on Go values: `obj.Method()` is not callable; pass computed values as data or register a global function (Python string, list and dict methods such as `s.upper()` do work)
+- Python-specific filters that miya lacks, or that print differently (see the list at the top and [Limitations](MIYA_LIMITATIONS.md)) → Use Go equivalents
 - Custom extensions → Rewrite using Go extension API
 - Date/time handling → Use Go time.Time objects
 
@@ -662,42 +647,7 @@ Clean input: {{ user_input|trim|lower }}
 ### 16.2 Best Practices for Go Miya
 
 1. **Use Go types effectively**: Pass Go structs, maps, and slices
-2. **Leverage concurrency**: Templates are goroutine-safe
+2. **Leverage concurrency**: An `Environment` is safe for concurrent use; configure it (`SetConfig`, `SetLoader`, loader templates) before rendering starts
 3. **Cache templates**: Use loader caching for performance
 4. **Error handling**: Implement proper error checking
 5. **Extensions**: Use Go's type system for custom functionality
-
----
-
-## 17. Compatibility Matrix Summary
-
-| Category               | Features | Compatible | Partial | Missing | Compatibility % |
-|------------------------|----------|------------|---------|---------|-----------------|
-| **Core Syntax**        | 20       | 20         | 0       | 0       | 100%            |
-| **Control Structures** | 15       | 15         | 0       | 0       | 100%            |
-| **Inheritance**        | 8        | 8          | 0       | 0       | 100%            |
-| **Expressions**        | 25       | 23         | 1       | 1       | 96%             |
-| **Operators**          | 20       | 20         | 0       | 0       | 100%            |
-| **Filters**            | 70+      | 65+        | 5+      | 0       | 95%+            |
-| **Tests**              | 30+      | 30+        | 0       | 0       | 100%            |
-| **Global Functions**   | 9        | 9          | 0       | 0       | 100%            |
-| **Advanced Features**  | 20       | 20         | 0       | 0       | 100%            |
-
-**Overall Compatibility: 99%+**
-
----
-
----
-
-## 18. Recent Updates
-
-**August 2025 - Filter Blocks Implementation**
-
--  Filter blocks (`{% filter %}...{% endfilter %}`) now fully implemented
--  Support for filter chaining, arguments, and complex content
--  Comprehensive testing and documentation completed
--  Overall compatibility increased to 99%+
-
-*Last Updated: August 2025*  
-*Go Miya Version: Latest with Filter Blocks*  
-*Python Jinja2 Reference: 3.1.x*
