@@ -74,7 +74,8 @@ func TestMarkupParity(t *testing.T) {
 			}
 			if len(row.KnownUnrelated) > 0 && string(row.KnownUnrelated) != "null" && string(row.KnownUnrelated) != "false" {
 				if got == row.Want {
-					t.Logf("%s now matches Jinja2; drop known_unrelated", row.Name)
+					t.Errorf("%s now matches Jinja2; remove known_unrelated from testdata/markup_parity.json", row.Name)
+					return
 				}
 				t.Skip("known_unrelated")
 			}

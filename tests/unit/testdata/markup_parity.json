@@ -232,7 +232,7 @@
       "h": "<b>"
     },
     "want": "&lt;B&gt;x&lt;/b&gt;",
-    "known_unrelated": "title word-boundary algorithm (control K10; plan 039)"
+    "known_unrelated": "Jinja2's title returns plain text; miya keeps Markup so filter blocks stay raw (control K10)"
   },
   {
     "name": "W9_string",
@@ -269,7 +269,7 @@
       "h": "<b>"
     },
     "want": "|d",
-    "known_unrelated": "default treats \"\" as missing without boolean=true (control K4; plan 039)"
+    "known_unrelated": "default treats \"\" as missing without boolean=true (control K4)"
   },
   {
     "name": "W13_striptags",
@@ -288,7 +288,7 @@
       "h": "<b>"
     },
     "want": "&lt;,b,&gt;,x,&lt;,/,b,&gt;",
-    "known_unrelated": "join rejects a string (control K11; plan 039)"
+    "known_unrelated": "join rejects a string (control K11)"
   },
   {
     "name": "W15_list",
@@ -397,7 +397,7 @@
       "h": "<b>"
     },
     "want": "[Markup(&#39;&lt;b&gt;x&lt;/b&gt;&#39;)]",
-    "known_unrelated": "lists print Go-style (control K5; plan 035)"
+    "known_unrelated": "safe items print as '…', Jinja2 prints Markup('…') (repr of Markup; control K5)"
   },
   {
     "name": "W28_wordwrap",
@@ -488,7 +488,7 @@
       "h": "<b>"
     },
     "want": "",
-    "known_unrelated": "control: default on a plain string (plan 039)"
+    "known_unrelated": "control: default on a plain string"
   },
   {
     "name": "K5_ctl_list",
@@ -543,7 +543,7 @@
       "h": "<b>"
     },
     "want": "a,b,c",
-    "known_unrelated": "control: join on a plain string (plan 039)"
+    "known_unrelated": "control: join on a plain string"
   },
   {
     "name": "K12_ctl_e_plain",
