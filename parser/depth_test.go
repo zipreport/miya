@@ -26,7 +26,10 @@ func TestParseDepthLimit(t *testing.T) {
 		{"else_chain_at_limit", expr(rep("1 if x else ", 499) + "1"), false},
 		{"else_chain_huge", expr(rep("1 if x else ", 200000) + "1"), true},
 		{"pow_chain_at_limit", expr(rep("2 ** ", 499) + "2"), false},
-		{"pow_chain_huge", expr(rep("2 ** ", 200000) + "2"), true},
+		// ** is left-associative: a long chain is a loop, not recursion
+		{"pow_chain_huge", expr(rep("2 ** ", 200000) + "2"), false},
+		{"neg_chain", expr(rep("-", 200000) + "1"), true},
+		{"neg_at_limit", expr(rep("-", 400) + "1"), false},
 		{"many_siblings", expr(rep("1 + ", 600) + "1"), false},
 		{"many_sibling_tags", rep("{% if true %}x{% endif %}", 600), false},
 		{"many_sibling_conditionals", rep("{{ 1 if x else 2 }}", 600) + rep("{{ not x }}", 600) + rep("{{ 2 ** 3 }}", 600), false},

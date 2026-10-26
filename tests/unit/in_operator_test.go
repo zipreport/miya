@@ -108,7 +108,7 @@ func TestInOperatorPrecedence(t *testing.T) {
 			"in operator with comparison",
 			`{{ "apple" in fruits == true }}`,
 			map[string]interface{}{"fruits": []string{"apple", "banana", "cherry"}},
-			"true",
+			"false", // Jinja2 chains comparisons: "apple" in fruits and fruits == true
 		},
 	}
 

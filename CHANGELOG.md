@@ -71,6 +71,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A recursive `loop()` result is safe or plain according to the context of the loop itself, not of the call site (`{% autoescape true %}{{ loop(x.c) }}{% endautoescape %}` in an autoescape-off loop escapes the inner output).
 - In non-HTML escape contexts, Markup items in a list returned by a filter (`[u]|map('e')`) are plain strings, so the context escaper runs on them.
 - `joiner()` keeps a safe separator (`joiner('<br>'|safe)`) instead of falling back to `, `.
+- Tests take one argument without parentheses (`x is divisibleby 3`); `is in`, `is true`, `is false`, `is filter` and `is test` work; a test registered as `filter` or `test` replaces the built-in meaning.
+- Keywords can be attribute names (`d.if`, `d.block`) and, except `and`/`or`/`not`/`is`/`in`/`if`/`else`, variable names in expressions and `{% set %}` (not yet `for` targets, macro parameters or keyword-argument names); identifiers may be non-ASCII (not NFKC-normalized); `b.0` and `L.0.1` index.
+- Number literals accept `_`, `0x`/`0o`/`0b` and exponents (`1e3`); adjacent string literals join; `(1, 2)`, `()`, `set a, b = 1, 2`, `set (a, b) = ...` and `for v in 1, 2` parse; `{{ a if b }}` without `else` is undefined when `b` is false; `[x for x in items if x > 5]` (and the dict form) filter.
+- A comparison chain evaluates each operand once and stops at the first false comparison.
+- `include` accepts Jinja2's `ignore missing` before `with context`/`without context`; `without context` hides the render's variables.
+- Deeply nested `not`/`-` chains return `template nesting too deep` instead of crashing.
 
 ### Changed
 
@@ -147,6 +153,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A macro's output is safe only if autoescape was on where the macro is defined. Jinja2 decides at the call site.
 - Go filters, tests and Go global functions receive a plain `string` for safe values; macros and the built-in `namespace`, `dict`, `cycler` and `joiner` keep receiving Markup.
 - A Go filter that returns `runtime.SafeValue` or `*runtime.SafeValue` still works; the value becomes Markup.
+- **Breaking:** operator precedence follows Jinja2: `-2 ** 2` is `4`, `2 ** 3 ** 2` is `64`, `-x|abs` is `(-x)|abs`, and comparisons chain (`a < b < c` is `a < b and b < c`, so `"apple" in fruits == true` is `false`).
+- **Breaking:** `~` binds tighter than `+` and `-`: `'Page ' ~ n + 1` is `('Page ' ~ n) + 1`, which prints `Page 11` for `n = 1` (it printed `Page 2`), and `a + b ~ c` is `a + (b ~ c)`. Write `'Page ' ~ (n + 1)`.
+- **Breaking:** `is` applies to the operand right before it: `x + 1 is divisibleby(3)` is `x + (1 is divisibleby(3))` and `a == 1 is sameas(true)` is `a == (1 is sameas(true))`. Write `(x + 1) is divisibleby(3)`.
+- **Breaking (extensions):** `ParserAdapter.ParseArguments` uses the new expression grammar: adjacent string arguments join (`{% tag "a" "b" %}` gets one argument, `"ab"`), and keywords such as `as` are names.
+- To find affected templates: `grep -nE '~[^}%]*[-+]|[-+][^}%]*~' -r templates/` (`~` mixed with `+`/`-`) and `grep -nE '[-+*/%<>=][^}%]* is ' -r templates/` (`is` after an operator).
 
 ### Deprecated
 

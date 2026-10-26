@@ -19,32 +19,7 @@ This document details the **known limitations and differences** between Miya Eng
 
 ## Critical Limitations
 
-###  1. List Comprehensions with Filter Clauses
-
-**Not Supported:**
-```html+jinja
-{{ [x for x in numbers if x > 5] }}
-{{ [user.name for user in users if user.active] }}
-{{ [x for x in items if x.price > 100 and x.stock > 0] }}
-```
-
-**Error:**
-```
-parser error: expected 'else' in conditional expression
-```
-
-**Reason:** The parser treats any `if` inside a comprehension as a ternary operator and requires an `else` clause.
-
-**Workaround:**
-```html+jinja
-{# Use filter chains instead #}
-{{ users|selectattr("active")|map(attribute="name")|list }}
-{{ numbers|select("greaterthan", 5)|list }}
-```
-
----
-
-###  2. Dictionary Comprehensions with `.items()` Unpacking
+###  1. Dictionary Comprehensions with `.items()` Unpacking
 
 **Not Supported:**
 ```html+jinja
@@ -68,7 +43,7 @@ parser error: expected 'in' in dict comprehension
 
 ---
 
-###  3. Nested Comprehensions
+###  2. Nested Comprehensions
 
 **Not Supported:**
 ```html+jinja
@@ -96,35 +71,6 @@ parser error: unexpected 'for' in comprehension
 
 ---
 
-###  4. Inline Conditionals Without `else`
-
-**Not Supported:**
-```html+jinja
-{{ ", " if not loop.last }}
-{{ value if condition }}
-{{ user.name if user }}
-```
-
-**Error:**
-```
-parser error: expected 'else' in conditional expression
-```
-
-**Reason:** The parser always expects a complete ternary expression with both branches.
-
-**Workaround:**
-```html+jinja
-{# Use block-level conditionals #}
-{% if not loop.last %}, {% endif %}
-{% if condition %}{{ value }}{% endif %}
-
-{# Or provide an else clause #}
-{{ ", " if not loop.last else "" }}
-{{ value if condition else "" }}
-```
-
----
-
 ## Comprehensions Limitations
 
 ### Summary Table
@@ -132,11 +78,11 @@ parser error: expected 'else' in conditional expression
 | Feature | Jinja2 | Miya | Status |
 |---------|--------|------|--------|
 | `[expr for item in list]` |  |  | Works |
-| `[expr for item in list if cond]` |  |  | **Not Supported** |
+| `[expr for item in list if cond]` |  |  | Works |
 | `{key: val for item in list}` |  |  | Works |
 | `{k: v for k, v in dict.items()}` |  |  | **Not Supported** |
 | `[item for list in lists for item in list]` |  |  | **Not Supported** |
-| `{k: v for item in list if cond}` |  |  | **Not Supported** |
+| `{k: v for item in list if cond}` |  |  | Works |
 
 ### What Works
 
@@ -301,20 +247,6 @@ cannot call non-function value of type *runtime.Undefined
 {% endfor %}
 ```
 
-###  Multiple Variable Assignment
-
-**Not Supported:**
-```html+jinja
-{% set a, b = 1, 2 %}  {#  #}
-{% set x, y = some_tuple %}  {#  #}
-```
-
-**Workaround:**
-```html+jinja
-{% set a = 1 %}
-{% set b = 2 %}
-```
-
 ---
 
 ## Workarounds and Alternatives
@@ -354,20 +286,6 @@ cannot call non-function value of type *runtime.Undefined
 {% endfor %}
 ```
 
-### Pattern 3: Conditional Output
-
-**Instead of inline if without else:**
-```html+jinja
-{#  Doesn't work #}
-{{ ", " if not loop.last }}
-
-{#  Use block conditionals #}
-{% if not loop.last %}, {% endif %}
-
-{#  Or provide else clause #}
-{{ ", " if not loop.last else "" }}
-```
-
 ### Pattern 4: Dictionary Processing
 
 **Instead of .items() unpacking:**
@@ -391,10 +309,8 @@ When migrating from Jinja2 to Miya, test for these patterns:
 
 ### Checklist
 
-- [ ] No comprehensions with `if` clauses
 - [ ] No `.items()` unpacking in comprehensions
 - [ ] No nested comprehensions (multiple `for` clauses)
-- [ ] All inline conditionals have `else` clauses
 - [ ] No `caller()` in macros
 - [ ] No varargs/kwargs in macros
 - [ ] `enumerate()` uses positional args only

@@ -39,16 +39,16 @@ func TestOperatorPrecedence(t *testing.T) {
 			"true", // Should be ((1 == 1) and ("a" in "abc")) = true
 		},
 		{
-			"power right associative",
+			"power left associative",
 			`{{ 2 ** 3 ** 2 }}`,
 			map[string]interface{}{},
-			"512", // Should be (2 ** (3 ** 2)) = 512, not ((2 ** 3) ** 2) = 64
+			"64", // Jinja2: ** is left-associative, (2 ** 3) ** 2
 		},
 		{
-			"unary minus before power",
+			"unary minus binds tighter than power",
 			`{{ -2 ** 2 }}`,
 			map[string]interface{}{},
-			"-4", // Should be (-(2 ** 2)) = -4, not ((-2) ** 2) = 4
+			"4", // Jinja2: unary minus binds tighter, (-2) ** 2
 		},
 		{
 			"parentheses override precedence",
