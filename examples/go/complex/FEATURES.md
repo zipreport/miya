@@ -620,15 +620,9 @@ Including {{ variable }} content
 - **Inheritance Caching**: Cached resolution of template inheritance chains
 - **Smart Invalidation**: Cache updates when templates change
 
-### **Filter Chain Optimization**
-- **Chain Optimization**: Efficient processing of filter chains
-- **Memory Management**: Optimized memory usage for large datasets
-- **Concurrent Safety**: Thread-safe operations
-
 ### **Runtime Optimizations**
 - **Expression Evaluation**: Optimized AST evaluation
 - **Context Management**: Efficient variable scoping
-- **Memory Pooling**: Reduced garbage collection pressure
 
 ---
 
@@ -706,7 +700,6 @@ ctx.Set("products", productList)
 -  FileSystemLoader for template management
 -  Environment configuration
 -  Security features (autoescaping, safe filters)
--  Memory optimization
 -  Concurrent template rendering
 
 ### **Development Features**
