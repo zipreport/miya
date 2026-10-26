@@ -50,6 +50,7 @@ func TestWordwrapFilter(t *testing.T) {
 		{"ww_long", `{{ 'abcdefgh ij'|wordwrap(3) }}`, "abc\ndef\ngh\nij"},
 		{"ww_default", `{{ long|wordwrap }}`, "The quick brown fox jumps over the lazy dog and keeps running past the old mill\nby the river"},
 		{"ww_default_edge", `{{ w80|wordwrap }}`, "abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi\nabcdefghij"},
+		{"ww_kw_default_width", `{{ w80|wordwrap(break_on_hyphens=false) }}`, "abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi abcdefghi\nabcdefghij"},
 		{"ww_10", `{{ s|wordwrap(10) }}`, "The quick\nbrown fox\njumps over\nthe lazy\ndog and\nkeeps\nrunning"},
 		{"ww_nobreak", `{{ 'abcdefgh ij'|wordwrap(3, false) }}`, "abcdefgh\nij"},
 		{"ww_hyphen", `{{ 'well-known co-operation x'|wordwrap(6) }}`, "well-\nknown\nco-ope\nration\nx"},
