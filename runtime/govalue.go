@@ -102,11 +102,14 @@ func stringMapKey(key interface{}) string {
 
 // mapKey converts a template value to a key of type kt: any value for
 // string-kind keys (spelled by DictKey, so none is "None" as for dicts; a
-// []byte key is its text); a
-// number for integer, unsigned and float keys (a float must be integral and
-// in range for integer keys; unsigned keys reject negative numbers); for
-// interface keys, the value itself if it is comparable. ok is false when no
-// key of type kt can be built.
+// []byte key is its text); a number for integer, unsigned and float keys (a
+// float must be integral and in range for integer keys; unsigned keys reject
+// negative numbers); true, false, or a number that is 0 or 1 for bool keys; a
+// list or array of the same length whose items convert to the element type
+// and equal their conversion for array keys; for interface keys, the value
+// itself if it is comparable (nil is the zero key); for any other kind, a
+// comparable value of exactly type kt. ok is false when no key of type kt can
+// be built.
 func mapKey(key interface{}, kt reflect.Type) (reflect.Value, bool) {
 	switch kt.Kind() {
 	case reflect.String:
@@ -174,14 +177,91 @@ func mapKey(key interface{}, kt reflect.Type) (reflect.Value, bool) {
 		}
 		out.SetFloat(f)
 		return out, true
+	case reflect.Bool:
+		var b bool
+		if bv, ok := basicValue(Unmark(key)).(bool); ok {
+			b = bv
+		} else {
+			i, u, f, kind, ok := numericValue(Indirect(key))
+			if !ok {
+				return reflect.Value{}, false
+			}
+			var n float64
+			switch kind {
+			case 'i':
+				n = float64(i)
+			case 'u':
+				n = float64(u)
+			case 'f':
+				n = f
+			}
+			if n != 0 && n != 1 {
+				return reflect.Value{}, false
+			}
+			b = n == 1
+		}
+		return reflect.ValueOf(b).Convert(kt), true
+	case reflect.Array:
+		lv := reflect.ValueOf(Indirect(key))
+		if !lv.IsValid() || (lv.Kind() != reflect.Slice && lv.Kind() != reflect.Array) || lv.Len() != kt.Len() {
+			return reflect.Value{}, false
+		}
+		out := reflect.New(kt).Elem()
+		for j := 0; j < kt.Len(); j++ {
+			elem := lv.Index(j).Interface()
+			ev, ok := mapKey(elem, kt.Elem())
+			if !ok || !Equal(elem, ev.Interface()) {
+				return reflect.Value{}, false
+			}
+			out.Index(j).Set(ev)
+		}
+		return out, true
 	case reflect.Interface:
 		kv := reflect.ValueOf(key)
-		if !kv.IsValid() || !kv.Comparable() || !kv.Type().AssignableTo(kt) {
+		if !kv.IsValid() {
+			return reflect.Zero(kt), true
+		}
+		if !kv.Comparable() || !kv.Type().AssignableTo(kt) {
 			return reflect.Value{}, false
 		}
 		return kv, true
 	}
+	kv := reflect.ValueOf(key)
+	if !kv.IsValid() || kv.Type() != kt || !kv.Comparable() {
+		return reflect.Value{}, false
+	}
+	return kv, true
+}
+
+// mapLookup finds key in any Go map with a bounded number of MapIndex
+// calls: interfaceMapLookup for interface keys, mapKey for the rest.
+func mapLookup(rv reflect.Value, key interface{}) (reflect.Value, bool) {
+	kt := rv.Type().Key()
+	if kt.Kind() == reflect.Interface {
+		return interfaceMapLookup(rv, key)
+	}
+	k, ok := mapKey(key, kt)
+	if !ok {
+		return reflect.Value{}, false
+	}
+	if val := rv.MapIndex(k); val.IsValid() {
+		return val, true
+	}
 	return reflect.Value{}, false
+}
+
+// MapLookup is mapLookup for callers outside runtime: ok is false when m is
+// not a map or has no entry for key.
+func MapLookup(m, key interface{}) (interface{}, bool) {
+	rv := reflect.ValueOf(Indirect(m))
+	if rv.Kind() != reflect.Map {
+		return nil, false
+	}
+	val, ok := mapLookup(rv, key)
+	if !ok {
+		return nil, false
+	}
+	return val.Interface(), true
 }
 
 func mapKeyRank(k interface{}) int {
@@ -352,8 +432,8 @@ func SortedMapPairs(v interface{}) ([]interface{}, bool) {
 
 // interfaceMapLookup finds key in a map with interface keys the way a template
 // compares keys, with a bounded number of MapIndex calls and no scan: the key
-// itself, the same number in another numeric type (a bool is 0 or 1), or its
-// DictKey spelling.
+// itself, a string as Markup, the same number in another numeric type (a bool
+// is 0 or 1), or its DictKey spelling.
 func interfaceMapLookup(rv reflect.Value, key interface{}) (reflect.Value, bool) {
 	kt := rv.Type().Key()
 	try := func(c interface{}) (reflect.Value, bool) {
@@ -375,16 +455,19 @@ func interfaceMapLookup(rv reflect.Value, key interface{}) (reflect.Value, bool)
 		return val, true
 	}
 	var cands []interface{}
+	if sv := reflect.ValueOf(Unmark(key)); sv.IsValid() && sv.Kind() == reflect.String {
+		cands = append(cands, Markup(sv.String()))
+	}
 	if b, ok := key.(bool); ok {
 		n := 0
 		if b {
 			n = 1
 		}
-		cands = []interface{}{n, int64(n), float64(n)}
+		cands = append(cands, n, int64(n), float64(n))
 	} else if i, u, f, kind, ok := numericValue(key); ok {
 		switch kind {
 		case 'i':
-			cands = []interface{}{int(i), i, float64(i)}
+			cands = append(cands, int(i), i, float64(i))
 			if i >= 0 {
 				cands = append(cands, uint64(i))
 			}
@@ -392,7 +475,7 @@ func interfaceMapLookup(rv reflect.Value, key interface{}) (reflect.Value, bool)
 				cands = append(cands, i == 1)
 			}
 		case 'u':
-			cands = []interface{}{u, float64(u)}
+			cands = append(cands, u, float64(u))
 			if u <= math.MaxInt64 {
 				cands = append(cands, int(u), int64(u))
 			}
@@ -423,10 +506,8 @@ func interfaceMapLookup(rv reflect.Value, key interface{}) (reflect.Value, bool)
 }
 
 // dictMethodOver builds the dict method attr (get, items, keys, values) of a
-// map with non-string keys, in the order of sortedMapPairs. get looks the key
-// up without scanning when it can: interfaceMapLookup for interface keys,
-// mapKey for typed keys; only key kinds mapKey cannot build are scanned with
-// Equal.
+// Go map, in the order of sortedMapPairs. get looks the key up with mapLookup,
+// without scanning or copying the map.
 func dictMethodOver(rv reflect.Value, attr string) interface{} {
 	if attr == "get" {
 		return &builtinMethod{name: "get", fn: func(args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
@@ -436,21 +517,8 @@ func dictMethodOver(rv reflect.Value, attr string) interface{} {
 			if len(args) < 1 || len(args) > 2 {
 				return nil, fmt.Errorf("get() takes 1 or 2 arguments (%d given)", len(args))
 			}
-			if rv.Type().Key().Kind() == reflect.Interface {
-				if val, ok := interfaceMapLookup(rv, args[0]); ok {
-					return val.Interface(), nil
-				}
-			} else if k, ok := mapKey(args[0], rv.Type().Key()); ok {
-				if val := rv.MapIndex(k); val.IsValid() {
-					return val.Interface(), nil
-				}
-			} else {
-				for _, p := range sortedMapPairs(rv) {
-					pair := p.([]interface{})
-					if Equal(pair[0], args[0]) {
-						return pair[1], nil
-					}
-				}
+			if val, ok := mapLookup(rv, args[0]); ok {
+				return val.Interface(), nil
 			}
 			if len(args) == 2 {
 				return args[1], nil

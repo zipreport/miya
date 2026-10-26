@@ -758,8 +758,8 @@ func contains(container, item interface{}) (bool, error) {
 			}
 			return false, nil
 		case reflect.Map:
-			itemValue := reflect.ValueOf(item)
-			return rv.MapIndex(itemValue).IsValid(), nil
+			_, ok := runtime.MapLookup(container, item)
+			return ok, nil
 		default:
 			return false, fmt.Errorf("cannot check containment in %T", container)
 		}

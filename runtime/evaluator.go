@@ -2024,14 +2024,8 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 			}
 			return rv.Index(keyInt).Interface(), nil
 		case reflect.Map:
-			if rv.Type().Key().Kind() == reflect.Interface {
-				if val, ok := interfaceMapLookup(rv, key); ok {
-					return val.Interface(), nil
-				}
-			} else if k, ok := mapKey(key, rv.Type().Key()); ok {
-				if val := rv.MapIndex(k); val.IsValid() {
-					return val.Interface(), nil
-				}
+			if val, ok := mapLookup(rv, key); ok {
+				return val.Interface(), nil
 			}
 			return NewUndefined(fmt.Sprintf("%v", key), UndefinedSilent, nil), nil
 		}
@@ -3243,6 +3237,7 @@ func (e *DefaultEvaluator) greaterEqual(a, b interface{}) (bool, error) {
 }
 
 func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
+	rawItem := item
 	container, item = basicValue(Indirect(container)), basicValue(Indirect(item))
 	switch v := container.(type) {
 	case *Undefined:
@@ -3273,30 +3268,8 @@ func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
 			}
 			return false, nil
 		case reflect.Map:
-			// Handle any map type
-			kt := rv.Type().Key()
-			if kt.Kind() == reflect.String {
-				return rv.MapIndex(reflect.ValueOf(stringMapKey(item)).Convert(kt)).IsValid(), nil
-			}
-			if kt.Kind() == reflect.Interface {
-				_, found := interfaceMapLookup(rv, item)
-				return found, nil
-			}
-			if k, ok := mapKey(item, kt); ok {
-				return rv.MapIndex(k).IsValid(), nil
-			}
-			keys := rv.MapKeys()
-			itemValue := reflect.ValueOf(item)
-			for _, key := range keys {
-				if e.equal(key.Interface(), item) {
-					return true, nil
-				}
-			}
-			// Also check if item can be used as a key directly
-			if itemValue.IsValid() && itemValue.Comparable() && itemValue.Type().AssignableTo(rv.Type().Key()) {
-				return rv.MapIndex(itemValue).IsValid(), nil
-			}
-			return false, nil
+			_, found := mapLookup(rv, rawItem)
+			return found, nil
 		default:
 			return false, fmt.Errorf("cannot check containment in %T", container)
 		}
