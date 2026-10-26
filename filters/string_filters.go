@@ -238,7 +238,7 @@ func WordwrapFilter(value interface{}, args ...interface{}) (interface{}, error)
 	}
 	width := 79
 	if arg(0) != nil {
-		w, err := ToInt(arg(0))
+		w, err := ToInt(runtime.Unmark(arg(0)))
 		if err != nil {
 			return nil, fmt.Errorf("wordwrap width must be integer: %v", err)
 		}
