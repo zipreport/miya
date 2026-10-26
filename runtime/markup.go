@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"fmt"
 	"html"
 	"reflect"
 )
@@ -230,10 +229,6 @@ func escapeArg(ctx Context, a interface{}) interface{} {
 	}
 	if a == nil {
 		return a
-	}
-	switch a.(type) {
-	case fmt.Stringer, error:
-		return escapeFor(ctx, a)
 	}
 	if isNumberKind(a) || reflect.ValueOf(a).Kind() == reflect.Bool {
 		// a number or bool stays one unless its string form needs escaping
