@@ -191,6 +191,24 @@ type Evaluator interface {
 // nest deeper than maxRecursionDepth.
 var ErrMaxRecursion = errors.New("maximum template recursion depth exceeded")
 
+// ErrTemplateNotFound is matched (errors.Is) by every error that means a
+// template does not exist: the loader could not provide its source. A
+// template that exists but fails to compile is not "not found".
+var ErrTemplateNotFound = errors.New("template not found")
+
+// TemplateNotFoundError reports which template could not be found. It
+// matches ErrTemplateNotFound with errors.Is and unwraps to the loader's error.
+type TemplateNotFoundError struct {
+	Name string
+	Err  error
+}
+
+func (e *TemplateNotFoundError) Error() string {
+	return fmt.Sprintf("failed to load template %q: %v", e.Name, e.Err)
+}
+func (e *TemplateNotFoundError) Unwrap() error        { return e.Err }
+func (e *TemplateNotFoundError) Is(target error) bool { return target == ErrTemplateNotFound }
+
 const maxRecursionDepth = 200
 
 type DefaultEvaluator struct {
