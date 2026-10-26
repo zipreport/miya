@@ -1818,6 +1818,9 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 		if val, ok := v[attr]; ok {
 			return val
 		}
+		if attr == "get" {
+			return dictMethodOver(reflect.ValueOf(v), "get")
+		}
 		if isDictMethodName(attr) {
 			return e.getAttribute(stringMap(v), attr)
 		}
@@ -1896,7 +1899,7 @@ func (e *DefaultEvaluator) lookupReflect(obj interface{}, attr string) (interfac
 			return val.Interface(), true
 		}
 		if isDictMethodName(attr) {
-			if attr == "get" && kt.Kind() == reflect.Interface {
+			if attr == "get" {
 				return dictMethodOver(rv, attr), true
 			}
 			if m, ok := StringKeyMap(obj); ok && e.attributeExists(m, attr) {
