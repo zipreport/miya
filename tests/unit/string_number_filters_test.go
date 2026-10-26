@@ -1,6 +1,7 @@
 package miya_test
 
 import (
+	"errors"
 	"math"
 	"testing"
 
@@ -88,6 +89,7 @@ func TestStringNumberFilters(t *testing.T) {
 		{"ro_neg_prec_half", `{{ 1250.0|round(-2) }}`, "1300"},
 		{"ro_prec_cap", `{{ 1.5|round(400) }}`, "1.5"},
 		{"ro_prec_cap_320", `{{ 1.5|round(320) }}`, "1.5"},
+		{"ro_prec_cap_zero", `{{ 0|round(400) }}`, "0"},
 		{"ro_scaled_inf", `{{ big|round(300) }}`, "1e+20"},
 		{"ro_big_exact", `{{ big|round(3) }}`, "100000000000000000000.000"},
 		{"ro_inf", `{{ inf|round(2) }}`, "+Inf"},
@@ -117,6 +119,7 @@ func TestStringNumberFilters(t *testing.T) {
 		{"int_bad_base", `{{ '5'|int(0, 1) }}`, "5"},
 		{"int_float_bad_base", `{{ 3.7|int(0, 1) }}`, "3"},
 		{"int_nbsp", "{{ ' 7'|int }}", "7"},
+		{"int_hex_nbsp", "{{ '\u00a0ff'|int(0, 16) }}", "255"},
 		{"int_x1c", "{{ '\x1c7'|int }}", "0"},
 		{"int_exp_overflow", `{{ '1e400'|int }}`, "0"},
 		{"deviation_int_overflow", `{{ '12345678901234567890'|int }}`, "0"},
@@ -163,6 +166,8 @@ func TestStringNumberFilters(t *testing.T) {
 			if tc.want == "ERR" {
 				if err == nil {
 					t.Errorf("expected error, got %q", got)
+				} else if errors.Is(err, miya.ErrRenderPanic) {
+					t.Errorf("expected a filter error, got a recovered panic: %v", err)
 				}
 				return
 			}
