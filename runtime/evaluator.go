@@ -1237,24 +1237,26 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 	// The include runs in a copy of the includer's scope: it reads the
 	// includer's variables, and its own {% set %} stays inside.
 	var includeCtx Context
-	if c, ok := ctx.(childScoper); ok {
-		includeCtx = c.Child()
-	} else {
-		includeCtx = ctx.Clone()
-	}
 	if node.WithoutContext {
 		includeCtx = importContext(ctx, false)
-	} else if node.Context != nil {
-		// If a context expression is provided, evaluate it
-		contextValue, err := e.EvalNode(node.Context, ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error evaluating context for include: %w", err)
+	} else {
+		if c, ok := ctx.(childScoper); ok {
+			includeCtx = c.Child()
+		} else {
+			includeCtx = ctx.Clone()
 		}
+		if node.Context != nil {
+			// If a context expression is provided, evaluate it
+			contextValue, err := e.EvalNode(node.Context, ctx)
+			if err != nil {
+				return nil, fmt.Errorf("error evaluating context for include: %w", err)
+			}
 
-		// Add the provided values to the include's scope
-		if contextMap, ok := contextValue.(map[string]interface{}); ok {
-			for key, value := range contextMap {
-				includeCtx.SetVariable(key, value)
+			// Add the provided values to the include's scope
+			if contextMap, ok := contextValue.(map[string]interface{}); ok {
+				for key, value := range contextMap {
+					includeCtx.SetVariable(key, value)
+				}
 			}
 		}
 	}
