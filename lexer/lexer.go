@@ -533,7 +533,7 @@ func (l *Lexer) lexExpression() (*Token, error) {
 		if isDigit(l.ch) {
 			return l.lexNumber()
 		}
-		if isLetter(l.ch) || l.ch == '_' {
+		if r, _ := utf8.DecodeRuneInString(l.input[l.pos:]); isIdentStart(r) {
 			return l.lexIdentifier()
 		}
 	}
@@ -591,43 +591,65 @@ func (l *Lexer) lexNumber() (*Token, error) {
 	column := l.column
 	startPos := l.pos
 
-	// Read integer part
-	for isDigit(l.ch) {
+	// 0x1F, 0o17, 0b101, with optional underscores after the prefix
+	if l.ch == '0' {
+		if base := baseDigits(l.peekChar()); base != nil {
+			if p := l.pos + 2; p < len(l.input) && (base(l.input[p]) || l.input[p] == '_' && p+1 < len(l.input) && base(l.input[p+1])) {
+				l.readChar()
+				l.readChar()
+				l.readDigits(base)
+				return &Token{Type: TokenInteger, Value: l.input[startPos:l.pos], Line: line, Column: column}, nil
+			}
+		}
+	}
+
+	l.readDigits(isDigit)
+	tokenType := TokenInteger
+	// After a "." (L.0.1) a number is an integer index, never a float, as
+	// in Jinja2's lexer (its float pattern starts with (?<!\.))
+	afterDot := startPos > 0 && l.input[startPos-1] == '.'
+	if !afterDot && l.ch == '.' && isDigit(l.peekChar()) {
+		l.readChar() // consume '.'
+		l.readDigits(isDigit)
+		tokenType = TokenFloat
+	}
+	if !afterDot && (l.ch == 'e' || l.ch == 'E') {
+		p := l.pos + 1
+		if p < len(l.input) && (l.input[p] == '+' || l.input[p] == '-') {
+			p++
+		}
+		if p < len(l.input) && isDigit(l.input[p]) {
+			for l.pos < p {
+				l.readChar()
+			}
+			l.readDigits(isDigit)
+			tokenType = TokenFloat
+		}
+	}
+
+	return &Token{Type: tokenType, Value: l.input[startPos:l.pos], Line: line, Column: column}, nil
+}
+
+// readDigits consumes digits accepted by digit, allowing a single "_"
+// between two digits, as Jinja2 does.
+func (l *Lexer) readDigits(digit func(byte) bool) {
+	for digit(l.ch) || l.ch == '_' && digit(l.peekChar()) {
 		l.readChar()
 	}
+}
 
-	// Check for float
-	if l.ch == '.' && isDigit(l.peekChar()) {
-		l.readChar() // consume '.'
-		for isDigit(l.ch) {
-			l.readChar()
-		}
-
-		// Check for scientific notation
-		if l.ch == 'e' || l.ch == 'E' {
-			l.readChar()
-			if l.ch == '+' || l.ch == '-' {
-				l.readChar()
-			}
-			for isDigit(l.ch) {
-				l.readChar()
-			}
-		}
-
-		return &Token{
-			Type:   TokenFloat,
-			Value:  l.input[startPos:l.pos],
-			Line:   line,
-			Column: column,
-		}, nil
+// baseDigits returns the digit test for the base prefix letter after a "0"
+// (x, o or b, any case), or nil.
+func baseDigits(c byte) func(byte) bool {
+	switch c {
+	case 'x', 'X':
+		return func(b byte) bool { return isDigit(b) || 'a' <= b && b <= 'f' || 'A' <= b && b <= 'F' }
+	case 'o', 'O':
+		return func(b byte) bool { return '0' <= b && b <= '7' }
+	case 'b', 'B':
+		return func(b byte) bool { return b == '0' || b == '1' }
 	}
-
-	return &Token{
-		Type:   TokenInteger,
-		Value:  l.input[startPos:l.pos],
-		Line:   line,
-		Column: column,
-	}, nil
+	return nil
 }
 
 func (l *Lexer) lexIdentifier() (*Token, error) {
@@ -635,8 +657,14 @@ func (l *Lexer) lexIdentifier() (*Token, error) {
 	column := l.column
 	startPos := l.pos
 
-	for isLetter(l.ch) || isDigit(l.ch) || l.ch == '_' {
-		l.readChar()
+	for {
+		r, size := utf8.DecodeRuneInString(l.input[l.pos:])
+		if l.ch == 0 || !isIdentPart(r) {
+			break
+		}
+		for i := 0; i < size; i++ {
+			l.readChar()
+		}
 	}
 
 	ident := l.input[startPos:l.pos]
@@ -648,6 +676,18 @@ func (l *Lexer) lexIdentifier() (*Token, error) {
 		Line:   line,
 		Column: column,
 	}, nil
+}
+
+// isIdentStart and isIdentPart approximate Python identifiers, which Jinja2
+// uses: a letter or "_", then letters, digits, "_" and combining marks.
+// Unlike Python, names are not NFKC-normalized, and letter numbers (Ⅻ) and
+// "·" are rejected.
+func isIdentStart(r rune) bool {
+	return r == '_' || unicode.IsLetter(r)
+}
+
+func isIdentPart(r rune) bool {
+	return isIdentStart(r) || unicode.IsDigit(r) || unicode.In(r, unicode.Mn, unicode.Mc, unicode.Pc)
 }
 
 func (l *Lexer) readChar() {
