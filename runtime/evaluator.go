@@ -386,11 +386,8 @@ func (e *DefaultEvaluator) EvalVariableNode(node *parser.VariableNode, ctx Conte
 
 	// A strict undefined value stored in a variable (such as a name a
 	// {% from %} import did not find) raises when printed, as in Jinja2.
-	if u, ok := result.(*Undefined); ok && u.Behavior == UndefinedStrict {
-		if u.Hint != "" {
-			return nil, fmt.Errorf("undefined variable %s: %s", u.Name, u.Hint)
-		}
-		return nil, u.Error()
+	if err := strictUndefinedUse(result); err != nil {
+		return nil, err
 	}
 
 	// Apply auto-escaping if enabled in this context
@@ -419,12 +416,13 @@ func (e *DefaultEvaluator) EvalIdentifierNode(node *parser.IdentifierNode, ctx C
 		// Fallback to original behavior
 		return nil, NewUndefinedVariableError(node.Name, node)
 	}
-	return Unbox(value), nil
+	return unbox(value), nil
 }
 
 // evalLookup evaluates expr like EvalNode, except that when expr is a
-// variable, attribute or item lookup that finds nothing it returns an
-// *Undefined instead of failing, even in strict mode. Jinja2's StrictUndefined
+// variable, attribute or item lookup that finds nothing, or a filter whose
+// result is undefined, it returns an *Undefined instead of failing, even in
+// strict mode. Jinja2's StrictUndefined
 // can be passed to default and to the defined/undefined/none tests; only
 // using it fails. Errors from evaluating the base of the lookup still fail.
 func (e *DefaultEvaluator) evalLookup(expr parser.Node, ctx Context) (interface{}, error) {
@@ -435,7 +433,7 @@ func (e *DefaultEvaluator) evalLookup(expr parser.Node, ctx Context) (interface{
 	switch n := expr.(type) {
 	case *parser.IdentifierNode:
 		if v, ok := ctx.GetVariable(n.Name); ok {
-			return Unbox(v), nil
+			return unbox(v), nil
 		}
 		return NewUndefined(n.Name, behavior, n), nil
 	case *parser.AttributeNode:
@@ -487,6 +485,8 @@ func (e *DefaultEvaluator) evalLookup(expr parser.Node, ctx Context) (interface{
 			return NewUndefined(fmt.Sprintf("%s[%s]", e.getObjectName(obj), SprintV(key)), behavior, n), nil
 		}
 		return v, nil
+	case *parser.FilterNode:
+		return e.evalFilter(n, ctx)
 	}
 	return e.EvalNode(expr, ctx)
 }
@@ -593,7 +593,20 @@ func (e *DefaultEvaluator) EvalGetItemNode(node *parser.GetItemNode, ctx Context
 	return v, nil
 }
 
+// EvalFilterNode applies a filter; a strict undefined result fails here, as
+// an undefined variable does, unless evalLookup asked for it.
 func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) (interface{}, error) {
+	result, err := e.evalFilter(node, ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := strictUndefinedUse(result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (e *DefaultEvaluator) evalFilter(node *parser.FilterNode, ctx Context) (interface{}, error) {
 	var value interface{}
 	var err error
 	if node.FilterName == "default" || node.FilterName == "d" {
@@ -603,6 +616,12 @@ func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) 
 	}
 	if err != nil {
 		return nil, err
+	}
+	// A strict undefined result of an earlier filter fails on use, as in Jinja2.
+	if node.FilterName != "default" && node.FilterName != "d" {
+		if err := strictUndefinedUse(value); err != nil {
+			return nil, err
+		}
 	}
 
 	// Evaluate filter arguments with pre-allocated capacity
@@ -635,14 +654,15 @@ func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) 
 		}
 		// The keywords travel as a trailing KwArgs so the markup policy treats
 		// them like positional arguments.
-		return e.applyFilterWithMarkup(node.FilterName, value, append(args[:len(args):len(args)], KwArgs(kwargs)), ctx,
+		result, err := e.applyFilterWithMarkup(node.FilterName, value, append(args[:len(args):len(args)], KwArgs(kwargs)), ctx,
 			func(v interface{}, a []interface{}) (interface{}, error) {
 				n := len(a) - 1
 				return applier.ApplyFilterKwargs(node.FilterName, v, a[:n], map[string]interface{}(a[n].(KwArgs)))
 			})
+		return e.filterUndefined(node, result, err)
 	}
 
-	return e.applyFilterWithMarkup(node.FilterName, value, args, ctx, func(v interface{}, a []interface{}) (interface{}, error) {
+	result, err := e.applyFilterWithMarkup(node.FilterName, value, args, ctx, func(v interface{}, a []interface{}) (interface{}, error) {
 		// Try to use environment's filter registry if available
 		if envCtx, ok := envContext(ctx); ok {
 			return envCtx.ApplyFilter(node.FilterName, v, a...)
@@ -650,6 +670,36 @@ func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) 
 		// Fallback to basic filters
 		return e.applyFilter(node.FilterName, v, a)
 	})
+	return e.filterUndefined(node, result, err)
+}
+
+// strictUndefinedUse returns the error of using v when it is a strict undefined.
+func strictUndefinedUse(v interface{}) error {
+	u, ok := v.(*Undefined)
+	if !ok || u.Behavior != UndefinedStrict {
+		return nil
+	}
+	if u.Hint != "" {
+		return fmt.Errorf("undefined variable %s: %s", u.Name, u.Hint)
+	}
+	return u.Error()
+}
+
+// filterUndefined rebuilds an undefined filter result with the environment's
+// undefined behavior, keeping its hint: filters cannot see the environment
+// and return silent undefined.
+func (e *DefaultEvaluator) filterUndefined(node *parser.FilterNode, result interface{}, err error) (interface{}, error) {
+	u, ok := result.(*Undefined)
+	if err != nil || !ok || e.undefinedHandler == nil || u.Behavior == e.undefinedHandler.GetUndefinedBehavior() {
+		return result, err
+	}
+	name := u.Name
+	if name == "" {
+		name = node.FilterName
+	}
+	nu := e.undefinedHandler.undefinedFactory(name, node)
+	nu.Hint = u.Hint
+	return nu, nil
 }
 
 func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Context) (interface{}, error) {
@@ -682,10 +732,19 @@ func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Conte
 			if m, ok := concatMarkup(ctx, left, right); ok {
 				return m, nil
 			}
+		} else if r, ok := concatEscaped(ctx, left, right); ok {
+			return r, nil
 		}
 		left, right = Unmark(left), Unmark(right)
 	case "+":
 		if !markupContext(ctx) {
+			_, ls := basicValue(left).(string)
+			_, rs := basicValue(right).(string)
+			if ls && rs {
+				if r, ok := concatEscaped(ctx, left, right); ok {
+					return r, nil
+				}
+			}
 			left, right = Unmark(left), Unmark(right)
 			break
 		}
@@ -1372,8 +1431,8 @@ func (e *DefaultEvaluator) EvalTestNode(node *parser.TestNode, ctx Context) (int
 	}
 
 	if node.TestName != "escaped" {
-		value = Unmark(value)
-		args = unmarkArgs(args)
+		value = plainEscaped(Unmark(value))
+		args = plainArgContainers(unmarkArgs(args))
 	}
 
 	// Try to use environment's test registry if available
@@ -1741,11 +1800,11 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 
 	switch v := obj.(type) {
 	case NamespaceInterface:
-		val, ok := v.Get(attr)
+		val, ok := nsRawGet(v, attr)
 		if !ok {
 			return nil
 		}
-		return Unbox(val)
+		return unbox(val)
 	case *Cycler:
 		// Handle Cycler methods
 		switch attr {
@@ -1957,6 +2016,10 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("cannot get item from nil")
 	}
 	key = Unmark(key)
+	if t, _, ok := asEscaped(obj); ok {
+		// an item could split an escape sequence: it is plain text
+		return e.getItem(t, key)
+	}
 	if m, ok := AsMarkup(obj); ok {
 		r, err := e.getItem(string(m), key)
 		if s, ok := r.(string); ok {
@@ -2182,6 +2245,14 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 	case KeepMarkupFunc:
 		if len(kwargs) > 0 {
 			args = append(args, kwargs)
+		}
+		if escapedOutputMade.Load() {
+			// Markup stays, escaped output does not
+			plain := make([]interface{}, len(args))
+			for i, a := range args {
+				plain[i] = plainEscaped(a)
+			}
+			args = plain
 		}
 		return fn(args...)
 	}
@@ -3307,6 +3378,9 @@ func (e *DefaultEvaluator) length(obj interface{}) (int, error) {
 	if obj == nil {
 		return 0, nil
 	}
+	if t, _, ok := asEscaped(obj); ok {
+		return e.length(t)
+	}
 
 	switch v := obj.(type) {
 	case string:
@@ -3461,6 +3535,9 @@ func (e *DefaultEvaluator) slice(obj interface{}, start, end, step *int) (interf
 	}
 	if m, ok := AsMarkup(obj); ok {
 		return Markup(e.sliceString(string(m), start, end, step)), nil
+	}
+	if t, _, ok := asEscaped(obj); ok {
+		return e.sliceString(t, start, end, step), nil
 	}
 
 	switch v := obj.(type) {
@@ -3938,6 +4015,9 @@ func (e *DefaultEvaluator) EvalFilterBlockNode(node *parser.FilterBlockNode, ctx
 		current = result
 	}
 
+	if err := strictUndefinedUse(current); err != nil {
+		return nil, err
+	}
 	// Markup is written as is; anything else is escaped like {{ }} would
 	if m, ok := AsMarkup(current); ok {
 		return string(m), nil

@@ -12,7 +12,7 @@ import (
 	"github.com/zipreport/miya/runtime"
 )
 
-// FirstFilter returns the first item in a sequence
+// FirstFilter returns the first item in a sequence; an empty one gives undefined.
 func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	value = runtime.BasicValue(mapAsKeys(value))
 	if value == nil {
@@ -61,10 +61,10 @@ func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		}
 	}
 
-	return nil, nil
+	return emptyUndefined("No first item, sequence was empty."), nil
 }
 
-// LastFilter returns the last item in a sequence
+// LastFilter returns the last item in a sequence; an empty one gives undefined.
 func LastFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	value = runtime.BasicValue(mapAsKeys(value))
 	if value == nil {
@@ -113,7 +113,7 @@ func LastFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		}
 	}
 
-	return nil, nil
+	return emptyUndefined("No last item, sequence was empty."), nil
 }
 
 // LengthFilter returns the length of a sequence or mapping

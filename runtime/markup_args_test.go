@@ -1,6 +1,9 @@
 package runtime
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func markupTestCtx() Context {
 	return &autoescapeContext{Context: &simpleContext{variables: map[string]interface{}{}}, autoescape: true}
@@ -113,5 +116,76 @@ func TestMapMarkupSubListMismatch(t *testing.T) {
 	}
 	if got := out.([]interface{}); len(got) != 2 || got[0] != "W1" || got[1] != "W2" {
 		t.Errorf("out = %v, want [W1 W2]", got)
+	}
+}
+
+// The scans that turn escaped output into plain strings for Go code run only
+// once escaped output has been made, so HTML renders never pay for them; an
+// HTML render makes none.
+func TestEscapedScanOnlyAfterEscapedOutput(t *testing.T) {
+	defer escapedOutputMade.Store(true)
+	escapedOutputMade.Store(false)
+	var seen interface{}
+	kind := func(v interface{}, _ []interface{}) (interface{}, error) {
+		seen = v.([]interface{})[1]
+		return "", nil
+	}
+	e := NewEvaluator()
+	ctx := markupTestCtx()
+	if r := markIfSafe("<x>", ctx); r != Markup("<x>") {
+		t.Fatalf("markIfSafe = %#v", r)
+	}
+	if _, ok := concatEscaped(ctx, "a", Markup("b")); ok || escapedOutputMade.Load() {
+		t.Fatal("HTML output made escaped output")
+	}
+	// a value made elsewhere is not looked for
+	list := []interface{}{"a", escapedJS("b")}
+	if _, err := e.applyFilterWithMarkup("kind", list, nil, ctx, kind); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := seen.(escapedJS); !ok {
+		t.Errorf("scanned before escaped output was made: got %T", seen)
+	}
+	if got := Unbox(list).([]interface{})[1]; got != escapedJS("b") {
+		t.Errorf("Unbox scanned before escaped output was made: got %T", got)
+	}
+	markEscaped("c", EscapeContextJS)
+	if _, err := e.applyFilterWithMarkup("kind", list, nil, ctx, kind); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := seen.(string); !ok {
+		t.Errorf("not scanned after escaped output was made: got %T", seen)
+	}
+	if got := Unbox(list).([]interface{})[1]; got != "b" {
+		t.Errorf("Unbox did not scan after escaped output was made: got %T", got)
+	}
+}
+
+// plainEscaped walks a value that shares containers once per container, and
+// stops where a container contains itself.
+func TestPlainEscapedSharedAndSelfContaining(t *testing.T) {
+	escapedOutputMade.Store(true)
+	var l interface{} = []interface{}{escapedJS("a")}
+	for i := 0; i < 40; i++ {
+		l = []interface{}{l, l}
+	}
+	self := []interface{}{escapedJS("a"), nil}
+	self[1] = self
+	done := make(chan interface{}, 1)
+	go func() { done <- plainEscaped(map[string]interface{}{"l": l, "self": self}) }()
+	select {
+	case r := <-done:
+		leaf := r.(map[string]interface{})["l"]
+		for i := 0; i < 40; i++ {
+			leaf = leaf.([]interface{})[1]
+		}
+		if got := leaf.([]interface{})[0]; got != "a" {
+			t.Errorf("shared leaf = %#v", got)
+		}
+		if got := r.(map[string]interface{})["self"].([]interface{})[0]; got != "a" {
+			t.Errorf("self-containing item = %#v", got)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out")
 	}
 }

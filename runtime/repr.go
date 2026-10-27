@@ -126,7 +126,7 @@ func (s *reprState) repr(v interface{}) {
 		s.reprItems(x)
 		return
 	}
-	v = Unbox(v)
+	v = unbox(v)
 	switch sv := v.(type) {
 	case SafeValue:
 		s.repr(sv.Value)

@@ -298,6 +298,28 @@ func BenchmarkComplexFilterChain(b *testing.B) {
 	}
 }
 
+// A filter on a large list inside a loop over it: each filter call must not
+// walk the whole list in an HTML render.
+func BenchmarkFilterOnLargeListInLoop(b *testing.B) {
+	env := miya.NewEnvironment(miya.WithAutoEscape(true))
+	items := make([]interface{}, 2000)
+	for i := range items {
+		items[i] = "item"
+	}
+	tmpl, err := env.FromString("{% for i in items %}{{ items|first }}{% endfor %}")
+	if err != nil {
+		b.Fatalf("Failed to parse template: %v", err)
+	}
+	data := map[string]interface{}{"items": items}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := tmpl.Render(miya.NewContextFrom(data)); err != nil {
+			b.Fatalf("Failed to render template: %v", err)
+		}
+	}
+}
+
 // Memory Performance Benchmarks
 func BenchmarkMemoryUsage(b *testing.B) {
 	env := miya.NewEnvironment()

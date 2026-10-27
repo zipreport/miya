@@ -3,6 +3,8 @@ package filters
 import (
 	"reflect"
 	"testing"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 // TestFirstFilter tests the FirstFilter function
@@ -32,8 +34,8 @@ func TestFirstFilter(t *testing.T) {
 		if err != nil {
 			t.Fatalf("FirstFilter returned error: %v", err)
 		}
-		if result != nil {
-			t.Errorf("FirstFilter([]) = %v, want nil", result)
+		if !runtime.IsUndefined(result) {
+			t.Errorf("FirstFilter([]) = %v, want undefined", result)
 		}
 	})
 
@@ -62,8 +64,8 @@ func TestFirstFilter(t *testing.T) {
 		if err != nil {
 			t.Fatalf("FirstFilter returned error: %v", err)
 		}
-		if result != nil {
-			t.Errorf("FirstFilter('') = %v, want nil", result)
+		if !runtime.IsUndefined(result) {
+			t.Errorf("FirstFilter('') = %v, want undefined", result)
 		}
 	})
 
@@ -115,8 +117,8 @@ func TestLastFilter(t *testing.T) {
 		if err != nil {
 			t.Fatalf("LastFilter returned error: %v", err)
 		}
-		if result != nil {
-			t.Errorf("LastFilter([]) = %v, want nil", result)
+		if !runtime.IsUndefined(result) {
+			t.Errorf("LastFilter([]) = %v, want undefined", result)
 		}
 	})
 

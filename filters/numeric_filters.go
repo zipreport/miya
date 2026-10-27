@@ -350,7 +350,7 @@ func extremum(name string, want int, value interface{}, args []interface{}) (int
 		}
 	}
 	if !found {
-		return runtime.NewUndefined("", runtime.UndefinedSilent, nil), nil
+		return emptyUndefined("No aggregated item, sequence was empty."), nil
 	}
 	return best, nil
 }
@@ -363,7 +363,7 @@ func RandomFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	case string:
 		runes := []rune(v)
 		if len(runes) == 0 {
-			return runtime.NewUndefined("", runtime.UndefinedSilent, nil), nil
+			return emptyUndefined("No random item, sequence was empty."), nil
 		}
 		return string(runes[rand.IntN(len(runes))]), nil
 	case []interface{}:
@@ -375,9 +375,17 @@ func RandomFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		items, _ = toInterfaceSlice(v)
 	}
 	if len(items) == 0 {
-		return runtime.NewUndefined("", runtime.UndefinedSilent, nil), nil
+		return emptyUndefined("No random item, sequence was empty."), nil
 	}
 	return items[rand.IntN(len(items))], nil
+}
+
+// emptyUndefined is the undefined result of a filter given an empty sequence;
+// the evaluator gives it the environment's undefined behavior.
+func emptyUndefined(hint string) *runtime.Undefined {
+	u := runtime.NewUndefined("", runtime.UndefinedSilent, nil)
+	u.Hint = hint
+	return u
 }
 
 // CeilFilter returns the ceiling (smallest integer greater than or equal to) of a number

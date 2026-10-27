@@ -581,6 +581,8 @@ func FileSizeFormatFilter(value interface{}, args ...interface{}) (interface{}, 
 }
 
 // AutoEscapeFilter conditionally escapes based on context
+//
+// Deprecated: use EscapeFilter; the "autoescape" name cannot be used in templates.
 func AutoEscapeFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	// This would be called by the template engine based on auto-escape settings
 	return EscapeFilter(value, args...)

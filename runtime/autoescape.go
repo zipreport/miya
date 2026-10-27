@@ -185,7 +185,7 @@ func (ae *AutoEscaper) escapeCSS(s string) string {
 	s = strings.ReplaceAll(s, "\t", "\\9 ")
 	// Escape potential CSS injection characters (using pre-compiled regex)
 	s = reControlChars.ReplaceAllStringFunc(s, func(match string) string {
-		return "\\x" + strings.ToUpper(string(rune(match[0])))
+		return fmt.Sprintf("\\%X ", match[0])
 	})
 	return s
 }
@@ -206,7 +206,7 @@ func (ae *AutoEscaper) escapeJSON(s string) string {
 	s = strings.ReplaceAll(s, "\f", "\\f")
 	// Escape control characters (using pre-compiled regex)
 	s = reControlChars.ReplaceAllStringFunc(s, func(match string) string {
-		return "\\u" + strings.ToUpper(string(rune(match[0])))
+		return fmt.Sprintf("\\u%04X", match[0])
 	})
 	return s
 }
@@ -239,7 +239,7 @@ func ToString(value interface{}) string {
 		return ToString(sv.Value)
 	}
 
-	value = Unbox(Indirect(value))
+	value = unbox(Indirect(value))
 	if value == nil {
 		return ""
 	}

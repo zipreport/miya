@@ -63,8 +63,14 @@ func BoxList(v interface{}) interface{} {
 
 // Unbox returns the value a template variable holds (for code that reads
 // context variables directly): orig or items for a listBox, any other
-// value unchanged.
+// value unchanged, except that escaped template output, also inside lists
+// and dicts, becomes a plain string.
 func Unbox(v interface{}) interface{} {
+	return plainEscaped(unbox(v))
+}
+
+// unbox is Unbox for the runtime itself: escaped output keeps its type.
+func unbox(v interface{}) interface{} {
 	if b, ok := v.(*listBox); ok {
 		return b.view()
 	}
@@ -317,6 +323,9 @@ func (e *DefaultEvaluator) builtinMethodFor(obj interface{}, name string, ctx Co
 		return nil, false
 	}
 	if isStr {
+		if t, tec, ok := asEscaped(obj); ok {
+			return e.escapedMethod(t, tec, name, ctx), true
+		}
 		if m, ok := AsMarkup(obj); ok {
 			// Outside the HTML family a safe receiver is plain text: the
 			// context escaper must run on the method's result, even when
@@ -356,6 +365,34 @@ func (e *DefaultEvaluator) builtinMethodFor(obj interface{}, name string, ctx Co
 		}}, true
 	}
 	return nil, false
+}
+
+// escapedMethod is a string method of escaped output t: it works on the
+// text, and the case and whitespace-strip methods called without arguments
+// in t's escape context keep the result escaped, as the filters do.
+func (e *DefaultEvaluator) escapedMethod(t string, tec EscapeContext, name string, ctx Context) *builtinMethod {
+	m := e.stringMethod(t, false, name)
+	if _, ec, _ := resolveEscape(ctx); tec != ec || !keepsEscaped(escapedKeepingMethods, name, tec, false) {
+		return m
+	}
+	return &builtinMethod{name: name, fn: func(args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+		r, err := m.fn(args, kwargs)
+		s, isStr := r.(string)
+		if err != nil || !isStr || len(args) > 0 {
+			return r, err
+		}
+		if caseFilters[name] && (tec == EscapeContextJS || tec == EscapeContextJSON) {
+			if s, isStr = keepEscapes(t, s); !isStr {
+				return r, nil
+			}
+		}
+		return markEscaped(s, tec), nil
+	}}
+}
+
+var escapedKeepingMethods = map[string]bool{
+	"upper": true, "lower": true, "capitalize": true,
+	"strip": true, "lstrip": true, "rstrip": true,
 }
 
 // mapGetMethod is d.get(key, default=None).

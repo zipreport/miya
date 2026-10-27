@@ -88,14 +88,14 @@ func (m *Macro) Call(args []interface{}, kwargs map[string]interface{}) (interfa
 		varargs := []interface{}{}
 		if len(args) > len(m.Parameters) {
 			for _, a := range args[len(m.Parameters):] {
-				varargs = append(varargs, Unbox(a))
+				varargs = append(varargs, unbox(a))
 			}
 		}
 		ctx.SetVariable("varargs", varargs)
 	}
 	if m.CatchKwargs {
 		for k, v := range rest {
-			rest[k] = Unbox(v)
+			rest[k] = unbox(v)
 		}
 		ctx.SetVariable("kwargs", rest)
 	} else if len(rest) > 0 {

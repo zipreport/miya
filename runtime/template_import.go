@@ -30,7 +30,8 @@ func (in *ImportedNamespace) Get(name string) (interface{}, bool) {
 	return Unbox(v), ok
 }
 
-// RawGet returns the stored value, which can be a list box.
+// RawGet returns the stored value for the runtime, which can be a list box
+// or escaped template output; Go code should use Get.
 func (in *ImportedNamespace) RawGet(name string) (interface{}, bool) {
 	// Check if it's a macro
 	if macro, ok := in.namespace.Macros[name]; ok {

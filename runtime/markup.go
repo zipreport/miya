@@ -4,6 +4,7 @@ import (
 	"html"
 	"reflect"
 	"strings"
+	"sync/atomic"
 	"unsafe"
 )
 
@@ -54,7 +55,64 @@ func Unmark(value interface{}) interface{} {
 	if m, ok := AsMarkup(value); ok {
 		return string(m)
 	}
+	if t, _, ok := asEscaped(value); ok {
+		return t
+	}
 	return value
+}
+
+// escapedJS, escapedCSS, escapedURL and escapedJSON are template output
+// (macro, caller, block set, filter block) already escaped for that escape
+// context: the counterpart there of Markup, written as is when printed in the
+// same context. Like Markup their Kind() is reflect.String. They stay inside
+// the runtime: Unmark and Unbox turn them into plain strings for Go code.
+type (
+	escapedJS   string
+	escapedCSS  string
+	escapedURL  string
+	escapedJSON string
+)
+
+// asEscaped returns the text and escape context of escaped output.
+func asEscaped(v interface{}) (string, EscapeContext, bool) {
+	switch t := v.(type) {
+	case escapedJS:
+		return string(t), EscapeContextJS, true
+	case escapedCSS:
+		return string(t), EscapeContextCSS, true
+	case escapedURL:
+		return string(t), EscapeContextURL, true
+	case escapedJSON:
+		return string(t), EscapeContextJSON, true
+	}
+	return "", "", false
+}
+
+// escapedOutputMade is set once markEscaped has tagged a value. Until then
+// no value can be tagged, and the scans that turn tagged values into plain
+// strings for Go code are skipped: HTML renders never pay for them.
+var escapedOutputMade atomic.Bool
+
+// markEscaped tags s as already escaped for ec; s is returned as is for a
+// context without a tag.
+func markEscaped(s string, ec EscapeContext) interface{} {
+	switch ec {
+	case EscapeContextJS, EscapeContextCSS, EscapeContextURL, EscapeContextJSON:
+		if !escapedOutputMade.Load() {
+			escapedOutputMade.Store(true)
+		}
+	}
+	switch ec {
+	case EscapeContextJS:
+		return escapedJS(s)
+	case EscapeContextCSS:
+		return escapedCSS(s)
+	case EscapeContextURL:
+		return escapedURL(s)
+	case EscapeContextJSON:
+		return escapedJSON(s)
+	}
+	return s
 }
 
 // EscapeMarkup is markupsafe.escape: safe values pass through, anything else
@@ -147,12 +205,16 @@ func htmlFamily(ec EscapeContext) bool {
 }
 
 // markIfSafe marks rendered template output as Markup when ctx escapes in an
-// HTML-family context.
+// HTML-family context, and as escaped for the context in any other.
 func markIfSafe(s string, ctx Context) interface{} {
-	if markupContext(ctx) {
+	on, ec, _ := resolveEscape(ctx)
+	if !on {
+		return s
+	}
+	if htmlFamily(ec) {
 		return Markup(s)
 	}
-	return s
+	return markEscaped(s, ec)
 }
 
 // escapeFor escapes v exactly as {{ }} would in ctx; safe values come back
@@ -162,6 +224,13 @@ func escapeFor(ctx Context, v interface{}) string {
 		return string(m)
 	}
 	on, ec, esc := resolveEscape(ctx)
+	if t, tec, ok := asEscaped(v); ok {
+		// escaped for another context it is plain text here
+		if tec == ec {
+			return t
+		}
+		v = t
+	}
 	if !on {
 		return ToString(v)
 	}
@@ -201,8 +270,68 @@ var markupAwareFilters = map[string]bool{
 	"nl2br": true, "truncatehtml": true, "xmlattr": true,
 }
 
-// markupPassthroughFilters return either their input or an argument.
+// markupPlainWhenOff return a plain string when autoescape is off, as Jinja2's
+// do_replace, do_title, do_wordwrap, do_join, do_urlize and do_xmlattr do;
+// miya's HTML-generating extras follow urlize.
+var markupPlainWhenOff = map[string]bool{
+	"replace": true, "title": true, "wordwrap": true, "join": true, "xmlattr": true,
+	"urlize": true, "urlizetruncate": true, "urlizetarget": true, "nl2br": true, "truncatehtml": true,
+}
+
+// escapedKeepingFilters keep escaped output escaped: they cannot split an
+// escape sequence (trim and strip only without arguments, and not in CSS,
+// where they would drop the space that ends an escape). title is not one:
+// its word boundaries would fall inside escape sequences.
+var escapedKeepingFilters = map[string]bool{
+	"upper": true, "lower": true, "capitalize": true,
+	"trim": true, "strip": true, "center": true, "indent": true, "string": true,
+}
+
+var stripNames = map[string]bool{"trim": true, "strip": true, "lstrip": true, "rstrip": true}
+
+// keepsEscaped reports whether the filter or method name keeps output
+// escaped for tec escaped.
+func keepsEscaped(keeping map[string]bool, name string, tec EscapeContext, withArgs bool) bool {
+	return keeping[name] && !(stripNames[name] && (withArgs || tec == EscapeContextCSS))
+}
+
+var caseFilters = map[string]bool{"upper": true, "lower": true, "capitalize": true}
+
+// keepEscapes undoes a case change inside the escape sequences of JS or JSON
+// text: the character after a backslash and the hex digits of \uXXXX and
+// \xXX. ok is false when the change did not keep the number of characters.
+func keepEscapes(orig, changed string) (string, bool) {
+	o, c := []rune(orig), []rune(changed)
+	if len(o) != len(c) {
+		return "", false
+	}
+	for i := 0; i < len(o)-1; i++ {
+		if o[i] != '\\' {
+			continue
+		}
+		n := 1
+		switch o[i+1] {
+		case 'u':
+			n = 5
+		case 'x':
+			n = 3
+		}
+		for j := i + 1; j <= i+n && j < len(o); j++ {
+			c[j] = o[j]
+		}
+		i += n
+	}
+	return string(c), true
+}
+
+// markupPassthroughFilters return either their input or an argument, each
+// as it is.
 var markupPassthroughFilters = map[string]bool{"default": true, "d": true}
+
+// markupEscapedArgFilters get their arguments escaped for a safe input even
+// with autoescape off: markupsafe's Markup.center escapes its fill. Jinja2
+// marks indent's string safe, and Markup.strip does not escape its chars.
+var markupEscapedArgFilters = map[string]bool{"center": true}
 
 // markupMixingFilters receive their input and arguments unchanged, safe or not,
 // and implement Jinja2's mixing of safe and plain text themselves.
@@ -255,6 +384,30 @@ func escapeArgs(ctx Context, args []interface{}) []interface{} {
 	return out
 }
 
+// markupAsText returns args with safe values, also inside a KwArgs, turned
+// into plain strings and the rest unchanged.
+func markupAsText(args []interface{}) []interface{} {
+	out := make([]interface{}, len(args))
+	for i, a := range args {
+		if kw, ok := a.(KwArgs); ok {
+			nk := make(KwArgs, len(kw))
+			for k, v := range kw {
+				if m, ok := AsMarkup(v); ok {
+					v = string(m)
+				}
+				nk[k] = v
+			}
+			out[i] = nk
+			continue
+		}
+		if m, ok := AsMarkup(a); ok {
+			a = string(m)
+		}
+		out[i] = a
+	}
+	return out
+}
+
 func escapeArg(ctx Context, a interface{}) interface{} {
 	if m, ok := AsMarkup(a); ok {
 		return string(m)
@@ -281,23 +434,212 @@ func unmarkCall(args []interface{}, kwargs map[string]interface{}) ([]interface{
 	if len(args) > 0 {
 		na := make([]interface{}, len(args))
 		for i, a := range args {
-			na[i] = Unmark(a)
+			na[i] = unmarkCallArg(a)
 		}
 		args = na
 	}
 	if len(kwargs) > 0 {
 		nk := make(map[string]interface{}, len(kwargs))
 		for k, v := range kwargs {
-			nk[k] = Unmark(v)
+			nk[k] = unmarkCallArg(v)
 		}
 		kwargs = nk
 	}
 	return args, kwargs
 }
 
+// unmarkCallArg un-marks a Go function argument; escaped output, also
+// nested in lists and dicts, becomes a plain string too.
+func unmarkCallArg(a interface{}) interface{} {
+	return plainEscaped(Unmark(a))
+}
+
+// plainEscaped returns v with escaped output turned into plain strings, also
+// inside nested []interface{} and map[string]interface{} values, for Go
+// code. A container is copied only when something in it changes; one that
+// contains itself is left as is where it recurs. Nothing is walked before
+// escaped output has been made.
+func plainEscaped(v interface{}) interface{} {
+	if !escapedOutputMade.Load() {
+		return v
+	}
+	r, _ := plainEscapedIn(v, nil)
+	return r
+}
+
+// plainArgContainers applies plainEscaped to the list and dict arguments,
+// also inside a KwArgs; escaped output given directly as an argument is left
+// to the markup policy.
+func plainArgContainers(args []interface{}) []interface{} {
+	if !escapedOutputMade.Load() {
+		return args
+	}
+	inside := func(v interface{}) (interface{}, bool) {
+		if _, _, ok := asEscaped(v); ok {
+			return v, false
+		}
+		return plainEscapedIn(v, nil)
+	}
+	var out []interface{}
+	for i, a := range args {
+		n, changed := a, false
+		if kw, ok := a.(KwArgs); ok {
+			var nk KwArgs
+			for k, v := range kw {
+				if r, ch := inside(v); ch {
+					if nk == nil {
+						nk = make(KwArgs, len(kw))
+						for k2, v2 := range kw {
+							nk[k2] = v2
+						}
+					}
+					nk[k] = r
+				}
+			}
+			n, changed = nk, nk != nil
+		} else {
+			n, changed = inside(a)
+		}
+		if changed {
+			if out == nil {
+				out = append([]interface{}(nil), args...)
+			}
+			out[i] = n
+		}
+	}
+	if out == nil {
+		return args
+	}
+	return out
+}
+
+// plainWalk holds the containers on the current path of a plainEscaped
+// walk, and the result for each container already walked: a value that
+// shares containers is walked once per container.
+type plainWalk struct {
+	path map[reprKey]bool
+	done map[reprKey]plainResult
+}
+
+type plainResult struct {
+	v       interface{}
+	changed bool
+}
+
+func plainEscapedIn(v interface{}, w *plainWalk) (interface{}, bool) {
+	if t, _, ok := asEscaped(v); ok {
+		return t, true
+	}
+	var key reprKey
+	switch c := v.(type) {
+	case []interface{}:
+		if len(c) == 0 {
+			return v, false
+		}
+		key = reprKey{uintptr(unsafe.Pointer(&c[0])), len(c)}
+	case map[string]interface{}:
+		if len(c) == 0 {
+			return v, false
+		}
+		key = reprKey{ptr: reflect.ValueOf(c).Pointer()}
+	default:
+		return v, false
+	}
+	if w == nil {
+		w = &plainWalk{path: map[reprKey]bool{}, done: map[reprKey]plainResult{}}
+	}
+	if r, ok := w.done[key]; ok {
+		return r.v, r.changed
+	}
+	if w.path[key] {
+		return v, false
+	}
+	w.path[key] = true
+	r := plainResult{v: v}
+	switch c := v.(type) {
+	case []interface{}:
+		var out []interface{}
+		for i, it := range c {
+			if n, changed := plainEscapedIn(it, w); changed {
+				if out == nil {
+					out = append([]interface{}(nil), c...)
+				}
+				out[i] = n
+			}
+		}
+		if out != nil {
+			r = plainResult{out, true}
+		}
+	case map[string]interface{}:
+		var out map[string]interface{}
+		for k, it := range c {
+			if n, changed := plainEscapedIn(it, w); changed {
+				if out == nil {
+					out = make(map[string]interface{}, len(c))
+					for k2, v2 := range c {
+						out[k2] = v2
+					}
+				}
+				out[k] = n
+			}
+		}
+		if out != nil {
+			r = plainResult{out, true}
+		}
+	}
+	delete(w.path, key)
+	w.done[key] = r
+	return r.v, r.changed
+}
+
 // applyFilterWithMarkup applies the markup policy around a filter call.
 func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{}, args []interface{}, ctx Context,
 	apply func(interface{}, []interface{}) (interface{}, error)) (interface{}, error) {
+	// Markup stays Markup in the HTML family whether or not autoescape is on,
+	// as markupsafe's does; only a few filters check autoescape themselves.
+	on, ec, _ := resolveEscape(ctx)
+	html := htmlFamily(ec)
+	keep := html && (on || !markupPlainWhenOff[name])
+
+	if t, tec, ok := asEscaped(value); ok {
+		switch {
+		case name == "safe" || name == "marksafe":
+			return value, nil
+		case markupPassthroughFilters[name]:
+			r, err := e.applyFilterWithMarkup(name, t, args, ctx, apply)
+			if s, ok := r.(string); err == nil && ok && s == t {
+				// the input came back
+				return value, nil
+			}
+			return r, err
+		case tec == ec && keepsEscaped(escapedKeepingFilters, name, tec, len(args) > 0):
+			// the arguments are escaped for the text's context even where
+			// autoescape is off, as markupsafe does for Markup
+			argCtx := ctx
+			if !on {
+				argCtx = &autoescapeContext{Context: ctx, autoescape: true}
+			}
+			// a safe argument is HTML-safe, not safe for tec
+			r, err := apply(t, escapeArgs(argCtx, markupAsText(args)))
+			if err != nil {
+				return nil, err
+			}
+			if s, ok := r.(string); ok {
+				if caseFilters[name] && (tec == EscapeContextJS || tec == EscapeContextJSON) {
+					if s, ok = keepEscapes(t, s); !ok {
+						return r, nil
+					}
+				}
+				return markEscaped(s, tec), nil
+			}
+			return r, nil
+		}
+		// any other filter gets the text, and its result is escaped again
+		value = t
+	}
+	// Go filters never see escaped output, even nested
+	value = plainEscaped(value)
+	args = plainArgContainers(args)
 	m, safe := AsMarkup(value)
 
 	var result interface{}
@@ -305,12 +647,18 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 	switch {
 	case name == "join" && markupContext(ctx):
 		result, err = e.joinMarkup(ctx, value, args, apply)
-	case markupMixingFilters[name] && markupContext(ctx):
+	case markupMixingFilters[name] && keep:
 		result, err = apply(value, args)
-	case name == "map" && !safe && markupContext(ctx):
+	case name == "map" && !safe && html:
 		result, err = e.mapMarkup(ctx, value, args, apply)
-	case !safe && markupPassthroughFilters[name]:
+	case markupPassthroughFilters[name] && !safe:
 		result, err = apply(value, args)
+	case markupPassthroughFilters[name]:
+		result, err = apply(string(m), args)
+		if s, ok := result.(string); ok && s == string(m) {
+			// the input came back
+			result = m
+		}
 	case !safe && name == "replace" && markupContext(ctx) && isReplaceInput(value) && anySafeArg(args):
 		result, err = apply(escapeFor(ctx, value), replaceArgs(ctx, args))
 		if s, ok := result.(string); ok {
@@ -320,8 +668,14 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 		result, err = apply(value, unmarkArgs(args))
 	case markupAwareFilters[name]:
 		result, err = apply(m, unmarkArgs(args))
-	case (markupPassthroughFilters[name] || markupPreservingFilters[name]) && markupContext(ctx):
-		result, err = apply(string(m), escapeArgs(ctx, args))
+	case markupPreservingFilters[name] && keep:
+		// with autoescape off the arguments stay as they are, except where
+		// a markupsafe method escapes them
+		argCtx := ctx
+		if !on && markupEscapedArgFilters[name] {
+			argCtx = &autoescapeContext{Context: ctx, autoescape: true}
+		}
+		result, err = apply(string(m), escapeArgs(argCtx, args))
 		if s, ok := result.(string); ok {
 			result = Markup(s)
 		}
@@ -337,10 +691,10 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 		result = rm
 		// Outside the HTML family only safe and marksafe stay safe: the
 		// context escaper must run for everything else.
-		if !markupContext(ctx) && name != "safe" && name != "marksafe" {
+		if !keep && name != "safe" && name != "marksafe" {
 			return string(rm), nil
 		}
-	} else if list, ok := result.([]interface{}); ok && !markupContext(ctx) && name != "safe" && name != "marksafe" {
+	} else if list, ok := result.([]interface{}); ok && !keep && name != "safe" && name != "marksafe" {
 		// map('e') and friends: Markup items must not reach a non-HTML context raw.
 		// Only lists are walked; maps are left alone.
 		result = unmarkItems(list, nil)
@@ -702,8 +1056,22 @@ func concatMarkup(ctx Context, left, right interface{}) (Markup, bool) {
 	return Markup(escapeFor(ctx, left) + escapeFor(ctx, right)), true
 }
 
-// unmarkItems returns a copy of list with Markup elements turned into plain
-// strings, recursing into nested lists. It returns list itself when nothing changes.
+// concatEscaped implements ~ and + when an operand is output escaped for the
+// active escape context: the other operand is escaped and the result stays
+// escaped.
+func concatEscaped(ctx Context, left, right interface{}) (interface{}, bool) {
+	on, ec, _ := resolveEscape(ctx)
+	_, lec, ls := asEscaped(left)
+	_, rec, rs := asEscaped(right)
+	if !on || !(ls && lec == ec || rs && rec == ec) {
+		return nil, false
+	}
+	return markEscaped(escapeFor(ctx, left)+escapeFor(ctx, right), ec), true
+}
+
+// unmarkItems returns a copy of list with Markup elements and escaped output
+// turned into plain strings, recursing into nested lists. It returns list
+// itself when nothing changes.
 func unmarkItems(list []interface{}, path map[reprKey]bool) []interface{} {
 	var out []interface{}
 	for i, it := range list {
@@ -729,6 +1097,8 @@ func unmarkItems(list []interface{}, path map[reprKey]bool) []interface{} {
 				continue
 			}
 			n = r
+		} else if t, _, ok := asEscaped(it); ok {
+			n = t
 		} else if m, ok := AsMarkup(it); ok {
 			n = string(m)
 		} else {

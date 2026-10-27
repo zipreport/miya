@@ -281,3 +281,93 @@ func TestUndefinedBehaviorSwitching(t *testing.T) {
 		t.Logf("Debug undefined result: %s", result)
 	})
 }
+
+// TestFilterUndefinedFollowsEnvironment checks that the undefined result of a
+// filter (random, first, last, min, max of nothing) takes the environment's
+// undefined behavior, as Jinja2's environment.undefined does.
+func TestFilterUndefinedFollowsEnvironment(t *testing.T) {
+	printing := []string{
+		`{{ []|random }}`, `{{ ''|random }}`, `{{ []|first }}`, `{{ []|last }}`,
+		`{{ []|min }}`, `{{ []|max }}`, `{{ []|first|upper }}`,
+		`{% filter first %}{% endfilter %}`,
+	}
+	defined := []string{
+		`{{ ([]|first) is defined }}`, `{{ ([]|random) is defined }}`,
+		`{{ ([]|first) is none }}`,
+	}
+	modes := map[string]runtime.UndefinedBehavior{
+		"silent": runtime.UndefinedSilent, "strict": runtime.UndefinedStrict, "debug": runtime.UndefinedDebug,
+	}
+	for mode, b := range modes {
+		env := miya.NewEnvironment(miya.WithUndefinedBehavior(b))
+		for _, tpl := range printing {
+			out, err := env.RenderString(tpl, miya.NewContext())
+			switch b {
+			case runtime.UndefinedStrict:
+				if err == nil {
+					t.Errorf("%s %s: want error, got %q", mode, tpl, out)
+				}
+			case runtime.UndefinedDebug:
+				if err != nil || !strings.Contains(strings.ToLower(out), "undefined variable") {
+					t.Errorf("%s %s: want debug placeholder, got %q, %v", mode, tpl, out, err)
+				}
+			default:
+				if err != nil || out != "" {
+					t.Errorf("%s %s: want empty, got %q, %v", mode, tpl, out, err)
+				}
+			}
+		}
+		for _, tpl := range defined {
+			if out, err := env.RenderString(tpl, miya.NewContext()); err != nil || out != "false" {
+				t.Errorf("%s %s: want false, got %q, %v", mode, tpl, out, err)
+			}
+		}
+		if out, err := env.RenderString(`{{ []|first|default('d') }}`, miya.NewContext()); err != nil || out != "d" {
+			t.Errorf("%s default: want d, got %q, %v", mode, out, err)
+		}
+	}
+}
+
+// TestStrictFilterUndefinedFailsOnUse checks that a strict undefined filter
+// result fails wherever it is used, like an undefined variable: only the
+// defined, undefined and none tests and default accept it.
+func TestStrictFilterUndefinedFailsOnUse(t *testing.T) {
+	strict := miya.NewEnvironment(miya.WithUndefinedBehavior(runtime.UndefinedStrict))
+	for _, tpl := range []string{
+		`{{ ([]|first) ~ 'a' }}`, `{{ 'a' ~ ([]|first) }}`, `{{ ([]|first) + 'a' }}`,
+		`{{ [([]|first)]|join }}`, `{{ "%s"|format([]|first) }}`,
+		`{% if []|first %}y{% endif %}`, `{% if 0 %}{% elif []|first %}y{% endif %}`,
+		`{{ 'y' if []|first else 'n' }}`, `{% for i in []|first %}y{% endfor %}`,
+		`{% set v = []|last %}`, `{{ ([]|first)|upper }}`,
+	} {
+		out, err := strict.RenderString(tpl, miya.NewContext())
+		if err == nil {
+			t.Errorf("strict %s: want error, got %q", tpl, out)
+		} else if !strings.Contains(strings.ToLower(err.Error()), "undefined") {
+			t.Errorf("strict %s: want an undefined error, got %v", tpl, err)
+		}
+	}
+	tolerated := map[string]string{
+		`{{ ([]|first) is defined }}`:   "false",
+		`{{ ([]|first) is undefined }}`: "true",
+		`{{ ([]|first) is none }}`:      "false",
+		`{{ []|first|default('d') }}`:   "d",
+		`{{ []|first|d('d') }}`:         "d",
+		`{{ ([]|first)|d('d') }}`:       "d",
+	}
+	for tpl, want := range tolerated {
+		if out, err := strict.RenderString(tpl, miya.NewContext()); err != nil || out != want {
+			t.Errorf("strict %s: want %q, got %q, %v", tpl, want, out, err)
+		}
+	}
+	const uses = `{{ ([]|first) ~ 'a' }}|{{ [([]|first)]|join }}|{% if []|first %}y{% else %}n{% endif %}|{% for i in []|first %}y{% endfor %}|{% set v = []|last %}{{ v is defined }}`
+	silent := miya.NewEnvironment()
+	if out, err := silent.RenderString(uses, miya.NewContext()); err != nil || out != "a||n||false" {
+		t.Errorf("silent: got %q, %v", out, err)
+	}
+	debug := miya.NewEnvironment(miya.WithUndefinedBehavior(runtime.UndefinedDebug))
+	const ph = "{{ undefined variable: first (No first item, sequence was empty.) }}"
+	if out, err := debug.RenderString(uses, miya.NewContext()); err != nil || out != ph+"a|"+ph+"|n||false" {
+		t.Errorf("debug: got %q, %v", out, err)
+	}
+}

@@ -31,7 +31,9 @@ func (ns *Namespace) Get(key string) (interface{}, bool) {
 	return runtime.Unbox(val), ok
 }
 
-// RawGet retrieves the stored value, which can be an internal list box.
+// RawGet retrieves the stored value for the template runtime, which can be
+// an internal list box or internal escaped template output; Go code should
+// use Get.
 func (ns *Namespace) RawGet(key string) (interface{}, bool) {
 	ns.mu.RLock()
 	defer ns.mu.RUnlock()
