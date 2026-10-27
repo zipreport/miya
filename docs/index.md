@@ -12,7 +12,7 @@ A high-performance Jinja2-compatible template engine for Go.
 
 - **Jinja2 Compatibility**: Parse and render Jinja2 templates with familiar syntax
 - **High Performance**: Optimized for speed with template compilation and caching
-- **Bounded caching**: templates are cached by the environment; `Release()` drops a one-off template from the cache
+- **Template caching**: compiled templates are cached by the environment with no size limit or expiry; `Release()` drops a one-off template from the cache
 - **Template Inheritance**: extends, blocks, `super()` and includes (see the limitations page for the known gaps)
 - **Rich Filter System**: Built-in filters plus support for custom filters
 - **Flexible Loading**: Load templates from filesystem, memory, or embedded resources

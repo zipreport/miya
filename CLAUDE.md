@@ -136,6 +136,7 @@ tests/
 ├── core_engine_test.go        # Core engine rendering and error tests
 ├── advanced_features_test.go  # Advanced feature and edge case tests
 ├── performance_test.go        # Wall-clock performance checks
+├── conformance/               # Jinja2 conformance and whitespace suites
 ├── helpers/                   # Shared test helpers and fixtures
 └── unit/                      # Unit tests by topic
 benchmarks/
@@ -161,12 +162,12 @@ make test
 
 ### Jinja2 conformance suite
 
-`tests/conformance/` renders `cases.json` (produced by Jinja2 3.1.6) with miya; cases miya still gets wrong are listed in `known_divergences.json`. A change that fixes a case must delete its entry. To dump and rebuild the allow-list:
+`tests/conformance/` renders `cases.json` (produced by Jinja2 3.1.6) with miya; cases miya still gets wrong are listed in `known_divergences.json`. A change that fixes a case must delete its entry. To drop fixed entries and refresh kinds and reasons from a dump (the script exits 1, listing them, if anything diverges that is not already allow-listed; `--allow-new` adds such entries and is only for deliberate divergences):
 
 ```bash
-echo '{}' > tests/conformance/known_divergences.json
 go test ./tests/conformance/ -run '^TestConformance$' -count=1 -args -conformance.dump=/tmp/dump.json
-python3 tests/conformance/build_allowlist.py /tmp/dump.json > tests/conformance/known_divergences.json
+python3 tests/conformance/build_allowlist.py --existing tests/conformance/known_divergences.json /tmp/dump.json > /tmp/kd.json \
+  && mv /tmp/kd.json tests/conformance/known_divergences.json
 ```
 
 See `tests/conformance/README.md`.
@@ -176,7 +177,7 @@ See `tests/conformance/README.md`.
 ### Adding a New Filter
 
 1. Add filter function in `filters/` (appropriate category file)
-2. Register in `filters/registry.go` `NewRegistry()` function
+2. Register in `registerBuiltinFilters()` in `filters/filter.go`; if it takes keyword arguments, declare its parameters in `builtinParams` in `filters/params.go`
 3. Add tests in `tests/unit/` or relevant test file
 
 ```go
@@ -187,14 +188,14 @@ func MyFilter(value interface{}, args ...interface{}) (interface{}, error) {
     return result, nil
 }
 
-// In filters/registry.go NewRegistry()
-r.Register("myfilter", MyFilter)
+// In filters/filter.go registerBuiltinFilters()
+r.filters["myfilter"] = MyFilter
 ```
 
 ### Adding a New Test Function
 
-1. Add test function in `branching/tests.go`
-2. Register in `branching/registry.go`
+1. Add test function in `branching/branching.go`
+2. Register in `registerBuiltinTests()` in the same file: `r.tests["mytest"] = testMyTest`
 3. Use with `{% if value is mytest %}` syntax
 
 ### Adding Template Tags via Extensions

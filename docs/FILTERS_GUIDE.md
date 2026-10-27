@@ -15,7 +15,6 @@ Filters transform variables and expressions in templates. Miya Engine supports 7
 5. [HTML & Security Filters](#html-security-filters)
 6. [Utility Filters](#utility-filters)
 7. [Filter Chaining](#filter-chaining)
-8. [Limitations](#limitations)
 
 ---
 
@@ -86,27 +85,19 @@ Filters transform variables and expressions in templates. Miya Engine supports 7
 | `startswith` | Check start | `{{"hello"\|startswith("he")}}` → `true` |
 | `endswith` | Check end | `{{"hello"\|endswith("lo")}}` → `true` |
 | `contains` | Check substring | `{{"hello"\|contains("ell")}}` → `true` |
-| `split` | Split to list | `{{"a,b,c"\|split(",")}}` → `["a","b","c"]` |
+| `split` | Split to list | `{{"a,b,c"\|split(",")}}` → `['a', 'b', 'c']` |
 
 **Examples:**
 ```html+jinja
 {{ "The quick brown fox"|wordcount }}  → 4
 {{ "filename.txt"|endswith(".txt") }}  → true
 {{ "hello world"|contains("world") }}  → true
-{{ "apple,banana,cherry"|split(",") }} → ["apple", "banana", "cherry"]
+{{ "apple,banana,cherry"|split(",") }} → ['apple', 'banana', 'cherry']
 ```
 
 ---
 
 ## Collection Filters
-
-###  Important Limitations
-
-Some collection filters have limited support in Miya. **Reliable filters:**
-
--  `length`, `first`, `last`, `join`
--  `list` (convert to list)
--  `sort`, `reverse`, `unique`, `slice`, `batch` - May have issues
 
 ### Basic Collection Filters
 
@@ -116,7 +107,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 | `last` | Get last item | `{{[1,2,3]\|last}}` → `3` |
 | `length` | Get count | `{{[1,2,3]\|length}}` → `3` |
 | `join` | Join to string | `{{["a","b"]\|join(",")}}` → `"a,b"` |
-| `list` | Convert to list | `{{range(5)\|list}}` → `[0,1,2,3,4]` |
+| `list` | Convert to list | `{{range(5)\|list}}` → `[0, 1, 2, 3, 4]` |
 
 **Examples:**
 ```html+jinja
@@ -197,7 +188,7 @@ Some collection filters have limited support in Miya. **Reliable filters:**
 ```html+jinja
 {# Auto-escape user input #}
 {{ user_input|escape }}
-→ &lt;script&gt;alert('XSS')&lt;/script&gt;
+→ &lt;script&gt;alert(&#39;XSS&#39;)&lt;/script&gt;
 
 {# Allow trusted HTML #}
 {{ trusted_html|safe }}
@@ -272,7 +263,7 @@ Apply multiple filters in sequence:
 → "HELLO MIYA"
 
 {{ long_text|truncate(30)|title }}
-→ "This Is A Very Long Tex..."
+→ "This Is A Very Long Text..."
 
 {{ users|selectattr("active")|map(attribute="name")|join(", ")|upper }}
 → "ALICE, CHARLIE, DIANA"
@@ -352,62 +343,16 @@ First: {{ items|first }}, Last: {{ items|last }}
 
 ---
 
-## Limitations
-
-###  Filters with Known Issues
-
-Based on testing, these filters may not work reliably:
-
-```html+jinja
-{# May fail with "requires a sequence" error #}
-{{ numbers|sort }}
-{{ numbers|reverse }}
-{{ items|unique }}
-{{ numbers|slice(3) }}
-{{ range(10)|batch(3) }}
-```
-
-###  Working Alternatives
-
-Instead of problematic filters, use:
-
-```html+jinja
-{# Use in loops #}
-{% for num in numbers %}{{ num }}{% endfor %}
-
-{# Use filter chains #}
-{{ items|selectattr("active")|map(attribute="name")|join(", ") }}
-
-{# Convert to list #}
-{{ range(10)|list }}
-```
-
-### Comprehension Filters Don't Work
-
-```html+jinja
-{#  This doesn't work #}
-{{ [x for x in numbers if x > 5] }}
-
-{#  Use filter chains instead #}
-{{ numbers|select("greaterthan", 5)|list }}
-```
-
----
-
 ## Complete Filter Reference
 
 ### String Filters (16+)
  `upper`, `lower`, `capitalize`, `title`, `trim`, `replace`, `truncate`, `center`, `wordcount`, `split`, `startswith`, `endswith`, `contains`, `slugify`, `indent`, `wordwrap`
 
-### Collection Filters (8)
- `first`, `last`, `length`, `join`, `list`, `map`, `selectattr`, `rejectattr`
+### Collection Filters (13)
+ `first`, `last`, `length`, `join`, `list`, `map`, `selectattr`, `rejectattr`, `sort`, `reverse`, `unique`, `slice`, `batch`
 
- `sort`, `reverse`, `unique`, `slice`, `batch` - Limited support
-
-### Numeric Filters (5)
- `abs`, `round`, `int`, `float`, `pow`
-
- `sum`, `min`, `max` - May have issues
+### Numeric Filters (8)
+ `abs`, `round`, `int`, `float`, `pow`, `sum`, `min`, `max`
 
 ### HTML/Security Filters (4)
  `escape`, `safe`, `striptags`, `urlencode`

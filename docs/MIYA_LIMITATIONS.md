@@ -29,6 +29,7 @@ miya's conformance suite (`tests/conformance/`) holds 289 small templates writte
 - Methods on Go values are not callable from templates (`{{ s.Hello() }}` is an error; fields such as `{{ s.Name }}` work). Pass computed values as data or register a global function. Python string, list and dict methods (`'abc'.upper()`, `d.get('a')`) do work.
 - `None` sorts before every other value in `sort`, where Jinja2 raises an error.
 - `map` with an unknown filter name yields empty values where Jinja2 raises an error.
+- Map key lookup (`[]`, `.get()`, `in`) on string-key maps, dict literals included, uses the key's string spelling: `d[1]` finds a `"1"` key, `d[none]` a `"None"` key, a `[]byte` key finds a typed string-key map's entry, and an undefined key finds the `""` entry (Jinja2: not found). A list key misses instead of raising, and finds a Go array key with equal elements (Jinja2: TypeError, unhashable). In an interface-key map, a key of a named Go string type is found only by a value of that type, not by a plain string (Jinja2: a `str` subclass key equals the string).
 
 ---
 

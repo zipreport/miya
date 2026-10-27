@@ -238,7 +238,7 @@ This document provides the complete feature reference for Miya (miya), based on 
 {{ "Hello World"|replace("World", "Go") }}   → "Hello Go"
 {{ "Very long text"|truncate(10, leeway=0) }} → "Very..."
 {{ "hello"|center(10, "-") }}                → "--hello---"
-{{ "text"|indent(4) }}                       → "    text"
+{{ "text"|indent(4, first=true) }}           → "    text"
 {{ "hello world"|wordwrap(5) }}              → "hello\nworld"
 {{ "hello world"|wordcount }}                → 2
 {{ text|startswith("Hello") }}               → true/false
@@ -251,9 +251,9 @@ This document provides the complete feature reference for Miya (miya), based on 
 
 ### **Collection Filters (15 filters)**
 ```html+jinja
-{{ [1,3,2]|sort }}                          → [1,2,3]
-{{ [1,2,3]|reverse }}                       → [3,2,1]
-{{ [1,1,2,2]|unique }}                      → [1,2]
+{{ [1,3,2]|sort }}                          → [1, 2, 3]
+{{ [1,2,3]|reverse }}                       → [3, 2, 1]
+{{ [1,1,2,2]|unique }}                      → [1, 2]
 {{ [1,2,3]|first }}                         → 1
 {{ [1,2,3]|last }}                          → 3
 {{ [1,2,3]|length }}                        → 3
@@ -261,11 +261,11 @@ This document provides the complete feature reference for Miya (miya), based on 
 {{ users|selectattr("active") }}            → active users only
 {{ users|rejectattr("active") }}            → inactive users only
 {{ users|map("name")|list }}                → list of names
-{{ range(12)|batch(3) }}                    → [[0,1,2],[3,4,5],[6,7,8],[9,10,11]]
-{{ items|slice(5) }}                        → first 5 items
-{{ dict|items }}                            → [(k1,v1), (k2,v2)]
-{{ dict|keys }}                             → [k1, k2]
-{{ dict|values }}                           → [v1, v2]
+{{ range(12)|batch(3) }}                    → [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]]
+{{ [1,2,3,4,5,6,7]|slice(3) }}              → [[1, 2, 3], [4, 5], [6, 7]] (3 columns)
+{{ dict|items }}                            → [['k1', 'v1'], ['k2', 'v2']]
+{{ dict|keys }}                             → ['k1', 'k2']
+{{ dict|values }}                           → ['v1', 'v2']
 ```
 
 ### **Numeric Filters (10 filters)**
@@ -292,7 +292,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 {{ "Visit https://example.com"|urlize }}    → clickable links
 {{ html|truncatehtml(100) }}                → truncate preserving HTML
 {{ html|striptags }}                        → remove HTML tags
-{{ content|autoescape }}                    → auto HTML escaping
 {{ content|marksafe }}                      → mark as safe HTML
 {{ attrs|xmlattr }}                         → XML attributes
 ```

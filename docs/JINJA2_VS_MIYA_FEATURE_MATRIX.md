@@ -20,6 +20,7 @@ A second suite checks whitespace control (`trim_blocks`, `lstrip_blocks`, `-`/`+
 - Methods on Go values are not callable from templates. Pass computed values as data or register a global function.
 - `None` sorts before every other value in `sort`, where Jinja2 raises an error.
 - `map` with an unknown filter name yields empty values where Jinja2 raises an error.
+- Map key lookup (`[]`, `.get()`, `in`) on string-key maps, dict literals included, uses the key's string spelling: `d[1]` finds a `"1"` key, `d[none]` a `"None"` key, a `[]byte` key finds a typed string-key map's entry, and an undefined key finds the `""` entry (Jinja2: not found). A list key misses instead of raising, and finds a Go array key with equal elements (Jinja2: TypeError, unhashable). In an interface-key map, a key of a named Go string type is found only by a value of that type, not by a plain string (Jinja2: a `str` subclass key equals the string).
 
 Differences that are not deliberate, and miya-only extensions, are listed in [MIYA_LIMITATIONS.md](MIYA_LIMITATIONS.md).
 

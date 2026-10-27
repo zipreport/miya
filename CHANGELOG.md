@@ -25,6 +25,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `parser`: `CompareNode`, `CompareOperand` and `NewCompareNode` (chained comparisons such as `a < b < c`), `DictNode` and `NewDictNode`, `DiscardNode` and `NewDiscardNode`, `MacroUsage` (the special names a macro body references), and the tree helpers `WalkStatements`, `ChildBodies`, `CloneStatement` and `CheckDuplicateBlocks` (errors on duplicate block names, as Jinja2 does).
 - `filters`: `(*FilterRegistry).RegisterWithParams`, `SetParams` and `ApplyKwargs` register, declare the parameters of, and call a filter with keyword arguments; `Environment.ApplyFilterKwargs` does the same by name.
 - `ReprData` on `*Namespace` returns a copy of the namespace's data for `runtime.Repr`.
+- `miya.RenderPanicError`, with the recovered panic `Value` and its `Stack`.
+- `runtime.SprintV` (`fmt.Sprintf("%v", v)` that prints a slice or map met again inside itself as `[...]`/`map[...]`) and `runtime.FmtCycles` (reports whether `%v` would recurse forever on a value).
 
 ### Fixed
 
@@ -153,6 +155,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `wordcount` counts words like Jinja2 (`\w+`), so punctuation and hyphens separate words.
 - Errors from filter blocks and template inheritance keep their cause, so `errors.Is` finds `ErrOutputTooLarge` and other sentinels through them.
 - `wordwrap` on long words, hyphenated runs or long runs of spaces, and `urlize` on long runs of brackets or trailing punctuation, used to be quadratic: inputs of 200-400 KB took 5-22 s. Both are now linear, and their output is unchanged.
+- In non-HTML escape contexts, string methods on a safe value (`.replace`, `.format`, `.join`, `.upper`, …) return plain strings that the context escaper escapes, also inside `{% autoescape false %}`; they returned HTML-escaped `Markup` that was written raw. `replace` and the other markup-preserving filters on a safe value no longer escape their arguments twice there.
+- Runaway recursion through macro default arguments or includes reports the depth limit once instead of wrapping it at every level.
+- A list or dict that contains itself no longer crashes the process with a stack overflow when used as a dict key, compared with `==` or `in`, printed inside a struct, or passed to `sort`, `unique`, `min`, `max`, `dictsort`, `pprint`, `is in`, `is lower` or `is upper`, or used as a key on an undefined value.
+- Rendering one `Context` from several goroutines no longer races, and `Context.All()` reflects later writes to parent contexts.
+- `GetTemplate` no longer returns a `FromString` template for its internal cache name, and a `FromString` hash collision can no longer return another source's template.
+- `for` loops inside `{% autoescape %}` blocks or a `ContextWrapper` no longer copy every context variable on each iteration.
+- The `replace`, `join` and `format` filters enforce the 64 MiB result limit (errors wrap `runtime.ErrOutputTooLarge`), as the string methods already did. `tojson(indent)` is bounded by the same limit; a huge indent no longer panics, and an indent of 0 or less puts items on separate lines, as in Jinja2.
+- `random` picks a random item (or whole character) and accepts typed slices; it always returned the first item (or byte). An empty sequence gives undefined.
+- Filters and tests accept pointers to slices and maps, and typed maps: `first`, `last`, `list`, `length`, `sort`, `unique`, `sum`, `xmlattr`, `is in`, `is sequence`, `is mapping` and `is iterable`.
+- `urlizetruncate` no longer double-escapes safe input.
 
 ### Changed
 
@@ -275,6 +287,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Custom extension tags whose arguments contain unbalanced punctuation (for example `:-)`) now fail in the lexer. Jinja2 rejects them too.
 - Error columns on lines after the first are one higher than the actual column (an existing quirk, unchanged here); line numbers are exact.
 - **Breaking:** `format` uses Python `%` formatting instead of Go's `fmt`. `'%d'|format(x)` and `'%i'|format(x)` accept float operands such as JSON numbers, truncating them as Python does. `%(name)s` takes keyword arguments, and `%r`, `%i`, `%u` and `%a` work. Too few or too many arguments, `%d` of a string and a lone `%` are errors instead of printing `%!` text. Go-only verbs such as `%v` and `%q` are errors. miya differences: `%x`/`%o`/`%X`/`%c` and `*` accept whole floats, and `%s` prints `None` as empty and booleans as `true`/`false`.
+- A recovered render panic is a `*RenderPanicError` (still `errors.Is(err, ErrRenderPanic)`); the goroutine stack is in its `Stack` field instead of the error message. `ConcurrentTemplateRenderer` uses it too, and its panic message changed from "panic during template render".
+- **Breaking:** `sum` is an error for `none` and for items that are neither numbers nor numeric strings instead of skipping them (numeric strings still add, like miya's `1 + "2"`; Jinja2 raises a TypeError); `replace` is an error for a count that is not a whole number (`2.0` is accepted, `1.5` and `"2"` are not); `first`, `last` and `list` are errors for a value that is not iterable (`list` used to wrap it in a one-item list).
+- **Breaking:** integer arguments (widths, counts) outside Go's `int` range are errors instead of wrapping around, e.g. `pad_left(1e19)`.
 
 ### Removed
 
@@ -286,6 +301,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Environment.GetMacro`, `ListMacros`, `CallMacro` and `ClearMacros`, and the `macros` package behind them. The registry mixes macros from every compiled template and binds arguments differently from template calls. They will be removed in a later minor release. To call a macro, render a template that imports it (`{% from "lib.html" import m %}{{ m(x) }}`), or walk `Template.AST()`.
 - `parser.ReleaseAST`, `parser.ReleaseNode`, the `parser.Release*Node` functions, `parser.GetNodePoolStats` and `parser.NodePoolStats` do nothing.
 - `filters.SelectFilter`, `RejectFilter`, `SelectAttrFilter` and `RejectAttrFilter`: templates no longer use them (the registered filters apply tests); they keep their old value-comparing behaviour for direct Go callers.
+- `InheritanceCache.SetResolvedTTL` (does nothing), the `resolvedTTL` argument of `Environment.ConfigureInheritanceCache` (ignored), `runtime.ResolvedTemplateCacheEntry` and `CacheStats.ResolvedCache` (always zero).
 
 ## [v0.2.0]
 
