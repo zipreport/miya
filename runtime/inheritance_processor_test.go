@@ -240,75 +240,6 @@ func TestInheritanceGetCacheStats(t *testing.T) {
 	_ = stats.HierarchyCache.Hits
 }
 
-// TestIsSelfReferencingBlock tests detecting self-referencing blocks
-func TestIsSelfReferencingBlock(t *testing.T) {
-	env := newMockEnvironment()
-	processor := NewInheritanceProcessor(env)
-
-	t.Run("non-self-referencing", func(t *testing.T) {
-		original := &parser.BlockNode{
-			Name: "content",
-			Body: []parser.Node{
-				&parser.TextNode{Content: "Original"},
-			},
-		}
-		override := &parser.BlockNode{
-			Name: "content",
-			Body: []parser.Node{
-				&parser.TextNode{Content: "Override"},
-			},
-		}
-		if processor.isSelfReferencingBlock(original, override) {
-			t.Error("expected false for different block pointers")
-		}
-	})
-
-	t.Run("self-referencing same pointer", func(t *testing.T) {
-		block := &parser.BlockNode{
-			Name: "content",
-			Body: []parser.Node{
-				&parser.TextNode{Content: "Content"},
-			},
-		}
-		// Same pointer means it's self-referencing
-		if !processor.isSelfReferencingBlock(block, block) {
-			t.Error("expected true for same block pointer")
-		}
-	})
-}
-
-// TestBlockContainsSuperCalls tests detecting super() calls in blocks
-func TestBlockContainsSuperCalls(t *testing.T) {
-	env := newMockEnvironment()
-	processor := NewInheritanceProcessor(env)
-
-	t.Run("with super call", func(t *testing.T) {
-		block := &parser.BlockNode{
-			Name: "content",
-			Body: []parser.Node{
-				&parser.VariableNode{
-					Expression: &parser.SuperNode{},
-				},
-			},
-		}
-		if !processor.blockContainsSuperCalls(block) {
-			t.Error("expected to detect super() call")
-		}
-	})
-
-	t.Run("without super call", func(t *testing.T) {
-		block := &parser.BlockNode{
-			Name: "content",
-			Body: []parser.Node{
-				&parser.TextNode{Content: "Hello"},
-			},
-		}
-		if processor.blockContainsSuperCalls(block) {
-			t.Error("expected not to detect super() call")
-		}
-	})
-}
-
 // TestCloneTemplateNode tests cloning template nodes
 func TestCloneTemplateNode(t *testing.T) {
 	env := newMockEnvironment()
@@ -334,19 +265,4 @@ func TestCloneTemplateNode(t *testing.T) {
 	if len(clone.Children) != len(original.Children) {
 		t.Error("clone should have same number of children")
 	}
-}
-
-// TestDebugPrintTemplate tests the debug output function
-func TestDebugPrintTemplate(t *testing.T) {
-	env := newMockEnvironment()
-	processor := NewInheritanceProcessor(env)
-
-	ast := &parser.TemplateNode{
-		Children: []parser.Node{
-			&parser.TextNode{Content: "Hello"},
-		},
-	}
-
-	// Just verify it doesn't panic
-	processor.debugPrintTemplate(ast, 0)
 }

@@ -2,6 +2,7 @@ package filters
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"unicode"
@@ -13,9 +14,8 @@ import (
 // Pre-compiled regex patterns for string filters (performance optimization)
 var (
 	// Slugify patterns
-	reSlugifySpaces    = regexp.MustCompile(`[\s\-_]+`)
-	reSlugifyNonWord   = regexp.MustCompile(`[^\w\-]`)
-	reRegexReplaceTest = regexp.MustCompile(`^/(.+)/([gimsuy]*)$`)
+	reSlugifySpaces  = regexp.MustCompile(`[\s\-_]+`)
+	reSlugifyNonWord = regexp.MustCompile(`[^\w\-]`)
 )
 
 // reTitleSep splits on Jinja2's title separators: '-', Python whitespace and
@@ -138,14 +138,26 @@ func ReplaceFilter(value interface{}, args ...interface{}) (interface{}, error) 
 	new := ToString(args[1])
 
 	count := -1 // Replace all by default
-	if len(args) > 2 {
-		if c, err := ToInt(args[2]); err == nil {
+	if len(args) > 2 && args[2] != nil {
+		n, ok := runtime.Number(args[2])
+		if f, isFloat := n.(float64); !ok || isFloat && f != math.Trunc(f) {
+			return nil, fmt.Errorf("replace filter: count must be an integer, not %s", pyTypeName(args[2]))
+		}
+		// A count out of int range replaces every occurrence, like -1.
+		if c, err := ToInt(n); err == nil {
 			count = c
 		}
 	}
 
-	if count == -1 {
-		return strings.ReplaceAll(s, old, new), nil
+	n := int64(strings.Count(s, old))
+	if old == "" {
+		n = int64(utf8.RuneCountInString(s)) + 1
+	}
+	if count >= 0 && int64(count) < n {
+		n = int64(count)
+	}
+	if int64(len(s))+n*int64(len(new)-len(old)) > maxRepeatBytes {
+		return nil, &runtime.SizeError{Msg: "replace output too large"}
 	}
 	return strings.Replace(s, old, new, count), nil
 }
@@ -687,12 +699,4 @@ func PadRightFilter(value interface{}, args ...interface{}) (interface{}, error)
 // WordcountFilter counts words in a string
 func WordcountFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	return len(reWord.FindAllString(ToString(value), -1)), nil
-}
-
-// Helper function to extract regex flags from string
-func extractRegexFlags(s string) (pattern string, ignoreCase bool) {
-	if strings.HasPrefix(s, "(?i)") {
-		return s[4:], true
-	}
-	return s, false
 }

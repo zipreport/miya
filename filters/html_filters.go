@@ -115,6 +115,7 @@ func URLEncodeFilter(value interface{}, args ...interface{}) (interface{}, error
 
 // XMLAttrFilter formats attributes for XML/HTML
 func XMLAttrFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = dictInput(value)
 	if value == nil {
 		return "", nil
 	}
@@ -639,6 +640,12 @@ func UrlizeTruncateFilter(value interface{}, args ...interface{}) (interface{}, 
 	}
 
 	s := ToString(value)
+	safe := isSafe(value)
+	// Safe input is already escaped, as in urlize.
+	escape := html.EscapeString
+	if safe {
+		escape = func(s string) string { return s }
+	}
 
 	// Use pre-compiled URL regex (same as urlize)
 	link := func(match string) string {
@@ -681,7 +688,7 @@ func UrlizeTruncateFilter(value interface{}, args ...interface{}) (interface{}, 
 
 		// Build link attributes
 		var attrs []string
-		attrs = append(attrs, fmt.Sprintf(`href="%s"`, html.EscapeString(match)))
+		attrs = append(attrs, fmt.Sprintf(`href="%s"`, escape(match)))
 
 		if target != "" {
 			attrs = append(attrs, fmt.Sprintf(`target="%s"`, html.EscapeString(target)))
@@ -691,8 +698,8 @@ func UrlizeTruncateFilter(value interface{}, args ...interface{}) (interface{}, 
 			attrs = append(attrs, fmt.Sprintf(`rel="%s"`, html.EscapeString(rel)))
 		}
 
-		return fmt.Sprintf(`<a %s>%s</a>`, strings.Join(attrs, " "), html.EscapeString(displayURL))
+		return fmt.Sprintf(`<a %s>%s</a>`, strings.Join(attrs, " "), escape(displayURL))
 	}
 
-	return runtime.Markup(linkify(s, isSafe(value), link)), nil
+	return runtime.Markup(linkify(s, safe, link)), nil
 }

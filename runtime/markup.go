@@ -4,6 +4,7 @@ import (
 	"html"
 	"reflect"
 	"strings"
+	"unsafe"
 )
 
 // Markup is a string marked safe for HTML output, the equivalent of Jinja2's
@@ -133,9 +134,11 @@ func withBaseAutoescape(ctx Context) Context {
 // and the escape context is in the HTML family.
 func markupContext(ctx Context) bool {
 	on, ec, _ := resolveEscape(ctx)
-	if !on {
-		return false
-	}
+	return on && htmlFamily(ec)
+}
+
+// htmlFamily reports whether ec escapes HTML, where Markup is safe as is.
+func htmlFamily(ec EscapeContext) bool {
 	switch ec {
 	case EscapeContextHTML, EscapeContextXHTML, EscapeContextXML:
 		return true
@@ -317,7 +320,7 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 		result, err = apply(value, unmarkArgs(args))
 	case markupAwareFilters[name]:
 		result, err = apply(m, unmarkArgs(args))
-	case markupPassthroughFilters[name], markupPreservingFilters[name]:
+	case (markupPassthroughFilters[name] || markupPreservingFilters[name]) && markupContext(ctx):
 		result, err = apply(string(m), escapeArgs(ctx, args))
 		if s, ok := result.(string); ok {
 			result = Markup(s)
@@ -340,7 +343,7 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 	} else if list, ok := result.([]interface{}); ok && !markupContext(ctx) && name != "safe" && name != "marksafe" {
 		// map('e') and friends: Markup items must not reach a non-HTML context raw.
 		// Only lists are walked; maps are left alone.
-		result = unmarkItems(list)
+		result = unmarkItems(list, nil)
 	}
 	return result, nil
 }
@@ -701,13 +704,28 @@ func concatMarkup(ctx Context, left, right interface{}) (Markup, bool) {
 
 // unmarkItems returns a copy of list with Markup elements turned into plain
 // strings, recursing into nested lists. It returns list itself when nothing changes.
-func unmarkItems(list []interface{}) []interface{} {
+func unmarkItems(list []interface{}, path map[reprKey]bool) []interface{} {
 	var out []interface{}
 	for i, it := range list {
 		var n interface{}
 		if sub, ok := it.([]interface{}); ok {
-			r := unmarkItems(sub)
-			if len(r) == 0 || len(sub) == 0 || &r[0] == &sub[0] {
+			if len(sub) == 0 {
+				continue
+			}
+			// path holds the lists being un-marked, the top-level one
+			// included: one that contains itself is left as is where it
+			// recurs
+			if path == nil {
+				path = map[reprKey]bool{{uintptr(unsafe.Pointer(&list[0])), len(list)}: true}
+			}
+			key := reprKey{uintptr(unsafe.Pointer(&sub[0])), len(sub)}
+			if path[key] {
+				continue
+			}
+			path[key] = true
+			r := unmarkItems(sub, path)
+			delete(path, key)
+			if len(r) == 0 || &r[0] == &sub[0] {
 				continue
 			}
 			n = r

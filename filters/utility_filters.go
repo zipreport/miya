@@ -179,6 +179,10 @@ func PPrintFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		verbose = ToBool(args[0])
 	}
 
+	if runtime.FmtCycles(value) {
+		return runtime.Repr(value), nil
+	}
+
 	if verbose {
 		// More detailed representation
 		return fmt.Sprintf("%#v", value), nil
@@ -201,7 +205,7 @@ func PPrintFilter(value interface{}, args ...interface{}) (interface{}, error) {
 			}
 			result.WriteString(k)
 			result.WriteString(": ")
-			fmt.Fprintf(&result, "%v", v[k])
+			result.WriteString(runtime.SprintV(v[k]))
 		}
 		result.WriteByte('}')
 		return result.String(), nil
@@ -213,7 +217,7 @@ func PPrintFilter(value interface{}, args ...interface{}) (interface{}, error) {
 			if i > 0 {
 				result.WriteString(", ")
 			}
-			fmt.Fprintf(&result, "%v", item)
+			result.WriteString(runtime.SprintV(item))
 		}
 		result.WriteByte(']')
 		return result.String(), nil
@@ -367,30 +371,89 @@ func ToJSONFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	if _, ok := value.(*runtime.Undefined); ok {
 		return nil, fmt.Errorf("tojson: Object of type Undefined is not JSON serializable")
 	}
-	indent := 0
-	if len(args) > 0 {
-		i, err := ToInt(args[0])
-		if err == nil && i > 0 {
-			indent = i
+	indent := -1
+	if len(args) > 0 && args[0] != nil {
+		// json.dumps puts items on their own lines for any int indent; 0 and
+		// negative ones indent by nothing.
+		if i, err := ToInt(args[0]); err == nil {
+			indent = max(i, 0)
 		}
 	}
 
-	var data []byte
-	var err error
-
-	if indent > 0 {
-		data, err = json.MarshalIndent(value, "", strings.Repeat(" ", indent))
-	} else {
-		data, err = json.Marshal(value)
-	}
-
+	data, err := json.Marshal(value)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert to JSON: %v", err)
+	}
+
+	if indent >= 0 {
+		if indentedJSONSize(data, indent) > maxRepeatBytes {
+			return nil, &runtime.SizeError{Msg: "tojson output too large"}
+		}
+		prefix, err := repeatBounded(" ", indent)
+		if err != nil {
+			return nil, err
+		}
+		var buf bytes.Buffer
+		if err := json.Indent(&buf, data, "", prefix); err != nil {
+			return nil, fmt.Errorf("failed to convert to JSON: %v", err)
+		}
+		data = buf.Bytes()
 	}
 
 	data = bytes.ReplaceAll(data, []byte("'"), []byte(`\u0027`))
 
 	return runtime.Markup(string(data)), nil
+}
+
+// indentedJSONSize is the length of compact JSON data after json.Indent with
+// width spaces per level; it stops counting once past maxRepeatBytes.
+func indentedJSONSize(data []byte, width int) int64 {
+	size, depth := int64(len(data)), 0
+	newline := func() {
+		if width > 0 && depth > maxRepeatBytes/width {
+			size = maxRepeatBytes + 1
+			return
+		}
+		size += 1 + int64(depth*width)
+	}
+	inString, escaped := false, false
+	for i, c := range data {
+		if inString {
+			switch {
+			case escaped:
+				escaped = false
+			case c == '\\':
+				escaped = true
+			case c == '"':
+				inString = false
+			}
+			continue
+		}
+		switch c {
+		case '"':
+			inString = true
+		case '{', '[':
+			if i+1 < len(data) && (data[i+1] == '}' || data[i+1] == ']') {
+				continue
+			}
+			depth++
+			newline()
+		case '}', ']':
+			if i > 0 && (data[i-1] == '{' || data[i-1] == '[') {
+				continue
+			}
+			depth--
+			newline()
+		case ',':
+			newline()
+		case ':':
+			size++
+		}
+		if size > maxRepeatBytes {
+			break
+		}
+	}
+	return size
 }
 
 // FromJSONFilter parses JSON string to value

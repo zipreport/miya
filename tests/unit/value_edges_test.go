@@ -37,7 +37,7 @@ func TestValueEdges(t *testing.T) {
 		{name: "s3_div", tpl: `{{ w / 2 }}`, data: inf, anyErr: true},
 		{name: "deviation_inf_plus", tpl: `{{ w + 1 }}`, data: inf, want: `inf1`},
 		{name: "s6_abs", tpl: `{{ w|abs }}`, data: inf, errHas: "abs filter requires a number"},
-		{name: "deviation_sum_string", tpl: `{{ [w]|sum }}`, data: inf, want: `0`}, // Jinja2: TypeError
+		{name: "s7_sum_string", tpl: `{{ [w]|sum }}`, data: inf, errHas: "unsupported operand"},
 		{name: "k5", tpl: `{{ none in {none: 1} }}|{{ none is in {none: 1} }}`, want: `true|true`},
 		{name: "k6", tpl: `{{ {none: 1}.get(none) }}`, want: `1`},
 		{name: "k7", tpl: `{{ (1.0|round(2)) in {1: 1} }}`, want: `true`},

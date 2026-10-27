@@ -38,8 +38,9 @@ type Environment struct {
 	extensionRegistry *extensions.Registry
 	globals           map[string]interface{}
 	globalsMu         sync.RWMutex
-	tests             map[string]TestFunc // deprecated, use testRegistry
-	cache             map[string]*Template
+	tests             map[string]TestFunc  // deprecated, use testRegistry
+	cache             map[string]*Template // GetTemplate, by name
+	stringCache       map[string]*Template // FromString, by hashString(source)
 	cacheMutex        sync.RWMutex
 
 	// New inheritance caching system
@@ -91,6 +92,7 @@ func NewEnvironment(opts ...EnvironmentOption) *Environment {
 		globals:           make(map[string]interface{}),
 		tests:             make(map[string]TestFunc), // deprecated
 		cache:             make(map[string]*Template),
+		stringCache:       make(map[string]*Template),
 		inheritanceCache:  inheritanceCache,
 		extensionConfig:   make(map[string]interface{}),
 		autoEscape:        true,
@@ -175,24 +177,28 @@ func (e *Environment) FromString(source string) (*Template, error) {
 	// Generate cache key from content hash (Phase 2 optimization)
 	cacheKey := hashString(source)
 
-	// Check cache first
+	// Check cache first; a hash collision compiles the source uncached
 	e.cacheMutex.RLock()
-	if tmpl, ok := e.cache[cacheKey]; ok {
-		e.cacheMutex.RUnlock()
+	tmpl, ok := e.stringCache[cacheKey]
+	e.cacheMutex.RUnlock()
+	if ok && tmpl.source == source {
 		return tmpl, nil
 	}
-	e.cacheMutex.RUnlock()
+	collision := ok
 
 	// Compile if not cached (use "<string>" as display name)
 	tmpl, err := e.compile("<string>", source)
 	if err != nil {
 		return nil, err
 	}
+	if collision {
+		return tmpl, nil
+	}
 
 	// Store in cache with hash key
 	tmpl.cacheKey = cacheKey
 	e.cacheMutex.Lock()
-	e.cache[cacheKey] = tmpl
+	e.stringCache[cacheKey] = tmpl
 	e.cacheMutex.Unlock()
 
 	return tmpl, nil
@@ -436,7 +442,7 @@ func (e *Environment) CallMacro(name string, ctx Context, args []interface{}, kw
 	defer func() {
 		if r := recover(); r != nil {
 			result = nil
-			err = fmt.Errorf("%w: %v\n%s", ErrRenderPanic, r, debug.Stack())
+			err = &RenderPanicError{Value: r, Stack: debug.Stack()}
 		}
 	}()
 
@@ -660,6 +666,7 @@ func WithUndefinedBehavior(behavior runtime.UndefinedBehavior) EnvironmentOption
 func (e *Environment) ClearCache() {
 	e.cacheMutex.Lock()
 	e.cache = make(map[string]*Template)
+	e.stringCache = make(map[string]*Template)
 	e.cacheMutex.Unlock()
 	e.ClearInheritanceCache()
 }
@@ -668,7 +675,7 @@ func (e *Environment) ClearCache() {
 func (e *Environment) GetCacheSize() int {
 	e.cacheMutex.RLock()
 	defer e.cacheMutex.RUnlock()
-	return len(e.cache)
+	return len(e.cache) + len(e.stringCache)
 }
 
 // Inheritance cache management methods
@@ -700,12 +707,12 @@ func (e *Environment) GetInheritanceCacheStats() runtime.CacheStats {
 	return e.inheritanceCache.GetStats()
 }
 
-// ConfigureInheritanceCache allows tuning of inheritance cache settings
+// ConfigureInheritanceCache allows tuning of inheritance cache settings.
+// resolvedTTL is ignored and deprecated: resolved templates are not cached.
 func (e *Environment) ConfigureInheritanceCache(hierarchyTTL, resolvedTTL time.Duration, maxEntries int) {
 	e.inheritanceCacheMutex.Lock()
 	defer e.inheritanceCacheMutex.Unlock()
 	e.inheritanceCache.SetHierarchyTTL(hierarchyTTL)
-	e.inheritanceCache.SetResolvedTTL(resolvedTTL)
 	e.inheritanceCache.SetMaxEntries(maxEntries)
 }
 

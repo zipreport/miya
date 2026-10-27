@@ -2,6 +2,7 @@ package filters
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"sync"
 
@@ -361,7 +362,7 @@ func ToString(value interface{}) string {
 func ToInt(value interface{}) (int, error) {
 	switch v := value.(type) {
 	case runtime.RoundedFloat:
-		return int(v.Value), nil
+		return intFromFloat(v.Value)
 	case int:
 		return v, nil
 	case int8:
@@ -373,7 +374,7 @@ func ToInt(value interface{}) (int, error) {
 	case int64:
 		return int(v), nil
 	case uint:
-		return int(v), nil
+		return intFromUint(uint64(v))
 	case uint8:
 		return int(v), nil
 	case uint16:
@@ -381,11 +382,11 @@ func ToInt(value interface{}) (int, error) {
 	case uint32:
 		return int(v), nil
 	case uint64:
-		return int(v), nil
+		return intFromUint(v)
 	case float32:
-		return int(v), nil
+		return intFromFloat(float64(v))
 	case float64:
-		return int(v), nil
+		return intFromFloat(v)
 	case string:
 		var i int
 		_, err := fmt.Sscanf(v, "%d", &i)
@@ -396,13 +397,29 @@ func ToInt(value interface{}) (int, error) {
 			case int64:
 				return int(x), nil
 			case uint64:
-				return int(x), nil
+				return intFromUint(x)
 			case float64:
-				return int(x), nil
+				return intFromFloat(x)
 			}
 		}
 		return 0, fmt.Errorf("cannot convert %v to int", reflect.TypeOf(value))
 	}
+}
+
+// intFromFloat truncates f toward zero; a value outside int's range (or NaN) is
+// an error instead of wrapping.
+func intFromFloat(f float64) (int, error) {
+	if !(f >= math.MinInt && f < -math.MinInt) {
+		return 0, fmt.Errorf("cannot convert %v to int: out of range", f)
+	}
+	return int(f), nil
+}
+
+func intFromUint(u uint64) (int, error) {
+	if u > math.MaxInt {
+		return 0, fmt.Errorf("cannot convert %d to int: out of range", u)
+	}
+	return int(u), nil
 }
 
 func ToBool(value interface{}) bool {

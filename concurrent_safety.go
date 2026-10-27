@@ -2,6 +2,7 @@ package miya
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 )
@@ -207,7 +208,7 @@ func (ctr *ConcurrentTemplateRenderer) worker() {
 					if r := recover(); r != nil {
 						result = renderResult{
 							output: "",
-							err:    fmt.Errorf("panic during template render: %v", r),
+							err:    &RenderPanicError{Value: r, Stack: debug.Stack()},
 						}
 					}
 					job.resultCh <- result
@@ -234,7 +235,7 @@ func (ctr *ConcurrentTemplateRenderer) RenderBatch(contexts []Context) ([]string
 			// Recover from panics to prevent one bad render from affecting others
 			defer func() {
 				if r := recover(); r != nil {
-					errors[idx] = fmt.Errorf("panic during template render: %v", r)
+					errors[idx] = &RenderPanicError{Value: r, Stack: debug.Stack()}
 				}
 			}()
 			result, err := ctr.template.Render(context)

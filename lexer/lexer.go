@@ -805,24 +805,8 @@ func (l *Lexer) makeTokenAt(typ TokenType, value string, line, column int) *Toke
 	}
 }
 
-func isLetter(ch byte) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z'
-}
-
 func isDigit(ch byte) bool {
 	return '0' <= ch && ch <= '9'
-}
-
-func isAlphaNumeric(ch byte) bool {
-	return isLetter(ch) || isDigit(ch)
-}
-
-func isWhitespace(r rune) bool {
-	return unicode.IsSpace(r)
-}
-
-func runeLen(s string) int {
-	return utf8.RuneCountInString(s)
 }
 
 // lexRaw lexes {% raw %}...{% endraw %} when the block starting at l.pos is a

@@ -30,7 +30,7 @@ func mixCtx() miya.Context {
 		"fs": M("%s"), "fr": M("%r"), "fa": M("%a"), "fc": M("%c"), "fw": M("%5s|"),
 		"ff": M("%.2f"), "fx": M("%x"), "fd": M("%d"), "fka": M("%(a)s"), "fkr": M("%(a)r"),
 		"fp": M("%.2s"), "fl": M("%-6s|"),
-		"n60": 60, "lt": "<", "f25": 2.5, "n255": 255, "n3": 3,
+		"n60": 60, "lt": "<", "bs": `\`, "f25": 2.5, "n255": 255, "n3": 3,
 		"bx": M("<b>X"), "mb20": M("<b>" + strings.Repeat("x", 20)), "p20": strings.Repeat("x", 20),
 		"mb3": M("<b>xxx"), "mab": M("a b"), "pab": "a b", "miab": M("<i>a b"),
 		"st": mixSt(1), "sp": mixSp(1), "ft": mixFt(1), "t": strings.Repeat("y", 40),
@@ -116,6 +116,18 @@ func TestMarkupMixingNonHTML(t *testing.T) {
 		{"format_safe_arg", `{{ fs|format(m) }}`, `\u003cb\u003e`},
 		{"truncate", `{{ p20|truncate(12, true, sm) }}`, `xxxxxxxxx\u003cs\u003e`},
 		{"wordwrap", `{{ card|wordwrap(5, false, sep) }}`, `\u003cimg onerror=alert(1) src=/a.png onerror=alert(1) alt=photo\u003e`},
+		{"replace_safe", `{{ ("Hi NAME"|safe)|replace("NAME", bs) }}`, `Hi \\`},
+		{"replace_safe_tag", `{{ m|replace("b", x) }}`, `\u003c\u003cx\u003e\u003e`},
+		{"method_replace", `{{ ("Hi NAME"|safe).replace("NAME", bs) }}`, `Hi \\`},
+		{"method_format", `{{ ("{}"|safe).format(x) }}`, `\u003cx\u003e`},
+		{"method_join", `{{ (","|safe).join([x, x]) }}`, `\u003cx\u003e,\u003cx\u003e`},
+		{"method_upper", `{{ m.upper() }}`, `\u003cB\u003e`},
+		{"method_split", `{{ m.split()[0] }}`, `\u003cb\u003e`},
+		// With autoescape off the method result is still plain text here, so
+		// the JS escaper runs on it once it is printed with autoescape on.
+		{"method_format_autoescape_off", `{% autoescape false %}{% set s = ("{}"|safe).format(bs) %}{% endautoescape %}"{{ s }}"`, `"\\"`},
+		{"method_replace_autoescape_off", `{% autoescape false %}{% set s = ("A"|safe).replace("A", bs) %}{% endautoescape %}"{{ s }}"`, `"\\"`},
+		{"filter_replace_autoescape_off", `{% autoescape false %}{% set s = ("A"|safe)|replace("A", bs) %}{% endautoescape %}"{{ s }}"`, `"\\"`},
 	}
 	for _, tc := range rows {
 		t.Run(tc.name, func(t *testing.T) {

@@ -171,14 +171,14 @@ func (h *UndefinedHandler) HandleAttributeAccess(undefined *Undefined, attrName 
 func (h *UndefinedHandler) HandleItemAccess(undefined *Undefined, key interface{}, node parser.Node) (interface{}, error) {
 	switch undefined.Behavior {
 	case UndefinedStrict, UndefinedChainFail:
-		chainedName := fmt.Sprintf("%s[%v]", undefined.Name, key)
+		chainedName := fmt.Sprintf("%s[%s]", undefined.Name, SprintV(key))
 		return nil, NewUndefinedVariableError(chainedName, node)
 	case UndefinedDebug:
-		chainedName := fmt.Sprintf("%s[%v]", undefined.Name, key)
+		chainedName := fmt.Sprintf("%s[%s]", undefined.Name, SprintV(key))
 		return NewDebugUndefined(chainedName, "item access on undefined", node), nil
 	default:
 		// Silent behavior
-		chainedName := fmt.Sprintf("%s[%v]", undefined.Name, key)
+		chainedName := fmt.Sprintf("%s[%s]", undefined.Name, SprintV(key))
 		return NewUndefined(chainedName, UndefinedSilent, node), nil
 	}
 }

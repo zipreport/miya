@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"unsafe"
@@ -388,5 +389,198 @@ func (s *reprState) reprNamespace(ns ReprNamespace, v interface{}) {
 	s.write(")")
 	if tracked {
 		s.leave(key)
+	}
+}
+
+// FmtCycles reports whether fmt's %v would recurse forever on v: a non-empty
+// slice or map that holds itself through slices, arrays, maps, structs or
+// interfaces. fmt prints a nested pointer as an address, so only a top-level
+// pointer is followed.
+func FmtCycles(v interface{}) bool {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr && !rv.IsNil() {
+		rv = rv.Elem()
+	}
+	var w cycleWalk
+	return w.cyclic(rv)
+}
+
+// cycleWalk holds the containers on the current path and those already
+// walked without finding a cycle.
+type cycleWalk struct{ path, done map[reprKey]bool }
+
+func (w *cycleWalk) cyclic(rv reflect.Value) bool {
+	switch rv.Kind() {
+	case reflect.Interface:
+		return !rv.IsNil() && w.cyclic(rv.Elem())
+	case reflect.Struct:
+		for i := 0; i < rv.NumField(); i++ {
+			if w.cyclic(rv.Field(i)) {
+				return true
+			}
+		}
+	case reflect.Array:
+		if canHoldContainer(rv.Type().Elem()) {
+			for i := 0; i < rv.Len(); i++ {
+				if w.cyclic(rv.Index(i)) {
+					return true
+				}
+			}
+		}
+	case reflect.Slice, reflect.Map:
+		t := rv.Type()
+		if rv.Len() == 0 || !canHoldContainer(t.Elem()) && (t.Kind() == reflect.Slice || !canHoldContainer(t.Key())) {
+			return false
+		}
+		key := reprKey{ptr: rv.Pointer()}
+		if t.Kind() == reflect.Slice {
+			key.n = rv.Len()
+		}
+		if w.path[key] {
+			return true
+		}
+		if w.done[key] {
+			return false
+		}
+		if w.path == nil {
+			w.path, w.done = map[reprKey]bool{}, map[reprKey]bool{}
+		}
+		w.path[key] = true
+		found := false
+		if t.Kind() == reflect.Slice {
+			for i := 0; i < rv.Len() && !found; i++ {
+				found = w.cyclic(rv.Index(i))
+			}
+		} else {
+			for it := rv.MapRange(); !found && it.Next(); {
+				found = w.cyclic(it.Key()) || w.cyclic(it.Value())
+			}
+		}
+		delete(w.path, key)
+		w.done[key] = true
+		return found
+	}
+	return false
+}
+
+// canHoldContainer reports whether a value of type t can hold a slice or map
+// that fmt would print.
+func canHoldContainer(t reflect.Type) bool {
+	switch t.Kind() {
+	case reflect.Interface, reflect.Struct, reflect.Array, reflect.Slice, reflect.Map:
+		return true
+	}
+	return false
+}
+
+// SprintV is fmt.Sprintf("%v", v), except that a value fmt would print
+// forever (FmtCycles) prints a slice or map met again inside itself as [...]
+// or map[...].
+func SprintV(v interface{}) string {
+	if !FmtCycles(v) {
+		return fmt.Sprintf("%v", v)
+	}
+	s := &reprState{}
+	s.fmtValue(reflect.ValueOf(v), 0)
+	return string(s.b)
+}
+
+func (s *reprState) fmtValue(rv reflect.Value, depth int) {
+	if s.full {
+		return
+	}
+	if !rv.IsValid() {
+		s.write("<nil>")
+		return
+	}
+	if depth > 0 && rv.CanInterface() && !(rv.Kind() == reflect.Ptr && rv.IsNil()) {
+		switch x := rv.Interface().(type) {
+		case error:
+			s.write(x.Error())
+			return
+		case fmt.Stringer:
+			s.write(x.String())
+			return
+		}
+	}
+	switch rv.Kind() {
+	case reflect.Interface:
+		s.fmtValue(rv.Elem(), depth+1)
+	case reflect.Ptr:
+		if rv.IsNil() {
+			s.write("<nil>")
+			return
+		}
+		if depth == 0 {
+			switch rv.Elem().Kind() {
+			case reflect.Array, reflect.Slice, reflect.Struct, reflect.Map:
+				s.write("&")
+				s.fmtValue(rv.Elem(), depth+1)
+				return
+			}
+		}
+		s.write("0x" + strconv.FormatUint(uint64(rv.Pointer()), 16))
+	case reflect.Struct:
+		s.write("{")
+		for i := 0; i < rv.NumField(); i++ {
+			if i > 0 {
+				s.write(" ")
+			}
+			s.fmtValue(rv.Field(i), depth+1)
+		}
+		s.write("}")
+	case reflect.Map:
+		key := reprKey{ptr: rv.Pointer()}
+		tracked, cyclic := s.enter(key)
+		if cyclic {
+			s.write("map[...]")
+			return
+		}
+		type entry struct {
+			k string
+			v reflect.Value
+		}
+		entries := make([]entry, 0, rv.Len())
+		for it := rv.MapRange(); it.Next(); {
+			ks := &reprState{}
+			ks.fmtValue(it.Key(), depth+1)
+			entries = append(entries, entry{string(ks.b), it.Value()})
+		}
+		sort.Slice(entries, func(i, j int) bool { return entries[i].k < entries[j].k })
+		s.write("map[")
+		for i, en := range entries {
+			if i > 0 {
+				s.write(" ")
+			}
+			s.write(en.k + ":")
+			s.fmtValue(en.v, depth+1)
+		}
+		s.write("]")
+		if tracked {
+			s.leave(key)
+		}
+	case reflect.Slice, reflect.Array:
+		var key reprKey
+		if rv.Kind() == reflect.Slice && rv.Len() > 0 {
+			key = reprKey{rv.Pointer(), rv.Len()}
+		}
+		tracked, cyclic := s.enter(key)
+		if cyclic {
+			s.write("[...]")
+			return
+		}
+		s.write("[")
+		for i := 0; i < rv.Len() && !s.full; i++ {
+			if i > 0 {
+				s.write(" ")
+			}
+			s.fmtValue(rv.Index(i), depth+1)
+		}
+		s.write("]")
+		if tracked {
+			s.leave(key)
+		}
+	default:
+		s.write(fmt.Sprintf("%v", rv))
 	}
 }

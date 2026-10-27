@@ -5,7 +5,6 @@ import (
 	"math"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"unicode"
@@ -227,12 +226,8 @@ func testSequence(value interface{}, args ...interface{}) (bool, error) {
 	if _, ok := value.(*runtime.Undefined); ok {
 		return true, nil
 	}
-	if value == nil {
-		return false, nil
-	}
 
-	rv := reflect.ValueOf(value)
-	switch rv.Kind() {
+	switch valueKind(value) {
 	case reflect.Slice, reflect.Array, reflect.Map:
 		return true, nil
 	case reflect.String:
@@ -244,12 +239,7 @@ func testSequence(value interface{}, args ...interface{}) (bool, error) {
 
 // testMapping checks if a value is a mapping (map)
 func testMapping(value interface{}, args ...interface{}) (bool, error) {
-	if value == nil {
-		return false, nil
-	}
-
-	rv := reflect.ValueOf(value)
-	return rv.Kind() == reflect.Map, nil
+	return valueKind(value) == reflect.Map, nil
 }
 
 // testIterable checks if a value is iterable
@@ -257,12 +247,8 @@ func testIterable(value interface{}, args ...interface{}) (bool, error) {
 	if _, ok := value.(*runtime.Undefined); ok {
 		return true, nil
 	}
-	if value == nil {
-		return false, nil
-	}
 
-	rv := reflect.ValueOf(value)
-	switch rv.Kind() {
+	switch valueKind(value) {
 	case reflect.Slice, reflect.Array, reflect.Map, reflect.String:
 		return true, nil
 	default:
@@ -404,7 +390,7 @@ func pyCaseValue(value interface{}, lower bool) bool {
 	if s, ok := value.(string); ok {
 		return pyCaseTest(s, lower)
 	}
-	return pyCaseTest(fmt.Sprintf("%v", value), lower)
+	return pyCaseTest(runtime.SprintV(value), lower)
 }
 
 // testLower checks if a string is all lowercase
@@ -688,44 +674,10 @@ func testGreaterThanOrEqual(value interface{}, args ...interface{}) (bool, error
 
 // Helper functions
 
-// toInt converts a value to int
-func toInt(value interface{}) (int, error) {
-	switch v := value.(type) {
-	case runtime.RoundedFloat:
-		return int(v.Value), nil
-	case int:
-		return v, nil
-	case int8:
-		return int(v), nil
-	case int16:
-		return int(v), nil
-	case int32:
-		return int(v), nil
-	case int64:
-		return int(v), nil
-	case uint:
-		return int(v), nil
-	case uint8:
-		return int(v), nil
-	case uint16:
-		return int(v), nil
-	case uint32:
-		return int(v), nil
-	case uint64:
-		return int(v), nil
-	case float32:
-		return int(v), nil
-	case float64:
-		return int(v), nil
-	case string:
-		return strconv.Atoi(v)
-	default:
-		return 0, fmt.Errorf("cannot convert %T to int", value)
-	}
-}
-
 // contains checks if a container contains an item
 func contains(container, item interface{}) (bool, error) {
+	rawItem := item
+	container, item = runtime.BasicValue(container), runtime.BasicValue(item)
 	if container == nil {
 		return false, nil
 	}
@@ -734,7 +686,14 @@ func contains(container, item interface{}) (bool, error) {
 	case *runtime.Undefined:
 		return false, nil
 	case string:
-		itemStr := fmt.Sprintf("%v", item)
+		var itemStr string
+		switch reflect.ValueOf(item).Kind() {
+		case reflect.Slice, reflect.Array, reflect.Map:
+			// fmt never stops on a list or dict that contains itself
+			itemStr = runtime.ToString(item)
+		default:
+			itemStr = runtime.SprintV(item)
+		}
 		return strings.Contains(v, itemStr), nil
 	case []interface{}:
 		for _, elem := range v {
@@ -758,7 +717,7 @@ func contains(container, item interface{}) (bool, error) {
 			}
 			return false, nil
 		case reflect.Map:
-			_, ok := runtime.MapLookup(container, item)
+			_, ok := runtime.MapLookup(container, rawItem)
 			return ok, nil
 		default:
 			return false, fmt.Errorf("cannot check containment in %T", container)
@@ -813,42 +772,6 @@ func compareValues(v1, v2 interface{}, compFunc func(int) bool) (bool, error) {
 
 	// For equality comparison of uncomparable types, they're not equal
 	return compFunc(1), nil // Any non-zero value works for inequality
-}
-
-// toFloat converts a value to float64 for numeric comparison
-func toFloat(value interface{}) (float64, error) {
-	switch v := value.(type) {
-	case runtime.RoundedFloat:
-		return v.Value, nil
-	case int:
-		return float64(v), nil
-	case int8:
-		return float64(v), nil
-	case int16:
-		return float64(v), nil
-	case int32:
-		return float64(v), nil
-	case int64:
-		return float64(v), nil
-	case uint:
-		return float64(v), nil
-	case uint8:
-		return float64(v), nil
-	case uint16:
-		return float64(v), nil
-	case uint32:
-		return float64(v), nil
-	case uint64:
-		return float64(v), nil
-	case float32:
-		return float64(v), nil
-	case float64:
-		return v, nil
-	case string:
-		return strconv.ParseFloat(v, 64)
-	default:
-		return 0, fmt.Errorf("cannot convert %T to float", value)
-	}
 }
 
 // testAlpha checks if a string contains only alphabetic characters

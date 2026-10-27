@@ -263,7 +263,7 @@ func ToString(value interface{}) string {
 	if s, ok := reprContainer(value); ok {
 		return s
 	}
-	return fmt.Sprintf("%v", value)
+	return SprintV(value)
 }
 
 // escapeOutput is what {{ }} writes under autoescape: safe values unchanged,
@@ -353,6 +353,15 @@ func (cw *ContextWrapper) IsAutoescapeEnabled() bool {
 func (cw *ContextWrapper) Clone() Context {
 	return &ContextWrapper{
 		Context:       cw.Context.Clone(),
+		escapeContext: cw.escapeContext,
+		autoEscaper:   cw.autoEscaper,
+	}
+}
+
+// Child is a child scope of the wrapped context with the same escaping.
+func (cw *ContextWrapper) Child() Context {
+	return &ContextWrapper{
+		Context:       childScope(cw.Context),
 		escapeContext: cw.escapeContext,
 		autoEscaper:   cw.autoEscaper,
 	}

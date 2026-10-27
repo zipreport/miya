@@ -61,6 +61,9 @@ func (m *Macro) Call(args []interface{}, kwargs map[string]interface{}) (interfa
 			if expr, isExpr := def.(parser.ExpressionNode); isExpr {
 				v, err := e.callArg(expr, ctx)
 				if err != nil {
+					if errors.Is(err, ErrMaxRecursion) {
+						return nil, err
+					}
 					return nil, fmt.Errorf("error evaluating default value for parameter %s: %w", name, err)
 				}
 				def = v

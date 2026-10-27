@@ -453,7 +453,7 @@ func (e *DefaultEvaluator) evalLookup(expr parser.Node, ctx Context) (interface{
 		if u, ok := obj.(*Undefined); ok && e.undefinedHandler != nil {
 			return e.undefinedHandler.HandleAttributeAccess(u, n.Attribute, n)
 		}
-		if m, ok := e.builtinMethodFor(obj, n.Attribute); ok {
+		if m, ok := e.builtinMethodFor(obj, n.Attribute, ctx); ok {
 			return m, nil
 		}
 		missing := NewUndefined(fmt.Sprintf("%s.%s", e.getObjectName(obj), n.Attribute), behavior, n)
@@ -484,7 +484,7 @@ func (e *DefaultEvaluator) evalLookup(expr parser.Node, ctx Context) (interface{
 		if gerr != nil {
 			// Jinja2's getitem returns Undefined when the base is None, is not
 			// subscriptable, or rejects the key type; it never raises here.
-			return NewUndefined(fmt.Sprintf("%s[%v]", e.getObjectName(obj), key), behavior, n), nil
+			return NewUndefined(fmt.Sprintf("%s[%s]", e.getObjectName(obj), SprintV(key)), behavior, n), nil
 		}
 		return v, nil
 	}
@@ -542,7 +542,7 @@ func (e *DefaultEvaluator) EvalAttributeNode(node *parser.AttributeNode, ctx Con
 		return e.undefinedHandler.HandleAttributeAccess(undefined, node.Attribute, node)
 	}
 
-	if m, ok := e.builtinMethodFor(obj, node.Attribute); ok {
+	if m, ok := e.builtinMethodFor(obj, node.Attribute, ctx); ok {
 		return m, nil
 	}
 
@@ -588,7 +588,7 @@ func (e *DefaultEvaluator) EvalGetItemNode(node *parser.GetItemNode, ctx Context
 	}
 	if _, missing := v.(*Undefined); missing && e.undefinedHandler != nil {
 		// a missing key or index: strict mode fails, other modes get their own Undefined
-		return e.undefinedHandler.Handle(fmt.Sprintf("%s[%v]", e.getObjectName(obj), key), node)
+		return e.undefinedHandler.Handle(fmt.Sprintf("%s[%s]", e.getObjectName(obj), SprintV(key)), node)
 	}
 	return v, nil
 }
@@ -977,7 +977,7 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 				// Create a new for node with the same structure but new iterable
 				literalNode := &parser.LiteralNode{
 					Value: newIterable,
-					Raw:   fmt.Sprintf("%v", newIterable),
+					Raw:   SprintV(newIterable),
 				}
 				recursiveNode := &parser.ForNode{
 					Variables: node.Variables,
@@ -1289,6 +1289,9 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 	// Execute the included template with the appropriate context
 	result, err := e.EvalNode(templateAST, includeCtx)
 	if err != nil {
+		if errors.Is(err, ErrMaxRecursion) {
+			return nil, err
+		}
 		return nil, fmt.Errorf("error executing included template %q: %w", templateName, err)
 	}
 
@@ -1636,7 +1639,7 @@ func (e *DefaultEvaluator) attributeExists(obj interface{}, attr string) bool {
 	if obj == nil {
 		return false
 	}
-	if _, ok := e.builtinMethodFor(obj, attr); ok {
+	if _, ok := e.builtinMethodFor(obj, attr, nil); ok {
 		return true
 	}
 
@@ -1732,7 +1735,7 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 	if obj == nil {
 		return nil
 	}
-	if m, ok := e.builtinMethodFor(obj, attr); ok {
+	if m, ok := e.builtinMethodFor(obj, attr, nil); ok {
 		return m
 	}
 
@@ -1946,7 +1949,7 @@ func DictKey(key interface{}) string {
 	case RoundedFloat:
 		return fmt.Sprintf("%v", k.Value)
 	}
-	return fmt.Sprintf("%v", key)
+	return SprintV(key)
 }
 
 func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
@@ -2030,7 +2033,7 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 			if val, ok := mapLookup(rv, key); ok {
 				return val.Interface(), nil
 			}
-			return NewUndefined(fmt.Sprintf("%v", key), UndefinedSilent, nil), nil
+			return NewUndefined(SprintV(key), UndefinedSilent, nil), nil
 		}
 
 		return nil, fmt.Errorf("object is not subscriptable: %T", obj)
@@ -2088,11 +2091,6 @@ func (e *DefaultEvaluator) applyBinaryOpWithNode(op string, left, right interfac
 	}
 }
 
-// Legacy method for backward compatibility
-func (e *DefaultEvaluator) applyBinaryOp(op string, left, right interface{}) (interface{}, error) {
-	return e.applyBinaryOpWithNode(op, left, right, nil)
-}
-
 func (e *DefaultEvaluator) applyUnaryOp(op string, operand interface{}) (interface{}, error) {
 	switch op {
 	case "not":
@@ -2111,17 +2109,17 @@ func (e *DefaultEvaluator) applyFilter(name string, value interface{}, args []in
 	// For now, implement basic filters directly
 	switch name {
 	case "upper":
-		return strings.ToUpper(fmt.Sprintf("%v", value)), nil
+		return strings.ToUpper(SprintV(value)), nil
 	case "lower":
-		return strings.ToLower(fmt.Sprintf("%v", value)), nil
+		return strings.ToLower(SprintV(value)), nil
 	case "capitalize":
-		s := fmt.Sprintf("%v", value)
+		s := SprintV(value)
 		if len(s) == 0 {
 			return s, nil
 		}
 		return strings.ToUpper(s[:1]) + strings.ToLower(s[1:]), nil
 	case "trim":
-		return strings.TrimSpace(fmt.Sprintf("%v", value)), nil
+		return strings.TrimSpace(SprintV(value)), nil
 	case "length":
 		return e.length(value)
 	case "default":
@@ -2140,17 +2138,13 @@ func (e *DefaultEvaluator) applyFilter(name string, value interface{}, args []in
 		}
 		return value, nil
 	case "escape":
-		return e.htmlEscape(fmt.Sprintf("%v", value)), nil
+		return e.htmlEscape(SprintV(value)), nil
 	case "safe":
 		// Mark as safe - would need proper implementation
 		return value, nil
 	default:
 		return nil, fmt.Errorf("unknown filter: %s", name)
 	}
-}
-
-func (e *DefaultEvaluator) callFunction(function interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
-	return e.callFunctionWithContext(function, args, kwargs, nil)
 }
 
 func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []interface{}, kwargs map[string]interface{}, ctx Context) (interface{}, error) {
@@ -2357,6 +2351,7 @@ func (e *DefaultEvaluator) applyTest(name string, value interface{}, args []inte
 		}
 		return strings.HasSuffix(str, suffix), nil
 	case "sequence":
+		value = Indirect(value)
 		if value == nil {
 			return false, nil
 		}
@@ -2370,12 +2365,14 @@ func (e *DefaultEvaluator) applyTest(name string, value interface{}, args []inte
 			return false, nil
 		}
 	case "mapping":
+		value = Indirect(value)
 		if value == nil {
 			return false, nil
 		}
 		rv := reflect.ValueOf(value)
 		return rv.Kind() == reflect.Map, nil
 	case "iterable":
+		value = Indirect(value)
 		if value == nil {
 			return false, nil
 		}
@@ -2787,10 +2784,6 @@ func (e *DefaultEvaluator) addWithNode(a, b interface{}, node parser.Node) (inte
 	return nil, NewTypeError("addition", a, node).WithContext(fmt.Sprintf("cannot add %T and %T", a, b))
 }
 
-func (e *DefaultEvaluator) add(a, b interface{}) (interface{}, error) {
-	return e.addWithNode(a, b, nil)
-}
-
 // Placeholder enhanced operations (simplified for now)
 func (e *DefaultEvaluator) subtractWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
 	return e.subtract(a, b)
@@ -2827,48 +2820,6 @@ func (e *DefaultEvaluator) powerWithNode(a, b interface{}, node parser.Node) (in
 
 func (e *DefaultEvaluator) concatenateWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
 	return ToString(a) + ToString(b), nil
-}
-
-// Legacy method for existing code
-func (e *DefaultEvaluator) addOld(a, b interface{}) (interface{}, error) {
-	// String concatenation
-	if aStr, ok := a.(string); ok {
-		return aStr + fmt.Sprintf("%v", b), nil
-	}
-	if bStr, ok := b.(string); ok {
-		return fmt.Sprintf("%v", a) + bStr, nil
-	}
-
-	// Array/slice concatenation
-	if aSlice, ok := a.([]interface{}); ok {
-		if bSlice, ok := b.([]interface{}); ok {
-			result := make([]interface{}, len(aSlice)+len(bSlice))
-			copy(result, aSlice)
-			copy(result[len(aSlice):], bSlice)
-			return result, nil
-		}
-		// Concatenate single element to slice
-		result := make([]interface{}, len(aSlice)+1)
-		copy(result, aSlice)
-		result[len(aSlice)] = b
-		return result, nil
-	}
-	if bSlice, ok := b.([]interface{}); ok {
-		// Concatenate single element to beginning of slice
-		result := make([]interface{}, 1+len(bSlice))
-		result[0] = a
-		copy(result[1:], bSlice)
-		return result, nil
-	}
-
-	// Numeric addition
-	aFloat, aErr := e.toFloat(a)
-	bFloat, bErr := e.toFloat(b)
-	if aErr == nil && bErr == nil {
-		return aFloat + bFloat, nil
-	}
-
-	return nil, fmt.Errorf("cannot add %T and %T", a, b)
 }
 
 func (e *DefaultEvaluator) subtract(a, b interface{}) (interface{}, error) {
@@ -2929,10 +2880,6 @@ func (e *DefaultEvaluator) divideWithNode(a, b interface{}, node parser.Node) (i
 	return nil, NewTypeError("division", a, node).WithContext(fmt.Sprintf("cannot divide %T and %T", a, b))
 }
 
-func (e *DefaultEvaluator) divide(a, b interface{}) (interface{}, error) {
-	return e.divideWithNode(a, b, nil)
-}
-
 func (e *DefaultEvaluator) floorDivideWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
 	ai, bi, af, bf, isInt, ok := pyOperands(a, b)
 	if !ok {
@@ -2950,10 +2897,6 @@ func (e *DefaultEvaluator) floorDivideWithNode(a, b interface{}, node parser.Nod
 	}
 	floordiv, _ := pyFloatDivMod(af, bf)
 	return floordiv, nil
-}
-
-func (e *DefaultEvaluator) floorDivide(a, b interface{}) (interface{}, error) {
-	return e.floorDivideWithNode(a, b, nil)
 }
 
 func (e *DefaultEvaluator) modulo(a, b interface{}) (interface{}, error) {
@@ -3177,7 +3120,12 @@ func CompareNumbers(a, b interface{}) (cmp int, ok bool) { return compareNumbers
 func Equal(a, b interface{}) bool { var e DefaultEvaluator; return e.equal(a, b) }
 
 // Comparison operations
-func (e *DefaultEvaluator) equal(a, b interface{}) bool {
+func (e *DefaultEvaluator) equal(a, b interface{}) bool { return e.equalSeen(a, b, nil) }
+
+// equalSeen is equal with the pairs of lists already being compared: like
+// reflect.DeepEqual, a pair met again counts as equal, so self-containing
+// lists terminate.
+func (e *DefaultEvaluator) equalSeen(a, b interface{}, seen map[[3]uintptr]bool) bool {
 	a, b = Unmark(a), Unmark(b)
 	if cmp, ok := compareNumbers(a, b); ok {
 		return cmp == 0
@@ -3190,11 +3138,21 @@ func (e *DefaultEvaluator) equal(a, b interface{}) bool {
 			if av.Len() != bv.Len() {
 				return false
 			}
-			if ak == reflect.Slice && bk == reflect.Slice && av.Len() > 0 && av.Pointer() == bv.Pointer() {
-				return true
+			if ak == reflect.Slice && bk == reflect.Slice && av.Len() > 0 {
+				if av.Pointer() == bv.Pointer() {
+					return true
+				}
+				pair := [3]uintptr{av.Pointer(), bv.Pointer(), uintptr(av.Len())}
+				if seen[pair] {
+					return true
+				}
+				if seen == nil {
+					seen = map[[3]uintptr]bool{}
+				}
+				seen[pair] = true
 			}
 			for i := 0; i < av.Len(); i++ {
-				if !e.equal(av.Index(i).Interface(), bv.Index(i).Interface()) {
+				if !e.equalSeen(av.Index(i).Interface(), bv.Index(i).Interface(), seen) {
 					return false
 				}
 			}
@@ -3296,7 +3254,7 @@ func (e *DefaultEvaluator) fastToString(v interface{}) string {
 		}
 		return "false"
 	default:
-		return fmt.Sprintf("%v", v)
+		return SprintV(v)
 	}
 }
 
@@ -3687,6 +3645,19 @@ func (ac *autoescapeContext) IsAutoescapeEnabled() bool {
 // Clone keeps the block's autoescape setting for loops and with-blocks inside it.
 func (ac *autoescapeContext) Clone() Context {
 	return &autoescapeContext{Context: ac.Context.Clone(), autoescape: ac.autoescape}
+}
+
+// Child is a child scope of the wrapped context with the same autoescape setting.
+func (ac *autoescapeContext) Child() Context {
+	return &autoescapeContext{Context: childScope(ac.Context), autoescape: ac.autoescape}
+}
+
+// childScope returns a child scope of ctx, or a clone when ctx has none.
+func childScope(ctx Context) Context {
+	if c, ok := ctx.(childScoper); ok {
+		return c.Child()
+	}
+	return ctx.Clone()
 }
 
 // AutoescapeContext interface for contexts that support autoescape state

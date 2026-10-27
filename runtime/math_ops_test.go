@@ -9,7 +9,7 @@ func TestEvaluatorMathOperations(t *testing.T) {
 	e := NewEvaluator()
 
 	t.Run("add", func(t *testing.T) {
-		result, err := e.add(10, 5)
+		result, err := e.addWithNode(10, 5, nil)
 		if err != nil {
 			t.Fatalf("add failed: %v", err)
 		}
@@ -18,75 +18,8 @@ func TestEvaluatorMathOperations(t *testing.T) {
 		}
 	})
 
-	t.Run("addOld_strings", func(t *testing.T) {
-		result, err := e.addOld("hello", " world")
-		if err != nil {
-			t.Fatalf("addOld failed: %v", err)
-		}
-		if result != "hello world" {
-			t.Errorf("addOld('hello', ' world') = %v, want 'hello world'", result)
-		}
-	})
-
-	t.Run("addOld_string_and_number", func(t *testing.T) {
-		result, err := e.addOld("count: ", 42)
-		if err != nil {
-			t.Fatalf("addOld failed: %v", err)
-		}
-		if result != "count: 42" {
-			t.Errorf("addOld('count: ', 42) = %v, want 'count: 42'", result)
-		}
-	})
-
-	t.Run("addOld_slices", func(t *testing.T) {
-		a := []interface{}{1, 2}
-		b := []interface{}{3, 4}
-		result, err := e.addOld(a, b)
-		if err != nil {
-			t.Fatalf("addOld failed: %v", err)
-		}
-		slice, ok := result.([]interface{})
-		if !ok || len(slice) != 4 {
-			t.Errorf("addOld slices = %v, want [1,2,3,4]", result)
-		}
-	})
-
-	t.Run("addOld_slice_and_element", func(t *testing.T) {
-		a := []interface{}{1, 2}
-		result, err := e.addOld(a, 3)
-		if err != nil {
-			t.Fatalf("addOld failed: %v", err)
-		}
-		slice, ok := result.([]interface{})
-		if !ok || len(slice) != 3 {
-			t.Errorf("addOld(slice, element) = %v, want [1,2,3]", result)
-		}
-	})
-
-	t.Run("addOld_element_and_slice", func(t *testing.T) {
-		b := []interface{}{2, 3}
-		result, err := e.addOld(1, b)
-		if err != nil {
-			t.Fatalf("addOld failed: %v", err)
-		}
-		slice, ok := result.([]interface{})
-		if !ok || len(slice) != 3 {
-			t.Errorf("addOld(element, slice) = %v, want [1,2,3]", result)
-		}
-	})
-
-	t.Run("addOld_numbers", func(t *testing.T) {
-		result, err := e.addOld(10, 5)
-		if err != nil {
-			t.Fatalf("addOld failed: %v", err)
-		}
-		if result != float64(15) {
-			t.Errorf("addOld(10, 5) = %v, want 15", result)
-		}
-	})
-
 	t.Run("divide", func(t *testing.T) {
-		result, err := e.divide(10, 2)
+		result, err := e.divideWithNode(10, 2, nil)
 		if err != nil {
 			t.Fatalf("divide failed: %v", err)
 		}
@@ -96,14 +29,14 @@ func TestEvaluatorMathOperations(t *testing.T) {
 	})
 
 	t.Run("divide_by_zero", func(t *testing.T) {
-		_, err := e.divide(10, 0)
+		_, err := e.divideWithNode(10, 0, nil)
 		if err == nil {
 			t.Error("divide by zero should return error")
 		}
 	})
 
 	t.Run("floorDivide", func(t *testing.T) {
-		result, err := e.floorDivide(10, 3)
+		result, err := e.floorDivideWithNode(10, 3, nil)
 		if err != nil {
 			t.Fatalf("floorDivide failed: %v", err)
 		}
@@ -123,14 +56,14 @@ func TestEvaluatorMathOperations(t *testing.T) {
 	})
 
 	t.Run("floorDivide_by_zero", func(t *testing.T) {
-		_, err := e.floorDivide(10, 0)
+		_, err := e.floorDivideWithNode(10, 0, nil)
 		if err == nil {
 			t.Error("floor divide by zero should return error")
 		}
 	})
 
 	t.Run("floorDivide_type_error", func(t *testing.T) {
-		_, err := e.floorDivide("hello", 2)
+		_, err := e.floorDivideWithNode("hello", 2, nil)
 		if err == nil {
 			t.Error("floor divide with string should return error")
 		}
@@ -219,7 +152,7 @@ func TestApplyBinaryOp(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := e.applyBinaryOp(tt.op, tt.a, tt.b)
+			result, err := e.applyBinaryOpWithNode(tt.op, tt.a, tt.b, nil)
 			if tt.hasError {
 				if err == nil {
 					t.Errorf("expected error for op %q", tt.op)
@@ -250,7 +183,7 @@ func TestCallFunction(t *testing.T) {
 			}
 			return 0, nil
 		}
-		result, err := e.callFunction(fn, []interface{}{1, 2}, nil)
+		result, err := e.callFunctionWithContext(fn, []interface{}{1, 2}, nil, nil)
 		if err != nil {
 			t.Fatalf("callFunction failed: %v", err)
 		}
@@ -263,7 +196,7 @@ func TestCallFunction(t *testing.T) {
 		fn := func() (interface{}, error) {
 			return "hello", nil
 		}
-		result, err := e.callFunction(fn, nil, nil)
+		result, err := e.callFunctionWithContext(fn, nil, nil, nil)
 		if err != nil {
 			t.Fatalf("callFunction failed: %v", err)
 		}
@@ -276,7 +209,7 @@ func TestCallFunction(t *testing.T) {
 		fn := func(args []interface{}) (interface{}, error) {
 			return len(args), nil
 		}
-		result, err := e.callFunction(fn, []interface{}{1, 2, 3}, nil)
+		result, err := e.callFunctionWithContext(fn, []interface{}{1, 2, 3}, nil, nil)
 		if err != nil {
 			t.Fatalf("callFunction failed: %v", err)
 		}
@@ -290,7 +223,7 @@ func TestCallFunction(t *testing.T) {
 			return len(args) + len(kwargs), nil
 		}
 		kwargs := map[string]interface{}{"a": 1, "b": 2}
-		result, err := e.callFunction(fn, []interface{}{3}, kwargs)
+		result, err := e.callFunctionWithContext(fn, []interface{}{3}, kwargs, nil)
 		if err != nil {
 			t.Fatalf("callFunction failed: %v", err)
 		}
@@ -300,14 +233,14 @@ func TestCallFunction(t *testing.T) {
 	})
 
 	t.Run("non-function", func(t *testing.T) {
-		_, err := e.callFunction("not a function", nil, nil)
+		_, err := e.callFunctionWithContext("not a function", nil, nil, nil)
 		if err == nil {
 			t.Error("expected error for non-function")
 		}
 	})
 
 	t.Run("nil function", func(t *testing.T) {
-		_, err := e.callFunction(nil, nil, nil)
+		_, err := e.callFunctionWithContext(nil, nil, nil, nil)
 		if err == nil {
 			t.Error("expected error for nil function")
 		}
@@ -315,7 +248,7 @@ func TestCallFunction(t *testing.T) {
 
 	t.Run("Joiner", func(t *testing.T) {
 		joiner := &Joiner{Separator: ", ", Used: true}
-		result, err := e.callFunction(joiner, nil, nil)
+		result, err := e.callFunctionWithContext(joiner, nil, nil, nil)
 		if err != nil {
 			t.Fatalf("callFunction with Joiner failed: %v", err)
 		}
@@ -373,7 +306,7 @@ func TestApplyBinaryOpLogicalOperands(t *testing.T) {
 		{"and", 1, "x", "x"},
 	}
 	for _, tt := range tests {
-		got, err := e.applyBinaryOp(tt.op, tt.left, tt.right)
+		got, err := e.applyBinaryOpWithNode(tt.op, tt.left, tt.right, nil)
 		if err != nil {
 			t.Fatalf("%v %s %v: %v", tt.left, tt.op, tt.right, err)
 		}

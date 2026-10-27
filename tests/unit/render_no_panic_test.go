@@ -2,6 +2,7 @@ package miya_test
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -116,6 +117,7 @@ func TestRenderNoPanic(t *testing.T) {
 		if err == nil || !errors.Is(err, miya.ErrRenderPanic) {
 			t.Fatalf("want ErrRenderPanic, got %v", err)
 		}
+		checkPanicStack(t, err)
 	})
 
 	t.Run("panicking_filter", func(t *testing.T) {
@@ -138,6 +140,7 @@ func TestRenderNoPanic(t *testing.T) {
 		if !errors.Is(err, miya.ErrRenderPanic) {
 			t.Fatalf("errors.Is(err, ErrRenderPanic) false: %v", err)
 		}
+		checkPanicStack(t, err)
 
 		out, err := env.RenderString(`{{ 1 + 1 }}`, miya.NewContext())
 		if err != nil || out != "2" {
@@ -165,7 +168,21 @@ func TestRenderNoPanic(t *testing.T) {
 		if err == nil || !errors.Is(err, miya.ErrRenderPanic) {
 			t.Fatalf("want ErrRenderPanic, got %v", err)
 		}
+		checkPanicStack(t, err)
 	})
+}
+
+// checkPanicStack asserts the goroutine stack of a recovered panic is
+// available through RenderPanicError but kept out of the message.
+func checkPanicStack(t *testing.T, err error) {
+	t.Helper()
+	if strings.Contains(err.Error(), "goroutine ") {
+		t.Fatalf("error message carries the stack: %v", err)
+	}
+	var pe *miya.RenderPanicError
+	if !errors.As(err, &pe) || len(pe.Stack) == 0 || !strings.Contains(fmt.Sprint(pe.Value), "boom") {
+		t.Fatalf("want *RenderPanicError with stack and panic value, got %#v", pe)
+	}
 }
 
 func sp(s string) *string { return &s }

@@ -51,10 +51,6 @@ type context struct {
 	parent *context
 	data   map[string]interface{}
 	env    *Environment
-
-	// Phase 3b optimization: Cache for All() method
-	cachedAll     map[string]interface{}
-	allCacheValid bool
 }
 
 // NewContext creates a new empty Context for passing variables to template rendering.
@@ -231,8 +227,6 @@ func safeMethodCall(rv reflect.Value, methodName string) (result interface{}) {
 
 func (c *context) Set(key string, value interface{}) {
 	c.data[key] = value
-	// Invalidate All() cache (Phase 3b optimization)
-	c.allCacheValid = false
 }
 
 func (c *context) Push() Context {
@@ -251,11 +245,6 @@ func (c *context) Pop() Context {
 }
 
 func (c *context) All() map[string]interface{} {
-	// Use cached version if valid (Phase 3b optimization)
-	if c.allCacheValid {
-		return c.cachedAll
-	}
-
 	result := make(map[string]interface{})
 
 	// Phase 3b optimization: Start with environment globals (if present)
@@ -282,10 +271,6 @@ func (c *context) All() map[string]interface{} {
 	}
 
 	collect(c)
-
-	// Cache the result (Phase 3b optimization)
-	c.cachedAll = result
-	c.allCacheValid = true
 
 	return result
 }

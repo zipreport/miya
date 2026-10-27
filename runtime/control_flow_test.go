@@ -503,45 +503,6 @@ func TestEvalIfStatementWithElseIf(t *testing.T) {
 	})
 }
 
-// TestEvalBodyNodesWithLoopControl tests the loop control propagation
-func TestEvalBodyNodesWithLoopControl(t *testing.T) {
-	baseEvaluator := NewEvaluator()
-	cfEvaluator := NewControlFlowEvaluator(baseEvaluator)
-	ctx := &simpleContext{variables: make(map[string]interface{})}
-
-	t.Run("Normal evaluation", func(t *testing.T) {
-		nodes := []parser.Node{
-			parser.NewLiteralNode("hello", "", 1, 1),
-			parser.NewLiteralNode(" ", "", 1, 1),
-			parser.NewLiteralNode("world", "", 1, 1),
-		}
-
-		result, err := cfEvaluator.evalBodyNodesWithLoopControl(nodes, ctx)
-		if err != nil {
-			t.Fatalf("evalBodyNodesWithLoopControl failed: %v", err)
-		}
-
-		if result != "hello world" {
-			t.Errorf("Expected 'hello world', got %q", result)
-		}
-	})
-
-	t.Run("Non-string result conversion", func(t *testing.T) {
-		nodes := []parser.Node{
-			parser.NewLiteralNode(42, "", 1, 1),
-		}
-
-		result, err := cfEvaluator.evalBodyNodesWithLoopControl(nodes, ctx)
-		if err != nil {
-			t.Fatalf("evalBodyNodesWithLoopControl failed: %v", err)
-		}
-
-		if result != "42" {
-			t.Errorf("Expected '42', got %q", result)
-		}
-	})
-}
-
 // TestEvalLogicalAndShortCircuit tests short-circuit evaluation
 func TestEvalLogicalAndShortCircuit(t *testing.T) {
 	baseEvaluator := NewEvaluator()

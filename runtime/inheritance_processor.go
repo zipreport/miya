@@ -130,57 +130,6 @@ func (p *InheritanceProcessor) hasInheritanceDirectives(node parser.Node) bool {
 	return found
 }
 
-// isSelfReferencingBlock checks if this is the same block (no real inheritance)
-func (p *InheritanceProcessor) isSelfReferencingBlock(original, override *parser.BlockNode) bool {
-	// Only consider it self-referencing if it's literally the same block pointer
-	// This should only happen when a template has no parent and references its own blocks
-	return original == override
-}
-
-// blockContainsSuperCalls checks if a block contains super() calls
-func (p *InheritanceProcessor) blockContainsSuperCalls(block *parser.BlockNode) bool {
-	detector := NewSuperCallDetector()
-	for _, child := range block.Body {
-		if detector.HasSuperCalls(child) {
-			return true
-		}
-	}
-	return false
-}
-
-// debugPrintTemplate prints the structure of a template for debugging
-func (p *InheritanceProcessor) debugPrintTemplate(node parser.Node, depth int) {
-	indent := ""
-	for i := 0; i < depth; i++ {
-		indent += "  "
-	}
-
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		fmt.Printf("%sTemplateNode (%d children)\n", indent, len(n.Children))
-		for i, child := range n.Children {
-			fmt.Printf("%s  [%d]:", indent, i)
-			p.debugPrintTemplate(child, depth+1)
-		}
-
-	case *parser.BlockNode:
-		fmt.Printf(" BlockNode '%s' (%d children)\n", n.Name, len(n.Body))
-		for i, child := range n.Body {
-			fmt.Printf("%s    [%d]:", indent, i)
-			p.debugPrintTemplate(child, depth+1)
-		}
-
-	case *parser.VariableNode:
-		fmt.Printf(" VariableNode (expr: %T)\n", n.Expression)
-
-	case *parser.SuperNode:
-		fmt.Printf(" SuperNode\n")
-
-	default:
-		fmt.Printf(" %T\n", n)
-	}
-}
-
 // buildInheritanceHierarchy builds the complete inheritance chain
 func (p *InheritanceProcessor) buildInheritanceHierarchy(template TemplateInterface) (*InheritanceHierarchy, error) {
 	hierarchy := &InheritanceHierarchy{

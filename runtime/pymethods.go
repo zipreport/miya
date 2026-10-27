@@ -309,15 +309,20 @@ func (e *DefaultEvaluator) bindValue(expr parser.ExpressionNode, value interface
 }
 
 // builtinMethodFor returns the builtin method name of a string or list value.
-// Dicts are handled in getAttribute's map case, after their keys.
-func (e *DefaultEvaluator) builtinMethodFor(obj interface{}, name string) (*builtinMethod, bool) {
+// Dicts are handled in getAttribute's map case, after their keys. ctx may be
+// nil when only the method's existence matters.
+func (e *DefaultEvaluator) builtinMethodFor(obj interface{}, name string, ctx Context) (*builtinMethod, bool) {
 	isStr, isList := isStringMethodName(name), isListMethodName(name)
 	if obj == nil || (!isStr && !isList) {
 		return nil, false
 	}
 	if isStr {
 		if m, ok := AsMarkup(obj); ok {
-			return e.stringMethod(string(m), true, name), true
+			// Outside the HTML family a safe receiver is plain text: the
+			// context escaper must run on the method's result, even when
+			// autoescape is off where the method is called.
+			_, ec, _ := resolveEscape(ctx)
+			return e.stringMethod(string(m), htmlFamily(ec), name), true
 		}
 		if s, ok := basicValue(obj).(string); ok {
 			return e.stringMethod(s, false, name), true

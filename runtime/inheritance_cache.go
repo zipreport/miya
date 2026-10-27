@@ -18,6 +18,8 @@ type InheritanceCacheEntry struct {
 }
 
 // ResolvedTemplateCacheEntry represents a cached resolved template
+//
+// Deprecated: resolved templates are not cached; nothing uses this type.
 type ResolvedTemplateCacheEntry struct {
 	ResolvedAST   *parser.TemplateNode
 	ContextHash   string
@@ -38,6 +40,7 @@ type CacheStats struct {
 		HitRate   float64
 		AvgAccess float64
 	}
+	// Deprecated: resolved templates are not cached; these stats are always zero.
 	ResolvedCache struct {
 		Hits      int64
 		Misses    int64
@@ -58,17 +61,8 @@ type InheritanceCache struct {
 		misses int64
 	}
 
-	// Resolved template cache - stores final resolved templates
-	resolvedCache map[string]*ResolvedTemplateCacheEntry
-	resolvedMutex sync.RWMutex
-	resolvedStats struct {
-		hits   int64
-		misses int64
-	}
-
 	// Configuration
 	hierarchyTTL atomic.Int64 // How long to keep hierarchy entries (time.Duration)
-	resolvedTTL  atomic.Int64 // How long to keep resolved templates (time.Duration)
 	maxEntries   atomic.Int64 // Maximum cache entries
 
 	// Cleanup management
@@ -81,12 +75,10 @@ type InheritanceCache struct {
 func NewInheritanceCache() *InheritanceCache {
 	c := &InheritanceCache{
 		hierarchyCache:  make(map[string]*InheritanceCacheEntry),
-		resolvedCache:   make(map[string]*ResolvedTemplateCacheEntry),
 		lastCleanup:     time.Now(),
 		cleanupInterval: 2 * time.Minute,
 	}
 	c.hierarchyTTL.Store(int64(15 * time.Minute)) // Hierarchies are relatively stable
-	c.resolvedTTL.Store(int64(5 * time.Minute))   // Resolved templates may vary by context
 	c.maxEntries.Store(1000)                      // Reasonable default
 	return c
 }
@@ -96,10 +88,10 @@ func (c *InheritanceCache) SetHierarchyTTL(ttl time.Duration) {
 	c.hierarchyTTL.Store(int64(ttl))
 }
 
-// SetResolvedTTL sets the time-to-live for resolved template cache entries
-func (c *InheritanceCache) SetResolvedTTL(ttl time.Duration) {
-	c.resolvedTTL.Store(int64(ttl))
-}
+// SetResolvedTTL does nothing.
+//
+// Deprecated: resolved templates are not cached.
+func (c *InheritanceCache) SetResolvedTTL(ttl time.Duration) {}
 
 // SetMaxEntries sets the maximum number of cache entries
 func (c *InheritanceCache) SetMaxEntries(max int) {
@@ -166,22 +158,6 @@ func (c *InheritanceCache) InvalidateTemplate(templateName string) {
 	c.hierarchyMutex.Lock()
 	delete(c.hierarchyCache, templateName)
 	c.hierarchyMutex.Unlock()
-
-	// Invalidate resolved templates that include this template in their chain
-	c.resolvedMutex.Lock()
-	keysToDelete := make([]string, 0)
-	for key, entry := range c.resolvedCache {
-		for _, name := range entry.TemplateChain {
-			if name == templateName {
-				keysToDelete = append(keysToDelete, key)
-				break
-			}
-		}
-	}
-	for _, key := range keysToDelete {
-		delete(c.resolvedCache, key)
-	}
-	c.resolvedMutex.Unlock()
 }
 
 // ClearAll removes all cache entries
@@ -189,10 +165,6 @@ func (c *InheritanceCache) ClearAll() {
 	c.hierarchyMutex.Lock()
 	c.hierarchyCache = make(map[string]*InheritanceCacheEntry)
 	c.hierarchyMutex.Unlock()
-
-	c.resolvedMutex.Lock()
-	c.resolvedCache = make(map[string]*ResolvedTemplateCacheEntry)
-	c.resolvedMutex.Unlock()
 }
 
 // GetStats returns cache performance statistics
@@ -203,12 +175,6 @@ func (c *InheritanceCache) GetStats() CacheStats {
 	hierarchyHits := atomic.LoadInt64(&c.hierarchyStats.hits)
 	hierarchyMisses := atomic.LoadInt64(&c.hierarchyStats.misses)
 
-	c.resolvedMutex.RLock()
-	resolvedEntries := len(c.resolvedCache)
-	c.resolvedMutex.RUnlock()
-	resolvedHits := atomic.LoadInt64(&c.resolvedStats.hits)
-	resolvedMisses := atomic.LoadInt64(&c.resolvedStats.misses)
-
 	stats := CacheStats{}
 
 	// Hierarchy cache stats
@@ -217,14 +183,6 @@ func (c *InheritanceCache) GetStats() CacheStats {
 	stats.HierarchyCache.Entries = hierarchyEntries
 	if hierarchyHits+hierarchyMisses > 0 {
 		stats.HierarchyCache.HitRate = float64(hierarchyHits) / float64(hierarchyHits+hierarchyMisses)
-	}
-
-	// Resolved cache stats
-	stats.ResolvedCache.Hits = resolvedHits
-	stats.ResolvedCache.Misses = resolvedMisses
-	stats.ResolvedCache.Entries = resolvedEntries
-	if resolvedHits+resolvedMisses > 0 {
-		stats.ResolvedCache.HitRate = float64(resolvedHits) / float64(resolvedHits+resolvedMisses)
 	}
 
 	return stats
@@ -276,17 +234,4 @@ func (c *InheritanceCache) cleanup() {
 		delete(c.hierarchyCache, key)
 	}
 	c.hierarchyMutex.Unlock()
-
-	// Cleanup resolved cache
-	c.resolvedMutex.Lock()
-	resolvedKeysToDelete := make([]string, 0)
-	for key, entry := range c.resolvedCache {
-		if now.After(entry.ExpiresAt) {
-			resolvedKeysToDelete = append(resolvedKeysToDelete, key)
-		}
-	}
-	for _, key := range resolvedKeysToDelete {
-		delete(c.resolvedCache, key)
-	}
-	c.resolvedMutex.Unlock()
 }

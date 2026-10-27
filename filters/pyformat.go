@@ -240,6 +240,9 @@ func pyFormat(format string, args []interface{}, kwargs map[string]interface{}, 
 			}
 			text = pyPad(s, width, fl.left)
 		}
+		if out.Len()+len(text) > maxRepeatBytes {
+			return "", &runtime.SizeError{Msg: "format output too large"}
+		}
 		out.WriteString(text)
 	}
 

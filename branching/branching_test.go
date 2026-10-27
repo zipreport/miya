@@ -967,88 +967,8 @@ func TestTypeCheckFunctions(t *testing.T) {
 	})
 }
 
-// Test toInt conversion function
-func TestToIntConversion(t *testing.T) {
-	tests := []struct {
-		name     string
-		value    interface{}
-		expected int
-		hasError bool
-	}{
-		{"int", 42, 42, false},
-		{"int8", int8(42), 42, false},
-		{"int16", int16(42), 42, false},
-		{"int32", int32(42), 42, false},
-		{"int64", int64(42), 42, false},
-		{"uint", uint(42), 42, false},
-		{"uint8", uint8(42), 42, false},
-		{"uint16", uint16(42), 42, false},
-		{"uint32", uint32(42), 42, false},
-		{"uint64", uint64(42), 42, false},
-		{"float32", float32(42.9), 42, false},
-		{"float64", float64(42.9), 42, false},
-		{"string number", "42", 42, false},
-		{"invalid string", "not a number", 0, true},
-		{"bool", true, 0, true},
-		{"slice", []int{1, 2}, 0, true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := toInt(tt.value)
-			if tt.hasError {
-				if err == nil {
-					t.Errorf("toInt(%v) expected error but got none", tt.value)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("toInt(%v) unexpected error: %v", tt.value, err)
-				}
-				if result != tt.expected {
-					t.Errorf("toInt(%v) = %v, expected %v", tt.value, result, tt.expected)
-				}
-			}
-		})
-	}
-}
-
 // Test conversion functions
 func TestConversionFunctions(t *testing.T) {
-	t.Run("toFloat", func(t *testing.T) {
-		tests := []struct {
-			name     string
-			value    interface{}
-			expected float64
-			hasError bool
-		}{
-			{"int to float", 42, 42.0, false},
-			{"int64 to float", int64(42), 42.0, false},
-			{"float32 to float", float32(42.5), 42.5, false},
-			{"float64 unchanged", 42.5, 42.5, false},
-			{"string to float", "42.5", 42.5, false},
-			{"invalid string", "not a number", 0, true},
-			{"bool to float", true, 0, true},
-		}
-
-		for _, tt := range tests {
-			t.Run(tt.name, func(t *testing.T) {
-				result, err := toFloat(tt.value)
-				if tt.hasError {
-					if err == nil {
-						t.Errorf("toFloat(%v) expected error but got none", tt.value)
-					}
-				} else {
-					if err != nil {
-						t.Errorf("toFloat(%v) unexpected error: %v", tt.value, err)
-					}
-					if result != tt.expected {
-						t.Errorf("toFloat(%v) = %v, expected %v", tt.value, result, tt.expected)
-					}
-				}
-			})
-		}
-	})
-
 	t.Run("compareValues", func(t *testing.T) {
 		tests := []struct {
 			name      string

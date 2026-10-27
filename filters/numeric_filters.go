@@ -3,6 +3,7 @@ package filters
 import (
 	"fmt"
 	"math"
+	"math/rand/v2"
 	"reflect"
 	"strconv"
 	"strings"
@@ -238,51 +239,65 @@ func SumFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	switch v := value.(type) {
 	case []interface{}:
 		for _, item := range v {
-			if attribute != "" {
-				// Extract attribute
-				item = extractAttribute(item, attribute)
+			f, err := sumItem(item, attribute)
+			if err != nil {
+				return nil, err
 			}
-
-			if item != nil {
-				f, err := ToFloat(item)
-				if err == nil {
-					sum += f
-				}
-			}
+			sum += f
 		}
 		return sum, nil
 
 	case []string:
 		for _, item := range v {
-			f, err := ToFloat(item)
-			if err == nil {
-				sum += f
+			f, err := sumItem(item, "")
+			if err != nil {
+				return nil, err
 			}
+			sum += f
 		}
 		return sum, nil
 
 	default:
 		// Try reflection for other slice types
-		rv := reflect.ValueOf(value)
+		rv := reflect.ValueOf(runtime.Indirect(value))
 		if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
 			for i := 0; i < rv.Len(); i++ {
-				item := rv.Index(i).Interface()
-				if attribute != "" {
-					item = extractAttribute(item, attribute)
+				f, err := sumItem(rv.Index(i).Interface(), attribute)
+				if err != nil {
+					return nil, err
 				}
-
-				if item != nil {
-					f, err := ToFloat(item)
-					if err == nil {
-						sum += f
-					}
-				}
+				sum += f
 			}
 			return sum, nil
 		}
 
 		return nil, fmt.Errorf("sum filter requires a sequence")
 	}
+}
+
+// sumItem is what an item (or its attribute) adds to a sum. Undefined and
+// missing attributes add nothing, like miya's lenient undefined in `+`; None
+// and other non-numbers are a TypeError, as in Jinja2.
+func sumItem(item interface{}, attribute string) (float64, error) {
+	if attribute != "" {
+		v, found := lookupAttribute(item, attribute)
+		if !found {
+			return 0, nil
+		}
+		item = v
+	}
+	if _, ok := item.(*runtime.Undefined); ok {
+		return 0, nil
+	}
+	f, err := ToFloat(item)
+	if item == nil || err != nil {
+		name := "NoneType"
+		if item != nil {
+			name = pyTypeName(item)
+		}
+		return 0, fmt.Errorf("sum: unsupported operand type(s) for +: 'int' and '%s'", name)
+	}
+	return f, nil
 }
 
 // MinFilter returns the smallest item of a sequence, like Jinja2's min. With
@@ -340,34 +355,29 @@ func extremum(name string, want int, value interface{}, args []interface{}) (int
 	return best, nil
 }
 
-// RandomFilter returns a random item from sequence (simplified - not truly random)
+// RandomFilter returns a random item of a sequence or character of a string;
+// an empty one gives undefined, as in Jinja2.
 func RandomFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	// This is a simplified implementation
-	// In a real implementation, you'd use proper random number generation
-
-	switch v := value.(type) {
-	case []interface{}:
-		if len(v) == 0 {
-			return nil, nil
-		}
-		// Return first item as a placeholder
-		return v[0], nil
-
-	case []string:
-		if len(v) == 0 {
-			return "", nil
-		}
-		return v[0], nil
-
+	var items []interface{}
+	switch v := runtime.BasicValue(value).(type) {
 	case string:
-		if len(v) == 0 {
-			return "", nil
+		runes := []rune(v)
+		if len(runes) == 0 {
+			return runtime.NewUndefined("", runtime.UndefinedSilent, nil), nil
 		}
-		return string(v[0]), nil
-
+		return string(runes[rand.IntN(len(runes))]), nil
+	case []interface{}:
+		items = v
 	default:
-		return nil, fmt.Errorf("random filter requires a sequence")
+		if !isListKind(reflect.ValueOf(v).Kind()) {
+			return nil, fmt.Errorf("random filter requires a sequence")
+		}
+		items, _ = toInterfaceSlice(v)
 	}
+	if len(items) == 0 {
+		return runtime.NewUndefined("", runtime.UndefinedSilent, nil), nil
+	}
+	return items[rand.IntN(len(items))], nil
 }
 
 // CeilFilter returns the ceiling (smallest integer greater than or equal to) of a number

@@ -201,31 +201,6 @@ func (cf *ControlFlowEvaluator) evalBodyNodes(nodes []parser.Node, ctx Context) 
 	return result.String(), nil
 }
 
-// evalBodyNodesWithLoopControl evaluates nodes and propagates loop control errors
-func (cf *ControlFlowEvaluator) evalBodyNodesWithLoopControl(nodes []parser.Node, ctx Context) (string, error) {
-	var result strings.Builder
-
-	for _, node := range nodes {
-		nodeResult, err := cf.evaluator.EvalNode(node, ctx)
-		if err != nil {
-			// Propagate loop control errors
-			if _, ok := err.(*LoopControlError); ok {
-				return "", err
-			}
-			return "", err
-		}
-
-		// Convert result to string and append directly to builder
-		if str, ok := nodeResult.(string); ok {
-			result.WriteString(str)
-		} else {
-			result.WriteString(ToString(nodeResult))
-		}
-	}
-
-	return result.String(), nil
-}
-
 // evalBodyNodesWithLoopControlBuilder evaluates nodes and writes directly to a shared builder
 func (cf *ControlFlowEvaluator) evalBodyNodesWithLoopControlBuilder(nodes []parser.Node, ctx Context, builder *strings.Builder) (string, error) {
 	for _, node := range nodes {

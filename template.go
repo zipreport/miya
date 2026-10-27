@@ -32,13 +32,25 @@ type Template struct {
 // not a template error.
 var ErrRenderPanic = errors.New("miya: recovered panic during render")
 
+// RenderPanicError is the error returned when a render recovers from a panic.
+// It wraps ErrRenderPanic. Stack holds the goroutine stack at the recovery; it
+// is kept out of Error() so the message is safe to show or log.
+type RenderPanicError struct {
+	Value interface{}
+	Stack []byte
+}
+
+func (e *RenderPanicError) Error() string { return fmt.Sprintf("%v: %v", ErrRenderPanic, e.Value) }
+
+func (e *RenderPanicError) Unwrap() error { return ErrRenderPanic }
+
 // Render executes the template with the given context and returns the rendered output as a string.
 // It resolves template inheritance and handles auto-escaping; its output equals RenderTo's.
 func (t *Template) Render(context Context) (output string, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			output = ""
-			err = fmt.Errorf("%w: %v\n%s", ErrRenderPanic, r, debug.Stack())
+			err = &RenderPanicError{Value: r, Stack: debug.Stack()}
 		}
 	}()
 
@@ -55,7 +67,7 @@ func (t *Template) Render(context Context) (output string, err error) {
 func (t *Template) RenderTo(w io.Writer, context Context) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("%w: %v\n%s", ErrRenderPanic, r, debug.Stack())
+			err = &RenderPanicError{Value: r, Stack: debug.Stack()}
 		}
 	}()
 
@@ -225,6 +237,9 @@ func (t *Template) Release() {
 	e.cacheMutex.Lock()
 	if cached, ok := e.cache[t.cacheKey]; ok && cached == t {
 		delete(e.cache, t.cacheKey)
+	}
+	if cached, ok := e.stringCache[t.cacheKey]; ok && cached == t {
+		delete(e.stringCache, t.cacheKey)
 	}
 	e.cacheMutex.Unlock()
 }

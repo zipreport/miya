@@ -157,6 +157,9 @@ func TestSafeReceiverMethods(t *testing.T) {
 		{name: "strip_title", tpl: `{{ ('<b> '|safe).strip() }}|{{ ('<b>'|safe).title() }}`, data: x, autoescape: true, want: `<b>|<B>`},
 		{name: "plain_results", tpl: `{{ ('<b>'|safe).startswith('<') }}|{{ ('<b>'|safe).count('b') }}`, data: x, autoescape: true, want: `true|1`},
 		{name: "plain_receiver", tpl: `{{ '<b>{}</b>'.format(x) }}`, data: x, autoescape: true, want: `&lt;b&gt;&lt;i&gt;&lt;/b&gt;`},
+		// Jinja2: Markup methods escape their arguments with autoescape off too.
+		{name: "format_autoescape_off", tpl: `{{ ('<b>{}</b>'|safe).format(x) }}`, data: x, want: `<b>&lt;i&gt;</b>`},
+		{name: "replace_autoescape_off_tag", tpl: `{% autoescape false %}{{ ('<b>'|safe).replace('b', x) }}{% endautoescape %}`, data: x, autoescape: true, want: `<&lt;i&gt;>`},
 	})
 }
 

@@ -84,16 +84,8 @@ func TestNewInheritanceCache(t *testing.T) {
 		t.Error("Expected initialized hierarchy cache map")
 	}
 
-	if cache.resolvedCache == nil {
-		t.Error("Expected initialized resolved cache map")
-	}
-
 	if time.Duration(cache.hierarchyTTL.Load()) != 15*time.Minute {
 		t.Errorf("Expected hierarchyTTL of 15 minutes, got %v", time.Duration(cache.hierarchyTTL.Load()))
-	}
-
-	if time.Duration(cache.resolvedTTL.Load()) != 5*time.Minute {
-		t.Errorf("Expected resolvedTTL of 5 minutes, got %v", time.Duration(cache.resolvedTTL.Load()))
 	}
 
 	if int(cache.maxEntries.Load()) != 1000 {
@@ -110,18 +102,6 @@ func TestSetHierarchyTTL(t *testing.T) {
 
 	if time.Duration(cache.hierarchyTTL.Load()) != newTTL {
 		t.Errorf("Expected hierarchyTTL of %v, got %v", newTTL, time.Duration(cache.hierarchyTTL.Load()))
-	}
-}
-
-// TestSetResolvedTTL tests setting resolved template TTL
-func TestSetResolvedTTL(t *testing.T) {
-	cache := NewInheritanceCache()
-
-	newTTL := 10 * time.Minute
-	cache.SetResolvedTTL(newTTL)
-
-	if time.Duration(cache.resolvedTTL.Load()) != newTTL {
-		t.Errorf("Expected resolvedTTL of %v, got %v", newTTL, time.Duration(cache.resolvedTTL.Load()))
 	}
 }
 
@@ -388,7 +368,6 @@ func TestConcurrentAccess(t *testing.T) {
 func TestCleanup(t *testing.T) {
 	cache := NewInheritanceCache()
 	cache.SetHierarchyTTL(1 * time.Millisecond)
-	cache.SetResolvedTTL(1 * time.Millisecond)
 	cache.cleanupInterval = 1 * time.Millisecond
 
 	// Add entries

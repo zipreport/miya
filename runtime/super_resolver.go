@@ -174,11 +174,6 @@ func (s *SuperResolver) findParentBlockAtDepth(blockName string, depth int) (*pa
 	return blockHierarchy[targetIndex], nil
 }
 
-// findParentBlock searches the inheritance hierarchy for the parent block (legacy method)
-func (s *SuperResolver) findParentBlock(blockName string) (*parser.BlockNode, error) {
-	return s.findParentBlockAtDepth(blockName, 0)
-}
-
 // buildBlockHierarchy builds a hierarchy of blocks with the same name
 func (s *SuperResolver) buildBlockHierarchy(blockName string) []*parser.BlockNode {
 	var hierarchy []*parser.BlockNode

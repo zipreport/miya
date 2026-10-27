@@ -14,7 +14,7 @@ import (
 
 // FirstFilter returns the first item in a sequence
 func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	value = mapAsKeys(value)
+	value = runtime.BasicValue(mapAsKeys(value))
 	if value == nil {
 		return nil, nil
 	}
@@ -56,6 +56,8 @@ func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
 			if rv.Len() > 0 {
 				return rv.Index(0).Interface(), nil
 			}
+		} else if _, ok := value.(*runtime.Undefined); !ok {
+			return nil, fmt.Errorf("'%s' object is not iterable", pyTypeName(value))
 		}
 	}
 
@@ -64,7 +66,7 @@ func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // LastFilter returns the last item in a sequence
 func LastFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	value = mapAsKeys(value)
+	value = runtime.BasicValue(mapAsKeys(value))
 	if value == nil {
 		return nil, nil
 	}
@@ -106,6 +108,8 @@ func LastFilter(value interface{}, args ...interface{}) (interface{}, error) {
 			if rv.Len() > 0 {
 				return rv.Index(rv.Len() - 1).Interface(), nil
 			}
+		} else if _, ok := value.(*runtime.Undefined); !ok {
+			return nil, fmt.Errorf("'%s' object is not reversible", pyTypeName(value))
 		}
 	}
 
@@ -114,6 +118,7 @@ func LastFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // LengthFilter returns the length of a sequence or mapping
 func LengthFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = runtime.Indirect(value)
 	if value == nil {
 		return 0, nil
 	}
@@ -217,6 +222,15 @@ func JoinFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return nil, err
 	}
 
+	if len(items) > 0 {
+		size := int64(len(items)-1) * int64(len(separator))
+		for _, it := range items {
+			size += int64(len(it))
+		}
+		if size > maxRepeatBytes {
+			return nil, &runtime.SizeError{Msg: "join output too large"}
+		}
+	}
 	return strings.Join(items, separator), nil
 }
 
@@ -310,7 +324,7 @@ func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // ListFilter converts value to list
 func ListFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	value = mapAsKeys(value)
+	value = runtime.BasicValue(mapAsKeys(value))
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -350,8 +364,10 @@ func ListFilter(value interface{}, args ...interface{}) (interface{}, error) {
 			return result, nil
 		}
 
-		// Single item becomes single-item list
-		return []interface{}{value}, nil
+		if _, ok := value.(*runtime.Undefined); ok {
+			return []interface{}{}, nil
+		}
+		return nil, fmt.Errorf("'%s' object is not iterable", pyTypeName(value))
 	}
 }
 
@@ -636,6 +652,7 @@ func ZipFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // Helper function to convert various types to []interface{}
 func toInterfaceSlice(value interface{}) ([]interface{}, error) {
+	value = runtime.Indirect(value)
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -878,6 +895,14 @@ func wrapAttributeError(filterName, attribute string, err error) error {
 // other: a deliberate deviation, see the plan's "Why this matters".
 // Any other pairing is an error, as in Python.
 func compareItems(a, b interface{}, caseSensitive bool) (int, error) {
+	return compareItemsAt(a, b, caseSensitive, 0)
+}
+
+// maxCompareDepth bounds how deep a comparison descends into nested lists, so
+// lists that contain each other give Python's RecursionError, not a crash.
+const maxCompareDepth = 1000
+
+func compareItemsAt(a, b interface{}, caseSensitive bool, depth int) (int, error) {
 	a, b = runtime.BasicValue(runtime.Unmark(a)), runtime.BasicValue(runtime.Unmark(b))
 	if a == nil || b == nil {
 		switch {
@@ -917,8 +942,15 @@ func compareItems(a, b interface{}, caseSensitive bool) (int, error) {
 	}
 	av, bv := reflect.ValueOf(a), reflect.ValueOf(b)
 	if isListKind(av.Kind()) && isListKind(bv.Kind()) {
+		// Like Python, a list is equal to itself without comparing its items.
+		if av.Kind() == reflect.Slice && av.Type() == bv.Type() && av.Pointer() == bv.Pointer() && av.Len() == bv.Len() {
+			return 0, nil
+		}
+		if depth >= maxCompareDepth {
+			return 0, fmt.Errorf("maximum recursion depth exceeded in comparison")
+		}
 		for i := 0; i < av.Len() && i < bv.Len(); i++ {
-			c, err := compareItems(av.Index(i).Interface(), bv.Index(i).Interface(), caseSensitive)
+			c, err := compareItemsAt(av.Index(i).Interface(), bv.Index(i).Interface(), caseSensitive, depth+1)
 			if err != nil {
 				return 0, err
 			}
@@ -994,7 +1026,8 @@ func uniqueKey(v interface{}, caseSensitive bool) string {
 		}
 		return "s:" + s
 	}
-	return "o:" + fmt.Sprintf("%T:%v", v, v)
+	// runtime.Repr, unlike fmt, stops at a list or dict that contains itself.
+	return "o:" + fmt.Sprintf("%T:", v) + runtime.Repr(v)
 }
 
 // lookupAttribute resolves a Jinja2 attribute path such as "c.name" or "0"
