@@ -26,7 +26,13 @@ Edit `gen.py`, then regenerate with the pinned versions:
 Run `go test ./tests/conformance/ -run '^TestConformance$' -count=1`. A new case
 miya gets wrong is either fixed or added by hand to `known_divergences.json`
 with `plan`, `kind` and `reason`. `-args -conformance.dump=FILE` writes all
-current divergences; `build_allowlist.py FILE` turns a dump into the allow-list.
+current divergences (the test fails as usual, but still writes the file).
+`build_allowlist.py --existing known_divergences.json FILE` refreshes the
+allow-list from a dump: entries that now match are dropped, the rest keep their
+`plan` and take `kind` and `reason` from the dump. Any divergence not already
+in the allow-list makes it exit 1 and list the IDs; `--allow-new` adds them
+with plan `unplanned`, and is only for deliberate divergences. Write the output
+to a temporary file and move it over `known_divergences.json`.
 
 ## Contract for fix plans
 

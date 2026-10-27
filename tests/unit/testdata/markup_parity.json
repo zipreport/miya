@@ -232,7 +232,8 @@
       "h": "<b>"
     },
     "want": "&lt;B&gt;x&lt;/b&gt;",
-    "known_unrelated": "Jinja2's title returns plain text; miya keeps Markup so filter blocks stay raw (control K10)"
+    "known_unrelated": "Jinja2's title returns plain text; miya keeps Markup so filter blocks stay raw (control K10)",
+    "got_now": "<B>x</b>"
   },
   {
     "name": "W9_string",
@@ -269,7 +270,8 @@
       "h": "<b>"
     },
     "want": "|d",
-    "known_unrelated": "default treats \"\" as missing without boolean=true (control K4)"
+    "known_unrelated": "default treats \"\" as missing without boolean=true (control K4)",
+    "got_now": "d|d"
   },
   {
     "name": "W13_striptags",
@@ -288,7 +290,8 @@
       "h": "<b>"
     },
     "want": "&lt;,b,&gt;,x,&lt;,/,b,&gt;",
-    "known_unrelated": "join rejects a string (control K11)"
+    "known_unrelated": "join rejects a string (control K11)",
+    "got_now": "ERROR: join filter requires a sequence"
   },
   {
     "name": "W15_list",
@@ -397,7 +400,8 @@
       "h": "<b>"
     },
     "want": "[Markup(&#39;&lt;b&gt;x&lt;/b&gt;&#39;)]",
-    "known_unrelated": "safe items print as '…', Jinja2 prints Markup('…') (repr of Markup; control K5)"
+    "known_unrelated": "safe items print as '…', Jinja2 prints Markup('…') (repr of Markup; control K5)",
+    "got_now": "[&#39;&lt;b&gt;x&lt;/b&gt;&#39;]"
   },
   {
     "name": "W28_wordwrap",
@@ -488,7 +492,8 @@
       "h": "<b>"
     },
     "want": "",
-    "known_unrelated": "control: default on a plain string"
+    "known_unrelated": "control: default on a plain string",
+    "got_now": "d"
   },
   {
     "name": "K5_ctl_list",
@@ -543,7 +548,8 @@
       "h": "<b>"
     },
     "want": "a,b,c",
-    "known_unrelated": "control: join on a plain string"
+    "known_unrelated": "control: join on a plain string",
+    "got_now": "ERROR: join filter requires a sequence"
   },
   {
     "name": "K12_ctl_e_plain",
@@ -706,7 +712,8 @@
     },
     "autoescape": false,
     "want": "ERROR: UndefinedError: 'b' is undefined",
-    "known_unrelated": "macros defined inside {% autoescape %} leak out of the block; Jinja2 raises UndefinedError"
+    "known_unrelated": "macros defined inside {% autoescape %} leak out of the block; Jinja2 raises UndefinedError",
+    "got_now": "<b>&lt;s&gt;</b>"
   },
   {
     "name": "I1_import_macro",

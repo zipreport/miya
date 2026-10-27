@@ -23,6 +23,7 @@ type markupParityRow struct {
 	Files          map[string]string      `json:"files"`
 	Want           string                 `json:"want"`
 	KnownUnrelated json.RawMessage        `json:"known_unrelated"`
+	GotNow         string                 `json:"got_now"` // miya's pinned output for a known_unrelated row
 	Deviation      string                 `json:"deviation"`
 }
 
@@ -74,8 +75,11 @@ func TestMarkupParity(t *testing.T) {
 			}
 			if len(row.KnownUnrelated) > 0 && string(row.KnownUnrelated) != "null" && string(row.KnownUnrelated) != "false" {
 				if got == row.Want {
-					t.Errorf("%s now matches Jinja2; remove known_unrelated from testdata/markup_parity.json", row.Name)
+					t.Errorf("%s now matches Jinja2; remove known_unrelated and got_now from testdata/markup_parity.json", row.Name)
 					return
+				}
+				if got != row.GotNow {
+					t.Fatalf("tpl %q: known_unrelated output changed\n got: %q\npinned got_now: %q\nif intended, update got_now in testdata/markup_parity.json", row.Tpl, got, row.GotNow)
 				}
 				t.Skip("known_unrelated")
 			}

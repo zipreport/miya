@@ -3,6 +3,7 @@ package loader
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -122,13 +123,29 @@ func TestLoaderContainment(t *testing.T) {
 		wantSource(t, l, "a..b.html", "D")
 	})
 	t.Run("dotdot_segment_rejected", func(t *testing.T) {
-		_, root, l := setup(t)
-		write(t, filepath.Join(root, "m.html"), "M")
-		if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
-			t.Fatal(err)
-		}
-		for _, name := range []string{"sub/../m.html", "../x.html", "a/../../x.html", `..\x.html`} {
-			wantErr(t, l, name)
+		for _, follow := range []bool{false, true} {
+			base, root, l := setup(t)
+			l.SetFollowLinks(follow)
+			// Without the ".." check each name would resolve to one of these.
+			write(t, filepath.Join(root, "m.html"), "M")
+			write(t, filepath.Join(base, "x.html"), "OUTSIDE")
+			if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			names := []string{"sub/../m.html", "../x.html", "a/../../x.html"}
+			if filepath.Separator == '\\' {
+				names = append(names, `..\x.html`)
+			} else {
+				// On POSIX a backslash is an ordinary character: this is a file in root.
+				write(t, filepath.Join(root, `..\x.html`), "LITERAL")
+				wantSource(t, l, `..\x.html`, "LITERAL")
+			}
+			for _, name := range names {
+				got, err := l.GetSource(name)
+				if err == nil || !strings.Contains(err.Error(), "invalid template name") {
+					t.Errorf("followLinks=%v: GetSource(%q) = %q, %v; want invalid template name", follow, name, got, err)
+				}
+			}
 		}
 	})
 	t.Run("backslash_is_literal_on_posix", func(t *testing.T) {

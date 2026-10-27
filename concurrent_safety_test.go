@@ -576,6 +576,15 @@ func TestConcurrentRendererLifecycle(t *testing.T) {
 			t.Fatal(err)
 		}
 		r := NewConcurrentTemplateRenderer(tmpl, 1)
+		render := func() renderResult {
+			select {
+			case res := <-r.RenderAsync(NewContext()):
+				return res
+			case <-time.After(time.Second):
+				t.Fatal("no result within 1s")
+			}
+			return renderResult{}
+		}
 		func() {
 			defer func() {
 				if p := recover(); p != nil {
@@ -583,17 +592,26 @@ func TestConcurrentRendererLifecycle(t *testing.T) {
 				}
 			}()
 			r.Start()
+			if res := render(); res.err != nil || res.output != "x" {
+				t.Fatalf("running: got %q, %v; want \"x\"", res.output, res.err)
+			}
 			r.Stop()
 			r.Start()
+			// A renderer starts once: after Stop, Start does nothing.
+			if res := render(); res.err == nil || !strings.Contains(res.err.Error(), "stopped") {
+				t.Fatalf("after restart: got %q, %v; want renderer is stopped", res.output, res.err)
+			}
 			r.Stop()
 		}()
 	})
 
 	t.Run("pending_jobs_at_stop", func(t *testing.T) {
-		for iter := 0; iter < 10; iter++ {
+		drained := 0
+		for iter := 0; iter < 20; iter++ {
 			gate := make(chan struct{})
+			entered := make(chan struct{}, 3)
 			env := NewEnvironment()
-			env.AddGlobal("wait", func() (interface{}, error) { <-gate; return "", nil })
+			env.AddGlobal("wait", func() (interface{}, error) { entered <- struct{}{}; <-gate; return "", nil })
 			tmpl, err := env.FromString("{{ wait() }}x")
 			if err != nil {
 				t.Fatal(err)
@@ -601,20 +619,33 @@ func TestConcurrentRendererLifecycle(t *testing.T) {
 			r := NewConcurrentTemplateRenderer(tmpl, 1)
 			r.Start()
 			chans := make([]<-chan renderResult, 3)
-			for i := range chans {
-				chans[i] = r.RenderAsync(NewContext())
-			}
-			time.Sleep(10 * time.Millisecond)
+			// The single worker is blocked in job 0, so jobs 1 and 2 stay queued.
+			chans[0] = r.RenderAsync(NewContext())
+			<-entered
+			chans[1] = r.RenderAsync(NewContext())
+			chans[2] = r.RenderAsync(NewContext())
 			go r.Stop()
-			time.Sleep(50 * time.Millisecond)
+			<-r.stopChan // Stop has begun: no new work is accepted
 			close(gate)
 			for i, ch := range chans {
 				select {
-				case <-ch:
+				case res := <-ch:
+					switch {
+					case res.err == nil && res.output == "x":
+					case i > 0 && res.err != nil && strings.Contains(res.err.Error(), "stopped"):
+						drained++
+					default:
+						t.Fatalf("iteration %d: job %d: got %q, %v", iter, i, res.output, res.err)
+					}
 				case <-time.After(2 * time.Second):
 					t.Fatalf("iteration %d: job %d got no result", iter, i)
 				}
 			}
+		}
+		// After job 0 the worker picks a queued job or the stop signal at
+		// random, so each iteration drains at least one job with probability 3/4.
+		if drained == 0 {
+			t.Fatal("Stop never answered a queued job")
 		}
 	})
 }
