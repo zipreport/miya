@@ -163,7 +163,7 @@ func TestMarkupFiltersAutoescapeOff(t *testing.T) {
 		{"center", `m|center(7)`, `  <b>  `},
 		{"trim", `m|trim`, `<b>`},
 		{"indent", `m|indent(2, true)`, `  <b>`},
-		{"indent_arg_not_escaped", `("a\nb"|safe)|indent("<i>")`, "a\n<i>b"},
+		{"indent_arg_escaped", `("a\nb"|safe)|indent("<i>")`, "a\n&lt;i&gt;b"},
 		{"trim_arg_not_escaped", `("<b><"|safe)|trim("<")`, `b>`},
 		{"reverse", `m|reverse`, `>b<`},
 		{"default", `m|default(x)`, `<b>`},

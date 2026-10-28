@@ -66,6 +66,9 @@ func BoxList(v interface{}) interface{} {
 // value unchanged, except that escaped template output, also inside lists
 // and dicts, becomes a plain string.
 func Unbox(v interface{}) interface{} {
+	if !escapedOutputMade.Load() {
+		return unbox(v)
+	}
 	return plainEscaped(unbox(v))
 }
 
@@ -386,7 +389,7 @@ func (e *DefaultEvaluator) escapedMethod(t string, tec EscapeContext, name strin
 				return r, nil
 			}
 		}
-		return markEscaped(s, tec), nil
+		return e.markEscaped(s, tec), nil
 	}}
 }
 

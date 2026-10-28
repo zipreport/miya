@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"reflect"
 	"testing"
 	"time"
 )
@@ -119,9 +120,22 @@ func TestMapMarkupSubListMismatch(t *testing.T) {
 	}
 }
 
+// userFilterCtx is an environment context whose filter "kind" is the
+// user's; every other filter and test is miya's own.
+type userFilterCtx struct{ Context }
+
+func (userFilterCtx) ApplyFilter(string, interface{}, ...interface{}) (interface{}, error) {
+	return nil, nil
+}
+func (userFilterCtx) ApplyTest(string, interface{}, ...interface{}) (bool, error) { return false, nil }
+func (userFilterCtx) IsBuiltinFilter(name string) bool                            { return name != "kind" }
+func (userFilterCtx) IsBuiltinTest(string) bool                                   { return true }
+
 // The scans that turn escaped output into plain strings for Go code run only
-// once escaped output has been made, so HTML renders never pay for them; an
-// HTML render makes none.
+// for the user's filters, in a render whose evaluator made escaped output:
+// built-in filters and HTML renders never pay for them, and an HTML render
+// makes none. Unbox, which has no evaluator, scans once any evaluator made
+// escaped output.
 func TestEscapedScanOnlyAfterEscapedOutput(t *testing.T) {
 	defer escapedOutputMade.Store(true)
 	escapedOutputMade.Store(false)
@@ -131,33 +145,53 @@ func TestEscapedScanOnlyAfterEscapedOutput(t *testing.T) {
 		return "", nil
 	}
 	e := NewEvaluator()
-	ctx := markupTestCtx()
-	if r := markIfSafe("<x>", ctx); r != Markup("<x>") {
+	ctx := &autoescapeContext{Context: userFilterCtx{&simpleContext{variables: map[string]interface{}{}}}, autoescape: true}
+	if r := e.markIfSafe("<x>", ctx); r != Markup("<x>") {
 		t.Fatalf("markIfSafe = %#v", r)
 	}
-	if _, ok := concatEscaped(ctx, "a", Markup("b")); ok || escapedOutputMade.Load() {
+	if _, ok := e.concatEscaped(ctx, "a", Markup("b")); ok || e.escapedMade.Load() || escapedOutputMade.Load() {
 		t.Fatal("HTML output made escaped output")
 	}
-	// a value made elsewhere is not looked for
 	list := []interface{}{"a", escapedJS("b")}
-	if _, err := e.applyFilterWithMarkup("kind", list, nil, ctx, kind); err != nil {
-		t.Fatal(err)
+	scanned := func(name string, args ...interface{}) bool {
+		t.Helper()
+		seen = nil
+		if _, err := e.applyFilterWithMarkup(name, list, args, ctx, kind); err != nil {
+			t.Fatal(err)
+		}
+		_, plain := seen.(string)
+		return plain
 	}
-	if _, ok := seen.(escapedJS); !ok {
-		t.Errorf("scanned before escaped output was made: got %T", seen)
+	// a value made elsewhere is not looked for
+	if scanned("kind") {
+		t.Error("scanned before escaped output was made")
 	}
 	if got := Unbox(list).([]interface{})[1]; got != escapedJS("b") {
 		t.Errorf("Unbox scanned before escaped output was made: got %T", got)
 	}
-	markEscaped("c", EscapeContextJS)
-	if _, err := e.applyFilterWithMarkup("kind", list, nil, ctx, kind); err != nil {
-		t.Fatal(err)
-	}
-	if _, ok := seen.(string); !ok {
-		t.Errorf("not scanned after escaped output was made: got %T", seen)
+	// another render made escaped output
+	NewEvaluator().markEscaped("c", EscapeContextJS)
+	if scanned("kind") {
+		t.Error("scanned after another render made escaped output")
 	}
 	if got := Unbox(list).([]interface{})[1]; got != "b" {
 		t.Errorf("Unbox did not scan after escaped output was made: got %T", got)
+	}
+	e.markEscaped("c", EscapeContextJS)
+	for _, c := range []struct {
+		name string
+		args []interface{}
+		want bool
+	}{
+		{"kind", nil, true},
+		{"length", nil, false},
+		{"map", []interface{}{"kind"}, true},
+		{"map", []interface{}{"upper"}, false},
+		{"select", []interface{}{"string"}, false},
+	} {
+		if got := scanned(c.name, c.args...); got != c.want {
+			t.Errorf("%s%v: scanned = %v, want %v", c.name, c.args, got, c.want)
+		}
 	}
 }
 
@@ -184,6 +218,23 @@ func TestPlainEscapedSharedAndSelfContaining(t *testing.T) {
 		}
 		if got := r.(map[string]interface{})["self"].([]interface{})[0]; got != "a" {
 			t.Errorf("self-containing item = %#v", got)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("timed out")
+	}
+	// the same shapes without escaped output come back as they are
+	var p interface{} = []interface{}{"a"}
+	for i := 0; i < 40; i++ {
+		p = []interface{}{p, p}
+	}
+	pself := []interface{}{"a", nil}
+	pself[1] = pself
+	in := map[string]interface{}{"l": p, "self": pself}
+	go func() { done <- plainEscaped(in) }()
+	select {
+	case r := <-done:
+		if reflect.ValueOf(r).Pointer() != reflect.ValueOf(in).Pointer() {
+			t.Error("a value without escaped output was copied")
 		}
 	case <-time.After(10 * time.Second):
 		t.Fatal("timed out")

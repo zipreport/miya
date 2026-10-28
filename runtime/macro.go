@@ -116,7 +116,7 @@ func (m *Macro) Call(args []interface{}, kwargs map[string]interface{}) (interfa
 		return nil, fmt.Errorf("error executing macro %s: %w", m.Name, err)
 	}
 	if result == nil {
-		return markIfSafe("", m.defCtx), nil
+		return e.markIfSafe("", m.defCtx), nil
 	}
-	return markIfSafe(ToString(result), m.defCtx), nil
+	return e.markIfSafe(ToString(result), m.defCtx), nil
 }

@@ -99,7 +99,7 @@ func URLEncodeFilter(value interface{}, args ...interface{}) (interface{}, error
 			el := rv.Index(i).Interface()
 			ev := reflect.ValueOf(runtime.Indirect(el))
 			if (ev.Kind() != reflect.Slice && ev.Kind() != reflect.Array) || ev.Len() != 2 {
-				return nil, fmt.Errorf("urlencode: expected a string, a mapping or a list of pairs, got element %T", el)
+				return nil, fmt.Errorf("urlencode: expected a string, a mapping or a list of pairs, got element %T", escapedAsString(el))
 			}
 			pairs = append(pairs, [2]interface{}{ev.Index(0).Interface(), ev.Index(1).Interface()})
 		}

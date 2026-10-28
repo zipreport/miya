@@ -88,16 +88,20 @@ func asEscaped(v interface{}) (string, EscapeContext, bool) {
 	return "", "", false
 }
 
-// escapedOutputMade is set once markEscaped has tagged a value. Until then
-// no value can be tagged, and the scans that turn tagged values into plain
-// strings for Go code are skipped: HTML renders never pay for them.
+// escapedOutputMade is set once any evaluator has tagged a value. Until then
+// Unbox, which has no evaluator to ask, skips its scan for tagged values.
 var escapedOutputMade atomic.Bool
 
 // markEscaped tags s as already escaped for ec; s is returned as is for a
-// context without a tag.
-func markEscaped(s string, ec EscapeContext) interface{} {
+// context without a tag. The evaluator notes that it made escaped output:
+// from then on the user's Go filters, tests and functions get the lists and
+// dicts of this render scanned for it.
+func (e *DefaultEvaluator) markEscaped(s string, ec EscapeContext) interface{} {
 	switch ec {
 	case EscapeContextJS, EscapeContextCSS, EscapeContextURL, EscapeContextJSON:
+		if !e.escapedMade.Load() {
+			e.escapedMade.Store(true)
+		}
 		if !escapedOutputMade.Load() {
 			escapedOutputMade.Store(true)
 		}
@@ -206,7 +210,7 @@ func htmlFamily(ec EscapeContext) bool {
 
 // markIfSafe marks rendered template output as Markup when ctx escapes in an
 // HTML-family context, and as escaped for the context in any other.
-func markIfSafe(s string, ctx Context) interface{} {
+func (e *DefaultEvaluator) markIfSafe(s string, ctx Context) interface{} {
 	on, ec, _ := resolveEscape(ctx)
 	if !on {
 		return s
@@ -214,7 +218,7 @@ func markIfSafe(s string, ctx Context) interface{} {
 	if htmlFamily(ec) {
 		return Markup(s)
 	}
-	return markEscaped(s, ec)
+	return e.markEscaped(s, ec)
 }
 
 // escapeFor escapes v exactly as {{ }} would in ctx; safe values come back
@@ -330,8 +334,9 @@ var markupPassthroughFilters = map[string]bool{"default": true, "d": true}
 
 // markupEscapedArgFilters get their arguments escaped for a safe input even
 // with autoescape off: markupsafe's Markup.center escapes its fill. Jinja2
-// marks indent's string safe, and Markup.strip does not escape its chars.
-var markupEscapedArgFilters = map[string]bool{"center": true}
+// marks indent's string safe; miya escapes it as it does with autoescape on.
+// Markup.strip does not escape its chars.
+var markupEscapedArgFilters = map[string]bool{"center": true, "indent": true}
 
 // markupMixingFilters receive their input and arguments unchanged, safe or not,
 // and implement Jinja2's mixing of safe and plain text themselves.
@@ -429,53 +434,173 @@ func escapeArg(ctx Context, a interface{}) interface{} {
 }
 
 // unmarkCall returns copies of args and kwargs with safe values un-marked,
-// for Go functions that expect plain strings.
-func unmarkCall(args []interface{}, kwargs map[string]interface{}) ([]interface{}, map[string]interface{}) {
+// for Go functions that expect plain strings; with nested true escaped
+// output inside lists and dicts becomes a plain string too.
+func unmarkCall(args []interface{}, kwargs map[string]interface{}, nested bool) ([]interface{}, map[string]interface{}) {
 	if len(args) > 0 {
 		na := make([]interface{}, len(args))
 		for i, a := range args {
-			na[i] = unmarkCallArg(a)
+			na[i] = unmarkCallArg(a, nested)
 		}
 		args = na
 	}
 	if len(kwargs) > 0 {
 		nk := make(map[string]interface{}, len(kwargs))
 		for k, v := range kwargs {
-			nk[k] = unmarkCallArg(v)
+			nk[k] = unmarkCallArg(v, nested)
 		}
 		kwargs = nk
 	}
 	return args, kwargs
 }
 
-// unmarkCallArg un-marks a Go function argument; escaped output, also
-// nested in lists and dicts, becomes a plain string too.
-func unmarkCallArg(a interface{}) interface{} {
-	return plainEscaped(Unmark(a))
+// unmarkCallArg un-marks a Go function argument; with nested true escaped
+// output in lists and dicts becomes a plain string too.
+func unmarkCallArg(a interface{}, nested bool) interface{} {
+	a = Unmark(a)
+	if nested {
+		return plainEscaped(a)
+	}
+	return a
+}
+
+// builtinLookup is implemented by an environment context that can tell
+// miya's own filters and tests from the ones its user registered.
+type builtinLookup interface {
+	IsBuiltinFilter(name string) bool
+	IsBuiltinTest(name string) bool
+}
+
+// filtersCallingByName are the built-in filters that call the filter or test
+// named by their argument at that position.
+var filtersCallingByName = map[string]struct {
+	pos  int
+	test bool
+}{
+	"map": {0, false}, "select": {0, true}, "reject": {0, true},
+	"selectattr": {1, true}, "rejectattr": {1, true},
+}
+
+// builtinFilterCall reports whether filter name with args runs only miya's
+// own code, which takes escaped output nested in lists and dicts as the
+// strings they are. The evaluator's fallback filters are miya's own.
+func builtinFilterCall(ctx Context, name string, args []interface{}) bool {
+	fc := filterContext(ctx)
+	b, ok := fc.(builtinLookup)
+	if !ok {
+		_, env := fc.(EnvironmentContext)
+		return !env
+	}
+	if !b.IsBuiltinFilter(name) {
+		return false
+	}
+	by, ok := filtersCallingByName[name]
+	if !ok || by.pos >= len(args) {
+		return true
+	}
+	inner, ok := Unmark(args[by.pos]).(string)
+	if !ok {
+		return true
+	}
+	if by.test {
+		return b.IsBuiltinTest(inner)
+	}
+	return b.IsBuiltinFilter(inner)
+}
+
+// builtinTestCall reports whether test name is miya's own.
+func builtinTestCall(ctx Context, name string) bool {
+	fc := filterContext(ctx)
+	b, ok := fc.(builtinLookup)
+	if !ok {
+		_, env := fc.(EnvironmentContext)
+		return !env
+	}
+	return b.IsBuiltinTest(name)
 }
 
 // plainEscaped returns v with escaped output turned into plain strings, also
 // inside nested []interface{} and map[string]interface{} values, for Go
 // code. A container is copied only when something in it changes; one that
-// contains itself is left as is where it recurs. Nothing is walked before
-// escaped output has been made.
+// contains itself is left as is where it recurs. A value found to hold no
+// escaped output is returned without allocating.
 func plainEscaped(v interface{}) interface{} {
-	if !escapedOutputMade.Load() {
+	budget := plainScanBudget
+	if !mayHoldEscaped(v, 0, &budget) {
 		return v
 	}
 	r, _ := plainEscapedIn(v, nil)
 	return r
 }
 
+// plainItems returns a list with its escaped output items turned into plain
+// strings, copied only when one is; other values are returned unchanged.
+func plainItems(v interface{}) interface{} {
+	list, ok := v.([]interface{})
+	if !ok {
+		return v
+	}
+	var out []interface{}
+	for i, it := range list {
+		if t, _, ok := asEscaped(it); ok {
+			if out == nil {
+				out = append([]interface{}(nil), list...)
+			}
+			out[i] = t
+		}
+	}
+	if out == nil {
+		return v
+	}
+	return out
+}
+
+// plainScanDepth and plainScanBudget bound the scan of mayHoldEscaped, so a
+// value that contains itself or shares containers stops it.
+const (
+	plainScanDepth  = 256
+	plainScanBudget = 1 << 20
+)
+
+// mayHoldEscaped reports whether v holds escaped output, also nested; it
+// also reports true when the scan reaches its depth or its budget of items.
+func mayHoldEscaped(v interface{}, depth int, budget *int) bool {
+	if _, _, ok := asEscaped(v); ok {
+		return true
+	}
+	switch c := v.(type) {
+	case []interface{}:
+		if depth == plainScanDepth {
+			return len(c) > 0
+		}
+		for _, it := range c {
+			if *budget--; *budget < 0 || mayHoldEscaped(it, depth+1, budget) {
+				return true
+			}
+		}
+	case map[string]interface{}:
+		if depth == plainScanDepth {
+			return len(c) > 0
+		}
+		for _, it := range c {
+			if *budget--; *budget < 0 || mayHoldEscaped(it, depth+1, budget) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // plainArgContainers applies plainEscaped to the list and dict arguments,
 // also inside a KwArgs; escaped output given directly as an argument is left
 // to the markup policy.
 func plainArgContainers(args []interface{}) []interface{} {
-	if !escapedOutputMade.Load() {
-		return args
-	}
 	inside := func(v interface{}) (interface{}, bool) {
 		if _, _, ok := asEscaped(v); ok {
+			return v, false
+		}
+		budget := plainScanBudget
+		if !mayHoldEscaped(v, 0, &budget) {
 			return v, false
 		}
 		return plainEscapedIn(v, nil)
@@ -630,16 +755,22 @@ func (e *DefaultEvaluator) applyFilterWithMarkup(name string, value interface{},
 						return r, nil
 					}
 				}
-				return markEscaped(s, tec), nil
+				return e.markEscaped(s, tec), nil
 			}
 			return r, nil
 		}
 		// any other filter gets the text, and its result is escaped again
 		value = t
 	}
-	// Go filters never see escaped output, even nested
-	value = plainEscaped(value)
-	args = plainArgContainers(args)
+	// The user's Go filters never see escaped output, even nested
+	if e.escapedMade.Load() && !builtinFilterCall(ctx, name, args) {
+		value = plainEscaped(value)
+		args = plainArgContainers(args)
+	} else if name == "map" && !html {
+		// map gives each item to a filter, which takes escaped output as
+		// its text as it does when applied to it directly
+		value = plainItems(value)
+	}
 	m, safe := AsMarkup(value)
 
 	var result interface{}
@@ -1057,22 +1188,35 @@ func concatMarkup(ctx Context, left, right interface{}) (Markup, bool) {
 }
 
 // concatEscaped implements ~ and + when an operand is output escaped for the
-// active escape context: the other operand is escaped and the result stays
-// escaped.
-func concatEscaped(ctx Context, left, right interface{}) (interface{}, bool) {
+// active escape context: the other operand, safe or not, is escaped for the
+// context and the result stays escaped.
+func (e *DefaultEvaluator) concatEscaped(ctx Context, left, right interface{}) (interface{}, bool) {
 	on, ec, _ := resolveEscape(ctx)
 	_, lec, ls := asEscaped(left)
 	_, rec, rs := asEscaped(right)
 	if !on || !(ls && lec == ec || rs && rec == ec) {
 		return nil, false
 	}
-	return markEscaped(escapeFor(ctx, left)+escapeFor(ctx, right), ec), true
+	// a safe value is HTML-safe, not safe for ec
+	if !ls || lec != ec {
+		left = Unmark(left)
+	}
+	if !rs || rec != ec {
+		right = Unmark(right)
+	}
+	return e.markEscaped(escapeFor(ctx, left)+escapeFor(ctx, right), ec), true
 }
 
 // unmarkItems returns a copy of list with Markup elements and escaped output
 // turned into plain strings, recursing into nested lists. It returns list
 // itself when nothing changes.
 func unmarkItems(list []interface{}, path map[reprKey]bool) []interface{} {
+	return unmarkList(list, path, nil)
+}
+
+// unmarkList is unmarkItems with done holding the result for each nested list
+// already un-marked, so a list shared many times is walked once.
+func unmarkList(list []interface{}, path map[reprKey]bool, done map[reprKey][]interface{}) []interface{} {
 	var out []interface{}
 	for i, it := range list {
 		var n interface{}
@@ -1086,13 +1230,20 @@ func unmarkItems(list []interface{}, path map[reprKey]bool) []interface{} {
 			if path == nil {
 				path = map[reprKey]bool{{uintptr(unsafe.Pointer(&list[0])), len(list)}: true}
 			}
+			if done == nil {
+				done = map[reprKey][]interface{}{}
+			}
 			key := reprKey{uintptr(unsafe.Pointer(&sub[0])), len(sub)}
 			if path[key] {
 				continue
 			}
-			path[key] = true
-			r := unmarkItems(sub, path)
-			delete(path, key)
+			r, seen := done[key]
+			if !seen {
+				path[key] = true
+				r = unmarkList(sub, path, done)
+				delete(path, key)
+				done[key] = r
+			}
 			if len(r) == 0 || &r[0] == &sub[0] {
 				continue
 			}

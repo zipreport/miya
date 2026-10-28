@@ -20,7 +20,9 @@ type FilterRegistry struct {
 	params      map[string][]Param
 	kwargsNames map[string]bool
 	testLookup  TestLookup
-	mutex       sync.RWMutex
+	// builtin holds the names whose filter registerBuiltinFilters registered
+	builtin map[string]bool
+	mutex   sync.RWMutex
 }
 
 // SetTestLookup sets how select, reject, selectattr and rejectattr find tests.
@@ -68,8 +70,20 @@ func NewRegistry() *FilterRegistry {
 
 	// Register all built-in filters
 	registry.registerBuiltinFilters()
+	registry.builtin = make(map[string]bool, len(registry.filters))
+	for name := range registry.filters {
+		registry.builtin[name] = true
+	}
 
 	return registry
+}
+
+// IsBuiltin reports whether the filter registered as name is one of miya's
+// own; Replace keeps the mark, Unregister drops it.
+func (r *FilterRegistry) IsBuiltin(name string) bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.builtin[name]
 }
 
 func (r *FilterRegistry) Register(name string, fn FilterFunc) error {
@@ -221,6 +235,7 @@ func (r *FilterRegistry) Unregister(name string) bool {
 		delete(r.filters, name)
 		delete(r.params, name)
 		delete(r.kwargsNames, name)
+		delete(r.builtin, name)
 		return true
 	}
 	return false

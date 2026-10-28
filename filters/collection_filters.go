@@ -986,6 +986,7 @@ func isListKind(k reflect.Kind) bool {
 }
 
 func pyTypeName(v interface{}) string {
+	v = escapedAsString(v)
 	switch v.(type) {
 	case string:
 		return "str"
@@ -1003,6 +1004,15 @@ func pyTypeName(v interface{}) string {
 		return "list"
 	}
 	return fmt.Sprintf("%T", v)
+}
+
+// escapedAsString returns escaped template output, which can sit in a list
+// or dict, as the string it is; any other value is returned unchanged.
+func escapedAsString(v interface{}) interface{} {
+	if _, ok := runtime.AsMarkup(v); ok {
+		return v
+	}
+	return runtime.Unmark(v)
 }
 
 // uniqueKey maps a value to a string such that two values get the same key

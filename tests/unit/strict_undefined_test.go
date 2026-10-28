@@ -371,3 +371,55 @@ func TestStrictFilterUndefinedFailsOnUse(t *testing.T) {
 		t.Errorf("debug: got %q, %v", out, err)
 	}
 }
+
+// TestMapUndefinedItemsFollowEnvironment checks that the undefined items map
+// makes (first of an empty sequence) take the environment's undefined
+// behavior, as a filter's own undefined result does.
+func TestMapUndefinedItemsFollowEnvironment(t *testing.T) {
+	strict := miya.NewEnvironment(miya.WithUndefinedBehavior(runtime.UndefinedStrict))
+	for _, tpl := range []string{
+		`{{ [[], [1]]|map('first')|sum }}`, `{{ [[]]|map('first')|join }}`,
+		`{{ [[]]|map('first')|first }}`, `{{ ([[]]|map('first')|first) ~ 'a' }}`,
+	} {
+		out, err := strict.RenderString(tpl, miya.NewContext())
+		if err == nil {
+			t.Errorf("strict %s: want error, got %q", tpl, out)
+		} else if !strings.Contains(strings.ToLower(err.Error()), "undefined") {
+			t.Errorf("strict %s: want an undefined error, got %v", tpl, err)
+		}
+	}
+	if out, err := strict.RenderString(`{{ [[]]|map('first')|list|length }}|{{ [[]]|map('first')|first|default('d') }}`, miya.NewContext()); err != nil || out != "1|d" {
+		t.Errorf("strict: got %q, %v", out, err)
+	}
+	const uses = `{{ [[], [1]]|map('first')|sum }}|{{ [[]]|map('first')|join }}|{{ [[]]|map('first')|first }}`
+	silent := miya.NewEnvironment()
+	if out, err := silent.RenderString(uses, miya.NewContext()); err != nil || out != "1||" {
+		t.Errorf("silent: got %q, %v", out, err)
+	}
+	debug := miya.NewEnvironment(miya.WithUndefinedBehavior(runtime.UndefinedDebug))
+	const ph = "{{ undefined variable: first (No first item, sequence was empty.) }}"
+	if out, err := debug.RenderString(uses, miya.NewContext()); err != nil || out != "1|"+ph+"|"+ph {
+		t.Errorf("debug: got %q, %v", out, err)
+	}
+}
+
+// TestStrictFilterBlockChainDefault checks that a filter block's chain passes
+// a strict undefined result on to default, as Jinja2 does; it fails when the
+// chain ends with it or another filter uses it.
+func TestStrictFilterBlockChainDefault(t *testing.T) {
+	strict := miya.NewEnvironment(miya.WithUndefinedBehavior(runtime.UndefinedStrict))
+	for tpl, want := range map[string]string{
+		`{% filter first|default('z') %}{% endfilter %}`:   "z",
+		`{% filter first|d('z')|upper %}{% endfilter %}`:   "Z",
+		`{% filter first|default('z') %}ab{% endfilter %}`: "a",
+	} {
+		if out, err := strict.RenderString(tpl, miya.NewContext()); err != nil || out != want {
+			t.Errorf("strict %s: want %q, got %q, %v", tpl, want, out, err)
+		}
+	}
+	for _, tpl := range []string{`{% filter first %}{% endfilter %}`, `{% filter first|upper %}{% endfilter %}`, `{% filter first|default([])|first|string %}{% endfilter %}`} {
+		if out, err := strict.RenderString(tpl, miya.NewContext()); err == nil {
+			t.Errorf("strict %s: want error, got %q", tpl, out)
+		}
+	}
+}

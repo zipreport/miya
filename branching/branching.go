@@ -18,7 +18,9 @@ type TestFunc func(value interface{}, args ...interface{}) (bool, error)
 // TestRegistry manages template tests
 type TestRegistry struct {
 	tests map[string]TestFunc
-	mutex sync.RWMutex
+	// builtin holds the names of the tests registerBuiltinTests registered
+	builtin map[string]bool
+	mutex   sync.RWMutex
 }
 
 // NewTestRegistry creates a new test registry
@@ -29,8 +31,19 @@ func NewTestRegistry() *TestRegistry {
 
 	// Register built-in tests
 	registry.registerBuiltinTests()
+	registry.builtin = make(map[string]bool, len(registry.tests))
+	for name := range registry.tests {
+		registry.builtin[name] = true
+	}
 
 	return registry
+}
+
+// IsBuiltin reports whether test name is one of miya's own.
+func (r *TestRegistry) IsBuiltin(name string) bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.builtin[name]
 }
 
 // Register registers a test function

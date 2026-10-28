@@ -184,6 +184,21 @@ func (a *TemplateContextAdapter) ApplyTest(name string, value interface{}, args 
 	return a.env.ApplyTest(name, value, args...)
 }
 
+// IsBuiltinFilter reports whether the environment's filter name is one of
+// miya's own rather than one added with AddFilter and friends.
+func (a *TemplateContextAdapter) IsBuiltinFilter(name string) bool {
+	return a.env.filterRegistry.IsBuiltin(name)
+}
+
+// IsBuiltinTest reports whether the environment's test name is one of miya's
+// own rather than one added with AddTest.
+func (a *TemplateContextAdapter) IsBuiltinTest(name string) bool {
+	if _, registered := a.env.testRegistry.Get(name); registered {
+		return a.env.testRegistry.IsBuiltin(name)
+	}
+	return name == "filter" || name == "test"
+}
+
 // IsAutoescapeEnabled returns the environment's autoescape setting
 func (a *TemplateContextAdapter) IsAutoescapeEnabled() bool {
 	return a.env.autoEscape

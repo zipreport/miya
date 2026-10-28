@@ -214,6 +214,9 @@ type DefaultEvaluator struct {
 	// render, so every such import of a template shares one module, as in Jinja2.
 	// SetImportSystem clears it; renders never share it.
 	importMemo map[string]*TemplateNamespace
+	// escapedMade is set once this evaluator has made escaped output for a
+	// non-HTML context; SetImportSystem clears it with importMemo.
+	escapedMade atomic.Bool
 }
 
 // enter counts one level of template recursion; call the returned func when leaving.
@@ -261,6 +264,7 @@ func (e *DefaultEvaluator) SetUndefinedBehavior(behavior UndefinedBehavior) {
 func (e *DefaultEvaluator) SetImportSystem(importSystem *ImportSystem) {
 	e.importSystem = importSystem
 	e.importMemo = nil
+	e.escapedMade.Store(false)
 }
 
 func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{}, error) {
@@ -623,6 +627,15 @@ func (e *DefaultEvaluator) evalFilter(node *parser.FilterNode, ctx Context) (int
 			return nil, err
 		}
 	}
+	// join and sum use every item, such as one map made undefined
+	if list, ok := value.([]interface{}); ok && (node.FilterName == "join" || node.FilterName == "sum") &&
+		e.undefinedHandler != nil && e.undefinedHandler.GetUndefinedBehavior() == UndefinedStrict {
+		for _, it := range list {
+			if err := strictUndefinedUse(it); err != nil {
+				return nil, err
+			}
+		}
+	}
 
 	// Evaluate filter arguments with pre-allocated capacity
 	args := make([]interface{}, 0, len(node.Arguments))
@@ -687,19 +700,56 @@ func strictUndefinedUse(v interface{}) error {
 
 // filterUndefined rebuilds an undefined filter result with the environment's
 // undefined behavior, keeping its hint: filters cannot see the environment
-// and return silent undefined.
+// and return silent undefined. The items of map's list are filter results
+// too.
 func (e *DefaultEvaluator) filterUndefined(node *parser.FilterNode, result interface{}, err error) (interface{}, error) {
-	u, ok := result.(*Undefined)
-	if err != nil || !ok || e.undefinedHandler == nil || u.Behavior == e.undefinedHandler.GetUndefinedBehavior() {
+	if err != nil || e.undefinedHandler == nil {
 		return result, err
 	}
-	name := u.Name
-	if name == "" {
-		name = node.FilterName
+	if list, ok := result.([]interface{}); ok && node.FilterName == "map" {
+		// an item is named after the filter map applied
+		name := node.FilterName
+		if len(node.Arguments) > 0 {
+			if lit, ok := node.Arguments[0].(*parser.LiteralNode); ok {
+				if s, ok := lit.Value.(string); ok {
+					name = s
+				}
+			}
+		}
+		var out []interface{}
+		for i, it := range list {
+			if nu, ok := e.rebuildUndefined(name, node, it); ok {
+				if out == nil {
+					out = append([]interface{}(nil), list...)
+				}
+				out[i] = nu
+			}
+		}
+		if out != nil {
+			return out, nil
+		}
+		return result, nil
+	}
+	if nu, ok := e.rebuildUndefined(node.FilterName, node, result); ok {
+		return nu, nil
+	}
+	return result, nil
+}
+
+// rebuildUndefined returns v rebuilt with the environment's undefined
+// behavior when it is an undefined of another behavior; one without a name
+// gets name.
+func (e *DefaultEvaluator) rebuildUndefined(name string, node *parser.FilterNode, v interface{}) (*Undefined, bool) {
+	u, ok := v.(*Undefined)
+	if !ok || u.Behavior == e.undefinedHandler.GetUndefinedBehavior() {
+		return nil, false
+	}
+	if u.Name != "" {
+		name = u.Name
 	}
 	nu := e.undefinedHandler.undefinedFactory(name, node)
 	nu.Hint = u.Hint
-	return nu, nil
+	return nu, true
 }
 
 func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Context) (interface{}, error) {
@@ -732,7 +782,7 @@ func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Conte
 			if m, ok := concatMarkup(ctx, left, right); ok {
 				return m, nil
 			}
-		} else if r, ok := concatEscaped(ctx, left, right); ok {
+		} else if r, ok := e.concatEscaped(ctx, left, right); ok {
 			return r, nil
 		}
 		left, right = Unmark(left), Unmark(right)
@@ -741,7 +791,7 @@ func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Conte
 			_, ls := basicValue(left).(string)
 			_, rs := basicValue(right).(string)
 			if ls && rs {
-				if r, ok := concatEscaped(ctx, left, right); ok {
+				if r, ok := e.concatEscaped(ctx, left, right); ok {
 					return r, nil
 				}
 			}
@@ -1030,7 +1080,7 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 
 				// Handle undefined or nil iterables - just return empty string
 				if IsUndefined(newIterable) || newIterable == nil {
-					return markIfSafe("", ctx), nil
+					return e.markIfSafe("", ctx), nil
 				}
 
 				// Create a new for node with the same structure but new iterable
@@ -1052,7 +1102,7 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 				}
 				// The iteration output is template output of the loop's own context;
 				// the call site must not decide again.
-				return markIfSafe(ToString(r), ctx), nil
+				return e.markIfSafe(ToString(r), ctx), nil
 			}
 
 			// Create a callable loop object that supports both property access and function calls
@@ -1191,7 +1241,7 @@ func (e *DefaultEvaluator) EvalBlockSetNode(node *parser.BlockSetNode, ctx Conte
 	}
 
 	// Set the variable to the rendered content (Markup where escaping is on, as in Jinja2)
-	ctx.SetVariable(node.Variable, markIfSafe(content, ctx))
+	ctx.SetVariable(node.Variable, e.markIfSafe(content, ctx))
 
 	return "", nil // Block set statements don't produce output
 }
@@ -1431,8 +1481,12 @@ func (e *DefaultEvaluator) EvalTestNode(node *parser.TestNode, ctx Context) (int
 	}
 
 	if node.TestName != "escaped" {
-		value = plainEscaped(Unmark(value))
-		args = plainArgContainers(unmarkArgs(args))
+		value = Unmark(value)
+		args = unmarkArgs(args)
+		if e.escapedMade.Load() && !builtinTestCall(ctx, node.TestName) {
+			value = plainEscaped(value)
+			args = plainArgContainers(args)
+		}
 	}
 
 	// Try to use environment's test registry if available
@@ -2246,7 +2300,7 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 		if len(kwargs) > 0 {
 			args = append(args, kwargs)
 		}
-		if escapedOutputMade.Load() {
+		if e.escapedMade.Load() {
 			// Markup stays, escaped output does not
 			plain := make([]interface{}, len(args))
 			for i, a := range args {
@@ -2258,18 +2312,19 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 	}
 
 	// Go functions get plain strings for safe values
-	args, kwargs = unmarkCall(args, kwargs)
+	nested := e.escapedMade.Load()
+	args, kwargs = unmarkCall(args, kwargs, nested)
 
 	// Handle different function types
 	switch fn := function.(type) {
 	case func(Context, ...interface{}) (interface{}, error):
 		// Macro function that takes context as first parameter
 		if ctx != nil {
-			return fn(newGoContext(ctx), args...)
+			return fn(newGoContext(ctx, nested), args...)
 		}
 		// If no context provided, use a default empty context
 		emptyCtx := &simpleContext{variables: make(map[string]interface{})}
-		return fn(newGoContext(emptyCtx), args...)
+		return fn(newGoContext(emptyCtx, nested), args...)
 
 	case func(...interface{}) (interface{}, error):
 		// Variable argument function - append kwargs as last argument if present
@@ -3627,24 +3682,41 @@ type autoescapeContext struct {
 }
 
 // goContext is the context a Go function receives: it never hands out a
-// listBox. Unwrap lets filterContext and resolveEscape find the real context.
-type goContext struct{ inner Context }
+// listBox or escaped output, which is also looked for inside lists and dicts
+// when nested is set. Unwrap lets filterContext and resolveEscape find the
+// real context.
+type goContext struct {
+	inner  Context
+	nested bool
+}
+
+// plain returns v as a Go function sees it.
+func (g *goContext) plain(v interface{}) interface{} {
+	v = unbox(v)
+	if t, _, ok := asEscaped(v); ok {
+		return t
+	}
+	if g.nested {
+		return plainEscaped(v)
+	}
+	return v
+}
 
 func (g *goContext) GetVariable(key string) (interface{}, bool) {
 	v, ok := g.inner.GetVariable(key)
-	return Unbox(v), ok
+	return g.plain(v), ok
 }
 
 func (g *goContext) SetVariable(key string, value interface{}) { g.inner.SetVariable(key, value) }
 
-func (g *goContext) Clone() Context { return newGoContext(g.inner.Clone()) }
+func (g *goContext) Clone() Context { return newGoContext(g.inner.Clone(), g.nested) }
 
 // All returns a new map: the inner map may be shared or cached.
 func (g *goContext) All() map[string]interface{} {
 	all := g.inner.All()
 	out := make(map[string]interface{}, len(all))
 	for k, v := range all {
-		out[k] = Unbox(v)
+		out[k] = g.plain(v)
 	}
 	return out
 }
@@ -3654,7 +3726,7 @@ func (g *goContext) Unwrap() Context { return g.inner }
 // goAutoescapeContext also reports the inner context's autoescape setting.
 type goAutoescapeContext struct{ goContext }
 
-func (g *goAutoescapeContext) Clone() Context { return newGoContext(g.inner.Clone()) }
+func (g *goAutoescapeContext) Clone() Context { return newGoContext(g.inner.Clone(), g.nested) }
 
 func (g *goAutoescapeContext) IsAutoescapeEnabled() bool {
 	return g.inner.(AutoescapeContext).IsAutoescapeEnabled()
@@ -3663,7 +3735,7 @@ func (g *goAutoescapeContext) IsAutoescapeEnabled() bool {
 // goEnvContext also forwards the environment-aware interfaces.
 type goEnvContext struct{ goAutoescapeContext }
 
-func (g *goEnvContext) Clone() Context { return newGoContext(g.inner.Clone()) }
+func (g *goEnvContext) Clone() Context { return newGoContext(g.inner.Clone(), g.nested) }
 
 func (g *goEnvContext) ApplyFilter(name string, value interface{}, args ...interface{}) (interface{}, error) {
 	return g.inner.(EnvironmentContext).ApplyFilter(name, value, args...)
@@ -3681,11 +3753,11 @@ func (g *goEnvContext) ApplyFilterKwargs(name string, value interface{}, args []
 // conditionally, so the wrapper forwards the optional interfaces only for the
 // combinations the library's own contexts have; any other is reachable
 // through Unwrap.
-func newGoContext(ctx Context) Context {
+func newGoContext(ctx Context, nested bool) Context {
 	_, esc := ctx.(AutoescapeContext)
 	_, env := ctx.(EnvironmentContext)
 	_, kw := ctx.(KwargsFilterApplier)
-	g := goContext{inner: ctx}
+	g := goContext{inner: ctx, nested: nested}
 	switch {
 	case esc && env && kw:
 		return &goEnvContext{goAutoescapeContext{g}}
@@ -3997,7 +4069,7 @@ func (e *DefaultEvaluator) EvalFilterBlockNode(node *parser.FilterBlockNode, ctx
 
 	// The body is template output: Markup where escaping is on
 	body := bodyContent.String()
-	var current interface{} = markIfSafe(body, ctx)
+	var current interface{} = e.markIfSafe(body, ctx)
 
 	// Apply each filter in the chain to the previous result as it is
 	for _, filter := range node.FilterChain {
@@ -4007,8 +4079,9 @@ func (e *DefaultEvaluator) EvalFilterBlockNode(node *parser.FilterBlockNode, ctx
 		filterNode := parser.NewFilterNode(contentLiteral, filter.FilterName, filter.Arguments, filter.Line(), filter.Column())
 		filterNode.NamedArgs = filter.NamedArgs
 
-		// Evaluate the filter
-		result, err := e.EvalFilterNode(filterNode, ctx)
+		// Evaluate the filter; a strict undefined result fails where it is
+		// used, by the next filter or below
+		result, err := e.evalFilter(filterNode, ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error applying filter '%s' in filter block: %w", filter.FilterName, err)
 		}

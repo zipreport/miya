@@ -52,6 +52,29 @@ func TestFmtCyclesSharedListsLinear(t *testing.T) {
 	}
 }
 
+// unmarkItems un-marks each shared list once, so a DAG of shared lists takes
+// linear time.
+func TestUnmarkItemsSharedListsLinear(t *testing.T) {
+	var dag interface{} = []interface{}{Markup("<i>")}
+	for i := 0; i < 40; i++ {
+		dag = []interface{}{dag, dag}
+	}
+	done := make(chan interface{}, 1)
+	go func() { done <- unmarkItems(dag.([]interface{}), nil) }()
+	select {
+	case got := <-done:
+		leaf := got
+		for i := 0; i < 40; i++ {
+			leaf = leaf.([]interface{})[1]
+		}
+		if s, ok := leaf.([]interface{})[0].(string); !ok || s != "<i>" {
+			t.Fatalf("leaf = %#v, want the plain string \"<i>\"", leaf.([]interface{})[0])
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("unmarkItems did not finish on a DAG of shared lists")
+	}
+}
+
 // The fallback filters, used without an environment, print a self-containing
 // list without overflowing the stack.
 func TestFallbackFiltersSelfContaining(t *testing.T) {
