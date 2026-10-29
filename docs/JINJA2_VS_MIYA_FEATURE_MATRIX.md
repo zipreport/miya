@@ -5,7 +5,7 @@ including implementation differences and compatibility notes.
 
 ## How compatible is miya?
 
-miya's conformance suite (`tests/conformance/`) holds 289 small templates written to probe edge cases and known bugs; they are not a sample of real templates. At this commit miya matches Jinja2 3.1.6 on 283 of them (same output, or failing in the same phase for the cases that expect an error), after normalising the printing differences listed below. 4 of the remaining cases are deliberate differences. Every divergence and its reason is listed in `tests/conformance/known_divergences.json`. This is a regression net, not a compatibility percentage.
+miya's conformance suite (`tests/conformance/`) holds 300 small templates written to probe edge cases and known bugs; they are not a sample of real templates. At this commit miya matches Jinja2 3.1.6 on 291 of them (same output, or failing in the same phase for the cases that expect an error), after normalising the printing differences listed below. 7 of the remaining cases are deliberate differences. Every divergence and its reason is listed in `tests/conformance/known_divergences.json`. This is a regression net, not a compatibility percentage.
 
 A second suite checks whitespace control (`trim_blocks`, `lstrip_blocks`, `-`/`+` markers, `keep_trailing_newline`) against Jinja2 on 3240 generated templates, with no allowed divergences.
 
@@ -17,6 +17,7 @@ A second suite checks whitespace control (`trim_blocks`, `lstrip_blocks`, `-`/`+
 - `default` also replaces `None` and the empty string, not only undefined values.
 - Dicts iterate and print in sorted key order, not insertion order.
 - Integers are 64-bit: `9223372036854775807 + 1` becomes a float.
+- `+` with a string and a number: a plain string that parses as a number adds as one (`'5' + 1` is `6`; Jinja2 raises `TypeError`). Any other string, including a value of a named Go string type even when it holds `"5"`, concatenates with the number's text (`'a' + 1` is `a1`; Jinja2 raises `TypeError`), except under strict undefined, where it is an error. Two strings always concatenate with `+`, as in Jinja2 (`'5' + '1'` is `51`), but `-`, `*` and `/` still treat two numeric strings as numbers (`'5' - '1'` is `4`; Jinja2 raises `TypeError`), and so does the `sum` filter.
 - Methods on Go values are not callable from templates. Pass computed values as data or register a global function.
 - `None` sorts before every other value in `sort`, where Jinja2 raises an error.
 - `map` with an unknown filter name yields empty values where Jinja2 raises an error.
