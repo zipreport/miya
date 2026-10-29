@@ -388,6 +388,21 @@ case("nopanic-004", "{% extends 1 %}")
 # --- templates cannot modify data (plan 040) --------------------------------
 case("mut-001", "{% set d = dict() %}{% set d.k = 1 %}{{ d.k }}")
 case("mut-002", "{% set n = namespace(a=1) %}{% set n.a = 2 %}{{ n.a }}")
+# --- loop.changed, inf/nan printing, string + number (plan 071) --------------
+case("loop-009", "{% for x in [1, 1.0, 2] %}{{ loop.changed(x) }} {% endfor %}")
+case("loop-010", "{% for x in [1, 1.0, 1.5, 1.5] %}{{ loop.changed(x, 'k') }} {% endfor %}")
+# Infinities come from |float: with finalize, Jinja2 compiles a 1e400 literal to the name `inf` (NameError).
+case("math-008", "{{ x|float }}|{{ ('-' ~ x)|float }}|{{ x|float - x|float }}", {"x": "1e400"})
+case("math-009", "{{ [x|float, ('-' ~ x)|float, x|float - x|float] }}", {"x": "1e400"})
+case("math-010", "{{ x|float|string }}|{{ x|float ~ '' }}|{{ '%s'|format(x|float) }}|{{ x|float|round }}", {"x": "1e400"})
+case("math-011", "{{ 1e-400 }}")
+# string + number: miya coerces (deliberate, plan 071); Jinja2 raises TypeError.
+case("math-012", "{{ '5' + 1 }}")
+case("math-013", "{{ 'a' + 1 }}")
+case("math-014", "{{ 1 + '5' }}")
+# string + string always concatenates, as in Jinja2 (plan 071 fix).
+case("math-015", "{{ '5' + '1' }}")
+case("math-016", "{{ a + b }}", {"a": "5", "b": "1"})
 
 def render(c):
     env = jinja2.Environment(
