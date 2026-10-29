@@ -2,6 +2,7 @@ package miya_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"testing"
 
@@ -131,4 +132,68 @@ func TestNumberOutput(t *testing.T) {
 			t.Errorf("got %q, want %q", result, "10023")
 		}
 	})
+}
+
+// Infinite and NaN floats print as Python does, at top level and inside lists.
+func TestInfNaNOutput(t *testing.T) {
+	data := map[string]interface{}{
+		"nan": math.NaN(), "inf": math.Inf(1), "ninf": math.Inf(-1), "f32": float32(math.Inf(-1)),
+	}
+	for _, autoescape := range []bool{true, false} {
+		env := miya.NewEnvironment(miya.WithAutoEscape(autoescape))
+		tests := []struct {
+			name     string
+			template string
+			want     string
+		}{
+			{"top_level", `{{ nan }}|{{ inf }}|{{ ninf }}|{{ f32 }}`, "nan|inf|-inf|-inf"},
+			{"in_list", `{{ [nan, inf, ninf, f32] }}`, "[nan, inf, -inf, -inf]"},
+			{"concat", `{{ inf ~ '' }}|{{ 'x' ~ nan }}`, "inf|xnan"},
+			{"string_filter", `{{ inf|string }}|{{ ninf|string }}`, "inf|-inf"},
+			{"join_filter", `{{ [inf, 1]|join(',') }}`, "inf,1"},
+			{"format_s", `{{ '%s'|format(ninf) }}`, "-inf"},
+			{"escape_filter", `{{ nan|e }}`, "nan"},
+			{"round", `{{ inf|round }}`, "inf"},
+		}
+		for _, tc := range tests {
+			t.Run(fmt.Sprintf("%s/autoescape=%v", tc.name, autoescape), func(t *testing.T) {
+				got, err := env.RenderString(tc.template, miya.NewContextFrom(data))
+				if err != nil {
+					t.Fatalf("render: %v", err)
+				}
+				if got != tc.want {
+					t.Errorf("got %q, want %q", got, tc.want)
+				}
+			})
+		}
+	}
+}
+
+// A float literal beyond float64's range is infinity, as in Python; it is not
+// a compile error.
+func TestFloatLiteralRange(t *testing.T) {
+	env := miya.NewEnvironment(miya.WithAutoEscape(false))
+	tests := []struct {
+		name     string
+		template string
+		want     string
+	}{
+		{"overflow", `{{ 1e400 }}`, "inf"},
+		{"negative_overflow", `{{ -1e400 }}`, "-inf"},
+		{"overflow_compares", `{{ 1e400 > 1e308 }}`, "true"},
+		{"inf_minus_inf", `{{ 1e400 - 1e400 }}`, "nan"},
+		{"underflow", `{{ 1e-400 }}`, "0"},
+		{"underscore_overflow", `{{ 1_0e400 }}`, "inf"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := env.RenderString(tc.template, miya.NewContext())
+			if err != nil {
+				t.Fatalf("render: %v", err)
+			}
+			if got != tc.want {
+				t.Errorf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
 }
