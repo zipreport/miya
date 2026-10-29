@@ -24,6 +24,21 @@
   "plan": "unplanned",
   "reason": "want \"T|T\", got render-time error: cannot call non-function value of type *runtime.Undefined"
  },
+ "math-012": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want render-time error TypeError, got output \"6\""
+ },
+ "math-013": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want render-time error TypeError, got output \"a1\""
+ },
+ "math-014": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want render-time error TypeError, got output \"6\""
+ },
  "parse-015": {
   "kind": "error",
   "plan": "unplanned",

@@ -133,7 +133,7 @@ Unknown or misused filters:
 Operations applied to incompatible types:
 
 ```html+jinja
-{# Cannot add string and int #}
+{# Cannot add string and int under strict undefined (otherwise prints hello5; see MIYA_LIMITATIONS.md) #}
 {{ "hello" + 5 }}
 
 {# Iterating over a non-iterable #}

@@ -93,7 +93,7 @@ func TestPythonRepr(t *testing.T) {
 		{name: "bytes_top", tpl: `{{ b }}`, data: pvD{"b": []byte("hi")}, want: `hi`},
 		{name: "bytes_in_list", tpl: `{{ [b] }}`, data: pvD{"b": []byte("hi")}, want: `['hi']`},
 		{name: "inf_nan", tpl: `{{ l }}`, data: pvD{"l": []interface{}{math.Inf(1), math.Inf(-1), math.NaN()}}, want: `[inf, -inf, nan]`},
-		{name: "inf_top_unchanged", tpl: `{{ x }}`, data: pvD{"x": math.Inf(1)}, want: `+Inf`},
+		{name: "inf_top", tpl: `{{ x }}`, data: pvD{"x": math.Inf(1)}, want: `inf`},
 	})
 }
 

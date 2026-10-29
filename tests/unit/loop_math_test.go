@@ -217,3 +217,85 @@ func BenchmarkLoopScope10kRows(b *testing.B) {
 		}
 	}
 }
+
+// loop.changed compares like ==, so 1 and 1.0 are the same value, as in Jinja2.
+func TestLoopChanged(t *testing.T) {
+	env := miya.NewEnvironment(miya.WithAutoEscape(false))
+
+	tests := []struct {
+		name     string
+		template string
+		want     string
+	}{
+		{"int_float", `{% for x in [1, 1.0, 2] %}{{ loop.changed(x) }} {% endfor %}`, "true false true "},
+		{"two_args", `{% for x in [1, 1.0, 1.5, 1.5] %}{{ loop.changed(x, 'k') }} {% endfor %}`, "true false true false "},
+		{"lists", `{% for l in [[1, 2], [1.0, 2.0], [1, 3]] %}{{ loop.changed(l) }} {% endfor %}`, "true false true "},
+		{"bool_int", `{% for x in [true, 1] %}{{ loop.changed(x) }} {% endfor %}`, "true false "},
+		{"safe_string", `{% for s in ['a', 'a'|safe, 'b'] %}{{ loop.changed(s) }} {% endfor %}`, "true false true "},
+		{"dicts", `{% for d in [{'a': 1}, {'a': 1}, {'a': 2}] %}{{ loop.changed(d) }} {% endfor %}`, "true false true "},
+		{"string_vs_number", `{% for x in ['1', 1] %}{{ loop.changed(x) }} {% endfor %}`, "true true "},
+		{"none_then_zero", `{% for x in [none, none, 0] %}{{ loop.changed(x) }} {% endfor %}`, "true false true "},
+		{"same_strings", `{% for s in ['a', 'a', 'b'] %}{{ loop.changed(s) }} {% endfor %}`, "true false true "},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := env.RenderString(tt.template, miya.NewContext())
+			if err != nil {
+				t.Fatalf("render error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// '5' + 1 is 6 and 'a' + 1 is 'a1': a deliberate difference from Jinja2,
+// which raises TypeError for both (docs/MIYA_LIMITATIONS.md). Two strings
+// always concatenate, as in Jinja2: '5' + '1' is '51'. Other operators still
+// coerce two numeric strings ('5' - '1' is 4; Jinja2 raises TypeError).
+func TestStringNumberAddition(t *testing.T) {
+	tests := []struct {
+		name     string
+		template string
+		strict   bool
+		want     string
+		wantErr  bool
+	}{
+		{"numeric_string_plus_int", `{{ '5' + 1 }}`, false, "6", false},
+		{"int_plus_numeric_string", `{{ 1 + '5' }}`, false, "6", false},
+		{"two_numeric_strings", `{{ '5' + '1' }}`, false, "51", false},
+		{"two_data_strings", `{{ s + t }}`, false, "51", false},
+		{"exponent_strings", `{{ '1e3' + '1' }}`, false, "1e31", false},
+		{"namespace_accumulates_text", `{% set ns = namespace(a='0') %}{% for x in ['1', '2'] %}{% set ns.a = ns.a + x %}{% endfor %}{{ ns.a }}`, false, "012", false},
+		{"strict_two_numeric_strings", `{{ '5' + '1' }}`, true, "51", false},
+		{"data_string_plus_int", `{{ s + 1 }}`, false, "6", false},
+		{"text_plus_int", `{{ 'a' + 1 }}`, false, "a1", false},
+		{"int_plus_text", `{{ 1 + 'a' }}`, false, "1a", false},
+		{"two_texts", `{{ 'a' + 'b' }}`, false, "ab", false},
+		{"strict_numeric_string", `{{ '5' + 1 }}`, true, "6", false},
+		{"strict_text_plus_int", `{{ 'a' + 1 }}`, true, "", true},
+		{"two_data_strings_subtract", `{{ s - t }}`, false, "4", false},
+		{"two_data_strings_multiply", `{{ s * t }}`, false, "5", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			env := miya.NewEnvironment(miya.WithAutoEscape(false), miya.WithStrictUndefined(tt.strict))
+			got, err := env.RenderString(tt.template, miya.NewContextFrom(map[string]interface{}{"s": "5", "t": "1"}))
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("want an error, got %q", got)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("render error: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}

@@ -5735,6 +5735,216 @@
    "templates": {
     "main": "{% set n = namespace(a=1) %}{% set n.a = 2 %}{{ n.a }}"
    }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "true false true "
+   },
+   "id": "loop-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for x in [1, 1.0, 2] %}{{ loop.changed(x) }} {% endfor %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "true false true false "
+   },
+   "id": "loop-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{% for x in [1, 1.0, 1.5, 1.5] %}{{ loop.changed(x, 'k') }} {% endfor %}"
+   }
+  },
+  {
+   "context": {
+    "x": "1e400"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "inf|-inf|nan"
+   },
+   "id": "math-008",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x|float }}|{{ ('-' ~ x)|float }}|{{ x|float - x|float }}"
+   }
+  },
+  {
+   "context": {
+    "x": "1e400"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "[inf, -inf, nan]"
+   },
+   "id": "math-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ [x|float, ('-' ~ x)|float, x|float - x|float] }}"
+   }
+  },
+  {
+   "context": {
+    "x": "1e400"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "inf|inf|inf|inf"
+   },
+   "id": "math-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ x|float|string }}|{{ x|float ~ '' }}|{{ '%s'|format(x|float) }}|{{ x|float|round }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "0"
+   },
+   "id": "math-011",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 1e-400 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TypeError",
+    "phase": "render"
+   },
+   "id": "math-012",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ '5' + 1 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TypeError",
+    "phase": "render"
+   },
+   "id": "math-013",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 'a' + 1 }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TypeError",
+    "phase": "render"
+   },
+   "id": "math-014",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ 1 + '5' }}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "51"
+   },
+   "id": "math-015",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ '5' + '1' }}"
+   }
+  },
+  {
+   "context": {
+    "a": "5",
+    "b": "1"
+   },
+   "entry": "main",
+   "expect": {
+    "output": "51"
+   },
+   "id": "math-016",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "{{ a + b }}"
+   }
   }
  ],
  "jinja2": "3.1.6",

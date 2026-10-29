@@ -512,7 +512,7 @@ ctx.Set("current_time", time.Now())
 
 ##  Feature Compatibility
 
-miya's conformance suite (`tests/conformance/`) holds 289 small templates written to probe edge cases and known bugs; they are not a sample of real templates. At this commit miya matches Jinja2 3.1.6 on 283 of them (same output, or failing in the same phase for the cases that expect an error), after normalising the printing differences listed in [the feature matrix](JINJA2_VS_MIYA_FEATURE_MATRIX.md). 4 of the remaining cases are deliberate differences. Every divergence and its reason is listed in `tests/conformance/known_divergences.json`. This is a regression net, not a compatibility percentage.
+miya's conformance suite (`tests/conformance/`) holds 300 small templates written to probe edge cases and known bugs; they are not a sample of real templates. At this commit miya matches Jinja2 3.1.6 on 291 of them (same output, or failing in the same phase for the cases that expect an error), after normalising the printing differences listed in [the feature matrix](JINJA2_VS_MIYA_FEATURE_MATRIX.md). 7 of the remaining cases are deliberate differences. Every divergence and its reason is listed in `tests/conformance/known_divergences.json`. This is a regression net, not a compatibility percentage.
 
 ---
 
