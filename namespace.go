@@ -426,7 +426,10 @@ func enumerateFunction(args ...interface{}) (interface{}, error) {
 			}
 		}
 	}
-	if len(args) == 0 || len(args) > 2 {
+	if len(args) == 0 {
+		return nil, fmt.Errorf("enumerate() requires at least one argument")
+	}
+	if len(args) > 2 {
 		return nil, fmt.Errorf("enumerate() takes 1 or 2 arguments, got %d", len(args))
 	}
 
