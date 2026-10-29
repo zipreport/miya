@@ -47,7 +47,7 @@ func (m *Macro) Call(args []interface{}, kwargs map[string]interface{}) (interfa
 	}
 	behavior := e.undefinedHandler.GetUndefinedBehavior()
 
-	ctx := m.defCtx.Clone()
+	ctx := childScope(m.defCtx)
 	for i, name := range m.Parameters {
 		if i < len(args) {
 			if _, dup := rest[name]; dup {

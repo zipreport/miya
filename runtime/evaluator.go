@@ -921,7 +921,7 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 	if node.Condition != nil {
 		for _, item := range items {
 			// Create a temporary context to evaluate the condition
-			tempCtx := ctx.Clone()
+			tempCtx := childScope(ctx)
 
 			// Set loop variable(s) for condition evaluation
 			if len(node.Variables) == 1 {
@@ -1086,7 +1086,6 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 				// Create a new for node with the same structure but new iterable
 				literalNode := &parser.LiteralNode{
 					Value: newIterable,
-					Raw:   SprintV(newIterable),
 				}
 				recursiveNode := &parser.ForNode{
 					Variables: node.Variables,
@@ -1645,7 +1644,7 @@ func (e *DefaultEvaluator) EvalComprehensionNode(node *parser.ComprehensionNode,
 
 		for _, item := range items {
 			// Create loop context
-			loopCtx := ctx.Clone()
+			loopCtx := childScope(ctx)
 			loopCtx.SetVariable(node.Variable, item)
 
 			// Check condition if present
@@ -1680,7 +1679,7 @@ func (e *DefaultEvaluator) EvalComprehensionNode(node *parser.ComprehensionNode,
 
 		for _, item := range items {
 			// Create loop context
-			loopCtx := ctx.Clone()
+			loopCtx := childScope(ctx)
 			loopCtx.SetVariable(node.Variable, item)
 
 			// Check condition if present
