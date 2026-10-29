@@ -173,6 +173,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The JSON and CSS escape contexts write control characters as valid escapes (`\u0001`, `\1 `); they wrote `\u` or `\x` followed by the raw character.
 - `loop.changed` compares values like `==`, as in Jinja2: `1` and `1.0` (or `true` and `1`, or a named Go string type and the plain string) are the same value.
 - A float literal beyond float64's range (`1e400`) is infinity, as in Python, instead of a compile error.
+- `NewConcurrentTemplateRenderer` with a worker count below 1 runs one worker; with 0 workers `RenderAsync` and `Stop` hung forever, and a negative count panicked.
 
 ### Changed
 

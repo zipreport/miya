@@ -113,8 +113,11 @@ type renderResult struct {
 	err    error
 }
 
-// NewConcurrentTemplateRenderer creates a new concurrent template renderer
+// NewConcurrentTemplateRenderer creates a new concurrent template renderer with the given number of workers; a count below 1 runs one worker.
 func NewConcurrentTemplateRenderer(template *Template, workers int) *ConcurrentTemplateRenderer {
+	if workers < 1 {
+		workers = 1
+	}
 	return &ConcurrentTemplateRenderer{
 		template: template,
 		workers:  workers,
