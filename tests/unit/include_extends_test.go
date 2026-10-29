@@ -24,6 +24,10 @@ func TestIncludeExtends(t *testing.T) {
 		"m6":   `{% autoescape false %}{% include 'f' %}{% endautoescape %}`,
 		"m7":   `{% include 'c' without context %}`,
 		"m8":   `x{% include 'p' %}y`,
+		"ab":   `{% block b %}<i>{{ u }}</i>{% endblock %}`,
+		"ac":   `{% extends 'ab' %}{% block b %}{% autoescape false %}{{ super() }}{% endautoescape %}{% endblock %}`,
+		"m9":   `{% include 'd' without context %}`,
+		"m10":  `{% autoescape false %}{% include 'ac' %}{% endautoescape %}`,
 	}
 	type tc struct {
 		name    string
@@ -42,6 +46,11 @@ func TestIncludeExtends(t *testing.T) {
 		{name: "direct_and_included_agree", seq: []string{"c", "m", "c"},
 			on: []string{"[XBV]", "a[XBV]b", "[XBV]"}, off: []string{"[XBV]", "a[XBV]b", "[XBV]"}},
 		{name: "plain_include_unchanged", seq: []string{"m8"}, on: []string{"x<V>y"}, off: []string{"x<V>y"}},
+		// The parent is resolved with the include's own context (issue #5).
+		// Jinja2 3.1.6: UndefinedError 'layout' is undefined; the substring
+		// tells the parent-name error apart from a missing-template error.
+		{name: "without_context_dynamic_parent", seq: []string{"m9"}, errSub: "dynamic template name"},
+		{name: "autoescape_false_includer_super", seq: []string{"m10"}, on: []string{"<i>&lt;u&gt;</i>"}, off: []string{"<i><u></i>"}},
 	}
 	for _, c := range cases {
 		for _, ae := range []bool{true, false} {
