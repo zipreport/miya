@@ -46,7 +46,6 @@ These are bugs or gaps, not design decisions.
 | `{% import 'child' as m %}` where `child` has `{% extends 'base' %}` | only the child's top level runs: the parent's top-level macros and `{% set %}` are not exported (`m.bm is defined` is `false`) | the parent's top level runs too and is exported (`True`) |
 | `{{ '%s-%s' % (1, 2) }}` | error: `cannot modulo string and []interface {}` | `1-2` |
 | `{% do items.append(1) %}` on a list passed in as render data | error: store it first with `{% set items = items\|list %}` | mutates the list |
-| `enumerate(items, start=1)` | `start` is silently ignored; use `enumerate(items, 1)` (`enumerate` does not exist in Jinja2) | `enumerate` is undefined |
 | `{% autoescape false %}{% block b %}{{ x\|replace("<", s) }}{% endblock %}{% endautoescape %}` with `x = "<"`, `s = Markup("<b>")` | filters inside the block see escaping as on: `&lt;` (the output is escaped; before, `<b>`) | `&lt;b&gt;` |
 
 Printing differences:
@@ -116,7 +115,6 @@ Workaround for nested comprehensions:
 - [ ] No `{% include %}` of a template that itself uses `{% extends %}`
 - [ ] No `'...' % value` formatting; use the `format` filter
 - [ ] No `.append()` on lists passed in as render data without `{% set x = x|list %}` first
-- [ ] `enumerate()` uses positional arguments only
 - [ ] No `.items()` unpacking or multiple `for` clauses in comprehensions
 - [ ] No Go method calls on your data
 - [ ] Output that depends on the deliberate differences above (boolean and float printing, `round`, `default`, dict order) is checked
