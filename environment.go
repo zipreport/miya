@@ -11,6 +11,7 @@ import (
 	"github.com/zipreport/miya/extensions"
 	"github.com/zipreport/miya/filters"
 	"github.com/zipreport/miya/lexer"
+	"github.com/zipreport/miya/loader"
 	"github.com/zipreport/miya/macros"
 	"github.com/zipreport/miya/parser"
 	"github.com/zipreport/miya/runtime"
@@ -155,6 +156,10 @@ func (e *Environment) GetTemplate(name string) (*Template, error) {
 
 	source, err := e.loader.GetSource(name)
 	if err != nil {
+		// A template that exists but cannot be read is an error, not "not found"
+		if loader.IsReadError(err) {
+			return nil, fmt.Errorf("failed to load template %q: %w", name, err)
+		}
 		return nil, &runtime.TemplateNotFoundError{Name: name, Err: err}
 	}
 
