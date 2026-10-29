@@ -1029,7 +1029,7 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 			} else {
 				for j, val := range values {
 					key := fmt.Sprintf("val_%d", j)
-					if prevVal, exists := previousChanged[key]; !exists || !e.deepEqual(prevVal, val) {
+					if prevVal, exists := previousChanged[key]; !exists || !e.equal(prevVal, val) {
 						hasChanged = true
 						break
 					}
@@ -2857,18 +2857,18 @@ func (e *DefaultEvaluator) addWithNode(a, b interface{}, node parser.Node) (inte
 		b = 0
 	}
 
-	// Try numeric addition first
-	aFloat, aErr := e.toFloat(a)
-	bFloat, bErr := e.toFloat(b)
-	if aErr == nil && bErr == nil {
-		return aFloat + bFloat, nil
-	}
-
-	// Try string concatenation
+	// Two strings always concatenate, as in Jinja2: '5' + '1' is '51'
 	aStr, aStrOk := basicValue(a).(string)
 	bStr, bStrOk := basicValue(b).(string)
 	if aStrOk && bStrOk {
 		return aStr + bStr, nil
+	}
+
+	// Numeric addition, including a numeric string with a number ('5' + 1)
+	aFloat, aErr := e.toFloat(a)
+	bFloat, bErr := e.toFloat(b)
+	if aErr == nil && bErr == nil {
+		return aFloat + bFloat, nil
 	}
 
 	// Try mixed-type string concatenation (graceful handling)
@@ -3381,51 +3381,6 @@ func (e *DefaultEvaluator) fastToString(v interface{}) string {
 		return "false"
 	default:
 		return SprintV(v)
-	}
-}
-
-// deepEqual performs deep equality comparison for loop.changed() functionality
-func (e *DefaultEvaluator) deepEqual(a, b interface{}) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-
-	// For basic types, use standard equality
-	if reflect.TypeOf(a) != reflect.TypeOf(b) {
-		return false
-	}
-
-	switch va := a.(type) {
-	case string, int, int64, float64, bool:
-		return a == b
-	case []interface{}:
-		vb, ok := b.([]interface{})
-		if !ok || len(va) != len(vb) {
-			return false
-		}
-		for i, item := range va {
-			if !e.deepEqual(item, vb[i]) {
-				return false
-			}
-		}
-		return true
-	case map[string]interface{}:
-		vb, ok := b.(map[string]interface{})
-		if !ok || len(va) != len(vb) {
-			return false
-		}
-		for key, value := range va {
-			if bValue, exists := vb[key]; !exists || !e.deepEqual(value, bValue) {
-				return false
-			}
-		}
-		return true
-	default:
-		// For complex types, use reflection
-		return reflect.DeepEqual(a, b)
 	}
 }
 

@@ -109,7 +109,7 @@ func TestGoValues(t *testing.T) {
 		{name: "map_int_key_item", tpl: `{{ m[1] }}`, data: map[string]interface{}{"m": map[int]string{1: "one", 2: "two"}}, want: "one"},
 		{name: "map_int_key_iter", tpl: `{% for k in m %}{{ k }},{% endfor %}`, data: map[string]interface{}{"m": intKeys}, want: intKeysWant, times: 20},
 		{name: "map_mixed_key_iter", tpl: `{% for k in m %}{{ k }},{% endfor %}`, data: map[string]interface{}{"m": gvMixedKeys()}, want: "true,1,1,a,", times: 20},
-		{name: "map_nan_keys", tpl: `{% for k in m %}{{ k }},{% endfor %}`, data: map[string]interface{}{"m": gvNanKeys()}, want: "1,NaN,NaN,", times: 20},
+		{name: "map_nan_keys", tpl: `{% for k in m %}{{ k }},{% endfor %}`, data: map[string]interface{}{"m": gvNanKeys()}, want: "1,nan,nan,", times: 20},
 		{name: "map_struct_value", tpl: `{{ m.a.Name }}`, data: map[string]interface{}{"m": map[string]gvUser{"a": {Name: "Ann"}}}, want: "Ann"},
 		{name: "yaml_attr", tpl: `{{ m.name }}`, data: map[string]interface{}{"m": map[interface{}]interface{}{"name": "Y"}}, want: "Y"},
 		{name: "yaml_items", tpl: `{% for k, v in m.items() %}{{ k }}={{ v }};{% endfor %}`, data: map[string]interface{}{"m": map[interface{}]interface{}{"b": 2, "a": 1}}, want: "a=1;b=2;", times: 20},

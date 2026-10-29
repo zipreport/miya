@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -1614,7 +1615,7 @@ func (p *Parser) parsePrimary() (ExpressionNode, error) {
 	case lexer.TokenFloat:
 		token := p.advance()
 		value, err := strconv.ParseFloat(strings.ReplaceAll(token.Value, "_", ""), 64)
-		if err != nil {
+		if err != nil && !errors.Is(err, strconv.ErrRange) {
 			return nil, p.error(fmt.Sprintf("invalid float: %s", token.Value))
 		}
 		return AcquireLiteralNode(value, token.Value, token.Line, token.Column), nil

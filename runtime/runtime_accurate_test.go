@@ -2894,41 +2894,6 @@ func TestEvaluatorUtilityFunctions(t *testing.T) {
 			t.Logf("Slice with step not implemented: %v", err)
 		}
 	})
-
-	t.Run("deepEqual function", func(t *testing.T) {
-		// Test deep equality
-		obj1 := map[string]interface{}{
-			"name": "test",
-			"data": []interface{}{1, 2, 3},
-		}
-
-		obj2 := map[string]interface{}{
-			"name": "test",
-			"data": []interface{}{1, 2, 3},
-		}
-
-		obj3 := map[string]interface{}{
-			"name": "different",
-			"data": []interface{}{1, 2, 3},
-		}
-
-		if !evaluator.deepEqual(obj1, obj2) {
-			t.Error("Expected objects to be deeply equal")
-		}
-
-		if evaluator.deepEqual(obj1, obj3) {
-			t.Error("Expected objects to not be deeply equal")
-		}
-
-		// Test simple types
-		if !evaluator.deepEqual(42, 42) {
-			t.Error("Expected numbers to be equal")
-		}
-
-		if evaluator.deepEqual(42, 43) {
-			t.Error("Expected numbers to not be equal")
-		}
-	})
 }
 
 // Test control flow evaluation functions

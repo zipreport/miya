@@ -276,8 +276,17 @@ func escapeOutput(value interface{}) interface{} {
 }
 
 // FormatFloat prints a float like Python's repr, except that whole numbers
-// print without ".0" (JSON integers arrive as float64 in Go).
+// print without ".0" (JSON integers arrive as float64 in Go). Infinities and
+// NaN print "inf", "-inf" and "nan", as in Python.
 func FormatFloat(v float64, bits int) string {
+	switch {
+	case math.IsNaN(v):
+		return "nan"
+	case math.IsInf(v, 1):
+		return "inf"
+	case math.IsInf(v, -1):
+		return "-inf"
+	}
 	if a := math.Abs(v); v == 0 || (a >= 1e-4 && a < 1e16) {
 		return strconv.FormatFloat(v, 'f', -1, bits)
 	}
