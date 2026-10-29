@@ -2,6 +2,7 @@ package miya_test
 
 import (
 	miya "github.com/zipreport/miya"
+	"strings"
 	"testing"
 )
 
@@ -79,10 +80,12 @@ func TestMacroCallErrorHandling(t *testing.T) {
 	tests := []struct {
 		name     string
 		template string
+		errMsg   string
 	}{
 		{
 			name:     "Macro using caller without call block",
 			template: `{% macro test() %}{{ caller() }}{% endmacro %}{{ test() }}`,
+			errMsg:   "no caller defined",
 		},
 		{
 			name:     "Call block with undefined macro",
@@ -97,7 +100,9 @@ func TestMacroCallErrorHandling(t *testing.T) {
 			if err == nil {
 				t.Fatalf("Expected error for template: %s", tc.template)
 			}
-			t.Logf("Got expected error: %v", err)
+			if tc.errMsg != "" && !strings.Contains(err.Error(), tc.errMsg) {
+				t.Errorf("error %q does not contain %q", err, tc.errMsg)
+			}
 		})
 	}
 }

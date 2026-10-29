@@ -68,14 +68,13 @@ func TestIncludeCustomLoaderNotFound(t *testing.T) {
 }
 
 func TestEvalWithNodeWithoutNames(t *testing.T) {
-	// An AST built without the parser has no Names/Exprs: the assignments are
-	// evaluated in sorted key order.
+	// An AST built without the parser has no Names/Exprs: every assignment in the map is still bound.
 	node := parser.NewWithNode(map[string]parser.ExpressionNode{
 		"b": parser.NewLiteralNode("B", "", 1, 1),
 		"a": parser.NewLiteralNode("A", "", 1, 1),
-	}, []parser.Node{parser.NewIdentifierNode("a", 1, 1)}, 1, 1)
+	}, []parser.Node{parser.NewIdentifierNode("a", 1, 1), parser.NewIdentifierNode("b", 1, 1)}, 1, 1)
 	got, err := NewEvaluator().EvalWithNode(node, &simpleContext{variables: map[string]interface{}{}})
-	if err != nil || got != "A" {
-		t.Fatalf("got %v, %v; want A, nil", got, err)
+	if err != nil || got != "AB" {
+		t.Fatalf("got %v, %v; want AB, nil", got, err)
 	}
 }

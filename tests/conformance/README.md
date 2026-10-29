@@ -41,8 +41,7 @@ A change that makes an allow-listed case match must delete that entry from
 The `plan` field is a routing hint, not a rule: whichever change makes the case
 match deletes it. A change that alters how an allow-listed case diverges (its
 `kind`: `output`, `error`, `panic`) must update that entry's `kind` and
-`reason` in the same change and list it in its report; the `reason` text alone
-is not compared. Entries are never added to hide a regression.
+`reason` in the same change and list it in its report; for an `output` entry the `reason` (which contains miya's output) must also stay the same, so a deliberate difference cannot drift silently; the `reason` of an `error` or `panic` entry is not compared. Entries are never added to hide a regression.
 
 ## Why mapLoader
 

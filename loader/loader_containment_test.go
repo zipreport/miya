@@ -7,6 +7,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/zipreport/miya/parser"
 )
 
 func TestLoaderContainment(t *testing.T) {
@@ -177,6 +179,12 @@ func TestLoaderContainment(t *testing.T) {
 		}
 		if first == second {
 			t.Fatal("LoadTemplate returned the stale cached AST after the file changed")
+		}
+		if len(second.Children) != 1 {
+			t.Fatalf("reloaded template has %d nodes, want 1", len(second.Children))
+		}
+		if tn, ok := second.Children[0].(*parser.TextNode); !ok || tn.Content != "v2" {
+			t.Fatalf("reloaded template is not the new content: %#v", second.Children[0])
 		}
 	})
 	t.Run("nil_parser_errors", func(t *testing.T) {

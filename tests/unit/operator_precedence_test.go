@@ -121,9 +121,7 @@ func TestComplexExpressions(t *testing.T) {
 
 			result, err := env.RenderString(tt.template, ctx)
 			if err != nil {
-				t.Logf("Error rendering template (might be expected): %v", err)
-				// Some complex features might not be implemented yet
-				return
+				t.Fatalf("render error: %v", err)
 			}
 
 			if result != tt.expected {

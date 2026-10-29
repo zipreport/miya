@@ -155,20 +155,21 @@ func TestConformance(t *testing.T) {
 		// Stop at the first divergent render, except when dumping: then render
 		// every time and keep the lexicographically smallest reason, so the
 		// dump is the same on every run even for map-order cases.
+		entry, allowed := known[c.ID]
+		pinned := allowed && entry.Kind == kindOutput
 		var kind, reason string
 		for i := 0; i < renders; i++ {
 			k, r := diverges(c, render(c))
 			if k != "" && (kind == "" || r < reason) {
 				kind, reason = k, r
 			}
-			if kind != "" && *dump == "" {
+			if kind != "" && *dump == "" && !pinned {
 				break
 			}
 		}
 		if kind != "" {
 			current[c.ID] = divergence{Kind: kind, Reason: reason}
 		}
-		entry, allowed := known[c.ID]
 		switch {
 		case kind != "" && !allowed:
 			t.Errorf("%s: diverges from Jinja2: %s", c.ID, reason)
@@ -176,6 +177,8 @@ func TestConformance(t *testing.T) {
 			t.Errorf("%s: now matches Jinja2; remove it from known_divergences.json (plan %s)", c.ID, entry.Plan)
 		case kind != "" && kind != entry.Kind:
 			t.Errorf("%s: divergence kind changed from %q to %q: %s; if intended, update its kind and reason in known_divergences.json and say so in your report", c.ID, entry.Kind, kind, reason)
+		case pinned && reason != entry.Reason:
+			t.Errorf("%s: allow-listed output changed: was %s, now %s; if intended, update its reason in known_divergences.json and say so in your report", c.ID, entry.Reason, reason)
 		}
 	}
 	for id := range known {
