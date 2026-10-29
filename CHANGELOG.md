@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - A block tag left open at the end of a template (`{% if %}` without `{% endif %}`, and so on) reports the line where the template ends; it said `line 0, column 0`.
+- `{% import %}` and `{% from … import %}` of a template that is missing or cannot be read name it once; the error said `failed to load template "x"` twice.
 - `ChainLoader.LoadTemplate` stops at a template that exists but cannot be read or does not compile, like `GetSource`; it used to return a later loader's copy.
 - `enumerate(items, start=n)` starts at `n`; it used to ignore `start=` and any start that was not a Go `int` (a negative literal, `int64`). A non-integer start, an unknown keyword or a third argument is an error.
 - An included template that extends another renders through its base, as in Jinja2: its blocks fill the base, `super()` works, and a missing parent is an error even with `ignore missing`. It used to render only its own blocks.
