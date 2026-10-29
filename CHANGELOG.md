@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `enumerate(items, start=n)` starts at `n`; it used to ignore `start=` and any start that was not a Go `int` (a negative literal, `int64`). A non-integer start, an unknown keyword or a third argument is an error.
 - A template that extends another reuses its merged template across renders instead of rebuilding it each time (a two-level page with `super()` allocated 4.5× the same page written flat; now about the same). The merged template is cached with the template's hierarchy, per autoescape setting, and dropped with it by `InvalidateTemplate`, `ClearInheritanceCache` and the cache TTL.
 - Macro calls, `for … if` filters and list and dict comprehensions no longer copy every variable in scope per call or per item; their cost no longer grows with the number of keys in the render data. A recursive `loop()` no longer formats its children into an unused string (which also called `String()` on Go values in them). Behaviour change: a macro defined inside another macro and called after the outer call returns (stored in a namespace, appended to a list, passed to `caller()`) now reads the enclosing scope's current values, as in Jinja2, instead of the values at the time the outer macro was called.
 - `replace` with a safe argument on a number or boolean, and `map` with safe arguments over number and list items, keep the safe text, as in Jinja2.

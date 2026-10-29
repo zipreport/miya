@@ -533,7 +533,7 @@ Get index and value together:
 3. Cherry
 ```
 
-** Note:** Use positional argument, not `start=1` keyword.
+**Note:** `start` can be passed by position or as `start=1`; it must be an integer.
 
 ### Practical Examples
 
