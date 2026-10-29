@@ -29,7 +29,7 @@ func (m *Macro) String() string {
 }
 
 // Call binds args and kwargs to the parameters as Jinja2 does and renders
-// the body in a copy of the definition context.
+// the body in a child scope of the definition context.
 func (m *Macro) Call(args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
 	e := m.evaluator
 	leave, err := e.enter("macro " + m.Name)
