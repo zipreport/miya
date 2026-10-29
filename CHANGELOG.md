@@ -28,6 +28,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `(*filters.FilterRegistry).IsBuiltin`, `(*branching.TestRegistry).IsBuiltin` and `TemplateContextAdapter.IsBuiltinFilter`/`IsBuiltinTest` tell miya's own filters and tests from the ones added with `AddFilter`/`AddTest`.
 - `miya.RenderPanicError`, with the recovered panic `Value` and its `Stack`.
 - `runtime.SprintV` (`fmt.Sprintf("%v", v)` that prints a slice or map met again inside itself as `[...]`/`map[...]`) and `runtime.FmtCycles` (reports whether `%v` would recurse forever on a value).
+- `runtime.MapLookup`, used by the `branching` tests to read map keys the way the evaluator does, and the `runtime.FilterLookup` interface (`HasFilter(name) bool`), implemented by contexts that can tell whether a filter is registered.
+- `TemplateContextAdapter.Child`, `TemplateContextAdapter.NewModuleContext`, `TemplateContextAdapter.HasFilter` and `runtime.ContextWrapper.Child`: a child scope that reads through to its parent, an empty module context for imports without context, and a filter-existence check.
+- `parser.IncludeNode.WithContext`/`WithoutContext` (`{% include … with context %}` / `without context`) and `parser.CallBlockNode.Parameters`, `Defaults` and the embedded `MacroUsage` (`{% call(a, b=1) m() %}`).
 
 ### Fixed
 
