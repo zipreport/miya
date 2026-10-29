@@ -668,7 +668,7 @@ ctx.Set("products", productList)
 | **Template Inheritance** | 4 | 100% | `base.html`, `dashboard.html` |
 | **Control Structures** | 7 | 100% | `control_demo.html` |
 | **Include/Import** | 3 | 100% | `dashboard.html`, `macro_test.html` |
-| **Macros** | 4 | 90%* | `utilities.html` |
+| **Macros** | 4 | 100% | `utilities.html` |
 | **String Filters** | 18 | 100% | `filters_demo.html` |
 | **Collection Filters** | 15 | 98% | `filters_demo.html` |
 | **Numeric Filters** | 10 | 100% | `filters_demo.html` |
@@ -680,8 +680,6 @@ ctx.Set("products", productList)
 | **Performance** | 6 | 100% | All files |
 
 **Total: 131 features demonstrated with 95%+ compatibility**
-
-*\* Missing: *args/**kwargs support in macros*
 
 ---
 

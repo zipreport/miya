@@ -186,9 +186,15 @@ if err != nil {
 }
 
 // Template loading errors
-tmpl, err := env.GetTemplate("missing.html")
-if err != nil {
+tmpl, err = env.GetTemplate("page.html")
+switch {
+case errors.Is(err, runtime.ErrTemplateNotFound):
     log.Printf("Template not found: %v", err)
+case loader.IsReadError(err):
+    // the template exists but cannot be read (permission denied, I/O error)
+    log.Printf("Template unreadable: %v", err)
+case err != nil:
+    log.Printf("Template failed to load or compile: %v", err)
 }
 ```
 

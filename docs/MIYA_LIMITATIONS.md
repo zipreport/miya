@@ -41,6 +41,7 @@ These are bugs or gaps, not design decisions.
 
 | Template | miya | Jinja2 |
 |----------|------|--------|
+| `{% debug %}` | parse error (`unexpected block statement`); there is no debug extension | also unknown by default; with the `jinja2.ext.debug` extension it prints the context |
 | `{{ self.block_name() }}` | error: `cannot call non-function value of type *runtime.Undefined` | renders the block |
 | `{% import 'child' as m %}` where `child` has `{% extends 'base' %}` | only the child's top level runs: the parent's top-level macros and `{% set %}` are not exported (`m.bm is defined` is `false`) | the parent's top level runs too and is exported (`True`) |
 | `{{ '%s-%s' % (1, 2) }}` | error: `cannot modulo string and []interface {}` | `1-2` |

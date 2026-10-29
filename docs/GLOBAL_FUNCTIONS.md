@@ -738,7 +738,7 @@ Generate URLs from endpoint names:
 
 **9 Global Functions**
 
-All global functions work identically to Jinja2:
+`range`, `dict`, `cycler`, `joiner`, `namespace` and `lipsum` are Jinja2 globals. `zip`, `enumerate` and `url_for` are miya additions; Jinja2 does not define them.
 
  **Fully Supported:**
 - `range()` - Number sequences for iteration
@@ -757,4 +757,4 @@ All global functions work identically to Jinja2:
 - Professional placeholder content
 - Elegant data combination
 
-All functions are production-ready and perform identically to Jinja2.
+All functions are production-ready. See [Miya Limitations](MIYA_LIMITATIONS.md) for differences from Jinja2.

@@ -29,7 +29,6 @@
 
 | Pattern | Example | Workaround |
 |---------|---------|------------|
-| **Inline if** | `[x for x in list if cond]` | Use `selectattr`/`select` filters |
 | **Tuple unpacking** | `[a ~ b for a, b in zip(l1, l2)]` | Use `{% for %}` loop with unpacking instead |
 | **Dict .items()** | `{k: v for k, v in dict.items()}` | Loop over list of objects instead |
 | **Nested** | `[x for l in lists for x in l]` | Use nested for loops |
@@ -135,16 +134,16 @@
 
 ## Workaround Patterns
 
-For features not directly supported, use filter chains:
+Filter chains that do the same as a comprehension with an `if` clause:
 
 ```html+jinja
-{# Instead of: [x for x in numbers if x > 5] #}
+{# Same as: [x for x in numbers if x > 5] #}
 {{ numbers|select("greaterthan", 5)|list }}
 
-{# Instead of: [user.name for user in users if user.active] #}
+{# Same as: [user.name for user in users if user.active] #}
 {{ users|selectattr("active")|map(attribute="name")|list }}
 
-{# Instead of: [user for user in users if user.age >= 18] #}
+{# Same as: [user for user in users if user.age >= 18] #}
 {{ users|selectattr("age", ">=", 18)|list }}
 ```
 

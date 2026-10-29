@@ -208,20 +208,17 @@ This document provides the complete feature reference for Miya (miya), based on 
 -  Macro imports and namespaces
 -  Call blocks: `{% call macro() %}content{% endcall %}`
 
-**Limited Features:**
--  Variable arguments (`*args`) - Parser limitation
--  Keyword arguments (`**kwargs`) - Parser limitation
+-  Extra arguments: as in Jinja2, extra positional and keyword arguments arrive in the implicit `varargs` and `kwargs` variables (`*args`/`**kwargs` in a signature are not Jinja2 syntax)
 
-**Workarounds:**
 ```html+jinja
-<!-- Instead of *args, use explicit parameters or lists -->
-{% macro render_items(items, class="") %}
-    <ul class="{{ class }}">
-    {% for item in items %}
+{% macro render_items() %}
+    <ul>
+    {% for item in varargs %}
         <li>{{ item }}</li>
     {% endfor %}
     </ul>
 {% endmacro %}
+{{ render_items("a", "b") }}
 ```
 
 ---

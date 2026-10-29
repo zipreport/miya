@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `runtime.MapLookup`, used by the `branching` tests to read map keys the way the evaluator does, and the `runtime.FilterLookup` interface (`HasFilter(name) bool`), implemented by contexts that can tell whether a filter is registered.
 - `TemplateContextAdapter.Child`, `TemplateContextAdapter.NewModuleContext`, `TemplateContextAdapter.HasFilter` and `runtime.ContextWrapper.Child`: a child scope that reads through to its parent, an empty module context for imports without context, and a filter-existence check.
 - `parser.IncludeNode.WithContext`/`WithoutContext` (`{% include … with context %}` / `without context`) and `parser.CallBlockNode.Parameters`, `Defaults` and the embedded `MacroUsage` (`{% call(a, b=1) m() %}`).
+- `runtime.InheritanceResolver` and `(*runtime.ImportSystem).SetInheritanceResolver`: how an `{% include %}` resolves the included template's `{% extends %}`; the environment installs one, and an import system without one renders the included tree as it is.
 - `loader.IsReadError(err)`: true for a permission or I/O error, which `Environment.GetTemplate` and `ChainLoader`'s `GetSource`, `GetSourceWithMetadata` and `LoadTemplate` treat as an error rather than a missing template.
 
 ### Fixed

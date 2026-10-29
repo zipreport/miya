@@ -119,12 +119,9 @@ Create dictionaries from iterables:
 ### With Transformations
 
 ```html+jinja
-{# Uppercase keys #}
-{{ {key|upper: value for key, value in data} }}
-
 {# Format values #}
 {{ {product.id: "$" ~ product.price for product in products} }}
-→ {1: "$999", 2: "$29", 3: "$79"}
+→ {'1': '$999', '2': '$29', '3': '$79'}
 ```
 
 Dictionary comprehension keys become strings: `{x: x * 2 for x in [1, 2]}` prints `{'1': 2, '2': 4}` (`&#39;` instead of `'` when autoescape is on).
