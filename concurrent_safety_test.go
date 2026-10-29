@@ -119,11 +119,11 @@ func TestConcurrentTemplateRenderer(t *testing.T) {
 	resultCh := renderer.RenderAsync(ctx)
 	result := <-resultCh
 
-	if result.err != nil {
-		t.Fatalf("RenderAsync failed: %v", result.err)
+	if result.Err != nil {
+		t.Fatalf("RenderAsync failed: %v", result.Err)
 	}
-	if result.output != "Hello World!" {
-		t.Errorf("Expected 'Hello World!', got %q", result.output)
+	if result.Output != "Hello World!" {
+		t.Errorf("Expected 'Hello World!', got %q", result.Output)
 	}
 
 	// Stop the renderer
@@ -176,7 +176,7 @@ func TestConcurrentTemplateRendererStopped(t *testing.T) {
 	resultCh := renderer.RenderAsync(ctx)
 	result := <-resultCh
 
-	if result.err == nil {
+	if result.Err == nil {
 		t.Error("Expected error when rendering after stop")
 	}
 }
@@ -562,8 +562,8 @@ func TestConcurrentRendererLifecycle(t *testing.T) {
 		r := NewConcurrentTemplateRenderer(tmpl, 1)
 		select {
 		case res := <-r.RenderAsync(NewContext()):
-			if res.err == nil || !strings.Contains(res.err.Error(), "not started") {
-				t.Fatalf("err = %v, want not started", res.err)
+			if res.Err == nil || !strings.Contains(res.Err.Error(), "not started") {
+				t.Fatalf("err = %v, want not started", res.Err)
 			}
 		case <-time.After(time.Second):
 			t.Fatal("no result within 1s")
@@ -577,14 +577,14 @@ func TestConcurrentRendererLifecycle(t *testing.T) {
 			t.Fatal(err)
 		}
 		r := NewConcurrentTemplateRenderer(tmpl, 1)
-		render := func() renderResult {
+		render := func() RenderResult {
 			select {
 			case res := <-r.RenderAsync(NewContext()):
 				return res
 			case <-time.After(time.Second):
 				t.Fatal("no result within 1s")
 			}
-			return renderResult{}
+			return RenderResult{}
 		}
 		func() {
 			defer func() {
@@ -593,14 +593,14 @@ func TestConcurrentRendererLifecycle(t *testing.T) {
 				}
 			}()
 			r.Start()
-			if res := render(); res.err != nil || res.output != "x" {
-				t.Fatalf("running: got %q, %v; want \"x\"", res.output, res.err)
+			if res := render(); res.Err != nil || res.Output != "x" {
+				t.Fatalf("running: got %q, %v; want \"x\"", res.Output, res.Err)
 			}
 			r.Stop()
 			r.Start()
 			// A renderer starts once: after Stop, Start does nothing.
-			if res := render(); res.err == nil || !strings.Contains(res.err.Error(), "stopped") {
-				t.Fatalf("after restart: got %q, %v; want renderer is stopped", res.output, res.err)
+			if res := render(); res.Err == nil || !strings.Contains(res.Err.Error(), "stopped") {
+				t.Fatalf("after restart: got %q, %v; want renderer is stopped", res.Output, res.Err)
 			}
 			r.Stop()
 		}()
@@ -619,7 +619,7 @@ func TestConcurrentRendererLifecycle(t *testing.T) {
 			}
 			r := NewConcurrentTemplateRenderer(tmpl, 1)
 			r.Start()
-			chans := make([]<-chan renderResult, 3)
+			chans := make([]<-chan RenderResult, 3)
 			// The single worker is blocked in job 0, so jobs 1 and 2 stay queued.
 			chans[0] = r.RenderAsync(NewContext())
 			<-entered
@@ -632,11 +632,11 @@ func TestConcurrentRendererLifecycle(t *testing.T) {
 				select {
 				case res := <-ch:
 					switch {
-					case res.err == nil && res.output == "x":
-					case i > 0 && res.err != nil && strings.Contains(res.err.Error(), "stopped"):
+					case res.Err == nil && res.Output == "x":
+					case i > 0 && res.Err != nil && strings.Contains(res.Err.Error(), "stopped"):
 						drained++
 					default:
-						t.Fatalf("iteration %d: job %d: got %q, %v", iter, i, res.output, res.err)
+						t.Fatalf("iteration %d: job %d: got %q, %v", iter, i, res.Output, res.Err)
 					}
 				case <-time.After(2 * time.Second):
 					t.Fatalf("iteration %d: job %d got no result", iter, i)
@@ -704,11 +704,11 @@ func TestConcurrentTemplateRendererWorkerCount(t *testing.T) {
 			if err != nil {
 				t.Fatalf("FromString: %v", err)
 			}
-			done := make(chan renderResult, 1)
+			done := make(chan RenderResult, 1)
 			go func() {
 				defer func() {
 					if r := recover(); r != nil {
-						done <- renderResult{err: fmt.Errorf("panic: %v", r)}
+						done <- RenderResult{Err: fmt.Errorf("panic: %v", r)}
 					}
 				}()
 				renderer := NewConcurrentTemplateRenderer(tmpl, workers)
@@ -721,8 +721,8 @@ func TestConcurrentTemplateRendererWorkerCount(t *testing.T) {
 			}()
 			select {
 			case res := <-done:
-				if res.err != nil || res.output != "Hello World!" {
-					t.Fatalf("got %q, %v; want %q", res.output, res.err, "Hello World!")
+				if res.Err != nil || res.Output != "Hello World!" {
+					t.Fatalf("got %q, %v; want %q", res.Output, res.Err, "Hello World!")
 				}
 			case <-time.After(5 * time.Second):
 				t.Fatal("RenderAsync or Stop did not return within 5s")

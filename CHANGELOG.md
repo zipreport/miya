@@ -181,6 +181,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `ConcurrentTemplateRenderer.RenderAsync` returns `<-chan RenderResult` with exported `Output` and `Err`; the old result type's fields could not be read outside the package.
 - **Breaking:** a `{% block %}` body and an `{% include %}`d template render with the environment's autoescape setting, as in Jinja2. An `{% autoescape %}` tag around the block or include no longer applies to it, in the template that defines it or in a child's override. Tags inside the block body or included template still apply. Move such a tag inside to keep the old output. A block inside a `{% call %}` body under `{% autoescape false %}` is now escaped twice, as in Jinja2. With autoescape off, an `{% autoescape true %}` tag around a block or include no longer escapes it.
 - **Breaking:** an error in an imported module's top-level code (for example an undefined attribute in `{{ }}`) now fails the import, where it used to be skipped.
 - Go functions that take a `runtime.Context` receive a wrapper that unboxes lists; reach the original context with `interface{ Unwrap() runtime.Context }`. Code that type-asserts the context to `*miya.TemplateContextAdapter`, `*runtime.ContextWrapper` or `runtime.ContextAwareContext` now gets `ok == false`.

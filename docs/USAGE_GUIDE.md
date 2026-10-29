@@ -471,7 +471,7 @@ defer renderer.Stop()
 
 // Async single render
 resultCh := renderer.RenderAsync(ctx)
-result := <-resultCh // result.output, result.err
+result := <-resultCh // result.Output, result.Err
 
 // Batch render — all contexts rendered in parallel
 contexts := make([]miya.Context, 1000)
