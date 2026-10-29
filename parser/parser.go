@@ -1907,23 +1907,31 @@ func (p *Parser) parseDictLiteral() (ExpressionNode, error) {
 
 // Helper methods
 
+// eof is the end-of-input token, with the position where the template ends.
+func (p *Parser) eof() *lexer.Token {
+	if n := len(p.tokens); n > 0 && p.tokens[n-1].Type == lexer.TokenEOF {
+		return p.tokens[n-1]
+	}
+	return &lexer.Token{Type: lexer.TokenEOF}
+}
+
 func (p *Parser) peek() *lexer.Token {
 	if p.isAtEnd() {
-		return &lexer.Token{Type: lexer.TokenEOF}
+		return p.eof()
 	}
 	return p.tokens[p.current]
 }
 
 func (p *Parser) peekNext() *lexer.Token {
 	if p.current+1 >= len(p.tokens) {
-		return &lexer.Token{Type: lexer.TokenEOF}
+		return p.eof()
 	}
 	return p.tokens[p.current+1]
 }
 
 func (p *Parser) previous() *lexer.Token {
 	if p.current == 0 {
-		return &lexer.Token{Type: lexer.TokenEOF}
+		return p.eof()
 	}
 	return p.tokens[p.current-1]
 }
