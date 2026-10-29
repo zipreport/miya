@@ -539,6 +539,5 @@ fsLoader := loader.NewFileSystemLoader([]string{".", "templates"}, templateParse
 
 **Differences from Jinja2:**
 - `{{ self.block_name() }}` is an error (`cannot call non-function value of type *runtime.Undefined`); Jinja2 renders the block.
-- A template pulled in with `{% include %}` that itself uses `{% extends %}` is not inheritance-resolved: `a{% include 'child.html' %}b` prints `aXb`, where Jinja2 prints `a[X]b` (the base wraps the child's blocks).
 
 See [Miya Limitations](MIYA_LIMITATIONS.md) for the full list.
