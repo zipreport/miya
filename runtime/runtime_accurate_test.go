@@ -1206,15 +1206,18 @@ func TestTemplateMacro(t *testing.T) {
 			Parameters: []string{"required_param"},
 			Defaults:   map[string]interface{}{},
 			Body: []parser.Node{
-				&parser.TextNode{Content: "{{ required_param }}"},
+				parser.NewVariableNode(parser.NewIdentifierNode("required_param", 1, 1), 1, 1),
 			},
 			Context: ctx,
 		}
 
 		// Call without required parameter
-		_, err := macro.Call(evaluator, ctx, []interface{}{}, nil)
+		result, err := macro.Call(evaluator, ctx, []interface{}{}, nil)
 		if err != nil {
 			t.Fatalf("missing parameter must bind to undefined, got error: %v", err)
+		}
+		if fmt.Sprint(result) != "" {
+			t.Errorf("missing parameter printed %q, want empty (undefined)", result)
 		}
 	})
 
@@ -1875,10 +1878,13 @@ func TestTemplateMacroCall(t *testing.T) {
 			t.Error("Expected non-nil result with default parameter")
 		}
 
-		// Test with missing required parameter
-		_, err = macro.Call(evaluator, ctx, []interface{}{}, nil)
+		// Test with missing required parameter: it prints as undefined, the default still applies
+		result, err = macro.Call(evaluator, ctx, []interface{}{}, nil)
 		if err != nil {
 			t.Fatalf("missing parameter must bind to undefined, got error: %v", err)
+		}
+		if fmt.Sprint(result) != "Hello !" {
+			t.Errorf("got %q, want %q", result, "Hello !")
 		}
 	})
 
