@@ -127,7 +127,7 @@ The Miya implementation is **production-ready** for most use cases:
 - See [not_supported.md](not_supported.md) and [docs/MIYA_LIMITATIONS.md](../../../docs/MIYA_LIMITATIONS.md) for the full list.
 
 ###  **Workarounds Available:**
-- To build a dict from pairs, use `{k: v for k in keys}` with one loop variable, or a loop with `{% set %}`.
+- To build a dict from pairs, use one loop variable and index the pair, `{p[0]: p[1] for p in pairs}`, or a loop with `{% set %}`.
 
 ##  Files in This Demo
 
