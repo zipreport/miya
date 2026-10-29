@@ -86,7 +86,7 @@ func TestParserGaps(t *testing.T) {
 		// to the nearest operand, and "~" binds tighter than "+".
 		{"is_after_plus_parenthesized", "{{ (x + 1) is divisibleby(3) }}", "true"},
 		{"is_binds_to_operand_eq", "{{ a == 1 is sameas(true) }}", "false"},
-		{"tilde_before_plus", "{{ 'Page ' ~ x + 1 }}", "Page 51"}, // Jinja2: TypeError; miya adds the strings
+		{"tilde_before_plus", "{{ 'Page ' ~ x + 1 }}", "Page 51"}, // Jinja2: TypeError; miya concatenates a string and a number
 		{"tilde_parenthesized", "{{ 'Page ' ~ (x + 1) }}", "Page 6"},
 		{"plus_then_tilde", "{{ a + 2 ~ 3 }}", "24"},
 		// Tuples.
