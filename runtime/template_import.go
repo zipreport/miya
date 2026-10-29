@@ -106,7 +106,18 @@ type TemplateLoader interface {
 // reused (see DefaultEvaluator.loadModule), so one ImportSystem can serve
 // concurrent renders.
 type ImportSystem struct {
-	loader TemplateLoader
+	loader  TemplateLoader
+	resolve InheritanceResolver
+}
+
+// InheritanceResolver returns the tree an include renders: the template's own
+// tree, or the tree merged with its parents when it extends one.
+type InheritanceResolver func(name string, ast *parser.TemplateNode, ctx Context, eval Evaluator) (*parser.TemplateNode, error)
+
+// SetInheritanceResolver sets how an include resolves {% extends %}; nil
+// renders the included tree as it is.
+func (is *ImportSystem) SetInheritanceResolver(r InheritanceResolver) {
+	is.resolve = r
 }
 
 // NewImportSystem creates a new import system
