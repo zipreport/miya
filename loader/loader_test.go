@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -606,9 +607,23 @@ func TestSecurityFeatures(t *testing.T) {
 	})
 
 	t.Run("FourDotsIsOrdinaryName", func(t *testing.T) {
-		// "...." is an ordinary file name, not a traversal; it is rejected because it is not found
-		if _, err := loader.LoadTemplate("....//....//etc/passwd"); err == nil {
-			t.Error("Expected not-found error for four-dot path")
+		// "...." is an ordinary file name, not a traversal: a missing one is not found,
+		// and an existing one loads
+		_, err := loader.LoadTemplate("....//....//etc/passwd")
+		if err == nil || !strings.Contains(err.Error(), "template not found") {
+			t.Errorf("want a not-found error for a four-dot path, got %v", err)
+		}
+		if goruntime.GOOS == "windows" {
+			t.Skip("Windows strips trailing dots from file names")
+		}
+		if err := os.MkdirAll(filepath.Join(templatesDir, "...."), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(templatesDir, "....", "four.html"), []byte("four"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if src, err := loader.GetSource("..../four.html"); err != nil || src != "four" {
+			t.Errorf("GetSource(\"..../four.html\") = %q, %v; want \"four\"", src, err)
 		}
 	})
 
