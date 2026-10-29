@@ -6,7 +6,7 @@ This directory contains a complete implementation of a comprehensive Jinja2 temp
 
 - **`comprehensive_example.go`** - Complete Go implementation demonstrating 17+ Jinja2 features  
 - **`rendered_output_go.html`** - Generated HTML output (17,080 bytes)
-- **`PYTHON_VS_GO_JINJA2.md`** - Detailed comparison between Python and Go implementations
+- **`PYTHON_VS_GO_JINJA2.md`** - Pointers to the maintained Jinja2 comparison pages
 
 ## Features Demonstrated
 
@@ -47,7 +47,7 @@ This will generate `rendered_output_go.html` with the complete showcase (now 17,
 
 ## Comparison with Python
 
-See `PYTHON_VS_GO_JINJA2.md` for detailed differences, migration strategies, and compatibility information.
+See `PYTHON_VS_GO_JINJA2.md` for links to the maintained comparison with Jinja2.
 
 ## Output
 

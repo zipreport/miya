@@ -11,7 +11,7 @@ go run comprehensive_demo.go
 ##  Documentation Quick Links
 
 - **[FEATURES.md](FEATURES.md)** - Complete feature list with examples (131 features)
-- **[not_supported.md](not_supported.md)** - Unsupported features and workarounds  
+- **[not_supported.md](not_supported.md)** - Features miya does not have, with links to the maintained limitations page  
 - **[Template Files](templates/)** - Professional template organization examples
 
 ##  What's Demonstrated
@@ -103,19 +103,11 @@ go run comprehensive_demo.go
 - Inheritance resolution caching
 - Concurrent safety with proper locking
 
-##  Feature Coverage Summary
+##  Feature Coverage
 
-| Category | Support Level | Notes |
-|----------|---------------|-------|
-| **Core Syntax** | 100% | All basic template syntax |
-| **Template Inheritance** | 100% | Complete inheritance system |
-| **Control Structures** | 100% | All flow control features |
-| **Includes/Imports** | 100% | Full import system |
-| **Macros** | 90% | Missing *args/**kwargs |
-| **Filters** | 98% | 85+ filters implemented |
-| **Tests** | 95% | 30+ test expressions |
-| **Advanced Features** | 85% | Most advanced features |
-| **Performance** | 100% | Production-ready optimizations |
+For what miya supports and where it differs from Jinja2, see
+[docs/JINJA2_VS_MIYA_FEATURE_MATRIX.md](../../../docs/JINJA2_VS_MIYA_FEATURE_MATRIX.md)
+and [docs/MIYA_LIMITATIONS.md](../../../docs/MIYA_LIMITATIONS.md).
 
 ##  Production Readiness
 
@@ -130,14 +122,12 @@ The Miya implementation is **production-ready** for most use cases:
 - **Extensible architecture** with custom filters and tests
 
 ###  **Limitations:**
-- **Macro varargs/kwargs:** `*args` and `**kwargs` not supported
-- **Complex slicing:** Advanced slice operations limited
-- **Some Python-specific features:** Dict comprehensions may be incomplete
+- **Comprehensions** with more than one loop variable (`for k, v in …`) or more than one `for` clause do not parse; one-variable list and dict comprehensions work.
+- **`{% debug %}`** is not available.
+- See [not_supported.md](not_supported.md) and [docs/MIYA_LIMITATIONS.md](../../../docs/MIYA_LIMITATIONS.md) for the full list.
 
 ###  **Workarounds Available:**
-- Use explicit parameters instead of varargs
-- Use filter chains instead of complex slicing
-- Implement complex logic in Go code rather than templates
+- To build a dict from pairs, use `{k: v for k in keys}` with one loop variable, or a loop with `{% set %}`.
 
 ##  Files in This Demo
 
@@ -157,7 +147,7 @@ The Miya implementation is **production-ready** for most use cases:
 
 ### **Documentation**
 - **`FEATURES.md`** - Complete feature showcase with examples and usage
-- **`not_supported.md`** - Detailed list of unsupported features  
+- **`not_supported.md`** - Features miya does not have  
 - **`README.md`** - This comprehensive documentation
 
 ##  Architecture Highlights
