@@ -153,10 +153,19 @@ func (c *InheritanceCache) StoreHierarchy(templateName string, hierarchy *Inheri
 	c.hierarchyCache[templateName] = entry
 }
 
-// InvalidateTemplate removes all cache entries related to a template
+// InvalidateTemplate removes all cache entries related to a template: its own
+// hierarchy and the hierarchy of every template whose chain contains it.
 func (c *InheritanceCache) InvalidateTemplate(templateName string) {
 	c.hierarchyMutex.Lock()
-	delete(c.hierarchyCache, templateName)
+	for key, entry := range c.hierarchyCache {
+		if key == templateName {
+			delete(c.hierarchyCache, key)
+		} else if entry.Hierarchy != nil {
+			if _, inChain := entry.Hierarchy.TemplateMap[templateName]; inChain {
+				delete(c.hierarchyCache, key)
+			}
+		}
+	}
 	c.hierarchyMutex.Unlock()
 }
 

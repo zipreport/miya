@@ -625,7 +625,7 @@ size := env.GetCacheSize()
 // Clear all cached templates (e.g., after editing template files in development)
 env.ClearCache()
 
-// Invalidate a single template (also clears its inheritance cache entry)
+// Invalidate a single template (also drops the cached chains of templates that extend it)
 env.InvalidateTemplate("page.html")
 
 // Clear loader-level cache separately
@@ -636,7 +636,7 @@ if cachingLoader, ok := env.GetLoader().(loader.CachingLoader); ok {
 
 ### Inheritance Cache
 
-The chain of a template (e.g., `page.html` extends `layout.html` extends `base.html`) is cached separately, with configurable TTLs. The merged template of a template loaded by name with a fixed parent is kept with its chain, for as long as the hierarchy TTL. The separate resolved-template cache was removed: the second argument of `ConfigureInheritanceCache` has no effect and `ResolvedCache` always reads zero:
+The chain of a template (e.g., `page.html` extends `layout.html` extends `base.html`) is cached separately, with configurable TTLs. The merged template of a template loaded by name with a fixed parent is kept with its chain, for as long as the hierarchy TTL or until `InvalidateTemplate` names a template in that chain. The separate resolved-template cache was removed: the second argument of `ConfigureInheritanceCache` has no effect and `ResolvedCache` always reads zero:
 
 ```go
 import "time"
