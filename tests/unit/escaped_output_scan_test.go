@@ -51,8 +51,8 @@ func TestEscapedOutputNoScanForBuiltins(t *testing.T) {
 	small, large := scanData(10), scanData(10000)
 	check := func(name string, run func(big []interface{})) {
 		t.Helper()
-		a := testing.AllocsPerRun(5, func() { run(small) })
-		b := testing.AllocsPerRun(5, func() { run(large) })
+		a := testing.AllocsPerRun(100, func() { run(small) })
+		b := testing.AllocsPerRun(100, func() { run(large) })
 		if b > a+5 {
 			t.Errorf("%s: %v allocations for 10 items, %v for 10000", name, a, b)
 		}
