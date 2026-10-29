@@ -415,14 +415,31 @@ func zipFunction(args ...interface{}) (interface{}, error) {
 
 // enumerateFunction returns pairs of (index, item) for an iterable
 func enumerateFunction(args ...interface{}) (interface{}, error) {
-	if len(args) == 0 {
-		return nil, fmt.Errorf("enumerate() requires at least one argument")
+	if n := len(args); n > 1 {
+		if kw, ok := args[n-1].(map[string]interface{}); ok {
+			args = args[:n-1]
+			for k, v := range kw {
+				if k != "start" || len(args) != 1 {
+					return nil, fmt.Errorf("enumerate() got an unexpected keyword argument %q", k)
+				}
+				args = append(args, v)
+			}
+		}
+	}
+	if len(args) == 0 || len(args) > 2 {
+		return nil, fmt.Errorf("enumerate() takes 1 or 2 arguments, got %d", len(args))
 	}
 
 	start := 0
-	if len(args) > 1 {
-		if s, ok := args[1].(int); ok {
-			start = s
+	if len(args) == 2 {
+		v := reflect.ValueOf(args[1])
+		switch v.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			start = int(v.Int())
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			start = int(v.Uint())
+		default:
+			return nil, fmt.Errorf("enumerate() start must be an integer, got %T", args[1])
 		}
 	}
 
