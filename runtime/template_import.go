@@ -138,7 +138,12 @@ func NewImportSystem(loader TemplateLoader, evaluator *DefaultEvaluator) *Import
 func (is *ImportSystem) LoadTemplateNamespace(templateName string, moduleCtx Context, evaluator *DefaultEvaluator) (*TemplateNamespace, error) {
 	ast, err := is.loader.LoadTemplate(templateName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load template %q: %w", templateName, err)
+		// The environment's loader may already have named the template
+		prefix := fmt.Sprintf("failed to load template %q", templateName)
+		if strings.HasPrefix(err.Error(), prefix) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%s: %w", prefix, err)
 	}
 	if ast == nil {
 		return nil, fmt.Errorf("failed to load template %q: the loader returned no template", templateName)
