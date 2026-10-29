@@ -2,6 +2,7 @@ package miya_test
 
 import (
 	miya "github.com/zipreport/miya"
+	"strings"
 	"testing"
 )
 
@@ -122,8 +123,9 @@ func TestWithStatementErrors(t *testing.T) {
 				t.Fatalf("Expected error for template: %s", tc.template)
 			}
 
-			// Just check that we get some error - the exact message may vary
-			t.Logf("Got expected error: %v", err)
+			if !strings.Contains(err.Error(), tc.errMsg) {
+				t.Errorf("error %q does not contain %q", err, tc.errMsg)
+			}
 		})
 	}
 }
