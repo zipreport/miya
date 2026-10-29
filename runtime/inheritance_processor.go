@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/zipreport/miya/parser"
 )
@@ -32,6 +33,12 @@ type InheritanceHierarchy struct {
 	Templates    []*parser.TemplateNode // From child to parent order
 	BlockMap     map[string]*parser.BlockNode
 	TemplateMap  map[string]*parser.TemplateNode
+
+	// The merged template, built once per autoescape setting (the only input
+	// besides the hierarchy that buildFinalTemplate reads). Rendering never
+	// writes to an AST, so renders share it.
+	finalMu sync.Mutex
+	final   [2]*parser.TemplateNode
 }
 
 // NewInheritanceProcessor creates a new inheritance processor
@@ -102,6 +109,7 @@ func (p *InheritanceProcessor) ResolveInheritanceWith(template TemplateInterface
 			// Cache the hierarchy for future use
 			p.cache.StoreHierarchy(templateName, hierarchy)
 		}
+		return p.cachedFinalTemplate(hierarchy, context)
 	}
 
 	// Resolve blocks and build final template
@@ -111,6 +119,27 @@ func (p *InheritanceProcessor) ResolveInheritanceWith(template TemplateInterface
 	}
 
 	return finalTemplate, nil
+}
+
+// cachedFinalTemplate returns the merged template of a cached hierarchy,
+// building it on first use for the render's autoescape setting. Errors are
+// not cached.
+func (p *InheritanceProcessor) cachedFinalTemplate(hierarchy *InheritanceHierarchy, context Context) (*parser.TemplateNode, error) {
+	on, _, _ := resolveEscape(context)
+	slot := 0
+	if on {
+		slot = 1
+	}
+	hierarchy.finalMu.Lock()
+	defer hierarchy.finalMu.Unlock()
+	if hierarchy.final[slot] == nil {
+		finalTemplate, err := p.buildFinalTemplate(hierarchy, context)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build final template: %w", err)
+		}
+		hierarchy.final[slot] = finalTemplate
+	}
+	return hierarchy.final[slot], nil
 }
 
 // hasInheritanceDirectives checks if template contains {% extends %} directives or {{ super() }} calls
