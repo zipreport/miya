@@ -1,6 +1,7 @@
 package miya
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -692,4 +693,40 @@ func TestTemplateCacheSizes(t *testing.T) {
 			t.Fatal("b should be kept")
 		}
 	})
+}
+
+// A worker count below 1 runs one worker: RenderAsync neither hangs nor panics.
+func TestConcurrentTemplateRendererWorkerCount(t *testing.T) {
+	for _, workers := range []int{0, -1} {
+		t.Run(fmt.Sprint(workers), func(t *testing.T) {
+			env := NewEnvironment()
+			tmpl, err := env.FromString("Hello {{ name }}!")
+			if err != nil {
+				t.Fatalf("FromString: %v", err)
+			}
+			done := make(chan renderResult, 1)
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						done <- renderResult{err: fmt.Errorf("panic: %v", r)}
+					}
+				}()
+				renderer := NewConcurrentTemplateRenderer(tmpl, workers)
+				renderer.Start()
+				ctx := NewContext()
+				ctx.Set("name", "World")
+				res := <-renderer.RenderAsync(ctx)
+				renderer.Stop()
+				done <- res
+			}()
+			select {
+			case res := <-done:
+				if res.err != nil || res.output != "Hello World!" {
+					t.Fatalf("got %q, %v; want %q", res.output, res.err, "Hello World!")
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("RenderAsync or Stop did not return within 5s")
+			}
+		})
+	}
 }

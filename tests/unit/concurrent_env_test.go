@@ -32,11 +32,20 @@ func TestConcurrentEnvironmentMutation(t *testing.T) {
 		go func(r int) {
 			defer wg.Done()
 			for i := 0; i < 200; i++ {
-				_, _ = env.RenderString(fmt.Sprint("{{ g1 }}", r, "-", i), miya.NewContext())
+				want := fmt.Sprint("1", r, "-", i)
+				got, err := env.RenderString(fmt.Sprint("{{ g1 }}", r, "-", i), miya.NewContext())
+				if err != nil || got != want {
+					t.Errorf("render %d-%d: got %q, %v; want %q", r, i, got, err, want)
+					return
+				}
 			}
 		}(r)
 	}
 	wg.Wait()
+	got, err := env.RenderString("{{ g199 }}", miya.NewContext())
+	if err != nil || got != "199" {
+		t.Errorf("g199 after the writers: got %q, %v; want 199", got, err)
+	}
 }
 
 func TestConfigureInheritanceCacheConcurrent(t *testing.T) {

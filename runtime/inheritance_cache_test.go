@@ -464,6 +464,11 @@ func BenchmarkConcurrentCacheAccess(b *testing.B) {
 func TestInheritanceCacheCleanupConcurrent(t *testing.T) {
 	c := NewInheritanceCache()
 	c.cleanupInterval = 0
+	c.StoreHierarchy("live", &InheritanceHierarchy{})
+	c.StoreHierarchy("dead", &InheritanceHierarchy{})
+	c.hierarchyMutex.Lock()
+	c.hierarchyCache["dead"].ExpiresAt = time.Now().Add(-time.Second)
+	c.hierarchyMutex.Unlock()
 
 	var wg sync.WaitGroup
 	for g := 0; g < 4; g++ {
@@ -471,9 +476,31 @@ func TestInheritanceCacheCleanupConcurrent(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 200; i++ {
-				c.GetHierarchy("x")
+				if h, ok := c.GetHierarchy("x"); ok || h != nil {
+					t.Errorf("GetHierarchy of a name never stored: got %v, %v; want nil, false", h, ok)
+					return
+				}
 			}
 		}()
 	}
 	wg.Wait()
+
+	// Cleanup runs in background goroutines: wait for it to drop the expired entry
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		c.hierarchyMutex.RLock()
+		_, dead := c.hierarchyCache["dead"]
+		_, live := c.hierarchyCache["live"]
+		c.hierarchyMutex.RUnlock()
+		if !live {
+			t.Fatal("cleanup removed an entry that has not expired")
+		}
+		if !dead {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("cleanup did not remove the expired entry within 2s")
+		}
+		time.Sleep(time.Millisecond)
+	}
 }
