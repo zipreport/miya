@@ -2,6 +2,7 @@ package loader
 
 import (
 	"embed"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -12,6 +13,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/zipreport/miya/parser"
@@ -38,6 +40,14 @@ type Loader interface {
 	GetSource(name string) (string, error)
 	IsCached(name string) bool
 	ListTemplates() ([]string, error)
+}
+
+// IsReadError reports whether err means a template exists but could not be
+// read: permission denied or an I/O error. Such a template is not "not
+// found", as in Jinja2. Other file-system errors (does not exist, not a
+// directory, invalid path) are not read errors.
+func IsReadError(err error) bool {
+	return errors.Is(err, fs.ErrPermission) || errors.Is(err, syscall.EIO)
 }
 
 // Enhanced Loader interface for advanced template loading
@@ -239,13 +249,13 @@ func (f *FileSystemLoader) readTemplate(name string) (src *TemplateSource, searc
 
 	fh, err := f.openIn(searchPath, rel)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("failed to read template %s: %v", name, err)
+		return nil, "", "", fmt.Errorf("failed to read template %s: %w", name, err)
 	}
 	defer fh.Close()
 
 	st, err := fh.Stat()
 	if err != nil {
-		return nil, "", "", fmt.Errorf("failed to stat template %s: %v", name, err)
+		return nil, "", "", fmt.Errorf("failed to stat template %s: %w", name, err)
 	}
 	if st.IsDir() {
 		return nil, "", "", fmt.Errorf("failed to read template %s: is a directory", name)
@@ -253,7 +263,7 @@ func (f *FileSystemLoader) readTemplate(name string) (src *TemplateSource, searc
 
 	content, err := io.ReadAll(fh)
 	if err != nil {
-		return nil, "", "", fmt.Errorf("failed to read template %s: %v", name, err)
+		return nil, "", "", fmt.Errorf("failed to read template %s: %w", name, err)
 	}
 
 	return &TemplateSource{
@@ -816,6 +826,9 @@ func (c *ChainLoader) GetSource(name string) (string, error) {
 		if err == nil {
 			return source, nil
 		}
+		if IsReadError(err) {
+			return "", err
+		}
 		lastErr = err
 	}
 
@@ -863,6 +876,9 @@ func (c *ChainLoader) GetSourceWithMetadata(name string) (*TemplateSource, error
 		source, err := loader.GetSourceWithMetadata(name)
 		if err == nil {
 			return source, nil
+		}
+		if IsReadError(err) {
+			return nil, err
 		}
 		lastErr = err
 	}
