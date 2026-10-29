@@ -849,16 +849,21 @@ func (c *ChainLoader) IsCached(name string) bool {
 	return false
 }
 
-// LoadTemplate loads a template using the first loader that succeeds
+// LoadTemplate loads the template from the first loader that has it. A
+// template that exists but cannot be read or does not compile is an error;
+// only a missing one falls through to the next loader.
 func (c *ChainLoader) LoadTemplate(name string) (*parser.TemplateNode, error) {
 	var lastErr error
 
 	for _, loader := range c.loaders {
-		template, err := loader.LoadTemplate(name)
-		if err == nil {
-			return template, nil
+		if _, err := loader.GetSource(name); err != nil {
+			if IsReadError(err) {
+				return nil, err
+			}
+			lastErr = err
+			continue
 		}
-		lastErr = err
+		return loader.LoadTemplate(name)
 	}
 
 	if lastErr != nil {

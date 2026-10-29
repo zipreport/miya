@@ -14,29 +14,30 @@ import (
 	"github.com/zipreport/miya/runtime"
 )
 
+func unreadableDir(t *testing.T) string {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "t.html")
+	if err := os.WriteFile(p, []byte("secret"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(p, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(p, 0o644) })
+	if _, err := os.ReadFile(p); err == nil {
+		t.Skip("a mode-000 file is still readable here (root, or Windows)")
+	}
+	return dir
+}
+func stringLoader(src string) *loader.StringLoader {
+	sl := loader.NewStringLoader(loader.NewDirectTemplateParser())
+	sl.AddTemplate("t.html", src)
+	return sl
+}
+
 // A template that exists but cannot be read is an error, as in Jinja2
 // (PermissionError); only a template that does not exist is "not found".
 func TestLoaderReadErrors(t *testing.T) {
-	unreadableDir := func(t *testing.T) string {
-		dir := t.TempDir()
-		p := filepath.Join(dir, "t.html")
-		if err := os.WriteFile(p, []byte("secret"), 0o644); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Chmod(p, 0); err != nil {
-			t.Fatal(err)
-		}
-		t.Cleanup(func() { os.Chmod(p, 0o644) })
-		if _, err := os.ReadFile(p); err == nil {
-			t.Skip("a mode-000 file is still readable here (root, or Windows)")
-		}
-		return dir
-	}
-	strings := func(src string) *loader.StringLoader {
-		sl := loader.NewStringLoader(loader.NewDirectTemplateParser())
-		sl.AddTemplate("t.html", src)
-		return sl
-	}
 	permDenied := loader.LoaderFunc(func(name string) (string, error) {
 		return "", &fs.PathError{Op: "open", Path: name, Err: fs.ErrPermission}
 	})
@@ -71,7 +72,7 @@ func TestLoaderReadErrors(t *testing.T) {
 		}, true, nil, "[]"},
 		{"chain_unreadable_first", func(t *testing.T) miya.Loader {
 			fsl := loader.NewFileSystemLoader([]string{unreadableDir(t)}, loader.NewDirectTemplateParser())
-			return loader.NewChainLoader(fsl, strings("fallback"))
+			return loader.NewChainLoader(fsl, stringLoader("fallback"))
 		}, false, fs.ErrPermission, ""},
 	}
 
@@ -107,7 +108,7 @@ func TestLoaderReadErrors(t *testing.T) {
 	// A template that exists in an earlier loader but does not compile is an
 	// error; the chain does not fall through to a later loader's copy.
 	t.Run("chain_compile_error_first", func(t *testing.T) {
-		env := miya.NewEnvironment(miya.WithLoader(loader.NewChainLoader(strings("{% if %}"), strings("fallback"))))
+		env := miya.NewEnvironment(miya.WithLoader(loader.NewChainLoader(stringLoader("{% if %}"), stringLoader("fallback"))))
 		tmpl, err := env.GetTemplate("t.html")
 		if err == nil {
 			out, _ := tmpl.Render(miya.NewContext())
@@ -115,6 +116,52 @@ func TestLoaderReadErrors(t *testing.T) {
 		}
 		if errors.Is(err, runtime.ErrTemplateNotFound) {
 			t.Errorf("compile error reported as not found: %v", err)
+		}
+	})
+}
+
+func TestChainLoaderDirect(t *testing.T) {
+	fsl := func(dir string) *loader.FileSystemLoader {
+		return loader.NewFileSystemLoader([]string{dir}, loader.NewDirectTemplateParser())
+	}
+
+	t.Run("load_unreadable_first", func(t *testing.T) {
+		c := loader.NewChainLoader(fsl(unreadableDir(t)), stringLoader("fallback"))
+		ast, err := c.LoadTemplate("t.html")
+		if err == nil || !errors.Is(err, fs.ErrPermission) {
+			t.Fatalf("err = %v, want permission error", err)
+		}
+		if ast != nil {
+			t.Fatal("AST must be nil")
+		}
+	})
+	t.Run("meta_unreadable_first", func(t *testing.T) {
+		c := loader.NewChainLoader(fsl(unreadableDir(t)), stringLoader("fallback"))
+		if _, err := c.GetSourceWithMetadata("t.html"); !errors.Is(err, fs.ErrPermission) {
+			t.Fatalf("err = %v, want permission error", err)
+		}
+	})
+	t.Run("load_compile_error_first", func(t *testing.T) {
+		c := loader.NewChainLoader(stringLoader("{% if %}"), stringLoader("fallback"))
+		ast, err := c.LoadTemplate("t.html")
+		if err == nil {
+			t.Fatal("want a parse error")
+		}
+		if ast != nil {
+			t.Fatal("AST must be nil")
+		}
+	})
+	t.Run("load_missing_first_falls_through", func(t *testing.T) {
+		c := loader.NewChainLoader(fsl(t.TempDir()), stringLoader("fallback"))
+		ast, err := c.LoadTemplate("t.html")
+		if err != nil || ast == nil {
+			t.Fatalf("ast = %v, err = %v, want fallback template", ast, err)
+		}
+	})
+	t.Run("load_all_missing", func(t *testing.T) {
+		c := loader.NewChainLoader(fsl(t.TempDir()))
+		if _, err := c.LoadTemplate("t.html"); err == nil {
+			t.Fatal("want an error")
 		}
 	})
 }
