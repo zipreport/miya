@@ -2,8 +2,27 @@ package runtime
 
 import (
 	"fmt"
+	"reflect"
+	"sync"
 
 	"github.com/zipreport/miya/parser"
+)
+
+// superCaptureVar is the variable a super() inside an expression reads its
+// parent block from. It is not a valid template identifier.
+const superCaptureVar = "super()"
+
+// deferredSuper is the parent block content bound to superCaptureVar; it is
+// rendered each time super() is evaluated.
+type deferredSuper struct {
+	node parser.Node
+}
+
+var (
+	nodeSliceType = reflect.TypeOf([]parser.Node(nil))
+	// nodeFields caches, per AST struct type, the exported fields that can
+	// hold a node; the walk runs on every statement of every hierarchy build.
+	nodeFields sync.Map // reflect.Type -> []int
 )
 
 // SuperResolver handles {{ super() }} call resolution during inheritance processing
@@ -62,13 +81,11 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 	case *parser.BlockNode:
 		// Process block contents with the block name as context
 		block := parser.CloneStatement(n).(*parser.BlockNode)
-		for i, child := range block.Body {
-			resolved, err := s.resolveSuperCallsRecursive(child, n.Name, depth, enclosing)
-			if err != nil {
-				return nil, err
-			}
-			block.Body[i] = resolved
+		body, err := s.resolveBody(block.Body, n.Name, depth, enclosing)
+		if err != nil {
+			return nil, err
 		}
+		block.Body = body
 		return block, nil
 
 	default:
@@ -81,16 +98,146 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 			enclosing = &on
 		}
 		for _, body := range parser.ChildBodies(clone) {
-			for i, child := range *body {
-				resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth, enclosing)
-				if err != nil {
-					return nil, err
-				}
-				(*body)[i] = resolved
+			resolved, err := s.resolveBody(*body, currentBlockName, depth, enclosing)
+			if err != nil {
+				return nil, err
 			}
+			*body = resolved
 		}
 		return clone, nil
 	}
+}
+
+// resolveBody resolves super() calls in a statement list. Before a statement
+// whose expressions call super() it binds superCaptureVar to the parent block
+// content, which EvalSuperNode renders where super() is evaluated.
+func (s *SuperResolver) resolveBody(body []parser.Node, currentBlockName string, depth int, enclosing *bool) ([]parser.Node, error) {
+	out := make([]parser.Node, 0, len(body))
+	for _, child := range body {
+		// outside a block super() has no parent to bind; it fails when evaluated
+		if currentBlockName != "" && !isWholeSuper(child) && expressionsCallSuper(reflect.ValueOf(child)) {
+			parent, err := s.resolveSuperCall(currentBlockName, depth)
+			if err != nil {
+				return nil, err
+			}
+			parent = s.withParentEscaping(parent, child, enclosing)
+			value := parser.NewLiteralNode(&deferredSuper{node: parent}, "", child.Line(), child.Column())
+			out = append(out, parser.NewSetNode(superCaptureVar, value, child.Line(), child.Column()))
+		}
+		resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth, enclosing)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, resolved)
+	}
+	return out, nil
+}
+
+// isWholeSuper reports whether n is a {{ super() }} statement, which is
+// replaced by the parent block content inline.
+func isWholeSuper(n parser.Node) bool {
+	switch n := n.(type) {
+	case *parser.SuperNode:
+		return true
+	case *parser.VariableNode:
+		_, ok := n.Expression.(*parser.SuperNode)
+		return ok
+	}
+	return false
+}
+
+// expressionsCallSuper reports whether a SuperNode is reachable from v
+// through exported fields, without descending into statement lists.
+func expressionsCallSuper(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Interface, reflect.Ptr:
+		if v.IsNil() {
+			return false
+		}
+		switch v.Interface().(type) {
+		case *parser.SuperNode:
+			return true
+		case *parser.IdentifierNode, *parser.TextNode, *parser.LiteralNode:
+			return false
+		}
+		return expressionsCallSuper(v.Elem())
+	case reflect.Struct:
+		for _, i := range fieldsHoldingNodes(v.Type()) {
+			if expressionsCallSuper(v.Field(i)) {
+				return true
+			}
+		}
+	case reflect.Slice, reflect.Array:
+		if v.Type() == nodeSliceType {
+			return false
+		}
+		for i := 0; i < v.Len(); i++ {
+			if expressionsCallSuper(v.Index(i)) {
+				return true
+			}
+		}
+	case reflect.Map:
+		iter := v.MapRange()
+		for iter.Next() {
+			if expressionsCallSuper(iter.Value()) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// overridesCallSuper reports whether a block that overrides the root's calls
+// super() inside an expression. Only those blocks have a parent block to
+// render, so the root's own blocks (often most of the template) are skipped.
+func overridesCallSuper(h *InheritanceHierarchy) bool {
+	rootBlocks := make(map[*parser.BlockNode]bool)
+	parser.WalkStatements(h.RootTemplate.Children, func(n parser.Node) bool {
+		if b, ok := n.(*parser.BlockNode); ok {
+			rootBlocks[b] = true
+		}
+		return true
+	})
+	for _, b := range h.BlockMap {
+		if !rootBlocks[b] && superInExpressions(b) {
+			return true
+		}
+	}
+	return false
+}
+
+// superInExpressions reports whether any statement under node calls super()
+// inside an expression, which HasSuperCalls does not look for.
+func superInExpressions(node parser.Node) bool {
+	found := false
+	parser.WalkStatements([]parser.Node{node}, func(n parser.Node) bool {
+		if !found && !isWholeSuper(n) && expressionsCallSuper(reflect.ValueOf(n)) {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+// fieldsHoldingNodes returns the indexes of t's exported fields whose kind can
+// reach a node.
+func fieldsHoldingNodes(t reflect.Type) []int {
+	if f, ok := nodeFields.Load(t); ok {
+		return f.([]int)
+	}
+	var idx []int
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if !f.IsExported() {
+			continue
+		}
+		switch f.Type.Kind() {
+		case reflect.Interface, reflect.Ptr, reflect.Struct, reflect.Slice, reflect.Array, reflect.Map:
+			idx = append(idx, i)
+		}
+	}
+	nodeFields.Store(t, idx)
+	return idx
 }
 
 // withParentEscaping wraps resolved parent content in an {% autoescape %}
@@ -137,24 +284,17 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 		return &parser.TextNode{Content: ""}, nil
 	}
 
-	// Clone the parent block first
-	clonedParent, err := s.cloneNodeForSuper(parentBlock)
-	if err != nil {
-		return nil, err
-	}
-
-	// Process cloned parent block content for nested super() calls
-	resolvedParent, err := s.resolveSuperCallsRecursive(clonedParent, blockName, depth+1, nil)
+	// Process the parent block content for nested super() calls
+	resolvedParent, err := s.resolveSuperCallsRecursive(parentBlock, blockName, depth+1, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Cache the resolved parent block (not the original)
-	if resolvedParentBlock, ok := resolvedParent.(*parser.BlockNode); ok {
-		s.parentBlockCache[cacheKey] = resolvedParentBlock
-	}
+	resolvedParentBlock := resolvedParent.(*parser.BlockNode)
+	s.parentBlockCache[cacheKey] = resolvedParentBlock
 
-	return resolvedParent, nil
+	return s.cloneNodeForSuper(resolvedParentBlock)
 }
 
 // findParentBlockAtDepth searches the inheritance hierarchy for the parent block at a specific depth

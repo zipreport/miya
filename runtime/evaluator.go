@@ -1430,9 +1430,22 @@ func (e *DefaultEvaluator) notFound(err error, name string) bool {
 }
 
 func (e *DefaultEvaluator) EvalSuperNode(node *parser.SuperNode, ctx Context) (interface{}, error) {
-	// Super nodes are handled by the inheritance resolver during template compilation
-	// In the runtime context, they should have been replaced with parent block content
-	// If we reach here, it means the super() call wasn't resolved properly
+	// A super() inside an expression renders the parent block content the
+	// inheritance resolver bound before its statement (Markup where escaping
+	// is on, as in Jinja2). Rendering the parent rebinds it for the parent's
+	// own super() calls, so the child's binding is put back afterwards.
+	if v, ok := ctx.GetVariable(superCaptureVar); ok {
+		if d, ok := v.(*deferredSuper); ok {
+			out, err := e.EvalNode(d.node, ctx)
+			ctx.SetVariable(superCaptureVar, d)
+			if err != nil {
+				return nil, err
+			}
+			return e.markIfSafe(ToString(out), ctx), nil
+		}
+	}
+	// A whole-expression {{ super() }} is replaced by the inheritance
+	// resolver; reaching here means the call wasn't resolved.
 	return "", fmt.Errorf("super() call outside of block context")
 }
 
