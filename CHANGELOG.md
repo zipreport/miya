@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `runtime.MapLookup`, used by the `branching` tests to read map keys the way the evaluator does, and the `runtime.FilterLookup` interface (`HasFilter(name) bool`), implemented by contexts that can tell whether a filter is registered.
 - `TemplateContextAdapter.Child`, `TemplateContextAdapter.NewModuleContext`, `TemplateContextAdapter.HasFilter` and `runtime.ContextWrapper.Child`: a child scope that reads through to its parent, an empty module context for imports without context, and a filter-existence check.
 - `parser.IncludeNode.WithContext`/`WithoutContext` (`{% include … with context %}` / `without context`) and `parser.CallBlockNode.Parameters`, `Defaults` and the embedded `MacroUsage` (`{% call(a, b=1) m() %}`).
+- `loader.IsReadError(err)`: true for a permission or I/O error, which `Environment.GetTemplate` and `ChainLoader.GetSource` treat as an error rather than a missing template.
 
 ### Fixed
 
@@ -304,6 +305,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Infinite and NaN floats print `inf`, `-inf` and `nan` as in Python (top-level output, `~`, `string`, `join`, `format`, `round`). They printed Go's `+Inf`, `-Inf` and `NaN` outside lists. Go code calling `runtime.FormatFloat`, `runtime.ToString` or `filters.ToString` gets the new spelling too. Named Go float types (except inside lists), `pprint` and `filesizeformat` still print Go's spelling.
 - **Breaking:** two strings joined with `+` always concatenate, as in Jinja2: `'5' + '1'` is `51` (it was `6`), `'1e3' + '1'` is `1e31`, and numeric strings from data (`a + b` with `a = "5"`, `b = "1"`) concatenate too, as do `|safe` strings when autoescape is off. Convert first (`a|int + b|int`) to add them. A string and a number still add as numbers (`'5' + 1` is `6`), and `-`, `*` and `/` still treat two numeric strings as numbers (`'5' - '1'` is `4`).
 - Docs: string + number coercion (`'5' + 1` is `6`, `'a' + 1` is `a1`) is listed as a deliberate difference from Jinja2.
+- **Breaking:** a template that exists but cannot be read (permission denied, an I/O error) is an error, as in Jinja2: `Environment.GetTemplate` no longer reports it as `runtime.ErrTemplateNotFound` (the error wraps the loader's error, so `errors.Is(err, fs.ErrPermission)` works), `include … ignore missing` no longer skips it, and `ChainLoader.GetSource` stops at it instead of trying the next loader. A custom loader must return (or wrap with `%w`) the underlying error for this to apply; any other loader error still counts as "not found".
 
 ### Removed
 
