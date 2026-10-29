@@ -308,6 +308,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Removed
 
 - **Breaking:** unused code that no render path reached: the `inheritance` package; `runtime.OptimizedEvaluator`, `CachedEvaluator`, `BatchEvaluation`, `MemoryEfficientContext`, `FilterChainOptimizer`, `OptimizedFilterEvaluator`, `BatchFilterEvaluation`, `FilterPipeline` and `FastEvalNode`; `parser.FastEvaluator` and the `FastEval` methods on `parser.TextNode`, `LiteralNode`, `CommentNode` and `RawNode`; the memory helpers in `memory_optimization.go` (`MemoryOptimizedContext`, `StringInterner`, `ByteBufferPool`, `MemoryProfiler`, `MemoryEfficientTemplate`, `PrecomputedHash`, `SmallStringOptimizer`, `CachedEnvironmentOptions`, `DefaultCachedOptions`, `MemoryStats`, `GetMemoryStats` and their globals); `macros.MacroFunc`, `macros.MacroRegistry.Import` and `macros.MacroContext`; and `runtime.ContextHasher`, `InheritanceCache.GetResolvedTemplate` and `StoreResolvedTemplate` (unused since template inheritance stopped caching per-context results). Rendering output is unchanged.
+- **Breaking:** `runtime.ControlFlowEvaluator`, `runtime.NewControlFlowEvaluator`, `runtime.NestedLoopEvaluator`, `runtime.NewNestedLoopEvaluator` and `runtime.LoopInfo`: a second loop and condition evaluator that no render path used, with semantics that differed from both Jinja2 and miya's evaluator (one `loop` object shared by every iteration, `{% set %}` carried across iterations). `runtime.LoopControlError`, `NewBreakError` and `NewContinueError` stay.
 
 ### Deprecated
 

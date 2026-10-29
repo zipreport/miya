@@ -3779,16 +3779,12 @@ func (e *DefaultEvaluator) EvalExtensionNode(node *parser.ExtensionNode, ctx Con
 
 // EvalBreakNode evaluates break statements
 func (e *DefaultEvaluator) EvalBreakNode(node *parser.BreakNode, ctx Context) (interface{}, error) {
-	// Get the control flow evaluator
-	cfEvaluator := NewControlFlowEvaluator(e)
-	return nil, cfEvaluator.EvalBreak()
+	return nil, NewBreakError()
 }
 
 // EvalContinueNode evaluates continue statements
 func (e *DefaultEvaluator) EvalContinueNode(node *parser.ContinueNode, ctx Context) (interface{}, error) {
-	// Get the control flow evaluator
-	cfEvaluator := NewControlFlowEvaluator(e)
-	return nil, cfEvaluator.EvalContinue()
+	return nil, NewContinueError()
 }
 
 // EvalCallBlockNode evaluates call blocks ({% call macro() %}content{% endcall %})
