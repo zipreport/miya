@@ -393,6 +393,9 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 	// Check if final template needs super() resolution
 	// Only resolve super() calls if we have actual inheritance (multiple templates)
 	hasSuperCalls := detector.HasSuperCalls(finalTemplate)
+	if !hasSuperCalls && len(hierarchy.Templates) > 1 {
+		hasSuperCalls = overridesCallSuper(hierarchy)
+	}
 	if hasSuperCalls && len(hierarchy.Templates) > 1 {
 		// Resolve all super() calls in the final template
 		superResolver := NewSuperResolver(hierarchy, context, hierarchy.BlockMap)
