@@ -128,6 +128,13 @@ func NewEnvironment(opts ...EnvironmentOption) *Environment {
 	// Initialize shared import system (reused across renders)
 	templateLoader := runtime.NewSimpleTemplateLoader(env)
 	env.importSystem = runtime.NewImportSystem(templateLoader, nil)
+	env.importSystem.SetInheritanceResolver(func(name string, ast *parser.TemplateNode, ctx runtime.Context, eval runtime.Evaluator) (*parser.TemplateNode, error) {
+		tmpl, err := env.GetTemplate(name)
+		if err != nil || !tmpl.hasInheritanceDirectives() {
+			return ast, err
+		}
+		return env.getInheritanceProcessor().ResolveInheritanceWith(&templateAdapter{template: tmpl}, ctx, eval)
+	})
 
 	registerBuiltinTests(env)
 	registerBuiltinGlobals(env)

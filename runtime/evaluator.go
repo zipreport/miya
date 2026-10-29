@@ -1394,6 +1394,13 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 	}
 	defer leave()
 
+	if e.importSystem.resolve != nil {
+		templateAST, err = e.importSystem.resolve(templateName, templateAST, includeCtx, e)
+		if err != nil {
+			return nil, fmt.Errorf("error executing included template %q: %w", templateName, err)
+		}
+	}
+
 	// Execute the included template with the appropriate context
 	result, err := e.EvalNode(templateAST, includeCtx)
 	if err != nil {

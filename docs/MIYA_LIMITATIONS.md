@@ -42,7 +42,6 @@ These are bugs or gaps, not design decisions.
 | Template | miya | Jinja2 |
 |----------|------|--------|
 | `{{ self.block_name() }}` | error: `cannot call non-function value of type *runtime.Undefined` | renders the block |
-| `{% include 'child' %}` where `child` has `{% extends 'base' %}` | inheritance is not resolved: `a{% include %}b` prints `aXb` | `a[X]b` (the base wraps the child's blocks) |
 | `{% import 'child' as m %}` where `child` has `{% extends 'base' %}` | only the child's top level runs: the parent's top-level macros and `{% set %}` are not exported (`m.bm is defined` is `false`) | the parent's top level runs too and is exported (`True`) |
 | `{{ '%s-%s' % (1, 2) }}` | error: `cannot modulo string and []interface {}` | `1-2` |
 | `{% do items.append(1) %}` on a list passed in as render data | error: store it first with `{% set items = items\|list %}` | mutates the list |
@@ -112,7 +111,6 @@ Workaround for nested comprehensions:
 ## Migration checklist
 
 - [ ] No `self.block()` calls
-- [ ] No `{% include %}` of a template that itself uses `{% extends %}`
 - [ ] No `'...' % value` formatting; use the `format` filter
 - [ ] No `.append()` on lists passed in as render data without `{% set x = x|list %}` first
 - [ ] No `.items()` unpacking or multiple `for` clauses in comprehensions
