@@ -31,10 +31,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `runtime.MapLookup`, used by the `branching` tests to read map keys the way the evaluator does, and the `runtime.FilterLookup` interface (`HasFilter(name) bool`), implemented by contexts that can tell whether a filter is registered.
 - `TemplateContextAdapter.Child`, `TemplateContextAdapter.NewModuleContext`, `TemplateContextAdapter.HasFilter` and `runtime.ContextWrapper.Child`: a child scope that reads through to its parent, an empty module context for imports without context, and a filter-existence check.
 - `parser.IncludeNode.WithContext`/`WithoutContext` (`{% include … with context %}` / `without context`) and `parser.CallBlockNode.Parameters`, `Defaults` and the embedded `MacroUsage` (`{% call(a, b=1) m() %}`).
-- `loader.IsReadError(err)`: true for a permission or I/O error, which `Environment.GetTemplate` and `ChainLoader.GetSource` treat as an error rather than a missing template.
+- `loader.IsReadError(err)`: true for a permission or I/O error, which `Environment.GetTemplate` and `ChainLoader`'s `GetSource`, `GetSourceWithMetadata` and `LoadTemplate` treat as an error rather than a missing template.
 
 ### Fixed
 
+- `ChainLoader.LoadTemplate` stops at a template that exists but cannot be read or does not compile, like `GetSource`; it used to return a later loader's copy.
 - A template that extends another reuses its merged template across renders instead of rebuilding it each time (a two-level page with `super()` allocated 4.5× the same page written flat; now about the same). The merged template is cached with the template's hierarchy, per autoescape setting, and dropped with it by `InvalidateTemplate`, `ClearInheritanceCache` and the cache TTL.
 - Macro calls, `for … if` filters and list and dict comprehensions no longer copy every variable in scope per call or per item; their cost no longer grows with the number of keys in the render data. A recursive `loop()` no longer formats its children into an unused string (which also called `String()` on Go values in them). Behaviour change: a macro defined inside another macro and called after the outer call returns (stored in a namespace, appended to a list, passed to `caller()`) now reads the enclosing scope's current values, as in Jinja2, instead of the values at the time the outer macro was called.
 - `replace` with a safe argument on a number or boolean, and `map` with safe arguments over number and list items, keep the safe text, as in Jinja2.
