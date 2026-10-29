@@ -105,12 +105,13 @@ const (
 
 type renderJob struct {
 	ctx      Context
-	resultCh chan renderResult
+	resultCh chan RenderResult
 }
 
-type renderResult struct {
-	output string
-	err    error
+// RenderResult is the outcome of one RenderAsync render.
+type RenderResult struct {
+	Output string
+	Err    error
 }
 
 // NewConcurrentTemplateRenderer creates a new concurrent template renderer with the given number of workers; a count below 1 runs one worker.
@@ -165,7 +166,7 @@ func (ctr *ConcurrentTemplateRenderer) Stop() {
 	for {
 		select {
 		case job := <-ctr.workChan:
-			job.resultCh <- renderResult{err: fmt.Errorf("renderer is stopped")}
+			job.resultCh <- RenderResult{Err: fmt.Errorf("renderer is stopped")}
 			close(job.resultCh)
 		default:
 			return
@@ -174,8 +175,8 @@ func (ctr *ConcurrentTemplateRenderer) Stop() {
 }
 
 // RenderAsync renders a template asynchronously
-func (ctr *ConcurrentTemplateRenderer) RenderAsync(ctx Context) <-chan renderResult {
-	resultCh := make(chan renderResult, 1)
+func (ctr *ConcurrentTemplateRenderer) RenderAsync(ctx Context) <-chan RenderResult {
+	resultCh := make(chan RenderResult, 1)
 
 	// The read lock is held across the send: Stop cannot close stopChan until it is
 	// released, so the workers are running for as long as the send can block.
@@ -184,10 +185,10 @@ func (ctr *ConcurrentTemplateRenderer) RenderAsync(ctx Context) <-chan renderRes
 
 	switch ctr.state {
 	case rendererNew:
-		resultCh <- renderResult{err: fmt.Errorf("renderer not started")}
+		resultCh <- RenderResult{Err: fmt.Errorf("renderer not started")}
 		close(resultCh)
 	case rendererStopped:
-		resultCh <- renderResult{err: fmt.Errorf("renderer is stopped")}
+		resultCh <- RenderResult{Err: fmt.Errorf("renderer is stopped")}
 		close(resultCh)
 	default:
 		ctr.workChan <- renderJob{ctx: ctx, resultCh: resultCh}
@@ -204,20 +205,20 @@ func (ctr *ConcurrentTemplateRenderer) worker() {
 		case job := <-ctr.workChan:
 			// Process job with panic recovery and guaranteed channel close
 			func() {
-				var result renderResult
+				var result RenderResult
 				defer func() {
 					// Always close the channel after sending result
 					defer close(job.resultCh)
 					if r := recover(); r != nil {
-						result = renderResult{
-							output: "",
-							err:    &RenderPanicError{Value: r, Stack: debug.Stack()},
+						result = RenderResult{
+							Output: "",
+							Err:    &RenderPanicError{Value: r, Stack: debug.Stack()},
 						}
 					}
 					job.resultCh <- result
 				}()
 				output, err := ctr.template.Render(job.ctx)
-				result = renderResult{output: output, err: err}
+				result = RenderResult{Output: output, Err: err}
 			}()
 		case <-ctr.stopChan:
 			return
