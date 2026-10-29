@@ -559,7 +559,7 @@ func init() {
 func handleHome(w http.ResponseWriter, r *http.Request) {
     tmpl, err := env.GetTemplate("home.html")
     if err != nil {
-        http.Error(w, "Template not found", 500)
+        http.Error(w, "Template error", 500)
         return
     }
 
@@ -592,7 +592,7 @@ For better performance, write directly to the `http.ResponseWriter` instead of b
 func handlePage(w http.ResponseWriter, r *http.Request) {
     tmpl, err := env.GetTemplate("page.html")
     if err != nil {
-        http.Error(w, "Template not found", 500)
+        http.Error(w, "Template error", 500)
         return
     }
 

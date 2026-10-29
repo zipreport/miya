@@ -186,8 +186,8 @@ type Evaluator interface {
 var ErrMaxRecursion = errors.New("maximum template recursion depth exceeded")
 
 // ErrTemplateNotFound is matched (errors.Is) by every error that means a
-// template does not exist: the loader could not provide its source. A
-// template that exists but fails to compile is not "not found".
+// template does not exist. A template that exists but cannot be read
+// (loader.IsReadError) or fails to compile is not "not found".
 var ErrTemplateNotFound = errors.New("template not found")
 
 // TemplateNotFoundError reports which template could not be found. It

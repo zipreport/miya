@@ -272,7 +272,7 @@ Concise collection creation:
 {{ {user.id: user.name for user in users} }}
 {{ {product.sku: product.price for product in products} }}
 
-{# Note: Inline if not supported - use filters instead #}
+{# The same with filters #}
 {{ users|selectattr("active")|map(attribute="name")|list }}
 ```
 
@@ -282,7 +282,7 @@ Concise collection creation:
 - Basic list comprehensions
 - Dictionary comprehensions
 - Using filters in comprehensions
-- Limitations (no inline if, no .items() unpacking)
+- Limitations (one loop variable and one `for` clause per comprehension)
 - Workarounds with selectattr/select filters
 
 ---
@@ -375,7 +375,6 @@ Known differences are listed in [Limitations](MIYA_LIMITATIONS.md). The main one
 | Feature | Jinja2 | Miya Engine | Workaround |
 |---------|--------|-------------|------------|
 | `self.block()` | Supported | Not supported | Repeat the content or use a macro |
-| Include of a template that extends a base | Inheritance applied | Not applied | Include a template without `extends` |
 | `'%s' % value` | Supported | Not supported | Use the `format` filter |
 | Dict comprehension with `.items()` | Not Jinja2 syntax | Not supported | Loop instead |
 | Nested comprehensions | Not Jinja2 syntax | Not supported | Use nested loops |

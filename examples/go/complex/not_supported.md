@@ -20,7 +20,8 @@ most likely to run into.
 - `*args`/`**kwargs` in a macro signature. As in Jinja2, extra positional and
   keyword arguments arrive in the implicit `varargs` and `kwargs` variables:
   `{% macro f() %}{{ varargs }}{{ kwargs }}{% endmacro %}{{ f(1, 2, a=3) }}`
-  prints `[1, 2]{'a': 3}`.
+  prints `[1, 2]{&#39;a&#39;: 3}` with autoescape on (the default), and
+  `[1, 2]{'a': 3}` with it off.
 - An `export` modifier on macros.
 
 ## Works (listed as unsupported in older versions of this page)

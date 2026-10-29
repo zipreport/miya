@@ -547,7 +547,7 @@ Clean input: {{ user_input|trim|lower }}
 | namespace() |              |          |       | Create namespace object              |
 | url_for()   |              |          |       | URL generation (framework dependent) |
 | zip()       |              |          |       | Zip multiple sequences (miya only; not a Jinja2 global) |
-| enumerate() |              |          |       | Enumerate with index (miya only); the `start=` keyword is ignored, use `enumerate(items, 1)` |
+| enumerate() |              |          |       | Enumerate with index (miya only); `enumerate(items, 1)` or `enumerate(items, start=1)` |
 
 ---
 
@@ -629,7 +629,7 @@ Clean input: {{ user_input|trim|lower }}
 
 - Basic template syntax
 - Control structures (if/for/with)
-- Template inheritance (but see [Limitations](MIYA_LIMITATIONS.md) for `self.block()` and `include` of a child template)
+- Template inheritance (but see [Limitations](MIYA_LIMITATIONS.md) for `self.block()` and `import` of a template that extends another)
 - Macros, `caller()`, imports and includes
 - Filter blocks (`{% filter %}`)
 - Most filters and tests
