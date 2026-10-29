@@ -28,7 +28,7 @@ func TestEnumerateArguments(t *testing.T) {
 		{name: "start_float_errors", template: loop(", 2.5"), wantErr: true},
 		{name: "unknown_kw_errors", template: loop(", stat=5"), wantErr: true},
 		{name: "too_many_errors", template: loop(", 1, 2"), wantErr: true},
-		{name: "start_and_positional", template: "{% for i, v in enumerate(['a'], 1, start=2) %}{{ i }}{{ v }}{% endfor %}", wantErr: true},
+		{name: "start_and_positional", template: "{% for i, v in enumerate(['a'], 1, start=2) %}{{ i }}{{ v }}{% endfor %}", wantErr: true, wantMsg: "unexpected keyword argument"},
 		{
 			name:     "lone_map_is_not_keywords",
 			template: "{% for i, k in enumerate(d) %}{{ i }}{{ k }}{% endfor %}",
