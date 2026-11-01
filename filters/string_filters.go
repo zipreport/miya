@@ -18,10 +18,6 @@ var (
 	reSlugifyNonWord = regexp.MustCompile(`[^\w\-]`)
 )
 
-// reTitleSep splits on Jinja2's title separators: '-', Python whitespace and
-// the opening brackets ( { [ <.
-var reTitleSep = regexp.MustCompile(`[-\p{Z}\t-\r\x{1c}-\x{1f}\x{85}({\[<]+`)
-
 // reWord matches a Unicode-aware \w+ run, as counted by Jinja2's wordcount.
 var reWord = regexp.MustCompile(`[\p{L}\p{N}_]+`)
 
@@ -29,22 +25,40 @@ var reWord = regexp.MustCompile(`[\p{L}\p{N}_]+`)
 // piece between separators is upper-cased and the rest lower-cased.
 func titleCase(s string) string {
 	var b strings.Builder
-	last := 0
-	word := func(w string) {
-		if w == "" {
-			return
+	b.Grow(len(s))
+	start := true
+	for _, r := range s {
+		switch {
+		case isTitleSep(r):
+			start = true
+		case start:
+			start = false
+			if 'a' <= r && r <= 'z' {
+				r -= 'a' - 'A'
+			} else if r >= utf8.RuneSelf {
+				r = unicode.ToUpper(r)
+			}
+		case 'A' <= r && r <= 'Z':
+			r += 'a' - 'A'
+		case r >= utf8.RuneSelf:
+			r = unicode.ToLower(r)
 		}
-		r, size := utf8.DecodeRuneInString(w)
-		b.WriteString(strings.ToUpper(string(r)))
-		b.WriteString(strings.ToLower(w[size:]))
+		b.WriteRune(r)
 	}
-	for _, m := range reTitleSep.FindAllStringIndex(s, -1) {
-		word(s[last:m[0]])
-		b.WriteString(s[m[0]:m[1]])
-		last = m[1]
-	}
-	word(s[last:])
 	return b.String()
+}
+
+// isTitleSep reports whether r is one of Jinja2's title separators: '-',
+// Python whitespace and the opening brackets ( { [ <.
+func isTitleSep(r rune) bool {
+	switch r {
+	case '-', '(', '{', '[', '<', '\x85':
+		return true
+	}
+	if r < utf8.RuneSelf {
+		return r == ' ' || (r >= '\t' && r <= '\r') || (r >= 0x1c && r <= 0x1f)
+	}
+	return unicode.Is(unicode.Z, r)
 }
 
 // capitalizeFirst capitalizes only the first letter of a string.
