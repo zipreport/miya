@@ -90,16 +90,19 @@ func (p *InheritanceProcessor) ResolveInheritanceWith(template TemplateInterface
 		if err != nil {
 			return nil, fmt.Errorf("failed to build inheritance hierarchy: %w", err)
 		}
-	} else if cachedHierarchy, found := p.cache.GetHierarchy(templateName); found && templateName != "<string>" {
-		return p.cachedFinalTemplate(cachedHierarchy, context)
 	} else {
+		// Every FromString template is named "<string>", so the cache
+		// cannot tell them apart
+		if templateName != "<string>" {
+			if cachedHierarchy, found := p.cache.GetHierarchy(templateName); found {
+				return p.cachedFinalTemplate(cachedHierarchy, context)
+			}
+		}
 		hierarchy, err = p.buildInheritanceHierarchy(template)
 		if errors.Is(err, errNeedsContext) {
 			// A conditional {% extends %} picks the parent per render
 			hierarchy, err = p.buildInheritanceHierarchyWithContext(template, context, eval)
 		} else if err == nil && templateName != "<string>" {
-			// Every FromString template is named "<string>", so the cache
-			// cannot tell them apart
 			p.cache.StoreHierarchy(templateName, hierarchy)
 			return p.cachedFinalTemplate(hierarchy, context)
 		}

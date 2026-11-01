@@ -174,11 +174,12 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 	if !ok {
 		return nil
 	}
-	nodes := tmpl.Children
 	flat, ext, err := parentExtends(tmpl, namespace.Context, evaluator)
 	if err != nil {
 		return err
 	}
+	// The conditions around an {% extends %} are evaluated once, here
+	nodes := flat.Children
 	if ext != nil {
 		// Only the child's own top-level code runs; the parent's does not.
 		// Jinja2 runs the parent, so a parent that fails to load fails
@@ -508,3 +509,7 @@ func (stl *SimpleTemplateLoader) TemplateExists(name string) bool {
 	_, err := stl.LoadTemplate(name)
 	return err == nil
 }
+
+type dropVars struct{ Context }
+
+func (d *dropVars) GetVariable(string) (interface{}, bool) { return nil, false }

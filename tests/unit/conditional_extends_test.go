@@ -41,6 +41,9 @@ func TestIssue28ConditionalExtends(t *testing.T) {
 	}{
 		{"claim1_if_else_extends", `{% if name == 'p' %}{% extends 'a' %}{% else %}{% extends 'b' %}{% endif %}`, nil, "A[]"},
 		{"claim1_if_true_extends", `{% if true %}{% extends 'b' %}{% endif %}M`, nil, "B[]"},
+		{"first_true_branch_wins", `{% if true %}{% extends 'b' %}{% elif true %}{% extends 'nope' %}{% endif %}`, nil, "B[]"},
+		{"import_parent_condition_without_context", `{% import 'i' as m %}ok`,
+			map[string]string{"i": `{% extends 'j' %}`, "j": `{% if name == 'p' %}{% extends 'nope' %}{% endif %}`}, "ok"},
 		{"else_branch_taken", `{% if name == 'q' %}{% extends 'a' %}{% else %}{% extends 'b' %}{% endif %}{% block x %}X{% endblock %}`, nil, "B[X]"},
 		{"no_branch_extends", `{% if name == 'q' %}{% extends 'b' %}{% endif %}M{% block x %}X{% endblock %}`, nil, "MX"},
 		{"output_before_if_kept", `pre{% if true %}{% extends 'b' %}{% endif %}M{% block x %}X{% endblock %}`, nil, "preB[X]"},
@@ -94,6 +97,8 @@ func TestIssue28ConditionalExtends(t *testing.T) {
 			map[string]string{"i": `{% extends name %}`}, `failed to load template "p"`},
 		{"import_conditional_missing_parent", `{% import 'i' as m %}ok`,
 			map[string]string{"i": `{% if true %}{% extends 'nope' %}{% endif %}`}, `failed to load template "nope"`},
+		{"import_parent_condition_with_context", `{% import 'i' as m with context %}ok`,
+			map[string]string{"i": `{% extends 'j' %}`, "j": `{% if name == 'p' %}{% extends 'nope' %}{% endif %}`}, `failed to load template "nope"`},
 		{"import_parent_conditional_missing", `{% import 'i' as m %}ok`,
 			map[string]string{"i": `{% extends 'j' %}`, "j": `{% if true %}{% extends 'nope' %}{% endif %}`}, `failed to load template "nope"`},
 	}
@@ -135,6 +140,35 @@ func TestIssue28ConditionalExtends(t *testing.T) {
 					t.Errorf("%s standalone=%v: got %q, want %q", main, standalone, got, want[standalone])
 				}
 			}
+		}
+	})
+
+	// On import, a condition around an {% extends %} is evaluated once
+	t.Run("import_condition_evaluated_once", func(t *testing.T) {
+		env := newEnv(map[string]string{"main": `{% import 'i' as m with context %}{{ m.g() }}`, "b": b,
+			"i": `{% if f() %}{% extends 'b' %}{% endif %}{% macro g() %}G{% endmacro %}`})
+		calls := 0
+		f := func() bool { calls++; return false }
+		got, err := render(env, "p", map[string]interface{}{"f": f})
+		if err != nil || got != "G" {
+			t.Fatalf("got %q, %v; want \"G\"", got, err)
+		}
+		if calls != 1 {
+			t.Errorf("f called %d times, want 1", calls)
+		}
+	})
+
+	// A FromString template is never looked up in the hierarchy cache
+	t.Run("from_string_skips_hierarchy_cache", func(t *testing.T) {
+		env := newEnv(map[string]string{"b": b})
+		for i := 0; i < 3; i++ {
+			got, err := env.RenderString(`{% extends 'b' %}{% block x %}X{% endblock %}`, miya.NewContext())
+			if err != nil || got != "B[X]" {
+				t.Fatalf("got %q, %v", got, err)
+			}
+		}
+		if st := env.GetInheritanceCacheStats().HierarchyCache; st.Misses != 0 || st.Hits != 0 {
+			t.Errorf("hierarchy cache lookups: %+v", st)
 		}
 	})
 }
