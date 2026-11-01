@@ -51,6 +51,16 @@ func TestIssue40UnscopedBlocks(t *testing.T) {
 		{"import_module_block_sees_module_set", map[string]string{"m": `{% set v = 1 %}{% block b %}{% set ns.n = v %}{% endblock %}`, "main": `{% set ns = namespace(n=0) %}{% import 'm' as mm with context %}{{ ns.n }}`}, nil, "1"},
 		{"import_module_block_no_loop_var", map[string]string{"m": `{% for i in [5] %}{% block b %}{% set ns.n = i is defined %}{% endblock %}{% endfor %}`, "main": `{% set ns = namespace(n=0) %}{% import 'm' as mm with context %}{{ ns.n }}`}, nil, "false"},
 		{"single_template_super_keeps_scoped", map[string]string{"main": `{% for i in [1, 2] %}{% block b scoped %}{% if false %}{{ super() }}{% endif %}<{{ i }}>{% endblock %}{% endfor %}`}, nil, "<1><2>"},
+		{"unscoped_in_scoped", map[string]string{"main": `{% for i in [1] %}{% block o scoped %}{% block i %}[{{ i }}]{% endblock %}{% endblock %}{% endfor %}`}, nil, "[1]"},
+		{"override_at_scoped_position_nested", map[string]string{"base": `{% for i in [1] %}{% block o scoped %}{% endblock %}{% endfor %}`, "main": `{% extends 'base' %}{% block o %}{% block i %}[{{ i }}]{% endblock %}{% endblock %}`}, nil, "[1]"},
+		{"super_nested_in_scoped", map[string]string{"base": `{% for i in [1] %}{% block o scoped %}{% block i %}[{{ i }}]{% endblock %}{% endblock %}{% endfor %}`, "main": `{% extends 'base' %}{% block o %}<{{ super() }}>{% endblock %}`}, nil, "<[1]>"},
+		{"super_expr_nested_in_scoped", map[string]string{"base": `{% for i in ['q'] %}{% block o scoped %}{% block i %}[{{ i }}]{% endblock %}{% endblock %}{% endfor %}`, "main": `{% extends 'base' %}{% block o %}<{{ super()|upper }}>{% endblock %}`}, nil, "<[Q]>"},
+		{"macro_in_scoped", map[string]string{"main": `{% for i in [1] %}{% block o scoped %}{% macro m() %}{% block b %}[{{ i }}]{% endblock %}{% endmacro %}{{ m() }}{% endblock %}{% endfor %}`}, nil, "[1]"},
+		{"caller_in_scoped", map[string]string{"main": `{% macro m() %}{{ caller() }}{% endmacro %}{% for i in [1] %}{% block o scoped %}{% call m() %}{% block b %}[{{ i }}]{% endblock %}{% endcall %}{% endblock %}{% endfor %}`}, nil, "[1]"},
+		{"inner_loop_in_scoped", map[string]string{"main": `{% for i in [1] %}{% block o scoped %}{% for j in [2] %}{% block i %}[{{ i }}{{ j }}]{% endblock %}{% endfor %}{% endblock %}{% endfor %}`}, nil, "[1]"},
+		{"scoped_in_autoescape_false", map[string]string{"main": `{% autoescape false %}{% for i in [1] %}{% block b scoped %}{{ h }}{{ i }}{% endblock %}{% endfor %}{% endautoescape %}`}, map[string]interface{}{"h": "<b>"}, "&lt;b&gt;1"},
+		{"unscoped_in_autoescape_false", map[string]string{"main": `{% autoescape false %}{% block b %}{{ h }}{% endblock %}{% endautoescape %}`}, map[string]interface{}{"h": "<b>"}, "&lt;b&gt;"},
+		{"override_scoped_pos_autoescape_false", map[string]string{"base": `{% autoescape false %}{% for i in [1] %}{% block b scoped %}{% endblock %}{% endfor %}{% endautoescape %}`, "main": `{% extends 'base' %}{% block b %}{{ h }}{{ i }}{% endblock %}`}, map[string]interface{}{"h": "<b>"}, "&lt;b&gt;1"},
 	}
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
