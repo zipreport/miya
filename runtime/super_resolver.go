@@ -12,6 +12,10 @@ import (
 // parent block from. It is not a valid template identifier.
 const superCaptureVar = "super()"
 
+// blockEntryVar holds, in a block's scope, the context the block was entered
+// from. It is not a valid template identifier.
+const blockEntryVar = "block()"
+
 // deferredSuper is the parent block content bound to superCaptureVar; it is
 // rendered each time super() is evaluated.
 type deferredSuper struct {
@@ -350,30 +354,20 @@ func (s *SuperResolver) findBlockRecursive(node parser.Node, blockName string) *
 func (s *SuperResolver) cloneNodeForSuper(node parser.Node) (parser.Node, error) {
 	switch n := node.(type) {
 	case *parser.BlockNode:
-		// For super() calls, we want the block's body, not the block wrapper
+		// For super() calls, we want the block's body in a block named
+		// superCaptureVar, which renders it in the parent block's own scope
 		if len(n.Body) == 0 {
 			return &parser.TextNode{Content: ""}, nil
 		}
 
-		// If single child, return it directly
-		if len(n.Body) == 1 {
-			return s.cloneNodeForSuper(n.Body[0])
-		}
-
-		// Multiple children - wrap in a container
 		clonedChildren := make([]parser.Node, len(n.Body))
 		for i, child := range n.Body {
-			cloned, err := s.cloneNodeForSuper(child)
-			if err != nil {
-				return nil, err
-			}
-			clonedChildren[i] = cloned
+			clonedChildren[i] = parser.CloneStatement(child)
 		}
 
-		return &parser.TemplateNode{
-			Name:     "super_content",
-			Children: clonedChildren,
-		}, nil
+		parent := parser.NewBlockNode(superCaptureVar, n.Line(), n.Column())
+		parent.Body = clonedChildren
+		return parent, nil
 
 	default:
 		return parser.CloneStatement(node), nil

@@ -1152,9 +1152,28 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 }
 
 func (e *DefaultEvaluator) EvalBlockNode(node *parser.BlockNode, ctx Context) (interface{}, error) {
-	// Block evaluation is handled by the template inheritance system
-	// For now, just evaluate the body
-	return e.evalNodeList(node.Body, withBaseAutoescape(ctx))
+	// A block has its own scope, as a Jinja2 block is its own function. A
+	// parent block rendered by super() is scoped from where the child block
+	// was entered, so neither block sees the other's variables.
+	if node.Name == superCaptureVar {
+		entry := ctx
+		if v, ok := ctx.GetVariable(blockEntryVar); ok {
+			if c, ok := v.(Context); ok {
+				entry = c
+			}
+		}
+		// the resolver already set the parent's escaping around super()
+		scope := childScope(entry)
+		on, _, _ := resolveEscape(ctx)
+		if scopeOn, _, _ := resolveEscape(scope); on != scopeOn {
+			scope = &autoescapeContext{Context: scope, autoescape: on}
+		}
+		scope.SetVariable(blockEntryVar, entry)
+		return e.evalNodeList(node.Body, scope)
+	}
+	scope := childScope(withBaseAutoescape(ctx))
+	scope.SetVariable(blockEntryVar, ctx)
+	return e.evalNodeList(node.Body, scope)
 }
 
 func (e *DefaultEvaluator) EvalSetNode(node *parser.SetNode, ctx Context) (interface{}, error) {
