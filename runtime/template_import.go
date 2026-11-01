@@ -176,8 +176,13 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 	}
 	nodes := tmpl.Children
 	for _, child := range nodes {
-		if _, ok := child.(*parser.ExtendsNode); ok {
+		if ext, ok := child.(*parser.ExtendsNode); ok {
 			// Only the child's own top-level code runs; the parent's does not.
+			// Jinja2 runs the parent, so a parent that fails to load fails
+			// the import.
+			if err := is.loadParents(ext); err != nil {
+				return err
+			}
 			nodes = topLevelCode(tmpl)
 			break
 		}
@@ -192,6 +197,45 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 		}
 		if value, ok := namespace.Context.GetVariable(name); ok {
 			namespace.Variables[name] = value
+		}
+	}
+	return nil
+}
+
+// loadParents loads each template up the {% extends %} chain from ext. A
+// parent named by an expression is not followed.
+func (is *ImportSystem) loadParents(ext *parser.ExtendsNode) error {
+	seen := make(map[string]bool)
+	for ext != nil {
+		lit, ok := ext.Template.(*parser.LiteralNode)
+		if !ok {
+			return nil
+		}
+		name, ok := lit.Value.(string)
+		if !ok {
+			return nil
+		}
+		if seen[name] {
+			return fmt.Errorf("circular inheritance detected: %s", name)
+		}
+		seen[name] = true
+		ast, err := is.loader.LoadTemplate(name)
+		if err != nil {
+			prefix := fmt.Sprintf("failed to load template %q", name)
+			if strings.HasPrefix(err.Error(), prefix) {
+				return err
+			}
+			return fmt.Errorf("%s: %w", prefix, err)
+		}
+		if ast == nil {
+			return fmt.Errorf("failed to load template %q: the loader returned no template", name)
+		}
+		ext = nil
+		for _, child := range ast.Children {
+			if e, ok := child.(*parser.ExtendsNode); ok {
+				ext = e
+				break
+			}
 		}
 	}
 	return nil
