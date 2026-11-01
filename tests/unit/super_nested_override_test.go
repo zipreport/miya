@@ -1,6 +1,7 @@
 package miya_test
 
 import (
+	"strings"
 	"testing"
 
 	miya "github.com/zipreport/miya"
@@ -88,8 +89,28 @@ func TestIssue13SuperNestedOverrides(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, err := tmpl.Render(miya.NewContext()); err == nil {
-			t.Errorf("want an error, got %q", got)
+		if got, err := tmpl.Render(miya.NewContext()); err == nil || !strings.Contains(err.Error(), `super() in block "a" renders itself`) {
+			t.Errorf("want the super() cycle error, got %q, %v", got, err)
+		}
+	})
+
+	// a parent block resolved inside a cycle is not reused where it is no
+	// cycle, whatever the order of the blocks
+	t.Run("cycle_not_reused_outside_it", func(t *testing.T) {
+		tmpl, err := issue13Env(map[string]string{
+			"base":  "{% block a %}A{% if t1 %}{% block b %}B{% endblock %}{% endif %}{% endblock %}|{% block c %}{% endblock %}",
+			"mid":   "{% extends 'base' %}{% block c %}{% block b %}u({% if t2 %}{% block a %}ua{{ super() }}{% endblock %}{% endif %}){% endblock %}{% endblock %}",
+			"child": "{% extends 'mid' %}{% block b %}c{{ super() }}{% endblock %}",
+		}, false).GetTemplate("child")
+		if err != nil {
+			t.Fatal(err)
+		}
+		ctx := miya.NewContext()
+		ctx.Set("t1", false)
+		ctx.Set("t2", true)
+		got, err := tmpl.Render(ctx)
+		if err != nil || got != "uaA|cu(uaA)" {
+			t.Errorf("got %q, %v; want \"uaA|cu(uaA)\"", got, err)
 		}
 	})
 }

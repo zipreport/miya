@@ -43,8 +43,12 @@ type SuperResolver struct {
 
 	// Parent block cache for efficient super() resolution
 	parentBlockCache map[string]*parser.BlockNode
-	// parent blocks being resolved, to stop a super() cycle through nested blocks
-	resolving map[string]bool
+	// parent blocks being resolved, by position on the resolution stack, to
+	// stop a super() cycle through nested blocks
+	resolving map[string]int
+	// lowestCycle is the lowest stack position a superCycle made while
+	// resolving the current parent block points at; -1 when none
+	lowestCycle int
 }
 
 // NewSuperResolver creates a new super() call resolver
@@ -54,7 +58,8 @@ func NewSuperResolver(hierarchy *InheritanceHierarchy, context Context, blockMap
 		context:          context,
 		blockMap:         blockMap,
 		parentBlockCache: make(map[string]*parser.BlockNode),
-		resolving:        make(map[string]bool),
+		resolving:        make(map[string]int),
+		lowestCycle:      -1,
 	}
 }
 
@@ -281,7 +286,7 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 		return &parser.TextNode{Content: ""}, nil
 	}
 
-	// Create a unique cache key that includes depth to avoid infinite recursion
+	// The parent block at this depth of blockName's chain
 	cacheKey := fmt.Sprintf("%s_depth_%d", blockName, depth)
 
 	// Check cache first
@@ -301,10 +306,16 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 		return &parser.TextNode{Content: ""}, nil
 	}
 
-	if s.resolving[cacheKey] {
+	if pos, ok := s.resolving[cacheKey]; ok {
+		if s.lowestCycle < 0 || pos < s.lowestCycle {
+			s.lowestCycle = pos
+		}
 		return &superCycle{block: blockName}, nil
 	}
-	s.resolving[cacheKey] = true
+	pos := len(s.resolving)
+	s.resolving[cacheKey] = pos
+	outerCycle := s.lowestCycle
+	s.lowestCycle = -1
 	defer delete(s.resolving, cacheKey)
 
 	// Process the parent block content for nested super() calls
@@ -315,8 +326,14 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 	}
 	resolvedParentBlock.Body = body
 
-	// Cache the resolved parent block (not the original)
-	s.parentBlockCache[cacheKey] = resolvedParentBlock
+	// Content with a cycle back to a block resolved further out is a cycle
+	// only under that block, so it is not cached
+	if s.lowestCycle < 0 || s.lowestCycle >= pos {
+		s.parentBlockCache[cacheKey] = resolvedParentBlock
+		s.lowestCycle = outerCycle
+	} else if outerCycle >= 0 && outerCycle < s.lowestCycle {
+		s.lowestCycle = outerCycle
+	}
 
 	return s.cloneNodeForSuper(resolvedParentBlock)
 }
