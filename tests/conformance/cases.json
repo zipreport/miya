@@ -2609,6 +2609,84 @@
    }
   },
   {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[X]"
+   },
+   "id": "inh-104",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block x required %}{% endblock %}]",
+    "main": "{% extends 'base' %}{% block x %}X{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[X]"
+   },
+   "id": "inh-105",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block x scoped required %} {# c #} {% endblock %}]",
+    "main": "{% extends 'base' %}{% block x %}X{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[]"
+   },
+   "id": "inh-106",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block x %}B{% endblock %}]",
+    "main": "{% extends 'mid' %}",
+    "mid": "{% extends 'base' %}{% block x required %}{% endblock %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "output": "[X]"
+   },
+   "id": "inh-107",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block x required %}{% endblock %}]",
+    "main": "{% extends 'mid' %}{% block x %}X{{ super() }}{% endblock %}",
+    "mid": "{% extends 'base' %}"
+   }
+  },
+  {
    "context": {
     "v": "SECRET"
    },
@@ -5613,6 +5691,83 @@
    },
    "templates": {
     "main": "{% include 'nope' %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateRuntimeError",
+    "phase": "render"
+   },
+   "id": "err-009",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "[{% block x required %}{% endblock %}]"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateRuntimeError",
+    "phase": "render"
+   },
+   "id": "err-010",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "base": "[{% block x required %}{% endblock %}]",
+    "main": "{% extends 'base' %}"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateSyntaxError",
+    "phase": "compile"
+   },
+   "id": "err-011",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "[{% block x required %}body{% endblock %}]"
+   }
+  },
+  {
+   "context": {},
+   "entry": "main",
+   "expect": {
+    "error": "TemplateSyntaxError",
+    "phase": "compile"
+   },
+   "id": "err-012",
+   "options": {
+    "autoescape": true,
+    "keep_trailing_newline": false,
+    "lstrip_blocks": false,
+    "strict": false,
+    "trim_blocks": false
+   },
+   "templates": {
+    "main": "[{% block x required scoped %}{% endblock %}]"
    }
   },
   {

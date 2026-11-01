@@ -443,7 +443,49 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 		}
 	}
 
+	// A required block fails only when no other template in the chain
+	// defines it, as in Jinja2. Every block of finalTemplate is a copy.
+	if shared := sharedRequiredBlocks(hierarchy.Templates); len(shared) > 0 {
+		parser.WalkStatements(finalTemplate.Children, func(n parser.Node) bool {
+			if b, ok := n.(*parser.BlockNode); ok && shared[b.Name] {
+				b.Required = false
+			}
+			return true
+		})
+	}
+
 	return finalTemplate, nil
+}
+
+// sharedRequiredBlocks returns the names of the required blocks that more than
+// one of templates defines.
+func sharedRequiredBlocks(templates []*parser.TemplateNode) map[string]bool {
+	// A template defines each block name once (the parser rejects a second)
+	defined := make(map[string]int)
+	required := make(map[string]bool)
+	for _, tmpl := range templates {
+		parser.WalkStatements(tmpl.Children, func(n parser.Node) bool {
+			if b, ok := n.(*parser.BlockNode); ok {
+				defined[b.Name]++
+				if b.Required {
+					required[b.Name] = true
+				}
+			}
+			return true
+		})
+	}
+	// Only required names, so an ordinary override does not walk the
+	// final template
+	var shared map[string]bool
+	for name := range required {
+		if defined[name] > 1 {
+			if shared == nil {
+				shared = make(map[string]bool)
+			}
+			shared[name] = true
+		}
+	}
+	return shared
 }
 
 // topLevelCode returns what an extending template runs outside its blocks:
@@ -725,8 +767,9 @@ func (p *InheritanceProcessor) replaceSuperInNode(node parser.Node) (parser.Node
 			newBody[i] = replacedChild
 		}
 		return &parser.BlockNode{
-			Name: n.Name,
-			Body: newBody,
+			Name:     n.Name,
+			Body:     newBody,
+			Required: n.Required,
 		}, nil
 
 	case *parser.SuperNode:

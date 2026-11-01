@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `{% block name required %}` (and `{% block name scoped required %}`), as in Jinja2: a required block may hold only whitespace and comments, and rendering it fails with `required block "name" not found` unless another template in the chain also defines it. `parser.BlockNode.Required` holds the flag. See #42.
+
 ### Fixed
 
 - An `{% extends %}` inside `{% if %}` (or `elif`/`else`, nested ifs included) is run when its branch is taken, as in Jinja2, so `{% if not standalone %}{% extends 'base.html' %}{% endif %}` picks the parent per render; it was ignored and the template rendered without its parent. Blocks in the branches not taken still override the parent's. On import, the module's conditional or dynamic `{% extends %}` is followed with the module's context, so a missing parent fails the import. A template that extends twice, on render or import, fails with `extended multiple times`, and `{% extends 1 %}` fails on import as on render; both used to be accepted (render used the first parent). See #28.

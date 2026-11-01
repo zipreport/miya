@@ -554,6 +554,11 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 	if p.check(lexer.TokenIdentifier) && p.peek().Value == "scoped" {
 		p.advance()
 	}
+	required := false
+	if p.check(lexer.TokenIdentifier) && p.peek().Value == "required" {
+		p.advance()
+		required = true
+	}
 
 	if !p.check(lexer.TokenBlockEnd) && !p.check(lexer.TokenBlockEndTrim) {
 		return nil, p.error("expected '%}' after block name")
@@ -561,6 +566,7 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 	p.advance()
 
 	blockNode := NewBlockNode(blockName, blockToken.Line, blockToken.Column)
+	blockNode.Required = required
 
 	// Parse block body
 	for !p.isAtEnd() {
@@ -576,6 +582,21 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 		}
 		if node != nil {
 			blockNode.Body = append(blockNode.Body, node)
+		}
+	}
+
+	if required {
+		for _, n := range blockNode.Body {
+			ok := false
+			switch n := n.(type) {
+			case *TextNode:
+				ok = strings.TrimSpace(n.Content) == ""
+			case *RawNode:
+				ok = strings.TrimSpace(n.Content) == ""
+			}
+			if !ok {
+				return nil, p.error("required blocks can only contain comments or whitespace")
+			}
 		}
 	}
 

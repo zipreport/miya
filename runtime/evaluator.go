@@ -1158,6 +1158,9 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 }
 
 func (e *DefaultEvaluator) EvalBlockNode(node *parser.BlockNode, ctx Context) (interface{}, error) {
+	if node.Required {
+		return nil, fmt.Errorf("required block %q not found", node.Name)
+	}
 	// A block has its own scope, as a Jinja2 block is its own function. A
 	// parent block rendered by super() is scoped from where the child block
 	// was entered, so neither block sees the other's variables.
