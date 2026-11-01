@@ -39,6 +39,8 @@ func TestIssue12ImportMissingParent(t *testing.T) {
 		{"claim3_import_broken_parent", `{% import "bad.html" as m %}[{{ m.f() }}]`, "broken.html", "", nil},
 		{"missing_grandparent", `{% import "deep.html" as m %}[{{ m.f() }}]`, "nope.html", "", runtime.ErrTemplateNotFound},
 		{"extends_itself", `{% import "self.html" as m %}[{{ m.f() }}]`, "self.html", "circular inheritance detected", nil},
+		// a parent named by an expression is evaluated; p is undefined here
+		{"dynamic_parent_undefined", `{% import "dyn.html" as m %}[{{ m.f() }}]`, "dyn.html", "dynamic template name must be a string", nil},
 	}
 	for _, tt := range errs {
 		t.Run(tt.name, func(t *testing.T) {
@@ -68,8 +70,6 @@ func TestIssue12ImportMissingParent(t *testing.T) {
 	renders := []struct{ name, src, want string }{
 		{"claim4_existing_parent_exports_child_macros", `{% import "ok.html" as m %}[{{ m.f() }}]`, "[x]"},
 		{"from_existing_parent", `{% from "ok.html" import f %}[{{ f() }}]`, "[x]"},
-		// a parent named by an expression is not followed
-		{"dynamic_parent_not_followed", `{% import "dyn.html" as m %}[{{ m.f() }}]`, "[x]"},
 	}
 	for _, tt := range renders {
 		t.Run(tt.name, func(t *testing.T) {
