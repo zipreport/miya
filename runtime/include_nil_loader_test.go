@@ -17,7 +17,8 @@ func TestIncludeLoaderReturnsNothing(t *testing.T) {
 	e := NewEvaluator()
 	e.SetImportSystem(NewImportSystem(nilTemplateLoader{}, e))
 	node := parser.NewIncludeNode(parser.NewLiteralNode("x", `"x"`, 1, 1), 1, 1)
-	if _, err := e.EvalIncludeNode(node, &simpleContext{variables: map[string]interface{}{}}); err == nil {
-		t.Error("want an error")
+	_, err := e.EvalIncludeNode(node, &simpleContext{variables: map[string]interface{}{}})
+	if err == nil || err.Error() != `failed to load template "x": the loader returned no template` {
+		t.Errorf("got %v", err)
 	}
 }

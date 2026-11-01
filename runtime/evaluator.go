@@ -1337,6 +1337,9 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 	var lastErr error
 	for _, name := range names {
 		ast, err := e.importSystem.loader.LoadTemplate(name)
+		if err == nil && ast == nil {
+			return nil, fmt.Errorf("failed to load template %q: the loader returned no template", name)
+		}
 		if err == nil {
 			templateAST, templateName = ast, name
 			break
@@ -1358,7 +1361,7 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 		case 0:
 			return nil, fmt.Errorf("none of the included templates %q were found: %w", names, ErrTemplateNotFound)
 		case 1:
-			if lastErr != nil && strings.HasPrefix(lastErr.Error(), fmt.Sprintf("failed to load template %q", names[0])) {
+			if strings.HasPrefix(lastErr.Error(), fmt.Sprintf("failed to load template %q", names[0])) {
 				return nil, lastErr
 			}
 			return nil, fmt.Errorf("included template %q not found: %w", names[0], lastErr)
