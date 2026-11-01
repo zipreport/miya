@@ -320,6 +320,8 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 		return e.EvalExtendsNode(n, ctx)
 	case *parser.IncludeNode:
 		return e.EvalIncludeNode(n, ctx)
+	case *superCycle:
+		return nil, fmt.Errorf("super() in block %q renders itself", n.block)
 	case *parser.SuperNode:
 		return e.EvalSuperNode(n, ctx)
 	case *parser.MacroNode:
