@@ -286,7 +286,7 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 		return &parser.TextNode{Content: ""}, nil
 	}
 
-	// The parent block at this depth of blockName's chain
+	// Create a unique cache key that includes depth to avoid infinite recursion
 	cacheKey := fmt.Sprintf("%s_depth_%d", blockName, depth)
 
 	// Check cache first
