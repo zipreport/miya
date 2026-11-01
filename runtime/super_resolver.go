@@ -78,6 +78,11 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 		return nil, fmt.Errorf("super() call depth exceeded (possible infinite recursion)")
 	}
 
+	if currentBlockName == "" && isWholeSuper(node) {
+		// outside a block super() has no parent block; it fails when evaluated
+		return node, nil
+	}
+
 	switch n := node.(type) {
 	case *parser.SuperNode:
 		// Found a direct {{ super() }} call - resolve it
@@ -284,12 +289,6 @@ func (s *SuperResolver) withParentEscaping(resolved parser.Node, at parser.Node,
 
 // resolveSuperCall resolves a single {{ super() }} call to parent block content
 func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.Node, error) {
-	if blockName == "" {
-		// In base template with no inheritance, super() should return empty string
-		// instead of erroring - this allows templates to be more flexible
-		return &parser.TextNode{Content: ""}, nil
-	}
-
 	// Create a unique cache key that includes depth to avoid infinite recursion
 	cacheKey := fmt.Sprintf("%s_depth_%d", blockName, depth)
 
