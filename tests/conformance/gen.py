@@ -205,6 +205,10 @@ case("inh-009", templates={"main": "{% extends 'base' %}{% block t %}T{% endbloc
 case("inh-101", templates={"main": "{% extends 'base' %}{% block b %}{% for i in [1,2,3] if i > 1 %}{{ i }}{% endfor %}{% endblock %}", "base": "[{% block b %}{% endblock %}]"})
 case("inh-102", templates={"main": "{% extends 'base' %}{% block b %}{% for i in [1,2,3] if i > 5 %}a{% else %}e{% endfor %}{% endblock %}", "base": "[{% block b %}{% endblock %}]"})
 case("inh-103", templates={"main": "{% extends 'base' %}{% block b %}{% for n in tree recursive %}{{ loop.depth }}{% if n.c %}({{ loop(n.c) }}){% endif %}{% endfor %}{% endblock %}", "base": "[{% block b %}{% endblock %}]"}, ctx={"tree": [{"c": [{"c": [{"c": []}]}]}]})
+case("inh-104", templates={"main": "{% extends 'base' %}{% block x %}X{% endblock %}", "base": "[{% block x required %}{% endblock %}]"})
+case("inh-105", templates={"main": "{% extends 'base' %}{% block x %}X{% endblock %}", "base": "[{% block x scoped required %} {# c #} {% endblock %}]"})
+case("inh-106", templates={"main": "{% extends 'mid' %}", "mid": "{% extends 'base' %}{% block x required %}{% endblock %}", "base": "[{% block x %}B{% endblock %}]"})
+case("inh-107", templates={"main": "{% extends 'mid' %}{% block x %}X{{ super() }}{% endblock %}", "mid": "{% extends 'base' %}", "base": "[{% block x required %}{% endblock %}]"})
 
 # --- imports (plan 026) -----------------------------------------------------
 case("imp-001", templates={"main": "{% import 'lib' as l %}{{ l.show() }}", "lib": "{% macro show() %}[{{ v }}]{% endmacro %}"}, ctx={"v": "SECRET"})
@@ -377,6 +381,10 @@ case("err-005", "{{ 1 / 0 }}")
 case("err-006", "{% block a %}{% block a %}{% endblock %}{% endblock %}")
 case("err-007", templates={"main": "{% extends 'nope' %}"})
 case("err-008", templates={"main": "{% include 'nope' %}"})
+case("err-009", "[{% block x required %}{% endblock %}]")
+case("err-010", templates={"main": "{% extends 'base' %}", "base": "[{% block x required %}{% endblock %}]"})
+case("err-011", "[{% block x required %}body{% endblock %}]")
+case("err-012", "[{% block x required scoped %}{% endblock %}]")
 
 # --- bad data and malformed tags: errors, not panics (plan 030) -------------
 case("nopanic-001", "{{ n + 1 }}", {"n": None})

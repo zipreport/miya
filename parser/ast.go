@@ -466,6 +466,9 @@ type BlockNode struct {
 	baseNode
 	Name string
 	Body []Node
+	// Required is set by {% block name required %}: rendering the block
+	// fails unless another template in the chain also defines it
+	Required bool
 }
 
 func NewBlockNode(name string, line, column int) *BlockNode {

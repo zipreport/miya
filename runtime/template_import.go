@@ -184,10 +184,14 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 		// Only the child's own top-level code runs; the parent's does not.
 		// Jinja2 runs the parent, so a parent that fails to load fails
 		// the import.
-		if err := is.loadParents(ext, namespace.Context, evaluator); err != nil {
+		parents, err := is.loadParents(ext, namespace.Context, evaluator)
+		if err != nil {
 			return err
 		}
 		nodes = topLevelCode(flat)
+		if shared := sharedRequiredBlocks(append([]*parser.TemplateNode{flat}, parents...)); len(shared) > 0 {
+			clearRequired(nodes, shared)
+		}
 	}
 	assigned := make(map[string]bool)
 	if err := is.runModuleNodes(nodes, namespace, evaluator, assigned); err != nil {
@@ -204,39 +208,42 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 	return nil
 }
 
-// loadParents loads each template up the {% extends %} chain from ext,
-// evaluating a parent named by an expression or chosen by an {% if %} with ctx.
-func (is *ImportSystem) loadParents(ext *parser.ExtendsNode, ctx Context, eval Evaluator) error {
+// loadParents loads and returns each template up the {% extends %} chain
+// from ext, evaluating a parent named by an expression or chosen by an {% if %} with ctx.
+func (is *ImportSystem) loadParents(ext *parser.ExtendsNode, ctx Context, eval Evaluator) ([]*parser.TemplateNode, error) {
+	var parents []*parser.TemplateNode
 	seen := make(map[string]bool)
 	for ext != nil {
 		v, err := eval.EvalNode(ext.Template, ctx)
 		if err != nil {
-			return fmt.Errorf("failed to evaluate dynamic template name: %w", err)
+			return nil, fmt.Errorf("failed to evaluate dynamic template name: %w", err)
 		}
 		name, ok := v.(string)
 		if !ok {
-			return fmt.Errorf("dynamic template name must be a string, got %T", v)
+			return nil, fmt.Errorf("dynamic template name must be a string, got %T", v)
 		}
 		if seen[name] {
-			return fmt.Errorf("circular inheritance detected: %s", name)
+			return nil, fmt.Errorf("circular inheritance detected: %s", name)
 		}
 		seen[name] = true
 		ast, err := is.loader.LoadTemplate(name)
 		if err != nil {
 			prefix := fmt.Sprintf("failed to load template %q", name)
 			if strings.HasPrefix(err.Error(), prefix) {
-				return err
+				return nil, err
 			}
-			return fmt.Errorf("%s: %w", prefix, err)
+			return nil, fmt.Errorf("%s: %w", prefix, err)
 		}
 		if ast == nil {
-			return fmt.Errorf("failed to load template %q: the loader returned no template", name)
+			return nil, fmt.Errorf("failed to load template %q: the loader returned no template", name)
 		}
-		if _, ext, err = parentExtends(ast, ctx, eval); err != nil {
-			return err
+		var flat *parser.TemplateNode
+		if flat, ext, err = parentExtends(ast, ctx, eval); err != nil {
+			return nil, err
 		}
+		parents = append(parents, flat)
 	}
-	return nil
+	return parents, nil
 }
 
 func (is *ImportSystem) runModuleNodes(nodes []parser.Node, namespace *TemplateNamespace, evaluator *DefaultEvaluator, assigned map[string]bool) error {

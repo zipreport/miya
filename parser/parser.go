@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/zipreport/miya/lexer"
 )
@@ -554,6 +555,11 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 	if p.check(lexer.TokenIdentifier) && p.peek().Value == "scoped" {
 		p.advance()
 	}
+	required := false
+	if p.check(lexer.TokenIdentifier) && p.peek().Value == "required" {
+		p.advance()
+		required = true
+	}
 
 	if !p.check(lexer.TokenBlockEnd) && !p.check(lexer.TokenBlockEndTrim) {
 		return nil, p.error("expected '%}' after block name")
@@ -561,6 +567,7 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 	p.advance()
 
 	blockNode := NewBlockNode(blockName, blockToken.Line, blockToken.Column)
+	blockNode.Required = required
 
 	// Parse block body
 	for !p.isAtEnd() {
@@ -576,6 +583,21 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 		}
 		if node != nil {
 			blockNode.Body = append(blockNode.Body, node)
+		}
+	}
+
+	if required {
+		for _, n := range blockNode.Body {
+			ok := false
+			switch n := n.(type) {
+			case *TextNode:
+				ok = strings.TrimFunc(n.Content, isPySpace) == ""
+			case *RawNode:
+				ok = strings.TrimFunc(n.Content, isPySpace) == ""
+			}
+			if !ok {
+				return nil, p.error("required blocks can only contain comments or whitespace")
+			}
 		}
 	}
 
@@ -2437,4 +2459,10 @@ func (p *Parser) parseFilterBlock() (Node, error) {
 	p.advance() // consume '%}'
 
 	return filterBlockNode, nil
+}
+
+// isPySpace reports whether Python's str.isspace() counts r as whitespace:
+// Go's unicode.IsSpace plus the ASCII separators 0x1c-0x1f.
+func isPySpace(r rune) bool {
+	return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f)
 }

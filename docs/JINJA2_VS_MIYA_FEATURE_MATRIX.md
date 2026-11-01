@@ -81,6 +81,7 @@ Differences that are not deliberate, and miya-only extensions, are listed in [MI
 | Template extension   | `{% extends "base.html" %}`           | `{% extends "base.html" %}`           |       | Full support                 |
 | Block definition     | `{% block name %}`                    | `{% block name %}`                    |       | Full support                 |
 | Block override       | Child template blocks                 | Child template blocks                 |       | Full support                 |
+| Required blocks      | `{% block name required %}`           | `{% block name required %}`           |       | Full support; `scoped required` also parses |
 | Super calls          | `{{ super() }}`                       | `{{ super() }}`                       |       | Full support                 |
 | Include templates    | `{% include "template.html" %}`       | `{% include "template.html" %}`       |       | Requires proper loader setup |
 | Include with context | `{% include "t.html" with context %}` | `{% include "t.html" with context %}` |       | Full support                 |
