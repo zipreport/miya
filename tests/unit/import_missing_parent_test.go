@@ -31,14 +31,14 @@ func TestIssue12ImportMissingParent(t *testing.T) {
 
 	// Jinja2 3.1.6 raises TemplateNotFound, TemplateSyntaxError or RecursionError
 	errs := []struct {
-		name, src, names string
-		wantIs           error
+		name, src, names, contains string
+		wantIs                     error
 	}{
-		{"claim1_import_missing_parent", `{% import "ext.html" as m %}[{{ m.f() }}]`, "nope.html", runtime.ErrTemplateNotFound},
-		{"claim2_from_missing_parent", `{% from "ext.html" import f %}[{{ f() }}]`, "nope.html", runtime.ErrTemplateNotFound},
-		{"claim3_import_broken_parent", `{% import "bad.html" as m %}[{{ m.f() }}]`, "broken.html", nil},
-		{"missing_grandparent", `{% import "deep.html" as m %}[{{ m.f() }}]`, "nope.html", runtime.ErrTemplateNotFound},
-		{"extends_itself", `{% import "self.html" as m %}[{{ m.f() }}]`, "self.html", nil},
+		{"claim1_import_missing_parent", `{% import "ext.html" as m %}[{{ m.f() }}]`, "nope.html", "", runtime.ErrTemplateNotFound},
+		{"claim2_from_missing_parent", `{% from "ext.html" import f %}[{{ f() }}]`, "nope.html", "", runtime.ErrTemplateNotFound},
+		{"claim3_import_broken_parent", `{% import "bad.html" as m %}[{{ m.f() }}]`, "broken.html", "", nil},
+		{"missing_grandparent", `{% import "deep.html" as m %}[{{ m.f() }}]`, "nope.html", "", runtime.ErrTemplateNotFound},
+		{"extends_itself", `{% import "self.html" as m %}[{{ m.f() }}]`, "self.html", "circular inheritance detected", nil},
 	}
 	for _, tt := range errs {
 		t.Run(tt.name, func(t *testing.T) {
@@ -48,6 +48,16 @@ func TestIssue12ImportMissingParent(t *testing.T) {
 			}
 			if tt.wantIs != nil && !errors.Is(err, tt.wantIs) {
 				t.Errorf("error does not wrap %v: %v", tt.wantIs, err)
+			}
+			if tt.wantIs == nil && errors.Is(err, runtime.ErrTemplateNotFound) {
+				t.Errorf("error is reported as not found: %v", err)
+			}
+			var nf *runtime.TemplateNotFoundError
+			if errors.As(err, &nf) && nf.Name != tt.names {
+				t.Errorf("not-found error names %q, want %q", nf.Name, tt.names)
+			}
+			if !strings.Contains(err.Error(), tt.contains) {
+				t.Errorf("error does not say %q: %v", tt.contains, err)
 			}
 			if n := strings.Count(err.Error(), `"`+tt.names+`"`); n != 1 {
 				t.Errorf("%q appears %d times, want 1: %v", tt.names, n, err)
