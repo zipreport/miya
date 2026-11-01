@@ -4,11 +4,11 @@ All notable changes to Miya Engine will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [v0.3.0]
 
 ### Added
 
-- `parser.ForNode.LoopUnused`, set by the parser when nothing in a `{% for %}` body can read `loop` (no `loop` name, and no block, include, import or extension tag); the evaluator then does not build `loop`. A `ForNode` built in Go leaves it false and gets `loop` as before.
+- `parser.ForNode.LoopUnused`, set by the parser when nothing in a `{% for %}` body can read `loop` (no `loop` name, and no block, include, import or extension tag); the evaluator then does not build `loop`. A `ForNode` built in Go leaves it false and gets `loop` as before. A Go function that takes the context and reads `loop` from it no longer finds the loop it is called in when the template never names `loop`.
 - `miya.ErrRenderPanic`, wrapped by the error `Render`, `RenderTo` and `Environment.CallMacro` return when they recover from a panic.
 - `Environment.SetFilterParams(name, params...)`, `Environment.AddFilterWithParams(name, fn, params...)` and `filters.Param` declare a custom filter's parameter names so templates can pass them as keyword arguments. Keywords reach the filter as ordinary positional arguments; an unfilled earlier position receives its `Param.Default`, which is `nil` when unset. Also `filters.KwArgs` and `runtime.KwargsFilterApplier`.
 - `runtime.InheritanceProcessor.ResolveInheritanceWith`, which takes the evaluator for dynamic `{% extends %}`.
