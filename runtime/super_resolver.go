@@ -56,6 +56,11 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 		return nil, fmt.Errorf("super() call depth exceeded (possible infinite recursion)")
 	}
 
+	if currentBlockName == "" && isWholeSuper(node) {
+		// outside a block super() has no parent block; it fails when evaluated
+		return node, nil
+	}
+
 	switch n := node.(type) {
 	case *parser.SuperNode:
 		// Found a direct {{ super() }} call - resolve it

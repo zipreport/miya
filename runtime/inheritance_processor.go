@@ -375,6 +375,27 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 		return nil, fmt.Errorf("failed to apply block overrides: %w", err)
 	}
 
+	// Run each extending template's own top-level code before its parent's,
+	// as Jinja2 does: child first, root last
+	var hoisted []parser.Node
+	for _, tmpl := range hierarchy.Templates[:len(hierarchy.Templates)-1] {
+		hoisted = append(hoisted, topLevelCode(tmpl)...)
+	}
+	if len(hoisted) > 0 {
+		// Blocks kept in hoisted code (inside for, with, ...) render the
+		// most-derived definition, as every other block does
+		overrides := make(map[string]*parser.BlockNode)
+		for i := len(hierarchy.Templates) - 2; i >= 0; i-- {
+			p.collectChildOverrides(hierarchy.Templates[i], overrides)
+		}
+		code := parser.NewTemplateNode("", 0, 0)
+		code.Children = hoisted
+		if err := p.applyOverridesRecursive(code, overrides); err != nil {
+			return nil, err
+		}
+		finalTemplate.Children = append(code.Children, finalTemplate.Children...)
+	}
+
 	// Check for super() calls outside of blocks - these should always error
 	// Only validate for multi-template hierarchies (actual inheritance)
 	detector := NewSuperCallDetector()
@@ -410,27 +431,6 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 		if err != nil {
 			return nil, fmt.Errorf("failed to replace super() calls: %w", err)
 		}
-	}
-
-	// Run each extending template's own top-level code before its parent's,
-	// as Jinja2 does: child first, root last
-	var hoisted []parser.Node
-	for _, tmpl := range hierarchy.Templates[:len(hierarchy.Templates)-1] {
-		hoisted = append(hoisted, topLevelCode(tmpl)...)
-	}
-	if len(hoisted) > 0 {
-		// Blocks kept in hoisted code (inside for, with, ...) render the
-		// most-derived definition, as every other block does
-		overrides := make(map[string]*parser.BlockNode)
-		for i := len(hierarchy.Templates) - 2; i >= 0; i-- {
-			p.collectChildOverrides(hierarchy.Templates[i], overrides)
-		}
-		code := parser.NewTemplateNode("", 0, 0)
-		code.Children = hoisted
-		if err := p.applyOverridesRecursive(code, overrides); err != nil {
-			return nil, err
-		}
-		finalTemplate.Children = append(code.Children, finalTemplate.Children...)
 	}
 
 	return finalTemplate, nil
