@@ -2,11 +2,12 @@ package branching
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
+	"unicode"
 
 	"github.com/zipreport/miya/runtime"
 )
@@ -17,7 +18,9 @@ type TestFunc func(value interface{}, args ...interface{}) (bool, error)
 // TestRegistry manages template tests
 type TestRegistry struct {
 	tests map[string]TestFunc
-	mutex sync.RWMutex
+	// builtin holds the names of the tests registerBuiltinTests registered
+	builtin map[string]bool
+	mutex   sync.RWMutex
 }
 
 // NewTestRegistry creates a new test registry
@@ -28,8 +31,19 @@ func NewTestRegistry() *TestRegistry {
 
 	// Register built-in tests
 	registry.registerBuiltinTests()
+	registry.builtin = make(map[string]bool, len(registry.tests))
+	for name := range registry.tests {
+		registry.builtin[name] = true
+	}
 
 	return registry
+}
+
+// IsBuiltin reports whether test name is one of miya's own.
+func (r *TestRegistry) IsBuiltin(name string) bool {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	return r.builtin[name]
 }
 
 // Register registers a test function
@@ -115,6 +129,8 @@ func (r *TestRegistry) registerBuiltinTests() {
 	// Identity and comparison tests
 	r.tests["sameas"] = testSameAs
 	r.tests["escaped"] = testEscaped
+	r.tests["true"] = testTrue
+	r.tests["false"] = testFalse
 
 	// Comparison operators
 	r.tests["eq"] = testEqual
@@ -124,15 +140,20 @@ func (r *TestRegistry) registerBuiltinTests() {
 	r.tests["gt"] = testGreaterThan
 	r.tests["ge"] = testGreaterThanOrEqual
 	r.tests["equalto"] = testEqual // alias
+	r.tests["=="] = testEqual
+	r.tests["!="] = testNotEqual
+	r.tests["<"] = testLessThan
+	r.tests["lessthan"] = testLessThan
+	r.tests["<="] = testLessThanOrEqual
+	r.tests[">"] = testGreaterThan
+	r.tests["greaterthan"] = testGreaterThan
+	r.tests[">="] = testGreaterThanOrEqual
 }
 
 // Built-in test implementations
 
-// testDefined checks if a value is defined (not nil and not undefined)
+// testDefined checks if a value is defined (not an Undefined)
 func testDefined(value interface{}, args ...interface{}) (bool, error) {
-	if value == nil {
-		return false, nil
-	}
 	// Check if value is an Undefined type
 	if _, ok := value.(*runtime.Undefined); ok {
 		return false, nil
@@ -140,11 +161,8 @@ func testDefined(value interface{}, args ...interface{}) (bool, error) {
 	return true, nil
 }
 
-// testUndefined checks if a value is undefined (nil or Undefined type)
+// testUndefined checks if a value is an Undefined
 func testUndefined(value interface{}, args ...interface{}) (bool, error) {
-	if value == nil {
-		return true, nil
-	}
 	// Check if value is an Undefined type
 	if _, ok := value.(*runtime.Undefined); ok {
 		return true, nil
@@ -154,25 +172,38 @@ func testUndefined(value interface{}, args ...interface{}) (bool, error) {
 
 // testNone checks if a value is None/nil
 func testNone(value interface{}, args ...interface{}) (bool, error) {
-	return value == nil, nil
+	return runtime.Indirect(value) == nil, nil
+}
+
+// valueKind is the reflect kind of value after following pointers; nil gives
+// reflect.Invalid.
+func valueKind(value interface{}) reflect.Kind {
+	v := runtime.Indirect(value)
+	if v == nil {
+		return reflect.Invalid
+	}
+	return reflect.TypeOf(v).Kind()
 }
 
 // testBoolean checks if a value is a boolean
 func testBoolean(value interface{}, args ...interface{}) (bool, error) {
-	_, ok := value.(bool)
-	return ok, nil
+	return valueKind(value) == reflect.Bool, nil
 }
 
 // testString checks if a value is a string
 func testString(value interface{}, args ...interface{}) (bool, error) {
-	_, ok := value.(string)
-	return ok, nil
+	return valueKind(value) == reflect.String, nil
 }
 
-// testNumber checks if a value is a number (int or float)
+// testNumber checks if a value is a number (int, float or bool, as in Python)
 func testNumber(value interface{}, args ...interface{}) (bool, error) {
-	switch value.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+	if _, ok := runtime.Indirect(value).(runtime.RoundedFloat); ok {
+		return true, nil
+	}
+	switch valueKind(value) {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64, reflect.Bool:
 		return true, nil
 	default:
 		return false, nil
@@ -181,8 +212,9 @@ func testNumber(value interface{}, args ...interface{}) (bool, error) {
 
 // testInteger checks if a value is an integer
 func testInteger(value interface{}, args ...interface{}) (bool, error) {
-	switch value.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+	switch valueKind(value) {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return true, nil
 	default:
 		return false, nil
@@ -191,8 +223,11 @@ func testInteger(value interface{}, args ...interface{}) (bool, error) {
 
 // testFloat checks if a value is a float
 func testFloat(value interface{}, args ...interface{}) (bool, error) {
-	switch value.(type) {
-	case float32, float64:
+	if _, ok := runtime.Indirect(value).(runtime.RoundedFloat); ok {
+		return true, nil
+	}
+	switch valueKind(value) {
+	case reflect.Float32, reflect.Float64:
 		return true, nil
 	default:
 		return false, nil
@@ -201,13 +236,12 @@ func testFloat(value interface{}, args ...interface{}) (bool, error) {
 
 // testSequence checks if a value is a sequence (slice/array)
 func testSequence(value interface{}, args ...interface{}) (bool, error) {
-	if value == nil {
-		return false, nil
+	if _, ok := value.(*runtime.Undefined); ok {
+		return true, nil
 	}
 
-	rv := reflect.ValueOf(value)
-	switch rv.Kind() {
-	case reflect.Slice, reflect.Array:
+	switch valueKind(value) {
+	case reflect.Slice, reflect.Array, reflect.Map:
 		return true, nil
 	case reflect.String:
 		return true, nil // strings are sequences in Jinja2
@@ -218,22 +252,16 @@ func testSequence(value interface{}, args ...interface{}) (bool, error) {
 
 // testMapping checks if a value is a mapping (map)
 func testMapping(value interface{}, args ...interface{}) (bool, error) {
-	if value == nil {
-		return false, nil
-	}
-
-	rv := reflect.ValueOf(value)
-	return rv.Kind() == reflect.Map, nil
+	return valueKind(value) == reflect.Map, nil
 }
 
 // testIterable checks if a value is iterable
 func testIterable(value interface{}, args ...interface{}) (bool, error) {
-	if value == nil {
-		return false, nil
+	if _, ok := value.(*runtime.Undefined); ok {
+		return true, nil
 	}
 
-	rv := reflect.ValueOf(value)
-	switch rv.Kind() {
+	switch valueKind(value) {
 	case reflect.Slice, reflect.Array, reflect.Map, reflect.String:
 		return true, nil
 	default:
@@ -246,27 +274,72 @@ func testCallable(value interface{}, args ...interface{}) (bool, error) {
 	if value == nil {
 		return false, nil
 	}
+	if _, ok := value.(*runtime.Macro); ok {
+		return true, nil
+	}
 
 	rv := reflect.ValueOf(value)
 	return rv.Kind() == reflect.Func, nil
 }
 
+// pyNumber classifies v as Python sees a number: every Go integer kind and
+// bool (Python's bool is an int) as an integer, float kinds as a float.
+// Strings are not numbers.
+func pyNumber(v interface{}) (i int64, f float64, isInt, ok bool) {
+	v = runtime.Indirect(v)
+	if v == nil {
+		return
+	}
+	if r, isR := v.(runtime.RoundedFloat); isR {
+		return 0, r.Value, false, true
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return rv.Int(), 0, true, true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return int64(rv.Uint()), 0, true, true
+	case reflect.Float32, reflect.Float64:
+		return 0, rv.Float(), false, true
+	case reflect.Bool:
+		if rv.Bool() {
+			return 1, 0, true, true
+		}
+		return 0, 0, true, true
+	}
+	return
+}
+
+// pyAsFloat returns the number as a float64.
+func pyAsFloat(i int64, f float64, isInt bool) float64 {
+	if isInt {
+		return float64(i)
+	}
+	return f
+}
+
 // testEven checks if a number is even
 func testEven(value interface{}, args ...interface{}) (bool, error) {
-	num, err := toInt(value)
-	if err != nil {
-		return false, fmt.Errorf("even test requires an integer, got %T", value)
+	i, f, isInt, ok := pyNumber(value)
+	if !ok {
+		return false, fmt.Errorf("even test requires a number, got %T", value)
 	}
-	return num%2 == 0, nil
+	if isInt {
+		return i%2 == 0, nil
+	}
+	return math.Mod(f, 2) == 0, nil
 }
 
 // testOdd checks if a number is odd
 func testOdd(value interface{}, args ...interface{}) (bool, error) {
-	num, err := toInt(value)
-	if err != nil {
-		return false, fmt.Errorf("odd test requires an integer, got %T", value)
+	i, f, isInt, ok := pyNumber(value)
+	if !ok {
+		return false, fmt.Errorf("odd test requires a number, got %T", value)
 	}
-	return num%2 != 0, nil
+	if isInt {
+		return i%2 != 0, nil
+	}
+	return math.Abs(math.Mod(f, 2)) == 1, nil
 }
 
 // testDivisibleBy checks if a number is divisible by another number
@@ -275,39 +348,72 @@ func testDivisibleBy(value interface{}, args ...interface{}) (bool, error) {
 		return false, fmt.Errorf("divisibleby test requires exactly one argument")
 	}
 
-	num, err := toInt(value)
-	if err != nil {
-		return false, fmt.Errorf("divisibleby test requires an integer, got %T", value)
+	i, f, isInt, ok := pyNumber(value)
+	if !ok {
+		return false, fmt.Errorf("divisibleby test requires a number, got %T", value)
 	}
 
-	divisor, err := toInt(args[0])
-	if err != nil {
-		return false, fmt.Errorf("divisibleby test requires an integer divisor, got %T", args[0])
+	di, df, dIsInt, dok := pyNumber(args[0])
+	if !dok {
+		return false, fmt.Errorf("divisibleby test requires a number divisor, got %T", args[0])
 	}
 
-	if divisor == 0 {
+	if (dIsInt && di == 0) || (!dIsInt && df == 0) {
 		return false, fmt.Errorf("division by zero")
 	}
 
-	return num%divisor == 0, nil
+	if isInt && dIsInt {
+		return i%di == 0, nil
+	}
+	return math.Mod(pyAsFloat(i, f, isInt), pyAsFloat(di, df, dIsInt)) == 0, nil
+}
+
+// pyCaseTest follows Python's str.islower (lower) and str.isupper: false if
+// any rune has the opposite case (title case counts as upper), otherwise true
+// only if at least one rune is cased.
+func pyCaseTest(s string, lower bool) bool {
+	cased := false
+	for _, r := range s {
+		switch {
+		case unicode.IsUpper(r) || unicode.IsTitle(r):
+			if lower {
+				return false
+			}
+			cased = true
+		case unicode.IsLower(r):
+			if !lower {
+				return false
+			}
+			cased = true
+		}
+	}
+	return cased
+}
+
+// pyCaseValue applies pyCaseTest to a value: nil, bool and numbers are not
+// cased; other non-strings are tested on their string form.
+func pyCaseValue(value interface{}, lower bool) bool {
+	value = runtime.Indirect(value)
+	if value == nil {
+		return false
+	}
+	if _, _, _, ok := pyNumber(value); ok {
+		return false
+	}
+	if s, ok := value.(string); ok {
+		return pyCaseTest(s, lower)
+	}
+	return pyCaseTest(runtime.SprintV(value), lower)
 }
 
 // testLower checks if a string is all lowercase
 func testLower(value interface{}, args ...interface{}) (bool, error) {
-	str, ok := value.(string)
-	if !ok {
-		return false, fmt.Errorf("lower test requires a string, got %T", value)
-	}
-	return str == strings.ToLower(str), nil
+	return pyCaseValue(value, true), nil
 }
 
 // testUpper checks if a string is all uppercase
 func testUpper(value interface{}, args ...interface{}) (bool, error) {
-	str, ok := value.(string)
-	if !ok {
-		return false, fmt.Errorf("upper test requires a string, got %T", value)
-	}
-	return str == strings.ToUpper(str), nil
+	return pyCaseValue(value, false), nil
 }
 
 // testStartsWith checks if a string starts with a prefix
@@ -433,6 +539,8 @@ func testEmpty(value interface{}, args ...interface{}) (bool, error) {
 		return v == 0.0, nil
 	case float64:
 		return v == 0.0, nil
+	case runtime.RoundedFloat:
+		return v.Value == 0, nil
 	case bool:
 		return !v, nil
 	default:
@@ -492,6 +600,9 @@ func testSameAs(value interface{}, args ...interface{}) (bool, error) {
 
 // testEscaped checks if a value is marked as escaped/safe
 func testEscaped(value interface{}, args ...interface{}) (bool, error) {
+	if _, ok := runtime.AsMarkup(value); ok {
+		return true, nil
+	}
 	// Check if the value is wrapped in a SafeValue (from filters package)
 	// We need to check the type name since we can't import the filters package here
 	// due to potential circular imports
@@ -508,14 +619,25 @@ func testEscaped(value interface{}, args ...interface{}) (bool, error) {
 	return false, nil
 }
 
+// testTrue checks if a value is the boolean true
+func testTrue(value interface{}, args ...interface{}) (bool, error) {
+	b, ok := runtime.BasicValue(value).(bool)
+	return ok && b, nil
+}
+
+// testFalse checks if a value is the boolean false
+func testFalse(value interface{}, args ...interface{}) (bool, error) {
+	b, ok := runtime.BasicValue(value).(bool)
+	return ok && !b, nil
+}
+
 // testEqual checks if two values are equal
 func testEqual(value interface{}, args ...interface{}) (bool, error) {
 	if len(args) != 1 {
 		return false, fmt.Errorf("eq test requires exactly one argument")
 	}
 
-	other := args[0]
-	return reflect.DeepEqual(value, other), nil
+	return runtime.Equal(value, args[0]), nil
 }
 
 // testNotEqual checks if two values are not equal
@@ -524,8 +646,7 @@ func testNotEqual(value interface{}, args ...interface{}) (bool, error) {
 		return false, fmt.Errorf("ne test requires exactly one argument")
 	}
 
-	other := args[0]
-	return !reflect.DeepEqual(value, other), nil
+	return !runtime.Equal(value, args[0]), nil
 }
 
 // testLessThan checks if value < other
@@ -566,60 +687,36 @@ func testGreaterThanOrEqual(value interface{}, args ...interface{}) (bool, error
 
 // Helper functions
 
-// toInt converts a value to int
-func toInt(value interface{}) (int, error) {
-	switch v := value.(type) {
-	case int:
-		return v, nil
-	case int8:
-		return int(v), nil
-	case int16:
-		return int(v), nil
-	case int32:
-		return int(v), nil
-	case int64:
-		return int(v), nil
-	case uint:
-		return int(v), nil
-	case uint8:
-		return int(v), nil
-	case uint16:
-		return int(v), nil
-	case uint32:
-		return int(v), nil
-	case uint64:
-		return int(v), nil
-	case float32:
-		return int(v), nil
-	case float64:
-		return int(v), nil
-	case string:
-		return strconv.Atoi(v)
-	default:
-		return 0, fmt.Errorf("cannot convert %T to int", value)
-	}
-}
-
 // contains checks if a container contains an item
 func contains(container, item interface{}) (bool, error) {
+	rawItem := item
+	container, item = runtime.BasicValue(container), runtime.BasicValue(item)
 	if container == nil {
 		return false, nil
 	}
 
 	switch v := container.(type) {
+	case *runtime.Undefined:
+		return false, nil
 	case string:
-		itemStr := fmt.Sprintf("%v", item)
+		var itemStr string
+		switch reflect.ValueOf(item).Kind() {
+		case reflect.Slice, reflect.Array, reflect.Map:
+			// fmt never stops on a list or dict that contains itself
+			itemStr = runtime.ToString(item)
+		default:
+			itemStr = runtime.SprintV(item)
+		}
 		return strings.Contains(v, itemStr), nil
 	case []interface{}:
 		for _, elem := range v {
-			if reflect.DeepEqual(elem, item) {
+			if runtime.Equal(elem, item) {
 				return true, nil
 			}
 		}
 		return false, nil
 	case map[string]interface{}:
-		itemStr := fmt.Sprintf("%v", item)
-		_, ok := v[itemStr]
+		_, ok := v[runtime.DictKey(item)]
 		return ok, nil
 	default:
 		// Use reflection for other slice/array types
@@ -627,14 +724,14 @@ func contains(container, item interface{}) (bool, error) {
 		switch rv.Kind() {
 		case reflect.Slice, reflect.Array:
 			for i := 0; i < rv.Len(); i++ {
-				if reflect.DeepEqual(rv.Index(i).Interface(), item) {
+				if runtime.Equal(rv.Index(i).Interface(), item) {
 					return true, nil
 				}
 			}
 			return false, nil
 		case reflect.Map:
-			itemValue := reflect.ValueOf(item)
-			return rv.MapIndex(itemValue).IsValid(), nil
+			_, ok := runtime.MapLookup(container, rawItem)
+			return ok, nil
 		default:
 			return false, fmt.Errorf("cannot check containment in %T", container)
 		}
@@ -643,28 +740,23 @@ func contains(container, item interface{}) (bool, error) {
 
 // compareValues compares two values and applies a comparison function
 func compareValues(v1, v2 interface{}, compFunc func(int) bool) (bool, error) {
-	// Handle nil values
+	// nil only compares equal to nil; ordering it is a TypeError in Python
 	if v1 == nil && v2 == nil {
 		return compFunc(0), nil
 	}
-	if v1 == nil {
-		return compFunc(-1), nil
-	}
-	if v2 == nil {
+	if v1 == nil || v2 == nil {
+		if compFunc(-1) != compFunc(1) {
+			return false, fmt.Errorf("'<' not supported between %T and %T", v1, v2)
+		}
+		if v1 == nil {
+			return compFunc(-1), nil
+		}
 		return compFunc(1), nil
 	}
 
-	// Try numeric comparison first
-	if num1, err1 := toFloat(v1); err1 == nil {
-		if num2, err2 := toFloat(v2); err2 == nil {
-			if num1 < num2 {
-				return compFunc(-1), nil
-			} else if num1 > num2 {
-				return compFunc(1), nil
-			} else {
-				return compFunc(0), nil
-			}
-		}
+	// Numbers compare by value; a numeric string is not a number
+	if cmp, ok := runtime.CompareNumbers(v1, v2); ok {
+		return compFunc(cmp), nil
 	}
 
 	// Try string comparison
@@ -693,40 +785,6 @@ func compareValues(v1, v2 interface{}, compFunc func(int) bool) (bool, error) {
 
 	// For equality comparison of uncomparable types, they're not equal
 	return compFunc(1), nil // Any non-zero value works for inequality
-}
-
-// toFloat converts a value to float64 for numeric comparison
-func toFloat(value interface{}) (float64, error) {
-	switch v := value.(type) {
-	case int:
-		return float64(v), nil
-	case int8:
-		return float64(v), nil
-	case int16:
-		return float64(v), nil
-	case int32:
-		return float64(v), nil
-	case int64:
-		return float64(v), nil
-	case uint:
-		return float64(v), nil
-	case uint8:
-		return float64(v), nil
-	case uint16:
-		return float64(v), nil
-	case uint32:
-		return float64(v), nil
-	case uint64:
-		return float64(v), nil
-	case float32:
-		return float64(v), nil
-	case float64:
-		return v, nil
-	case string:
-		return strconv.ParseFloat(v, 64)
-	default:
-		return 0, fmt.Errorf("cannot convert %T to float", value)
-	}
 }
 
 // testAlpha checks if a string contains only alphabetic characters

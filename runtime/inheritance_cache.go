@@ -1,8 +1,6 @@
 package runtime
 
 import (
-	"crypto/md5"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -20,6 +18,8 @@ type InheritanceCacheEntry struct {
 }
 
 // ResolvedTemplateCacheEntry represents a cached resolved template
+//
+// Deprecated: resolved templates are not cached; nothing uses this type.
 type ResolvedTemplateCacheEntry struct {
 	ResolvedAST   *parser.TemplateNode
 	ContextHash   string
@@ -40,6 +40,7 @@ type CacheStats struct {
 		HitRate   float64
 		AvgAccess float64
 	}
+	// Deprecated: resolved templates are not cached; these stats are always zero.
 	ResolvedCache struct {
 		Hits      int64
 		Misses    int64
@@ -60,50 +61,41 @@ type InheritanceCache struct {
 		misses int64
 	}
 
-	// Resolved template cache - stores final resolved templates
-	resolvedCache map[string]*ResolvedTemplateCacheEntry
-	resolvedMutex sync.RWMutex
-	resolvedStats struct {
-		hits   int64
-		misses int64
-	}
-
 	// Configuration
-	hierarchyTTL time.Duration // How long to keep hierarchy entries
-	resolvedTTL  time.Duration // How long to keep resolved templates
-	maxEntries   int           // Maximum cache entries
+	hierarchyTTL atomic.Int64 // How long to keep hierarchy entries (time.Duration)
+	maxEntries   atomic.Int64 // Maximum cache entries
 
 	// Cleanup management
+	cleanupMu       sync.Mutex
 	lastCleanup     time.Time
 	cleanupInterval time.Duration
 }
 
 // NewInheritanceCache creates a new inheritance cache
 func NewInheritanceCache() *InheritanceCache {
-	return &InheritanceCache{
+	c := &InheritanceCache{
 		hierarchyCache:  make(map[string]*InheritanceCacheEntry),
-		resolvedCache:   make(map[string]*ResolvedTemplateCacheEntry),
-		hierarchyTTL:    15 * time.Minute, // Hierarchies are relatively stable
-		resolvedTTL:     5 * time.Minute,  // Resolved templates may vary by context
-		maxEntries:      1000,             // Reasonable default
 		lastCleanup:     time.Now(),
 		cleanupInterval: 2 * time.Minute,
 	}
+	c.hierarchyTTL.Store(int64(15 * time.Minute)) // Hierarchies are relatively stable
+	c.maxEntries.Store(1000)                      // Reasonable default
+	return c
 }
 
 // SetHierarchyTTL sets the time-to-live for hierarchy cache entries
 func (c *InheritanceCache) SetHierarchyTTL(ttl time.Duration) {
-	c.hierarchyTTL = ttl
+	c.hierarchyTTL.Store(int64(ttl))
 }
 
-// SetResolvedTTL sets the time-to-live for resolved template cache entries
-func (c *InheritanceCache) SetResolvedTTL(ttl time.Duration) {
-	c.resolvedTTL = ttl
-}
+// SetResolvedTTL does nothing.
+//
+// Deprecated: resolved templates are not cached.
+func (c *InheritanceCache) SetResolvedTTL(ttl time.Duration) {}
 
 // SetMaxEntries sets the maximum number of cache entries
 func (c *InheritanceCache) SetMaxEntries(max int) {
-	c.maxEntries = max
+	c.maxEntries.Store(int64(max))
 }
 
 // GetHierarchy retrieves a cached template hierarchy
@@ -145,7 +137,7 @@ func (c *InheritanceCache) StoreHierarchy(templateName string, hierarchy *Inheri
 	defer c.hierarchyMutex.Unlock()
 
 	// Check if we need to make space
-	if len(c.hierarchyCache) >= c.maxEntries {
+	if len(c.hierarchyCache) >= int(c.maxEntries.Load()) {
 		c.evictOldestHierarchy()
 	}
 
@@ -153,7 +145,7 @@ func (c *InheritanceCache) StoreHierarchy(templateName string, hierarchy *Inheri
 	entry := &InheritanceCacheEntry{
 		Hierarchy:   hierarchy,
 		CreatedAt:   now,
-		ExpiresAt:   now.Add(c.hierarchyTTL),
+		ExpiresAt:   now.Add(time.Duration(c.hierarchyTTL.Load())),
 		AccessCount: 1,
 		LastAccess:  now,
 	}
@@ -161,88 +153,20 @@ func (c *InheritanceCache) StoreHierarchy(templateName string, hierarchy *Inheri
 	c.hierarchyCache[templateName] = entry
 }
 
-// GetResolvedTemplate retrieves a cached resolved template
-func (c *InheritanceCache) GetResolvedTemplate(templateName string, contextHash string) (*parser.TemplateNode, bool) {
-	c.performCleanupIfNeeded()
-
-	cacheKey := c.buildResolvedCacheKey(templateName, contextHash)
-
-	c.resolvedMutex.RLock()
-	entry, exists := c.resolvedCache[cacheKey]
-	c.resolvedMutex.RUnlock()
-
-	if !exists {
-		atomic.AddInt64(&c.resolvedStats.misses, 1)
-		return nil, false
-	}
-
-	// Check expiration
-	if time.Now().After(entry.ExpiresAt) {
-		// Entry expired, remove it
-		c.resolvedMutex.Lock()
-		delete(c.resolvedCache, cacheKey)
-		c.resolvedMutex.Unlock()
-		atomic.AddInt64(&c.resolvedStats.misses, 1)
-		return nil, false
-	}
-
-	// Update access statistics
-	c.resolvedMutex.Lock()
-	entry.AccessCount++
-	entry.LastAccess = time.Now()
-	c.resolvedMutex.Unlock()
-
-	atomic.AddInt64(&c.resolvedStats.hits, 1)
-	return entry.ResolvedAST, true
-}
-
-// StoreResolvedTemplate caches a resolved template
-func (c *InheritanceCache) StoreResolvedTemplate(templateName string, contextHash string, resolvedAST *parser.TemplateNode, templateChain []string) {
-	c.resolvedMutex.Lock()
-	defer c.resolvedMutex.Unlock()
-
-	// Check if we need to make space
-	if len(c.resolvedCache) >= c.maxEntries {
-		c.evictOldestResolved()
-	}
-
-	cacheKey := c.buildResolvedCacheKey(templateName, contextHash)
-	now := time.Now()
-
-	entry := &ResolvedTemplateCacheEntry{
-		ResolvedAST:   resolvedAST,
-		ContextHash:   contextHash,
-		TemplateChain: templateChain,
-		CreatedAt:     now,
-		ExpiresAt:     now.Add(c.resolvedTTL),
-		AccessCount:   1,
-		LastAccess:    now,
-	}
-
-	c.resolvedCache[cacheKey] = entry
-}
-
-// InvalidateTemplate removes all cache entries related to a template
+// InvalidateTemplate removes all cache entries related to a template: its own
+// hierarchy and the hierarchy of every template whose chain contains it.
 func (c *InheritanceCache) InvalidateTemplate(templateName string) {
 	c.hierarchyMutex.Lock()
-	delete(c.hierarchyCache, templateName)
-	c.hierarchyMutex.Unlock()
-
-	// Invalidate resolved templates that include this template in their chain
-	c.resolvedMutex.Lock()
-	keysToDelete := make([]string, 0)
-	for key, entry := range c.resolvedCache {
-		for _, name := range entry.TemplateChain {
-			if name == templateName {
-				keysToDelete = append(keysToDelete, key)
-				break
+	for key, entry := range c.hierarchyCache {
+		if key == templateName {
+			delete(c.hierarchyCache, key)
+		} else if entry.Hierarchy != nil {
+			if _, inChain := entry.Hierarchy.TemplateMap[templateName]; inChain {
+				delete(c.hierarchyCache, key)
 			}
 		}
 	}
-	for _, key := range keysToDelete {
-		delete(c.resolvedCache, key)
-	}
-	c.resolvedMutex.Unlock()
+	c.hierarchyMutex.Unlock()
 }
 
 // ClearAll removes all cache entries
@@ -250,10 +174,6 @@ func (c *InheritanceCache) ClearAll() {
 	c.hierarchyMutex.Lock()
 	c.hierarchyCache = make(map[string]*InheritanceCacheEntry)
 	c.hierarchyMutex.Unlock()
-
-	c.resolvedMutex.Lock()
-	c.resolvedCache = make(map[string]*ResolvedTemplateCacheEntry)
-	c.resolvedMutex.Unlock()
 }
 
 // GetStats returns cache performance statistics
@@ -263,12 +183,6 @@ func (c *InheritanceCache) GetStats() CacheStats {
 	c.hierarchyMutex.RUnlock()
 	hierarchyHits := atomic.LoadInt64(&c.hierarchyStats.hits)
 	hierarchyMisses := atomic.LoadInt64(&c.hierarchyStats.misses)
-
-	c.resolvedMutex.RLock()
-	resolvedEntries := len(c.resolvedCache)
-	c.resolvedMutex.RUnlock()
-	resolvedHits := atomic.LoadInt64(&c.resolvedStats.hits)
-	resolvedMisses := atomic.LoadInt64(&c.resolvedStats.misses)
 
 	stats := CacheStats{}
 
@@ -280,20 +194,7 @@ func (c *InheritanceCache) GetStats() CacheStats {
 		stats.HierarchyCache.HitRate = float64(hierarchyHits) / float64(hierarchyHits+hierarchyMisses)
 	}
 
-	// Resolved cache stats
-	stats.ResolvedCache.Hits = resolvedHits
-	stats.ResolvedCache.Misses = resolvedMisses
-	stats.ResolvedCache.Entries = resolvedEntries
-	if resolvedHits+resolvedMisses > 0 {
-		stats.ResolvedCache.HitRate = float64(resolvedHits) / float64(resolvedHits+resolvedMisses)
-	}
-
 	return stats
-}
-
-// buildResolvedCacheKey creates a cache key for resolved templates
-func (c *InheritanceCache) buildResolvedCacheKey(templateName string, contextHash string) string {
-	return fmt.Sprintf("%s::%s", templateName, contextHash)
 }
 
 // evictOldestHierarchy removes the least recently used hierarchy entry
@@ -313,28 +214,15 @@ func (c *InheritanceCache) evictOldestHierarchy() {
 	}
 }
 
-// evictOldestResolved removes the least recently used resolved template entry
-func (c *InheritanceCache) evictOldestResolved() {
-	var oldestKey string
-	var oldestTime time.Time = time.Now()
-
-	for key, entry := range c.resolvedCache {
-		if entry.LastAccess.Before(oldestTime) {
-			oldestTime = entry.LastAccess
-			oldestKey = key
-		}
-	}
-
-	if oldestKey != "" {
-		delete(c.resolvedCache, oldestKey)
-	}
-}
-
 // performCleanupIfNeeded performs periodic cleanup of expired entries
 func (c *InheritanceCache) performCleanupIfNeeded() {
+	c.cleanupMu.Lock()
 	if time.Since(c.lastCleanup) < c.cleanupInterval {
+		c.cleanupMu.Unlock()
 		return
 	}
+	c.lastCleanup = time.Now()
+	c.cleanupMu.Unlock()
 
 	go c.cleanup() // Run cleanup in background
 }
@@ -355,59 +243,4 @@ func (c *InheritanceCache) cleanup() {
 		delete(c.hierarchyCache, key)
 	}
 	c.hierarchyMutex.Unlock()
-
-	// Cleanup resolved cache
-	c.resolvedMutex.Lock()
-	resolvedKeysToDelete := make([]string, 0)
-	for key, entry := range c.resolvedCache {
-		if now.After(entry.ExpiresAt) {
-			resolvedKeysToDelete = append(resolvedKeysToDelete, key)
-		}
-	}
-	for _, key := range resolvedKeysToDelete {
-		delete(c.resolvedCache, key)
-	}
-	c.resolvedMutex.Unlock()
-
-	c.lastCleanup = now
-}
-
-// ContextHasher creates context hashes for cache keys
-type ContextHasher struct{}
-
-// NewContextHasher creates a new context hasher
-func NewContextHasher() *ContextHasher {
-	return &ContextHasher{}
-}
-
-// HashContext creates a hash from context data for cache keying
-func (h *ContextHasher) HashContext(context Context) string {
-	if context == nil {
-		return "empty"
-	}
-
-	// Get all context variables and create a deterministic hash
-	data := context.All()
-	if len(data) == 0 {
-		return "empty"
-	}
-
-	// Create a simple hash based on key-value pairs
-	// Note: This is a simplified approach - a production system might want
-	// more sophisticated hashing that handles complex nested structures
-	hash := md5.New()
-
-	// Sort keys for consistent hashing
-	keys := make([]string, 0, len(data))
-	for k := range data {
-		keys = append(keys, k)
-	}
-
-	// Simple deterministic string representation
-	for _, key := range keys {
-		value := data[key]
-		fmt.Fprintf(hash, "%s:%v;", key, value)
-	}
-
-	return fmt.Sprintf("%x", hash.Sum(nil))[:16] // Use first 16 characters
 }

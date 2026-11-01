@@ -61,7 +61,7 @@ examples/showcase/
 - Basic for loops
 - Loop variables: `loop.index`, `loop.index0`, `loop.first`, `loop.last`, `loop.revindex`
 - `loop.cycle()` for alternating values
-- `loop.depth` for nested loops
+- `loop.depth` / `loop.depth0` for recursive loops (ordinary nested loops are each depth 1)
 - Conditional iteration (`{% for item in items if condition %}`)
 - Dictionary iteration with `.items()`
 - Nested loops

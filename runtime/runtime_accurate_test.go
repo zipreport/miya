@@ -585,7 +585,6 @@ func TestErrorTypes(t *testing.T) {
 }
 
 // Removed ImportContext tests as it doesn't exist
-// Removed FilterChainOptimizer tests as it has different API
 
 // Test Core Evaluator Functions
 func TestCoreEvaluator(t *testing.T) {
@@ -720,8 +719,7 @@ func TestCoreEvaluator(t *testing.T) {
 		}
 		result, err = evaluator.EvalGetItemNode(negNode, ctx)
 		if err != nil {
-			// Negative indexing might not be implemented, skip this test
-			t.Skipf("Negative indexing not supported: %v", err)
+			t.Fatalf("Negative indexing failed: %v", err)
 		} else if result != 5 {
 			t.Errorf("Expected 5, got %v", result)
 		}
@@ -838,6 +836,8 @@ func TestCoreEvaluator(t *testing.T) {
 			{false, "or", false, false},
 			{true, "or", false, true},
 			{false, "or", true, true},
+			{"a", "or", "x", "a"},
+			{0, "and", "x", 0},
 		}
 
 		for _, test := range tests {
@@ -911,8 +911,8 @@ func TestCoreEvaluator(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Unexpected error for negation: %v", err)
 		}
-		if result != -5.0 {
-			t.Errorf("Expected -5.0, got %v", result)
+		if result != int64(-5) {
+			t.Errorf("Expected -5, got %v", result)
 		}
 
 		// Test logical NOT
@@ -1087,48 +1087,6 @@ func TestControlFlow(t *testing.T) {
 			t.Error("Expected IsBreak to return false for continue error")
 		}
 	})
-
-	t.Run("ControlFlowEvaluator basic", func(t *testing.T) {
-		baseEvaluator := NewEvaluator()
-		evaluator := NewControlFlowEvaluator(baseEvaluator)
-		if evaluator == nil {
-			t.Fatal("Expected ControlFlowEvaluator, got nil")
-		}
-
-		// Just test that the evaluator was created successfully
-		// The actual methods may have different signatures than expected
-	})
-
-	t.Run("Break and Continue error types", func(t *testing.T) {
-		baseEvaluator := NewEvaluator()
-		evaluator := NewControlFlowEvaluator(baseEvaluator)
-
-		// Test EvalBreak (returns error, not result + error)
-		err := evaluator.EvalBreak()
-		if err == nil {
-			t.Error("Expected error from EvalBreak")
-		}
-		if breakErr, ok := err.(*LoopControlError); ok {
-			if !breakErr.IsBreak() {
-				t.Errorf("Expected break error, got: %v", err)
-			}
-		} else {
-			t.Errorf("Expected LoopControlError, got: %T", err)
-		}
-
-		// Test EvalContinue (returns error, not result + error)
-		err = evaluator.EvalContinue()
-		if err == nil {
-			t.Error("Expected error from EvalContinue")
-		}
-		if continueErr, ok := err.(*LoopControlError); ok {
-			if !continueErr.IsContinue() {
-				t.Errorf("Expected continue error, got: %v", err)
-			}
-		} else {
-			t.Errorf("Expected LoopControlError, got: %T", err)
-		}
-	})
 }
 
 // Test Template Import System
@@ -1206,18 +1164,18 @@ func TestTemplateMacro(t *testing.T) {
 			Parameters: []string{"required_param"},
 			Defaults:   map[string]interface{}{},
 			Body: []parser.Node{
-				&parser.TextNode{Content: "{{ required_param }}"},
+				parser.NewVariableNode(parser.NewIdentifierNode("required_param", 1, 1), 1, 1),
 			},
 			Context: ctx,
 		}
 
 		// Call without required parameter
-		_, err := macro.Call(evaluator, ctx, []interface{}{}, nil)
-		if err == nil {
-			t.Error("Expected error for missing required parameter")
+		result, err := macro.Call(evaluator, ctx, []interface{}{}, nil)
+		if err != nil {
+			t.Fatalf("missing parameter must bind to undefined, got error: %v", err)
 		}
-		if !strings.Contains(err.Error(), "missing required macro parameter") {
-			t.Errorf("Expected missing parameter error, got: %v", err)
+		if fmt.Sprint(result) != "" {
+			t.Errorf("missing parameter printed %q, want empty (undefined)", result)
 		}
 	})
 
@@ -1236,12 +1194,9 @@ func TestTemplateMacro(t *testing.T) {
 			"extra": "value",
 		}
 
-		result, err := macro.Call(evaluator, ctx, []interface{}{"Charlie"}, kwargs)
-		if err != nil {
-			t.Fatalf("Unexpected error with kwargs: %v", err)
-		}
-		if result == nil {
-			t.Error("Expected result from macro call with kwargs")
+		_, err := macro.Call(evaluator, ctx, []interface{}{"Charlie"}, kwargs)
+		if err == nil || !strings.Contains(err.Error(), `takes no keyword argument "extra"`) {
+			t.Fatalf("Expected unknown keyword argument error, got: %v", err)
 		}
 	})
 }
@@ -1305,310 +1260,6 @@ func TestTemplateNamespace(t *testing.T) {
 
 // Removed mock template loader due to interface mismatch
 // The actual TemplateLoader expects (*parser.TemplateNode, error) not (string, error)
-
-// Test FilterChainOptimizer functionality
-func TestFilterChainOptimizer(t *testing.T) {
-	ctx := &simpleContext{variables: make(map[string]interface{})}
-	ctx.SetVariable("name", "Alice")
-	ctx.SetVariable("items", []interface{}{1, 2, 3, 4, 5})
-
-	t.Run("NewFilterChainOptimizer", func(t *testing.T) {
-		evaluator := NewEvaluator()
-		optimizer := NewFilterChainOptimizer(evaluator)
-
-		if optimizer == nil {
-			t.Fatal("Expected optimizer to be created")
-		}
-		if optimizer.evaluator != evaluator {
-			t.Error("Expected optimizer to have evaluator reference")
-		}
-		if optimizer.chainCache == nil {
-			t.Error("Expected cache to be initialized")
-		}
-	})
-
-	t.Run("ExtractFilterChain", func(t *testing.T) {
-		evaluator := NewEvaluator()
-		optimizer := NewFilterChainOptimizer(evaluator)
-
-		// Create a simple filter chain: name | upper | length
-		baseExpr := parser.NewIdentifierNode("name", 1, 1)
-		upperFilter := &parser.FilterNode{
-			Expression: baseExpr,
-			FilterName: "upper",
-			Arguments:  []parser.ExpressionNode{},
-		}
-		lengthFilter := &parser.FilterNode{
-			Expression: upperFilter,
-			FilterName: "length",
-			Arguments:  []parser.ExpressionNode{},
-		}
-
-		chain := optimizer.extractFilterChain(lengthFilter)
-
-		if len(chain.filters) != 2 {
-			t.Errorf("Expected 2 filters in chain, got %d", len(chain.filters))
-		}
-
-		// Check filter order (should be in application order)
-		if chain.filters[0].name != "upper" {
-			t.Errorf("Expected first filter to be 'upper', got '%s'", chain.filters[0].name)
-		}
-		if chain.filters[1].name != "length" {
-			t.Errorf("Expected second filter to be 'length', got '%s'", chain.filters[1].name)
-		}
-	})
-
-	t.Run("GetBaseExpression", func(t *testing.T) {
-		evaluator := NewEvaluator()
-		optimizer := NewFilterChainOptimizer(evaluator)
-
-		// Create filter chain: name | upper
-		baseExpr := parser.NewIdentifierNode("name", 1, 1)
-		filterExpr := &parser.FilterNode{
-			Expression: baseExpr,
-			FilterName: "upper",
-			Arguments:  []parser.ExpressionNode{},
-		}
-
-		extracted := optimizer.getBaseExpression(filterExpr)
-
-		if identNode, ok := extracted.(*parser.IdentifierNode); ok {
-			if identNode.Name != "name" {
-				t.Errorf("Expected base expression to be 'name', got '%s'", identNode.Name)
-			}
-		} else {
-			t.Errorf("Expected base expression to be IdentifierNode, got %T", extracted)
-		}
-
-		// Test with non-filter expression
-		extracted = optimizer.getBaseExpression(baseExpr)
-		if extracted != baseExpr {
-			t.Error("Expected base expression to return itself when not a filter")
-		}
-	})
-
-	t.Run("EvalFilterChain_NoFilters", func(t *testing.T) {
-		evaluator := NewEvaluator()
-		optimizer := NewFilterChainOptimizer(evaluator)
-
-		// Simple expression without filters
-		expr := parser.NewIdentifierNode("name", 1, 1)
-
-		result, err := optimizer.EvalFilterChain(expr, ctx)
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-
-		if result != "Alice" {
-			t.Errorf("Expected 'Alice', got %v", result)
-		}
-	})
-
-	t.Run("EvalFilterChain_WithFilters", func(t *testing.T) {
-		evaluator := NewEvaluator()
-		optimizer := NewFilterChainOptimizer(evaluator)
-
-		// Create filter chain: name | upper (mock filter)
-		baseExpr := parser.NewIdentifierNode("name", 1, 1)
-		filterExpr := &parser.FilterNode{
-			Expression: baseExpr,
-			FilterName: "upper",
-			Arguments:  []parser.ExpressionNode{},
-		}
-
-		// This will test the basic chain extraction even if the filter doesn't exist
-		result, err := optimizer.EvalFilterChain(filterExpr, ctx)
-
-		// We expect an error since 'upper' filter doesn't exist in basic evaluator
-		if err == nil {
-			t.Log("Filter chain evaluated successfully:", result)
-		} else {
-			// Expected behavior - filter doesn't exist
-			if !stringContains(err.Error(), "filter") && !stringContains(err.Error(), "upper") {
-				t.Logf("Got expected filter error: %v", err)
-			}
-		}
-	})
-}
-
-// Test OptimizedFilterEvaluator
-func TestOptimizedFilterEvaluator(t *testing.T) {
-	ctx := &simpleContext{variables: make(map[string]interface{})}
-	ctx.SetVariable("test", "value")
-
-	t.Run("NewOptimizedFilterEvaluator", func(t *testing.T) {
-		evaluator := NewOptimizedFilterEvaluator()
-
-		if evaluator == nil {
-			t.Fatal("Expected evaluator to be created")
-		}
-		if evaluator.DefaultEvaluator == nil {
-			t.Error("Expected default evaluator to be set")
-		}
-		if evaluator.optimizer == nil {
-			t.Error("Expected optimizer to be set")
-		}
-	})
-
-	t.Run("EvalNode_FilterNode", func(t *testing.T) {
-		evaluator := NewOptimizedFilterEvaluator()
-
-		// Create a filter node
-		baseExpr := parser.NewIdentifierNode("test", 1, 1)
-		filterNode := &parser.FilterNode{
-			Expression: baseExpr,
-			FilterName: "unknown_filter",
-			Arguments:  []parser.ExpressionNode{},
-		}
-
-		// This should use the optimizer path
-		result, err := evaluator.EvalNode(filterNode, ctx)
-
-		// Expect error since filter doesn't exist
-		if err == nil {
-			t.Log("Filter evaluation succeeded:", result)
-		} else {
-			// Expected behavior
-			t.Logf("Got expected filter error: %v", err)
-		}
-	})
-
-	t.Run("EvalNode_NonFilterNode", func(t *testing.T) {
-		evaluator := NewOptimizedFilterEvaluator()
-
-		// Non-filter node should use default path
-		node := parser.NewIdentifierNode("test", 1, 1)
-
-		result, err := evaluator.EvalNode(node, ctx)
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-
-		if result != "value" {
-			t.Errorf("Expected 'value', got %v", result)
-		}
-	})
-}
-
-// Test BatchFilterEvaluation
-func TestBatchFilterEvaluation(t *testing.T) {
-	ctx := &simpleContext{variables: make(map[string]interface{})}
-	ctx.SetVariable("a", 1)
-	ctx.SetVariable("b", 2)
-	ctx.SetVariable("c", 3)
-
-	t.Run("NewBatchFilterEvaluation", func(t *testing.T) {
-		batch := NewBatchFilterEvaluation()
-
-		if batch == nil {
-			t.Fatal("Expected batch to be created")
-		}
-		if batch.chains == nil {
-			t.Error("Expected chains slice to be initialized")
-		}
-	})
-
-	t.Run("AddChain", func(t *testing.T) {
-		batch := NewBatchFilterEvaluation()
-
-		node1 := parser.NewIdentifierNode("a", 1, 1)
-		node2 := parser.NewIdentifierNode("b", 1, 1)
-
-		batch.AddChain(node1, ctx)
-		batch.AddChain(node2, ctx)
-
-		if len(batch.chains) != 2 {
-			t.Errorf("Expected 2 chains, got %d", len(batch.chains))
-		}
-	})
-
-	t.Run("Execute", func(t *testing.T) {
-		batch := NewBatchFilterEvaluation()
-		evaluator := NewOptimizedFilterEvaluator()
-
-		// Add some simple expressions
-		batch.AddChain(parser.NewIdentifierNode("a", 1, 1), ctx)
-		batch.AddChain(parser.NewIdentifierNode("b", 1, 1), ctx)
-		batch.AddChain(parser.NewIdentifierNode("c", 1, 1), ctx)
-
-		errors := batch.Execute(evaluator)
-
-		if len(errors) > 0 {
-			t.Fatalf("Unexpected errors: %v", errors)
-		}
-
-		results := batch.GetResults()
-		if len(results) != 3 {
-			t.Errorf("Expected 3 results, got %d", len(results))
-		}
-
-		expected := []interface{}{1, 2, 3}
-		for i, result := range results {
-			if result != expected[i] {
-				t.Errorf("Expected result[%d] = %v, got %v", i, expected[i], result)
-			}
-		}
-	})
-}
-
-// Test FilterPipeline
-func TestFilterPipeline(t *testing.T) {
-	t.Run("NewFilterPipeline", func(t *testing.T) {
-		pipeline := NewFilterPipeline()
-
-		if pipeline == nil {
-			t.Fatal("Expected pipeline to be created")
-		}
-		if pipeline.filters == nil {
-			t.Error("Expected filters slice to be initialized")
-		}
-	})
-
-	t.Run("AddFilter", func(t *testing.T) {
-		pipeline := NewFilterPipeline()
-
-		result := pipeline.AddFilter("upper")
-
-		// Should return itself for chaining
-		if result != pipeline {
-			t.Error("Expected AddFilter to return pipeline for chaining")
-		}
-
-		if len(pipeline.filters) != 1 {
-			t.Errorf("Expected 1 filter, got %d", len(pipeline.filters))
-		}
-
-		if pipeline.filters[0].name != "upper" {
-			t.Errorf("Expected filter name 'upper', got '%s'", pipeline.filters[0].name)
-		}
-
-		// Test chaining
-		pipeline.AddFilter("length").AddFilter("string")
-		if len(pipeline.filters) != 3 {
-			t.Errorf("Expected 3 filters after chaining, got %d", len(pipeline.filters))
-		}
-	})
-
-	t.Run("Apply_NoEnvironmentContext", func(t *testing.T) {
-		pipeline := NewFilterPipeline().AddFilter("upper")
-		ctx := &simpleContext{variables: make(map[string]interface{})}
-
-		// Simple context doesn't support filters
-		result, err := pipeline.Apply("test", ctx)
-
-		if err == nil {
-			t.Error("Expected error when context doesn't support filters")
-		}
-		if result != nil {
-			t.Error("Expected nil result on error")
-		}
-
-		if !stringContains(err.Error(), "context does not support filters") {
-			t.Errorf("Expected context error, got: %v", err)
-		}
-	})
-}
 
 // Helper function to check if string contains substring
 func stringContains(s, substr string) bool {
@@ -1974,7 +1625,7 @@ func (etl *ErrorTemplateLoader) LoadTemplate(name string) (*parser.TemplateNode,
 }
 
 func (etl *ErrorTemplateLoader) TemplateExists(name string) bool {
-	return true // Claim it exists but fail on load
+	return true // Not consulted by LoadTemplateNamespace
 }
 
 // Test template import system
@@ -1992,9 +1643,6 @@ func TestTemplateImportSystem(t *testing.T) {
 		if importSys.loader != loader {
 			t.Error("Expected loader to be set")
 		}
-		if importSys.namespaces == nil {
-			t.Error("Expected namespaces map to be initialized")
-		}
 	})
 
 	t.Run("LoadTemplateNamespace_MissingTemplate", func(t *testing.T) {
@@ -2003,34 +1651,16 @@ func TestTemplateImportSystem(t *testing.T) {
 		// Try to load non-existent template
 		ns, err := importSys.LoadTemplateNamespace("missing.html", ctx, evaluator)
 
-		if err != nil {
-			t.Fatalf("Unexpected error for missing template: %v", err)
+		if err == nil {
+			t.Fatal("Expected an error for a missing template")
 		}
 
-		if ns == nil {
-			t.Fatal("Expected placeholder namespace to be created")
+		if ns != nil {
+			t.Errorf("Expected nil namespace, got %v", ns)
 		}
 
-		if ns.TemplateName != "missing.html" {
-			t.Errorf("Expected template name 'missing.html', got %s", ns.TemplateName)
-		}
-
-		if ns.Macros == nil {
-			t.Error("Expected macros map to be initialized")
-		}
-
-		if ns.Variables == nil {
-			t.Error("Expected variables map to be initialized")
-		}
-
-		// Check that it's cached
-		ns2, err := importSys.LoadTemplateNamespace("missing.html", ctx, evaluator)
-		if err != nil {
-			t.Fatalf("Unexpected error on cached lookup: %v", err)
-		}
-
-		if ns2 != ns {
-			t.Error("Expected cached namespace to be returned")
+		if !stringContains(err.Error(), "failed to load template") {
+			t.Errorf("Expected load failure message, got: %v", err)
 		}
 	})
 
@@ -2102,8 +1732,8 @@ func TestTemplateImportSystem(t *testing.T) {
 			t.Error("Expected error when loader fails")
 		}
 
-		if !stringContains(err.Error(), "failed to load template") {
-			t.Errorf("Expected load failure message, got: %v", err)
+		if !stringContains(err.Error(), "failed to load template") || !stringContains(err.Error(), "simulated loader error") {
+			t.Errorf("Expected the loader's own error, wrapped, got: %v", err)
 		}
 	})
 
@@ -2206,14 +1836,13 @@ func TestTemplateMacroCall(t *testing.T) {
 			t.Error("Expected non-nil result with default parameter")
 		}
 
-		// Test with missing required parameter
-		_, err = macro.Call(evaluator, ctx, []interface{}{}, nil)
-		if err == nil {
-			t.Error("Expected error for missing required parameter")
+		// Test with missing required parameter: it prints as undefined, the default still applies
+		result, err = macro.Call(evaluator, ctx, []interface{}{}, nil)
+		if err != nil {
+			t.Fatalf("missing parameter must bind to undefined, got error: %v", err)
 		}
-
-		if !stringContains(err.Error(), "missing required macro parameter") {
-			t.Errorf("Expected missing parameter error, got: %v", err)
+		if fmt.Sprint(result) != "Hello !" {
+			t.Errorf("got %q, want %q", result, "Hello !")
 		}
 	})
 
@@ -2222,34 +1851,21 @@ func TestTemplateMacroCall(t *testing.T) {
 			Name:       "render_button",
 			Parameters: []string{"text", "class"},
 			Defaults:   map[string]interface{}{"class": "btn"},
-			Body:       []parser.Node{},
-			Context:    ctx,
+			Body: []parser.Node{
+				parser.NewVariableNode(parser.NewIdentifierNode("text", 1, 1), 1, 1),
+				&parser.TextNode{Content: "|"},
+				parser.NewVariableNode(parser.NewIdentifierNode("class", 1, 1), 1, 1),
+			},
+			Context: ctx,
 		}
 
-		kwargs := map[string]interface{}{
-			"class": "btn-primary",
-			"extra": "additional",
-		}
-
-		result, err := macro.Call(evaluator, ctx, []interface{}{"Click me"}, kwargs)
+		// class is bound by name, not position.
+		result, err := macro.Call(evaluator, ctx, nil, map[string]interface{}{"class": "btn-primary", "text": "Click me"})
 		if err != nil {
 			t.Fatalf("Unexpected error with kwargs: %v", err)
 		}
-
-		if result == nil {
-			t.Error("Expected non-nil result with kwargs")
-		}
-
-		// Check that the built-in render_button works
-		if stringContains(fmt.Sprintf("%v", result), "<button") {
-			// Verify it contains expected elements
-			resultStr := fmt.Sprintf("%v", result)
-			if !stringContains(resultStr, "Click me") {
-				t.Errorf("Expected button text in result, got: %v", result)
-			}
-			if !stringContains(resultStr, "btn-primary") {
-				t.Errorf("Expected class in result, got: %v", result)
-			}
+		if result != "Click me|btn-primary" {
+			t.Errorf("Expected %q, got %v", "Click me|btn-primary", result)
 		}
 	})
 
@@ -2258,22 +1874,31 @@ func TestTemplateMacroCall(t *testing.T) {
 			Name:       "test_macro",
 			Parameters: []string{},
 			Defaults:   map[string]interface{}{},
-			Body:       []parser.Node{},
+			Body: []parser.Node{
+				parser.NewVariableNode(parser.NewIdentifierNode("caller", 1, 1), 1, 1),
+			},
+			MacroUsage: parser.MacroUsage{Caller: true},
 			Context:    ctx,
 		}
 
-		// Set caller in call context
+		// A caller in the call context is ignored: the body runs in the
+		// definition context, and a caller is passed in kwargs.
 		callCtx := &simpleContext{variables: make(map[string]interface{})}
-		callCtx.SetVariable("caller", "caller_function")
-
-		result, err := macro.Call(evaluator, callCtx, []interface{}{}, nil)
+		callCtx.SetVariable("caller", "from_call_context")
+		result, err := macro.Call(evaluator, callCtx, nil, nil)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
+		if result != "" {
+			t.Errorf("caller must not come from callCtx, got %v", result)
+		}
 
-		// Should work without error
-		if result == nil {
-			t.Error("Expected non-nil result")
+		result, err = macro.Call(evaluator, callCtx, nil, map[string]interface{}{"caller": "from_kwargs"})
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if result != "from_kwargs" {
+			t.Errorf("Expected %q, got %v", "from_kwargs", result)
 		}
 	})
 }
@@ -3156,8 +2781,8 @@ func TestEvaluatorUtilityFunctions(t *testing.T) {
 			{42, 42, false},
 			{"123", 123, false},
 			{3.14, 3, false},
-			{true, 0, true},  // bool not supported
-			{false, 0, true}, // bool not supported
+			{true, 1, false}, // bool counts as 0/1, as in Python
+			{false, 0, false},
 			{"not_a_number", 0, true},
 		}
 
@@ -3187,7 +2812,7 @@ func TestEvaluatorUtilityFunctions(t *testing.T) {
 			{42, 42.0, false},
 			{3.14, 3.14, false},
 			{"123.45", 123.45, false},
-			{true, 0.0, true}, // bool not supported
+			{true, 1.0, false}, // bool counts as 0/1, as in Python
 			{"not_a_number", 0.0, true},
 		}
 
@@ -3231,258 +2856,6 @@ func TestEvaluatorUtilityFunctions(t *testing.T) {
 		result, err = evaluator.slice([]interface{}{1, 2, 3, 4, 5}, &start2, &end2, nil)
 		if err != nil {
 			t.Logf("Slice with step not implemented: %v", err)
-		}
-	})
-
-	t.Run("deepEqual function", func(t *testing.T) {
-		// Test deep equality
-		obj1 := map[string]interface{}{
-			"name": "test",
-			"data": []interface{}{1, 2, 3},
-		}
-
-		obj2 := map[string]interface{}{
-			"name": "test",
-			"data": []interface{}{1, 2, 3},
-		}
-
-		obj3 := map[string]interface{}{
-			"name": "different",
-			"data": []interface{}{1, 2, 3},
-		}
-
-		if !evaluator.deepEqual(obj1, obj2) {
-			t.Error("Expected objects to be deeply equal")
-		}
-
-		if evaluator.deepEqual(obj1, obj3) {
-			t.Error("Expected objects to not be deeply equal")
-		}
-
-		// Test simple types
-		if !evaluator.deepEqual(42, 42) {
-			t.Error("Expected numbers to be equal")
-		}
-
-		if evaluator.deepEqual(42, 43) {
-			t.Error("Expected numbers to not be equal")
-		}
-	})
-}
-
-// Test control flow evaluation functions
-func TestControlFlowEvaluationFunctions(t *testing.T) {
-	evaluator := NewControlFlowEvaluator(NewEvaluator())
-	ctx := &simpleContext{variables: make(map[string]interface{})}
-
-	t.Run("EvalIfStatement", func(t *testing.T) {
-		// Test basic if statement
-		ctx.SetVariable("condition", true)
-		conditionNode := parser.NewIdentifierNode("condition", 1, 1)
-		bodyNode := parser.NewLiteralNode("true branch", "", 1, 1)
-
-		ifNode := parser.NewIfNode(conditionNode, 1, 1)
-		ifNode.Body = []parser.Node{bodyNode}
-
-		result, err := evaluator.EvalIfStatement(ifNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalIfStatement failed: %v", err)
-		}
-
-		if result != "true branch" {
-			t.Errorf("Expected 'true branch', got %v", result)
-		}
-
-		// Test false condition with else
-		ctx.SetVariable("condition", false)
-		elseBodyNode := parser.NewLiteralNode("false branch", "", 1, 1)
-		ifNode.Else = []parser.Node{elseBodyNode}
-
-		result, err = evaluator.EvalIfStatement(ifNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalIfStatement with else failed: %v", err)
-		}
-
-		if result != "false branch" {
-			t.Errorf("Expected 'false branch', got %v", result)
-		}
-	})
-
-	t.Run("EvalForLoop", func(t *testing.T) {
-		// Test basic for loop
-		ctx.SetVariable("items", []interface{}{1, 2, 3})
-		iterableNode := parser.NewIdentifierNode("items", 1, 1)
-		bodyNode := parser.NewIdentifierNode("item", 1, 1)
-
-		forNode := parser.NewSingleForNode("item", iterableNode, 1, 1)
-		forNode.Body = []parser.Node{bodyNode}
-
-		result, err := evaluator.EvalForLoop(forNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalForLoop failed: %v", err)
-		}
-
-		// The result should be a string from evaluated body content
-		if result == "" {
-			t.Logf("EvalForLoop returned empty string (may be expected)")
-		}
-
-		// Test empty list with else
-		ctx.SetVariable("items", []interface{}{})
-		elseBodyNode := parser.NewLiteralNode("no items", "", 1, 1)
-		forNode.Else = []parser.Node{elseBodyNode}
-
-		result, err = evaluator.EvalForLoop(forNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalForLoop with empty list failed: %v", err)
-		}
-
-		if result != "no items" {
-			t.Errorf("Expected 'no items', got %v", result)
-		}
-	})
-
-	t.Run("evalBodyNodes", func(t *testing.T) {
-		// Test evaluating multiple body nodes
-		node1 := parser.NewLiteralNode("first", "", 1, 1)
-		node2 := parser.NewLiteralNode("second", "", 1, 1)
-		nodes := []parser.Node{node1, node2}
-
-		result, err := evaluator.evalBodyNodes(nodes, ctx)
-		if err != nil {
-			t.Fatalf("evalBodyNodes failed: %v", err)
-		}
-
-		// Should return concatenated results from all body nodes
-		if result != "firstsecond" {
-			t.Errorf("Expected 'firstsecond', got %v", result)
-		}
-	})
-
-	t.Run("EvalConditionalExpression", func(t *testing.T) {
-		// Test ternary expression: condition ? true_expr : false_expr
-		conditionNode := parser.NewLiteralNode(true, "", 1, 1)
-		trueExprNode := parser.NewLiteralNode("yes", "", 1, 1)
-		falseExprNode := parser.NewLiteralNode("no", "", 1, 1)
-
-		result, err := evaluator.EvalConditionalExpression(conditionNode, trueExprNode, falseExprNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalConditionalExpression failed: %v", err)
-		}
-
-		if result != "yes" {
-			t.Errorf("Expected 'yes', got %v", result)
-		}
-
-		// Test false condition
-		conditionNode = parser.NewLiteralNode(false, "", 1, 1)
-		result, err = evaluator.EvalConditionalExpression(conditionNode, trueExprNode, falseExprNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalConditionalExpression with false failed: %v", err)
-		}
-
-		if result != "no" {
-			t.Errorf("Expected 'no', got %v", result)
-		}
-	})
-
-	t.Run("EvalLogicalAnd", func(t *testing.T) {
-		// Test logical AND operation
-		trueNode := parser.NewLiteralNode(true, "", 1, 1)
-		falseNode := parser.NewLiteralNode(false, "", 1, 1)
-
-		result, err := evaluator.EvalLogicalAnd(trueNode, trueNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalLogicalAnd failed: %v", err)
-		}
-
-		if result != true {
-			t.Errorf("Expected true, got %v", result)
-		}
-
-		result, err = evaluator.EvalLogicalAnd(trueNode, falseNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalLogicalAnd failed: %v", err)
-		}
-
-		if result != false {
-			t.Errorf("Expected false, got %v", result)
-		}
-	})
-
-	t.Run("EvalLogicalOr", func(t *testing.T) {
-		// Test logical OR operation
-		trueNode := parser.NewLiteralNode(true, "", 1, 1)
-		falseNode := parser.NewLiteralNode(false, "", 1, 1)
-
-		result, err := evaluator.EvalLogicalOr(falseNode, trueNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalLogicalOr failed: %v", err)
-		}
-
-		if result != true {
-			t.Errorf("Expected true, got %v", result)
-		}
-
-		result, err = evaluator.EvalLogicalOr(falseNode, falseNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalLogicalOr failed: %v", err)
-		}
-
-		if result != false {
-			t.Errorf("Expected false, got %v", result)
-		}
-	})
-
-	t.Run("EvalInExpression", func(t *testing.T) {
-		// Test 'in' expression
-		valueNode := parser.NewLiteralNode(2, "", 1, 1)
-		listNode := parser.NewLiteralNode([]interface{}{1, 2, 3}, "", 1, 1)
-
-		result, err := evaluator.EvalInExpression(valueNode, listNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalInExpression failed: %v", err)
-		}
-
-		if result != true {
-			t.Errorf("Expected true, got %v", result)
-		}
-
-		// Test not in list
-		valueNode = parser.NewLiteralNode(5, "", 1, 1)
-		result, err = evaluator.EvalInExpression(valueNode, listNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalInExpression failed: %v", err)
-		}
-
-		if result != false {
-			t.Errorf("Expected false, got %v", result)
-		}
-	})
-
-	t.Run("EvalNotInExpression", func(t *testing.T) {
-		// Test 'not in' expression
-		valueNode := parser.NewLiteralNode(5, "", 1, 1)
-		listNode := parser.NewLiteralNode([]interface{}{1, 2, 3}, "", 1, 1)
-
-		result, err := evaluator.EvalNotInExpression(valueNode, listNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalNotInExpression failed: %v", err)
-		}
-
-		if result != true {
-			t.Errorf("Expected true, got %v", result)
-		}
-
-		// Test value in list (should return false)
-		valueNode = parser.NewLiteralNode(2, "", 1, 1)
-		result, err = evaluator.EvalNotInExpression(valueNode, listNode, ctx)
-		if err != nil {
-			t.Fatalf("EvalNotInExpression failed: %v", err)
-		}
-
-		if result != false {
-			t.Errorf("Expected false, got %v", result)
 		}
 	})
 }
@@ -3647,207 +3020,6 @@ func TestMissingEvaluatorNodeMethods(t *testing.T) {
 			t.Logf("EvalFilterBlockNode returned expected error: %v", err)
 		} else {
 			t.Logf("EvalFilterBlockNode returned: %v", result)
-		}
-	})
-}
-
-// Test optimized evaluator methods
-func TestOptimizedEvaluatorMethods(t *testing.T) {
-	ctx := &simpleContext{variables: make(map[string]interface{})}
-
-	t.Run("NewOptimizedEvaluator", func(t *testing.T) {
-		// Test creating an optimized evaluator
-		optimized := NewOptimizedEvaluator()
-		if optimized == nil {
-			t.Fatal("Expected non-nil optimized evaluator")
-		}
-
-		// Test basic evaluation
-		literalNode := parser.NewLiteralNode("test", "", 1, 1)
-		result, err := optimized.EvalNode(literalNode, ctx)
-		if err != nil {
-			t.Fatalf("Optimized evaluation failed: %v", err)
-		}
-
-		if result != "test" {
-			t.Errorf("Expected 'test', got %v", result)
-		}
-	})
-
-	t.Run("EvalTemplateNodeOptimized", func(t *testing.T) {
-		optimized := NewOptimizedEvaluator()
-
-		// Test optimized template evaluation
-		textNode := parser.NewTextNode("Hello World", 1, 1)
-		templateNode := parser.NewTemplateNode("test_template", 1, 1)
-		templateNode.Children = []parser.Node{textNode}
-
-		result, err := optimized.EvalTemplateNodeOptimized(templateNode, ctx)
-		if err != nil {
-			t.Fatalf("Optimized template evaluation failed: %v", err)
-		}
-
-		if result != "Hello World" {
-			t.Errorf("Expected 'Hello World', got %v", result)
-		}
-	})
-
-	t.Run("EvalForNodeOptimized", func(t *testing.T) {
-		optimized := NewOptimizedEvaluator()
-
-		// Test optimized for loop evaluation
-		ctx.SetVariable("items", []interface{}{1, 2, 3})
-		iterableNode := parser.NewIdentifierNode("items", 1, 1)
-		bodyNode := parser.NewTextNode("item ", 1, 1)
-
-		forNode := parser.NewSingleForNode("item", iterableNode, 1, 1)
-		forNode.Body = []parser.Node{bodyNode}
-
-		result, err := optimized.EvalForNodeOptimized(forNode, ctx)
-		if err != nil {
-			t.Fatalf("Optimized for loop failed: %v", err)
-		}
-
-		expected := "item item item "
-		if result != expected {
-			t.Errorf("Expected '%s', got '%s'", expected, result)
-		}
-	})
-
-	t.Run("EvalIfNodeOptimized", func(t *testing.T) {
-		optimized := NewOptimizedEvaluator()
-
-		// Test optimized if evaluation
-		ctx.SetVariable("condition", true)
-		conditionNode := parser.NewIdentifierNode("condition", 1, 1)
-		bodyNode := parser.NewTextNode("true branch", 1, 1)
-
-		ifNode := parser.NewIfNode(conditionNode, 1, 1)
-		ifNode.Body = []parser.Node{bodyNode}
-
-		result, err := optimized.EvalIfNodeOptimized(ifNode, ctx)
-		if err != nil {
-			t.Fatalf("Optimized if evaluation failed: %v", err)
-		}
-
-		if result != "true branch" {
-			t.Errorf("Expected 'true branch', got %v", result)
-		}
-	})
-
-	t.Run("BatchEvaluation", func(t *testing.T) {
-		// Create nodes to evaluate in batch
-		expr1 := parser.NewLiteralNode("hello", "", 1, 1)
-		expr2 := parser.NewLiteralNode("world", "", 1, 1)
-		nodes := []parser.Node{expr1, expr2}
-
-		batch := NewBatchEvaluation(nodes)
-		optimized := NewOptimizedEvaluator()
-
-		// Evaluate batch
-		optimized.EvaluateBatch(batch, ctx)
-
-		// Check results
-		if len(batch.results) != 2 {
-			t.Errorf("Expected 2 results, got %d", len(batch.results))
-		}
-
-		if batch.results[0] != "hello" {
-			t.Errorf("Expected 'hello', got %v", batch.results[0])
-		}
-
-		if batch.results[1] != "world" {
-			t.Errorf("Expected 'world', got %v", batch.results[1])
-		}
-
-		// Check for errors
-		for i, err := range batch.errors {
-			if err != nil {
-				t.Errorf("Batch evaluation error at index %d: %v", i, err)
-			}
-		}
-	})
-
-	t.Run("CachedEvaluator", func(t *testing.T) {
-		cached := NewCachedEvaluator()
-
-		// Test caching evaluation
-		literalNode := parser.NewLiteralNode("cached value", "", 1, 1)
-
-		// First evaluation (should cache)
-		result1, err := cached.EvalNodeCached(literalNode, ctx)
-		if err != nil {
-			t.Fatalf("Cached evaluation failed: %v", err)
-		}
-
-		// Second evaluation (should use cache)
-		result2, err := cached.EvalNodeCached(literalNode, ctx)
-		if err != nil {
-			t.Fatalf("Cached evaluation failed: %v", err)
-		}
-
-		if result1 != result2 {
-			t.Errorf("Expected same result from cache, got %v vs %v", result1, result2)
-		}
-
-		if result1 != "cached value" {
-			t.Errorf("Expected 'cached value', got %v", result1)
-		}
-
-		// Test cache stats
-		hits, misses := cached.GetCacheStats()
-		if hits < 0 || misses < 0 {
-			t.Error("Expected non-negative cache stats")
-		}
-		t.Logf("Cache stats: hits=%d, misses=%d", hits, misses)
-
-		// Test clearing cache
-		cached.ClearCache()
-		hits, misses = cached.GetCacheStats()
-		if hits != 0 || misses != 0 {
-			t.Error("Expected zero cache stats after clear")
-		}
-	})
-
-	t.Run("MemoryEfficientContext", func(t *testing.T) {
-		// Test memory efficient context
-		memCtx := NewMemoryEfficientContext()
-
-		// Test basic operations
-		memCtx.SetVariable("test", "value")
-		value, exists := memCtx.GetVariable("test")
-		if !exists {
-			t.Error("Expected variable to exist")
-		}
-		if value != "value" {
-			t.Errorf("Expected 'value', got %v", value)
-		}
-
-		// Test scope operations
-		memCtx.PushScope()
-		memCtx.SetVariable("scoped", "scoped_value")
-
-		value, exists = memCtx.GetVariable("scoped")
-		if !exists {
-			t.Error("Expected scoped variable to exist")
-		}
-
-		memCtx.PopScope()
-		value, exists = memCtx.GetVariable("scoped")
-		if exists {
-			t.Error("Expected scoped variable to be removed after pop")
-		}
-
-		// Test cloning
-		cloned := memCtx.Clone()
-		if cloned == nil {
-			t.Error("Expected non-nil cloned context")
-		}
-
-		// Test All() method
-		all := memCtx.All()
-		if all == nil {
-			t.Error("Expected non-nil map from All()")
 		}
 	})
 }
@@ -4155,7 +3327,7 @@ func TestRemainingUncoveredFunctions(t *testing.T) {
 			t.Fatalf("Unary minus failed: %v", err)
 		}
 
-		if result != float64(-5) {
+		if result != int64(-5) {
 			t.Errorf("Expected -5, got %v (type %T)", result, result)
 		}
 

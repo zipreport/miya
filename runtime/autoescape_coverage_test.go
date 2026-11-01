@@ -274,6 +274,24 @@ func TestEscapeCSSDetails(t *testing.T) {
 	_ = result // CSS escaping implementation may vary
 }
 
+// TestEscapeControlChars checks that control characters become valid escape
+// sequences instead of a prefix followed by the raw byte.
+func TestEscapeControlChars(t *testing.T) {
+	escaper := NewAutoEscaper(nil)
+	tests := []struct {
+		ctx  EscapeContext
+		want string
+	}{
+		{EscapeContextJSON, `a\u0001b\u001Fc\u007F`},
+		{EscapeContextCSS, `a\1 b\1F c\7F `},
+	}
+	for _, tt := range tests {
+		if got := escaper.Escape("a\x01b\x1fc\x7f", tt.ctx); got != tt.want {
+			t.Errorf("context %v: got %q, want %q", tt.ctx, got, tt.want)
+		}
+	}
+}
+
 // TestEscapeURLDetails tests URL escaping
 func TestEscapeURLDetails(t *testing.T) {
 	escaper := NewAutoEscaper(nil)

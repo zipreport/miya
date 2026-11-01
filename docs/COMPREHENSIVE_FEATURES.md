@@ -1,20 +1,16 @@
 # Comprehensive Miya Feature Documentation
 
-This document provides the complete feature reference for Miya (miya), based on the comprehensive demonstration implementation showing **131+ features** with **95%+ Jinja2 compatibility**.
+This document provides the complete feature reference for Miya (miya), based on the comprehensive demonstration implementation showing 131+ features.
 
 ##  Quick Summary
 
 - ** 131+ Features Implemented** and demonstrated
-- ** 95%+ Jinja2 Compatibility** for production use
 - ** Complete Template System** including inheritance, macros, filters
-- ** Production Ready** with performance optimizations and caching
-- ** Thread Safe** for concurrent web applications
+- ** Concurrency**: An `Environment` is safe for concurrent use; configure it (`SetConfig`, `SetLoader`, loader templates) before rendering starts.
 
 ---
 
 ##  Template Inheritance System
-
-### **Status: 100% Compatible **
 
 ```html+jinja
 <!-- base.html -->
@@ -53,8 +49,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 ---
 
 ##  Control Structures 
-
-### **Status: 100% Compatible **
 
 ### **Conditional Statements**
 ```html+jinja
@@ -140,8 +134,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 
 ##  Include & Import System
 
-### **Status: 100% Compatible **
-
 ### **Template Inclusion**
 ```html+jinja
 <!-- Include with context passing -->
@@ -172,8 +164,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 ---
 
 ##  Macro System
-
-### **Status: 90% Compatible **
 
 ```html+jinja
 <!-- Basic macro -->
@@ -218,27 +208,22 @@ This document provides the complete feature reference for Miya (miya), based on 
 -  Macro imports and namespaces
 -  Call blocks: `{% call macro() %}content{% endcall %}`
 
-**Limited Features:**
--  Variable arguments (`*args`) - Parser limitation
--  Keyword arguments (`**kwargs`) - Parser limitation
+-  Extra arguments: as in Jinja2, extra positional and keyword arguments arrive in the implicit `varargs` and `kwargs` variables (`*args`/`**kwargs` in a signature are not Jinja2 syntax)
 
-**Workarounds:**
 ```html+jinja
-<!-- Instead of *args, use explicit parameters or lists -->
-{% macro render_items(items, class="") %}
-    <ul class="{{ class }}">
-    {% for item in items %}
+{% macro render_items() %}
+    <ul>
+    {% for item in varargs %}
         <li>{{ item }}</li>
     {% endfor %}
     </ul>
 {% endmacro %}
+{{ render_items("a", "b") }}
 ```
 
 ---
 
 ##  Filter Library
-
-### **Status: 98% Compatible **
 
 ### **String Filters (18 filters)**
 ```html+jinja
@@ -248,9 +233,9 @@ This document provides the complete feature reference for Miya (miya), based on 
 {{ "hello world"|capitalize }}               → "Hello world"
 {{ "  text  "|trim }}                        → "text"
 {{ "Hello World"|replace("World", "Go") }}   → "Hello Go"
-{{ "Very long text"|truncate(10) }}          → "Very lo..."
+{{ "Very long text"|truncate(10, leeway=0) }} → "Very..."
 {{ "hello"|center(10, "-") }}                → "--hello---"
-{{ "text"|indent(4) }}                       → "    text"
+{{ "text"|indent(4, first=true) }}           → "    text"
 {{ "hello world"|wordwrap(5) }}              → "hello\nworld"
 {{ "hello world"|wordcount }}                → 2
 {{ text|startswith("Hello") }}               → true/false
@@ -263,9 +248,9 @@ This document provides the complete feature reference for Miya (miya), based on 
 
 ### **Collection Filters (15 filters)**
 ```html+jinja
-{{ [1,3,2]|sort }}                          → [1,2,3]
-{{ [1,2,3]|reverse }}                       → [3,2,1]
-{{ [1,1,2,2]|unique }}                      → [1,2]
+{{ [1,3,2]|sort }}                          → [1, 2, 3]
+{{ [1,2,3]|reverse }}                       → [3, 2, 1]
+{{ [1,1,2,2]|unique }}                      → [1, 2]
 {{ [1,2,3]|first }}                         → 1
 {{ [1,2,3]|last }}                          → 3
 {{ [1,2,3]|length }}                        → 3
@@ -273,11 +258,11 @@ This document provides the complete feature reference for Miya (miya), based on 
 {{ users|selectattr("active") }}            → active users only
 {{ users|rejectattr("active") }}            → inactive users only
 {{ users|map("name")|list }}                → list of names
-{{ range(12)|batch(3) }}                    → [[0,1,2],[3,4,5],[6,7,8],[9,10,11]]
-{{ items|slice(5) }}                        → first 5 items
-{{ dict|items }}                            → [(k1,v1), (k2,v2)]
-{{ dict|keys }}                             → [k1, k2]
-{{ dict|values }}                           → [v1, v2]
+{{ range(12)|batch(3) }}                    → [[0, 1, 2], [3, 4, 5], [6, 7, 8], [9, 10, 11]]
+{{ [1,2,3,4,5,6,7]|slice(3) }}              → [[1, 2, 3], [4, 5], [6, 7]] (3 columns)
+{{ dict|items }}                            → [['k1', 'v1'], ['k2', 'v2']]
+{{ dict|keys }}                             → ['k1', 'k2']
+{{ dict|values }}                           → ['v1', 'v2']
 ```
 
 ### **Numeric Filters (10 filters)**
@@ -304,7 +289,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 {{ "Visit https://example.com"|urlize }}    → clickable links
 {{ html|truncatehtml(100) }}                → truncate preserving HTML
 {{ html|striptags }}                        → remove HTML tags
-{{ content|autoescape }}                    → auto HTML escaping
 {{ content|marksafe }}                      → mark as safe HTML
 {{ attrs|xmlattr }}                         → XML attributes
 ```
@@ -314,14 +298,14 @@ This document provides the complete feature reference for Miya (miya), based on 
 {{ user.email|default("No email") }}        → fallback value
 {{ user.email|d("No email") }}              → alias
 {{ user|attr("name") }}                     → get attribute
-{{ "Hello {0}"|format("World") }}           → "Hello World"
+{{ "Hello %s"|format("World") }}           → "Hello World"
 {{ data|pprint }}                           → pretty print
 {{ dict|dictsort }}                         → sort by keys
 {{ items|groupby("category") }}             → group by attribute
 {{ data|tojson }}                           → JSON string
 {{ json_string|fromjson }}                  → parsed object
 {{ value|string }}                          → string conversion
-{{ 1536|filesizeformat }}                  → "1.5 KB"
+{{ 1536|filesizeformat }}                  → "1.5 kB"
 ```
 
 ### **Date/Time Filters (8 filters)**
@@ -339,8 +323,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 ---
 
 ##  Test Expressions
-
-### **Status: 95% Compatible **
 
 ### **Type Tests (8 tests)**
 ```html+jinja
@@ -398,8 +380,6 @@ This document provides the complete feature reference for Miya (miya), based on 
 ---
 
 ##  Advanced Features
-
-### **Status: 85% Compatible **
 
 ### **Whitespace Control**
 ```html+jinja
@@ -461,8 +441,6 @@ Numbers like {{ 12345 }} are also affected.
 
 ##  Performance & Production Features
 
-### **Status: 100% Implemented **
-
 ### **Caching System**
 -  **Template Compilation Caching** - LRU cache for parsed templates
 -  **Inheritance Resolution Caching** - Cached template inheritance chains
@@ -476,8 +454,6 @@ Numbers like {{ 12345 }} are also affected.
 
 ### **Runtime Optimizations**
 -  **Expression Evaluation** - Optimized AST evaluation
--  **Filter Chain Optimization** - Efficient filter processing
--  **Memory Pooling** - Reduced garbage collection pressure
 -  **Variable Resolution** - Fast context variable lookup
 
 ### **Error Handling**
@@ -531,45 +507,24 @@ ctx.Set("current_time", time.Now())
 
 ---
 
-##  Feature Compatibility Summary
+##  Feature Compatibility
 
-| Category | Total Features | Implemented | Compatibility | Status |
-|----------|----------------|-------------|---------------|---------|
-| **Template Inheritance** | 4 | 4 | 100% |  |
-| **Control Structures** | 7 | 7 | 100% |  |
-| **Include/Import System** | 3 | 3 | 100% |  |
-| **Macro System** | 6 | 5 | 90% |  |
-| **String Filters** | 18 | 18 | 100% |  |
-| **Collection Filters** | 15 | 15 | 100% |  |
-| **Numeric Filters** | 10 | 10 | 100% |  |
-| **HTML/Security Filters** | 11 | 11 | 100% |  |
-| **Utility Filters** | 11 | 11 | 100% |  |
-| **Date/Time Filters** | 8 | 7 | 90% |  |
-| **Test Expressions** | 26 | 25 | 95% |  |
-| **Advanced Features** | 8 | 7 | 85% |  |
-| **Performance Features** | 8 | 8 | 100% |  |
-| **Environment/Config** | 6 | 6 | 100% |  |
-
-### **Overall Compatibility: 95.4%**
-
-**Total Features: 131 implemented out of 136 possible**
+miya's conformance suite (`tests/conformance/`) holds 300 small templates written to probe edge cases and known bugs; they are not a sample of real templates. At this commit miya matches Jinja2 3.1.6 on 291 of them (same output, or failing in the same phase for the cases that expect an error), after normalising the printing differences listed in [the feature matrix](JINJA2_VS_MIYA_FEATURE_MATRIX.md). 7 of the remaining cases are deliberate differences. Every divergence and its reason is listed in `tests/conformance/known_divergences.json`. This is a regression net, not a compatibility percentage.
 
 ---
 
 ##  Production Readiness Assessment
 
-### ** Fully Production Ready**
+### **Core features**
 - Complete template inheritance system
 - Comprehensive filter library (73 filters)
 - Full test expression support (26 tests) 
 - Advanced template features (whitespace, escaping, raw blocks)
-- High-performance caching and optimizations
-- Thread-safe concurrent operations
+- Template caching
 - Professional template organization (FileSystemLoader)
 - Robust error handling and debugging
 
-### ** Enterprise Grade**
-- Memory optimization and pooling
+### **Configuration and security**
 - Configurable caching strategies
 - Multiple template loader types
 - Environment configuration options
@@ -580,7 +535,6 @@ ctx.Set("current_time", time.Now())
 - Clear, comprehensive error messages
 - Hot template reloading (development)
 - Template debugging and inspection
-- Complete feature parity with Jinja2
 - Extensive documentation and examples
 
 ---
@@ -674,4 +628,4 @@ ctx.Set("current_time", time.Now())
 
 ---
 
-**This comprehensive feature set makes Miya suitable for production web applications requiring full Jinja2 template compatibility in Go.**
+**This comprehensive feature set makes Miya suitable for production web applications that need a Jinja2-style template engine in Go.**

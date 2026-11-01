@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,6 +14,27 @@ type Parser struct {
 	tokens  []*lexer.Token
 	current int
 	errors  []string
+	depth   int // nesting of parsePrimary/parseBlockStatement calls
+}
+
+// maxParseDepth bounds expression and statement nesting so a deeply nested
+// template returns an error instead of overflowing the goroutine stack.
+// Jinja2 itself fails at about 100 levels, so no working template comes close.
+const maxParseDepth = 500
+
+func (p *Parser) enterNesting() error {
+	p.depth++
+	if p.depth > maxParseDepth {
+		return p.error(fmt.Sprintf("template nesting too deep (limit %d)", maxParseDepth))
+	}
+	return nil
+}
+
+// nest counts one more level for a chain that wraps its left operand in a new
+// node on each iteration (1 + 1 + 1 ...); the caller gives back *added levels.
+func (p *Parser) nest(added *int) error {
+	*added++
+	return p.enterNesting()
 }
 
 // NewParser creates a new parser with the given tokens
@@ -45,6 +67,10 @@ func (p *Parser) Parse() (*TemplateNode, error) {
 
 	if len(p.errors) > 0 {
 		return nil, fmt.Errorf("parse errors: %s", strings.Join(p.errors, "; "))
+	}
+
+	if err := CheckDuplicateBlocks(template); err != nil {
+		return nil, err
 	}
 
 	return template, nil
@@ -92,6 +118,10 @@ func (p *Parser) parseVariable() (Node, error) {
 
 // parseBlockStatement parses block statements {% ... %}
 func (p *Parser) parseBlockStatement() (Node, error) {
+	defer func() { p.depth-- }()
+	if err := p.enterNesting(); err != nil {
+		return nil, err
+	}
 	p.advance() // consume {% or {%-
 
 	if p.isAtEnd() {
@@ -312,7 +342,7 @@ func (p *Parser) parseForStatement() (Node, error) {
 	}
 	p.advance() // consume 'in'
 
-	iterable, err := p.parseOr() // Use parseOr to avoid consuming the 'if' token
+	iterable, err := p.parseExpressionList(p.parseOr) // Use parseOr to avoid consuming the 'if' token
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +452,12 @@ func (p *Parser) parseSetStatement() (Node, error) {
 	if err != nil {
 		return nil, p.error("syntax error: expected assignment target after 'set'")
 	}
-	targets = append(targets, firstTarget)
+	if tuple, ok := firstTarget.(*ListNode); ok {
+		// {% set (a, b) = ... %}
+		targets = append(targets, tuple.Elements...)
+	} else {
+		targets = append(targets, firstTarget)
+	}
 
 	// Check for multiple assignment (comma-separated targets)
 	for p.check(lexer.TokenComma) {
@@ -439,7 +474,7 @@ func (p *Parser) parseSetStatement() (Node, error) {
 		// Regular assignment: {% set var = value %} or {% set a.b = value %}
 		p.advance() // consume '='
 
-		value, err := p.parseExpression()
+		value, err := p.parseExpressionList(p.parseExpression)
 		if err != nil {
 			return nil, err
 		}
@@ -512,6 +547,11 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 		return nil, p.error("expected block name after 'block'")
 	}
 	blockName := p.advance().Value
+
+	// "scoped" is accepted; blocks always see the variables around them
+	if p.check(lexer.TokenIdentifier) && p.peek().Value == "scoped" {
+		p.advance()
+	}
 
 	if !p.check(lexer.TokenBlockEnd) && !p.check(lexer.TokenBlockEndTrim) {
 		return nil, p.error("expected '%}' after block name")
@@ -592,24 +632,53 @@ func (p *Parser) parseIncludeStatement() (Node, error) {
 
 	includeNode := NewIncludeNode(template, includeToken.Line, includeToken.Column)
 
-	// Check for optional context
-	if p.check(lexer.TokenWith) {
-		p.advance() // consume 'with'
-		context, err := p.parseExpression()
-		if err != nil {
-			return nil, err
+	// Jinja2 order: [ignore missing] [with context | without context].
+	// miya also accepts "with <expr>" and the older order
+	// "with context ignore missing".
+	ignoreMissing := func() error {
+		if !p.check(lexer.TokenIgnore) {
+			return nil
 		}
-		includeNode.Context = context
-	}
-
-	// Check for ignore missing
-	if p.check(lexer.TokenIgnore) {
 		p.advance() // consume 'ignore'
 		if !p.check(lexer.TokenMissing) {
-			return nil, p.error("expected 'missing' after 'ignore'")
+			return p.error("expected 'missing' after 'ignore'")
 		}
 		p.advance() // consume 'missing'
 		includeNode.IgnoreMissing = true
+		return nil
+	}
+	if err := ignoreMissing(); err != nil {
+		return nil, err
+	}
+
+	switch {
+	case p.check(lexer.TokenIdentifier) && p.peek().Value == "without":
+		p.advance() // consume 'without'
+		if !p.check(lexer.TokenIdentifier) || p.peek().Value != "context" {
+			return nil, p.error("expected 'context' after 'without'")
+		}
+		p.advance() // consume 'context'
+		includeNode.WithoutContext = true
+	case p.check(lexer.TokenWith):
+		p.advance() // consume 'with'
+		// "with context" is the keyword pair; "with context.x" is miya's
+		// "with <expr>" form, as it parsed before
+		if p.check(lexer.TokenIdentifier) && p.peek().Value == "context" && !p.checkNext(lexer.TokenDot) && !p.checkNext(lexer.TokenLeftBracket) && !p.checkNext(lexer.TokenPipe) {
+			p.advance() // consume 'context'
+			includeNode.WithContext = true
+		} else {
+			context, err := p.parseExpression()
+			if err != nil {
+				return nil, err
+			}
+			includeNode.Context = context
+		}
+	}
+
+	if !includeNode.IgnoreMissing {
+		if err := ignoreMissing(); err != nil {
+			return nil, err
+		}
 	}
 
 	if !p.check(lexer.TokenBlockEnd) && !p.check(lexer.TokenBlockEndTrim) {
@@ -633,36 +702,12 @@ func (p *Parser) parseMacroDefinition() (Node, error) {
 
 	// Parse parameters
 	if p.check(lexer.TokenLeftParen) {
-		p.advance() // consume '('
-
-		for !p.check(lexer.TokenRightParen) && !p.isAtEnd() {
-			if !p.check(lexer.TokenIdentifier) {
-				return nil, p.error("expected parameter name")
-			}
-			paramName := p.advance().Value
-			macroNode.Parameters = append(macroNode.Parameters, paramName)
-
-			// Check for default value
-			if p.check(lexer.TokenAssign) {
-				p.advance() // consume '='
-				defaultValue, err := p.parseExpression()
-				if err != nil {
-					return nil, err
-				}
-				macroNode.Defaults[paramName] = defaultValue
-			}
-
-			if p.check(lexer.TokenComma) {
-				p.advance() // consume ','
-			} else if !p.check(lexer.TokenRightParen) {
-				return nil, p.error("expected ',' or ')' in parameter list")
-			}
+		params, defaults, err := p.parseParameterList()
+		if err != nil {
+			return nil, err
 		}
-
-		if !p.check(lexer.TokenRightParen) {
-			return nil, p.error("expected ')' after parameter list")
-		}
-		p.advance() // consume ')'
+		macroNode.Parameters = params
+		macroNode.Defaults = defaults
 	}
 
 	if !p.check(lexer.TokenBlockEnd) && !p.check(lexer.TokenBlockEndTrim) {
@@ -703,7 +748,50 @@ func (p *Parser) parseMacroDefinition() (Node, error) {
 	}
 	p.advance()
 
+	usage, err := findMacroUsage(macroNode.Parameters, macroNode.Defaults, macroNode.Body)
+	if err != nil {
+		return nil, p.error(err.Error())
+	}
+	macroNode.MacroUsage = usage
 	return macroNode, nil
+}
+
+// parseParameterList parses "(a, b=expr)" for macros and call blocks. It
+// consumes the opening parenthesis itself.
+func (p *Parser) parseParameterList() ([]string, map[string]ExpressionNode, error) {
+	p.advance() // consume '('
+	params := []string{}
+	defaults := make(map[string]ExpressionNode)
+
+	for !p.check(lexer.TokenRightParen) && !p.isAtEnd() {
+		if !p.check(lexer.TokenIdentifier) {
+			return nil, nil, p.error("expected parameter name")
+		}
+		paramName := p.advance().Value
+		params = append(params, paramName)
+
+		// Check for default value
+		if p.check(lexer.TokenAssign) {
+			p.advance() // consume '='
+			defaultValue, err := p.parseExpression()
+			if err != nil {
+				return nil, nil, err
+			}
+			defaults[paramName] = defaultValue
+		}
+
+		if p.check(lexer.TokenComma) {
+			p.advance() // consume ','
+		} else if !p.check(lexer.TokenRightParen) {
+			return nil, nil, p.error("expected ',' or ')' in parameter list")
+		}
+	}
+
+	if !p.check(lexer.TokenRightParen) {
+		return nil, nil, p.error("expected ')' after parameter list")
+	}
+	p.advance() // consume ')'
+	return params, defaults, nil
 }
 
 // parseRawBlock parses raw blocks
@@ -715,18 +803,10 @@ func (p *Parser) parseRawBlock() (Node, error) {
 	}
 	p.advance()
 
-	var content strings.Builder
-
-	// Collect everything until {% endraw %}
-	for !p.isAtEnd() {
-		if p.check(lexer.TokenBlockStart) || p.check(lexer.TokenBlockStartTrim) {
-			if p.peekBlockType() == lexer.TokenEndraw {
-				break
-			}
-		}
-
-		token := p.advance()
-		content.WriteString(token.Value)
+	// The lexer delivers the raw content as at most one text token
+	content := ""
+	if p.check(lexer.TokenText) {
+		content = p.advance().Value
 	}
 
 	// Expect endraw
@@ -745,7 +825,7 @@ func (p *Parser) parseRawBlock() (Node, error) {
 	}
 	p.advance()
 
-	return NewRawNode(content.String(), rawToken.Line, rawToken.Column), nil
+	return NewRawNode(content, rawToken.Line, rawToken.Column), nil
 }
 
 // parseAutoescapeBlock parses autoescape blocks
@@ -908,14 +988,20 @@ func (p *Parser) parseConditional() (ExpressionNode, error) {
 			return nil, err
 		}
 
-		if !p.check(lexer.TokenElse) {
-			return nil, p.error("expected 'else' in conditional expression")
-		}
-		p.advance() // consume 'else'
+		// Without "else" the expression is undefined when the condition is false
+		var falseExpr ExpressionNode
+		if p.check(lexer.TokenElse) {
+			p.advance() // consume 'else'
 
-		falseExpr, err := p.parseConditional()
-		if err != nil {
-			return nil, err
+			if err := p.enterNesting(); err != nil {
+				p.depth--
+				return nil, err
+			}
+			falseExpr, err = p.parseConditional()
+			p.depth--
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		return NewConditionalNode(condition, expr, falseExpr, p.previous().Line, p.previous().Column), nil
@@ -926,12 +1012,17 @@ func (p *Parser) parseConditional() (ExpressionNode, error) {
 
 // parseOr parses logical OR expressions
 func (p *Parser) parseOr() (ExpressionNode, error) {
+	added := 0
+	defer func() { p.depth -= added }()
 	expr, err := p.parseAnd()
 	if err != nil {
 		return nil, err
 	}
 
 	for p.check(lexer.TokenOr) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
 		right, err := p.parseAnd()
 		if err != nil {
@@ -945,12 +1036,17 @@ func (p *Parser) parseOr() (ExpressionNode, error) {
 
 // parseAnd parses logical AND expressions
 func (p *Parser) parseAnd() (ExpressionNode, error) {
+	added := 0
+	defer func() { p.depth -= added }()
 	expr, err := p.parseNot()
 	if err != nil {
 		return nil, err
 	}
 
 	for p.check(lexer.TokenAnd) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
 		right, err := p.parseNot()
 		if err != nil {
@@ -966,110 +1062,69 @@ func (p *Parser) parseAnd() (ExpressionNode, error) {
 func (p *Parser) parseNot() (ExpressionNode, error) {
 	if p.check(lexer.TokenNot) {
 		operator := p.advance()
+		if err := p.enterNesting(); err != nil {
+			p.depth--
+			return nil, err
+		}
 		expr, err := p.parseNot()
+		p.depth--
 		if err != nil {
 			return nil, err
 		}
 		return AcquireUnaryOpNode(operator.Value, expr, operator.Line, operator.Column), nil
 	}
 
-	return p.parseIs()
+	return p.parseComparison()
 }
 
-// parseIs parses 'is' test expressions
-func (p *Parser) parseIs() (ExpressionNode, error) {
-	expr, err := p.parseComparison()
+// parseComparison parses comparison expressions. One comparison is a
+// BinaryOpNode; a chain such as a < b < c is a CompareNode, meaning
+// a < b and b < c, as in Jinja2.
+func (p *Parser) parseComparison() (ExpressionNode, error) {
+	left, err := p.parseAddition()
 	if err != nil {
 		return nil, err
 	}
 
-	if p.check(lexer.TokenIs) {
-		p.advance() // consume 'is'
-
-		negated := false
-		if p.check(lexer.TokenNot) {
-			p.advance() // consume 'not'
-			negated = true
+	var ops []CompareOperand
+	for p.checkAny(lexer.TokenGreater, lexer.TokenGreaterEqual, lexer.TokenLess, lexer.TokenLessEqual, lexer.TokenEqual, lexer.TokenNotEqual, lexer.TokenIn) || (p.check(lexer.TokenNot) && p.checkNext(lexer.TokenIn)) {
+		operator := p.advance()
+		op := operator.Value
+		if operator.Type == lexer.TokenNot {
+			p.advance() // consume 'in'
+			op = "not in"
 		}
-
-		if !p.check(lexer.TokenIdentifier) && !p.check(lexer.TokenNoneKeyword) {
-			return nil, p.error("expected test name after 'is'")
+		right, err := p.parseAddition()
+		if err != nil {
+			return nil, err
 		}
-		testName := p.advance().Value
-
-		testNode := NewTestNode(expr, testName, p.previous().Line, p.previous().Column)
-		testNode.Negated = negated
-
-		// Parse test arguments if present
-		if p.check(lexer.TokenLeftParen) {
-			p.advance() // consume '('
-
-			for !p.check(lexer.TokenRightParen) && !p.isAtEnd() {
-				arg, err := p.parseExpression()
-				if err != nil {
-					return nil, err
-				}
-				testNode.Arguments = append(testNode.Arguments, arg)
-
-				if p.check(lexer.TokenComma) {
-					p.advance() // consume ','
-				} else if !p.check(lexer.TokenRightParen) {
-					return nil, p.error("expected ',' or ')' in test arguments")
-				}
-			}
-
-			if !p.check(lexer.TokenRightParen) {
-				return nil, p.error("expected ')' after test arguments")
-			}
-			p.advance() // consume ')'
-		}
-
-		return testNode, nil
+		ops = append(ops, CompareOperand{Operator: op, Right: right, Line: operator.Line, Column: operator.Column})
 	}
 
-	return expr, nil
+	switch len(ops) {
+	case 0:
+		return left, nil
+	case 1:
+		return AcquireBinaryOpNode(left, ops[0].Operator, ops[0].Right, ops[0].Line, ops[0].Column), nil
+	}
+	return NewCompareNode(left, ops, ops[0].Line, ops[0].Column), nil
 }
 
-// parseComparison parses comparison expressions
-func (p *Parser) parseComparison() (ExpressionNode, error) {
+// parseAddition parses addition and subtraction
+func (p *Parser) parseAddition() (ExpressionNode, error) {
+	added := 0
+	defer func() { p.depth -= added }()
 	expr, err := p.parseConcatenation()
 	if err != nil {
 		return nil, err
 	}
 
-	for p.checkAny(lexer.TokenGreater, lexer.TokenGreaterEqual, lexer.TokenLess, lexer.TokenLessEqual, lexer.TokenEqual, lexer.TokenNotEqual, lexer.TokenIn) || (p.check(lexer.TokenNot) && p.checkNext(lexer.TokenIn)) {
-		if p.check(lexer.TokenNot) && p.checkNext(lexer.TokenIn) {
-			// Handle "not in" operator
-			notToken := p.advance() // consume 'not'
-			p.advance()             // consume 'in'
-			right, err := p.parseConcatenation()
-			if err != nil {
-				return nil, err
-			}
-			expr = AcquireBinaryOpNode(expr, "not in", right, notToken.Line, notToken.Column)
-		} else {
-			operator := p.advance()
-			right, err := p.parseConcatenation()
-			if err != nil {
-				return nil, err
-			}
-			expr = AcquireBinaryOpNode(expr, operator.Value, right, operator.Line, operator.Column)
+	for p.checkAny(lexer.TokenPlus, lexer.TokenMinus) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
 		}
-	}
-
-	return expr, nil
-}
-
-// parseConcatenation parses string concatenation (~)
-func (p *Parser) parseConcatenation() (ExpressionNode, error) {
-	expr, err := p.parseAddition()
-	if err != nil {
-		return nil, err
-	}
-
-	for p.check(lexer.TokenTilde) {
 		operator := p.advance()
-		right, err := p.parseAddition()
+		right, err := p.parseConcatenation()
 		if err != nil {
 			return nil, err
 		}
@@ -1079,14 +1134,20 @@ func (p *Parser) parseConcatenation() (ExpressionNode, error) {
 	return expr, nil
 }
 
-// parseAddition parses addition and subtraction
-func (p *Parser) parseAddition() (ExpressionNode, error) {
+// parseConcatenation parses string concatenation (~), which binds tighter
+// than + and - and looser than *, as in Jinja2
+func (p *Parser) parseConcatenation() (ExpressionNode, error) {
+	added := 0
+	defer func() { p.depth -= added }()
 	expr, err := p.parseMultiplication()
 	if err != nil {
 		return nil, err
 	}
 
-	for p.checkAny(lexer.TokenPlus, lexer.TokenMinus) {
+	for p.check(lexer.TokenTilde) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
 		right, err := p.parseMultiplication()
 		if err != nil {
@@ -1100,14 +1161,19 @@ func (p *Parser) parseAddition() (ExpressionNode, error) {
 
 // parseMultiplication parses multiplication, division, and modulo
 func (p *Parser) parseMultiplication() (ExpressionNode, error) {
-	expr, err := p.parseUnary()
+	added := 0
+	defer func() { p.depth -= added }()
+	expr, err := p.parsePower()
 	if err != nil {
 		return nil, err
 	}
 
 	for p.checkAny(lexer.TokenMultiply, lexer.TokenDivide, lexer.TokenFloorDivide, lexer.TokenModulo) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
-		right, err := p.parseUnary()
+		right, err := p.parsePower()
 		if err != nil {
 			return nil, err
 		}
@@ -1117,30 +1183,22 @@ func (p *Parser) parseMultiplication() (ExpressionNode, error) {
 	return expr, nil
 }
 
-// parseUnary parses unary expressions
-func (p *Parser) parseUnary() (ExpressionNode, error) {
-	if p.checkAny(lexer.TokenMinus, lexer.TokenPlus) {
-		operator := p.advance()
-		expr, err := p.parsePower() // Unary should have lower precedence than power
-		if err != nil {
-			return nil, err
-		}
-		return AcquireUnaryOpNode(operator.Value, expr, operator.Line, operator.Column), nil
-	}
-
-	return p.parsePower()
-}
-
-// parsePower parses power expressions (**)
+// parsePower parses **. As in Jinja2 it is left-associative and its operands
+// are unary expressions: 2 ** 3 ** 2 is 64 and -2 ** 2 is 4.
 func (p *Parser) parsePower() (ExpressionNode, error) {
-	expr, err := p.parsePostfix() // Power operates on postfix expressions
+	added := 0
+	defer func() { p.depth -= added }()
+	expr, err := p.parseUnary(true)
 	if err != nil {
 		return nil, err
 	}
 
-	if p.check(lexer.TokenPower) {
+	for p.check(lexer.TokenPower) {
+		if err := p.nest(&added); err != nil {
+			return nil, err
+		}
 		operator := p.advance()
-		right, err := p.parseUnary() // Right associative, and unary can bind to the right side
+		right, err := p.parseUnary(true)
 		if err != nil {
 			return nil, err
 		}
@@ -1148,6 +1206,33 @@ func (p *Parser) parsePower() (ExpressionNode, error) {
 	}
 
 	return expr, nil
+}
+
+// parseUnary parses unary minus and plus. As in Jinja2, the sign binds
+// before filters and tests: -x|abs is (-x)|abs.
+func (p *Parser) parseUnary(withFilters bool) (ExpressionNode, error) {
+	var expr ExpressionNode
+	if p.checkAny(lexer.TokenMinus, lexer.TokenPlus) {
+		// - - - 1 recurses here, not through parsePrimary: count the level
+		operator := p.advance()
+		if err := p.enterNesting(); err != nil {
+			p.depth--
+			return nil, err
+		}
+		operand, err := p.parseUnary(false)
+		p.depth--
+		if err != nil {
+			return nil, err
+		}
+		expr = AcquireUnaryOpNode(operator.Value, operand, operator.Line, operator.Column)
+	} else {
+		primary, err := p.parsePrimary()
+		if err != nil {
+			return nil, err
+		}
+		expr = primary
+	}
+	return p.parsePostfixOps(expr, withFilters)
 }
 
 // parsePostfix parses postfix expressions (filters, attribute access, etc.)
@@ -1156,11 +1241,35 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 	if err != nil {
 		return nil, err
 	}
+	return p.parsePostfixOps(expr, true)
+}
 
+// parsePostfixOps applies the postfix operators (attribute, index, call,
+// and, with withFilters, filters and tests) to expr.
+func (p *Parser) parsePostfixOps(expr ExpressionNode, withFilters bool) (ExpressionNode, error) {
+	var err error
+	added := 0
+	defer func() { p.depth -= added }()
 	for {
+		// every postfix operator wraps expr in a deeper node
+		if p.checkAny(lexer.TokenDot, lexer.TokenLeftBracket, lexer.TokenLeftParen) || (withFilters && p.checkAny(lexer.TokenPipe, lexer.TokenIs)) {
+			if err := p.nest(&added); err != nil {
+				return nil, err
+			}
+		}
 		if p.check(lexer.TokenDot) {
 			p.advance() // consume '.'
-			if !p.check(lexer.TokenIdentifier) {
+			if p.check(lexer.TokenInteger) {
+				// b.0 is b[0]
+				tok := p.advance()
+				index, convErr := strconv.Atoi(tok.Value)
+				if convErr != nil {
+					return nil, p.error(fmt.Sprintf("invalid integer: %s", tok.Value))
+				}
+				expr = AcquireGetItemNode(expr, AcquireLiteralNode(index, tok.Value, tok.Line, tok.Column), tok.Line, tok.Column)
+				continue
+			}
+			if !isNameToken(p.peek()) {
 				return nil, p.error("expected attribute name after '.'")
 			}
 			attr := p.advance().Value
@@ -1254,7 +1363,13 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 				}
 			}
 
-		} else if p.check(lexer.TokenPipe) {
+		} else if withFilters && p.check(lexer.TokenIs) {
+			expr, err = p.parseTest(expr)
+			if err != nil {
+				return nil, err
+			}
+
+		} else if withFilters && p.check(lexer.TokenPipe) {
 			p.advance() // consume '|'
 			if !p.check(lexer.TokenIdentifier) && !p.check(lexer.TokenFilter) {
 				return nil, p.error("expected filter name after '|'")
@@ -1263,6 +1378,7 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 
 			var args []ExpressionNode
 			namedArgs := make(map[string]ExpressionNode)
+			sawKeyword := false
 
 			if p.check(lexer.TokenLeftParen) {
 				p.advance() // consume '('
@@ -1282,7 +1398,11 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 								return nil, err
 							}
 							namedArgs[argName] = argValue
+							sawKeyword = true
 						} else {
+							if sawKeyword {
+								return nil, p.error("positional argument follows keyword argument")
+							}
 							// This is a positional argument, restore position and parse normally
 							p.current = savedPos
 							arg, err := p.parseOr() // Use parseOr to avoid conditional parsing issues
@@ -1292,6 +1412,9 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 							args = append(args, arg)
 						}
 					} else {
+						if sawKeyword {
+							return nil, p.error("positional argument follows keyword argument")
+						}
 						// Regular positional argument
 						arg, err := p.parseOr() // Use parseOr to avoid conditional parsing issues
 						if err != nil {
@@ -1387,8 +1510,90 @@ func (p *Parser) parsePostfix() (ExpressionNode, error) {
 	return expr, nil
 }
 
+// isNameToken reports whether tok is a name: an identifier, or a keyword,
+// which Jinja2 lexes as a plain name.
+func isNameToken(tok *lexer.Token) bool {
+	return tok.Type == lexer.TokenIdentifier || (tok.Value != "" && lexer.LookupKeyword(tok.Value) == tok.Type)
+}
+
+// parseTest parses "is [not] name", with arguments in parentheses or one
+// argument without them, as in "x is divisibleby 3".
+func (p *Parser) parseTest(expr ExpressionNode) (ExpressionNode, error) {
+	p.advance() // consume 'is'
+
+	negated := false
+	if p.check(lexer.TokenNot) {
+		p.advance() // consume 'not'
+		negated = true
+	}
+
+	if !isNameToken(p.peek()) {
+		return nil, p.error("expected test name after 'is'")
+	}
+	nameToken := p.advance()
+	testNode := NewTestNode(expr, nameToken.Value, nameToken.Line, nameToken.Column)
+	testNode.Negated = negated
+
+	switch {
+	case p.check(lexer.TokenLeftParen):
+		p.advance() // consume '('
+		for !p.check(lexer.TokenRightParen) && !p.isAtEnd() {
+			arg, err := p.parseExpression()
+			if err != nil {
+				return nil, err
+			}
+			testNode.Arguments = append(testNode.Arguments, arg)
+
+			if p.check(lexer.TokenComma) {
+				p.advance() // consume ','
+			} else if !p.check(lexer.TokenRightParen) {
+				return nil, p.error("expected ',' or ')' in test arguments")
+			}
+		}
+		if !p.check(lexer.TokenRightParen) {
+			return nil, p.error("expected ')' after test arguments")
+		}
+		p.advance() // consume ')'
+	case p.check(lexer.TokenIs):
+		return nil, p.error("cannot chain multiple tests with 'is'")
+	case p.canStartTestArgument():
+		arg, err := p.parsePrimary()
+		if err != nil {
+			return nil, err
+		}
+		arg, err = p.parsePostfixOps(arg, false)
+		if err != nil {
+			return nil, err
+		}
+		testNode.Arguments = append(testNode.Arguments, arg)
+	}
+
+	return testNode, nil
+}
+
+// canStartTestArgument reports whether the current token starts the single
+// unparenthesized argument of a test: a name, literal, list or dict, but not
+// "else", "or" or "and" (as in Jinja2), nor "if", "recursive", "in" or "not",
+// which miya cannot use as names and which end the test in templates miya
+// accepts today: {% for v in L if v is iterable recursive %},
+// {{ x is odd if t else 0 }}.
+func (p *Parser) canStartTestArgument() bool {
+	tok := p.peek()
+	switch tok.Type {
+	case lexer.TokenElse, lexer.TokenOr, lexer.TokenAnd, lexer.TokenIf, lexer.TokenRecursive, lexer.TokenIn, lexer.TokenNot:
+		return false
+	case lexer.TokenString, lexer.TokenInteger, lexer.TokenFloat, lexer.TokenLeftBracket, lexer.TokenLeftBrace:
+		return true
+	}
+	return isNameToken(tok)
+}
+
 // parsePrimary parses primary expressions
 func (p *Parser) parsePrimary() (ExpressionNode, error) {
+	defer func() { p.depth-- }()
+	if err := p.enterNesting(); err != nil {
+		return nil, err
+	}
 	switch p.peek().Type {
 	case lexer.TokenTrue, lexer.TokenFalse:
 		token := p.advance()
@@ -1401,7 +1606,7 @@ func (p *Parser) parsePrimary() (ExpressionNode, error) {
 
 	case lexer.TokenInteger:
 		token := p.advance()
-		value, err := strconv.Atoi(token.Value)
+		value, err := parseIntLiteral(token.Value)
 		if err != nil {
 			return nil, p.error(fmt.Sprintf("invalid integer: %s", token.Value))
 		}
@@ -1409,15 +1614,20 @@ func (p *Parser) parsePrimary() (ExpressionNode, error) {
 
 	case lexer.TokenFloat:
 		token := p.advance()
-		value, err := strconv.ParseFloat(token.Value, 64)
-		if err != nil {
+		value, err := strconv.ParseFloat(strings.ReplaceAll(token.Value, "_", ""), 64)
+		if err != nil && !errors.Is(err, strconv.ErrRange) {
 			return nil, p.error(fmt.Sprintf("invalid float: %s", token.Value))
 		}
 		return AcquireLiteralNode(value, token.Value, token.Line, token.Column), nil
 
 	case lexer.TokenString:
 		token := p.advance()
-		return AcquireLiteralNode(token.Value, token.Value, token.Line, token.Column), nil
+		value := token.Value
+		// Adjacent strings join, as in Jinja2: 'a' 'b' is 'ab'
+		for p.check(lexer.TokenString) {
+			value += p.advance().Value
+		}
+		return AcquireLiteralNode(value, value, token.Line, token.Column), nil
 
 	case lexer.TokenIdentifier:
 		token := p.advance()
@@ -1428,10 +1638,30 @@ func (p *Parser) parsePrimary() (ExpressionNode, error) {
 		return NewSuperNode(token.Line, token.Column), nil
 
 	case lexer.TokenLeftParen:
-		p.advance() // consume '('
+		open := p.advance() // consume '('
+		if p.check(lexer.TokenRightParen) {
+			p.advance() // consume ')'
+			return NewListNode(nil, open.Line, open.Column), nil
+		}
 		expr, err := p.parseExpression()
 		if err != nil {
 			return nil, err
+		}
+		if p.check(lexer.TokenComma) {
+			// A tuple; miya represents it as a list
+			elements := []ExpressionNode{expr}
+			for p.check(lexer.TokenComma) {
+				p.advance() // consume ','
+				if p.check(lexer.TokenRightParen) {
+					break
+				}
+				element, err := p.parseExpression()
+				if err != nil {
+					return nil, err
+				}
+				elements = append(elements, element)
+			}
+			expr = NewListNode(elements, open.Line, open.Column)
 		}
 		if !p.check(lexer.TokenRightParen) {
 			return nil, p.error("expected ')' after expression")
@@ -1445,9 +1675,47 @@ func (p *Parser) parsePrimary() (ExpressionNode, error) {
 	case lexer.TokenLeftBrace:
 		return p.parseDictLiteral()
 
+	case lexer.TokenAnd, lexer.TokenOr, lexer.TokenNot, lexer.TokenIs, lexer.TokenIn, lexer.TokenIf, lexer.TokenElse:
+		return nil, p.error(fmt.Sprintf("unexpected token in expression: %s", p.peek().Type))
+
 	default:
+		if isNameToken(p.peek()) {
+			// Other keywords (block, filter, missing, ...) are plain names here
+			token := p.advance()
+			return AcquireIdentifierNode(token.Value, token.Line, token.Column), nil
+		}
 		return nil, p.error(fmt.Sprintf("unexpected token in expression: %s", p.peek().Type))
 	}
+}
+
+// parseIntLiteral converts an integer token: decimal, or 0x/0o/0b, with
+// underscores between digits.
+func parseIntLiteral(text string) (int, error) {
+	digits := strings.ReplaceAll(text, "_", "")
+	if len(digits) > 1 && digits[0] == '0' && strings.ContainsAny(digits[1:2], "xXoObB") {
+		v, err := strconv.ParseInt(digits, 0, strconv.IntSize)
+		return int(v), err
+	}
+	return strconv.Atoi(digits)
+}
+
+// parseExpressionList parses one expression with parse, or several separated
+// by commas, which form a tuple (a list in miya): {% set a, b = 1, 2 %}.
+func (p *Parser) parseExpressionList(parse func() (ExpressionNode, error)) (ExpressionNode, error) {
+	first, err := parse()
+	if err != nil || !p.check(lexer.TokenComma) {
+		return first, err
+	}
+	elements := []ExpressionNode{first}
+	for p.check(lexer.TokenComma) {
+		p.advance() // consume ','
+		element, err := parse()
+		if err != nil {
+			return nil, err
+		}
+		elements = append(elements, element)
+	}
+	return NewListNode(elements, first.Line(), first.Column()), nil
 }
 
 // parseListLiteral parses list literals and comprehensions
@@ -1479,7 +1747,7 @@ func (p *Parser) parseListLiteral() (ExpressionNode, error) {
 		}
 		p.advance() // consume 'in'
 
-		iterable, err := p.parseExpression()
+		iterable, err := p.parseOr()
 		if err != nil {
 			return nil, err
 		}
@@ -1535,7 +1803,7 @@ func (p *Parser) parseDictLiteral() (ExpressionNode, error) {
 
 	if p.check(lexer.TokenRightBrace) {
 		p.advance() // consume '}'
-		return AcquireLiteralNode(map[string]interface{}{}, "{}", startToken.Line, startToken.Column), nil
+		return NewDictNode(nil, nil, startToken.Line, startToken.Column), nil
 	}
 
 	// Parse first key-value pair
@@ -1568,7 +1836,7 @@ func (p *Parser) parseDictLiteral() (ExpressionNode, error) {
 		}
 		p.advance() // consume 'in'
 
-		iterable, err := p.parseExpression()
+		iterable, err := p.parseOr()
 		if err != nil {
 			return nil, err
 		}
@@ -1595,9 +1863,9 @@ func (p *Parser) parseDictLiteral() (ExpressionNode, error) {
 		return compNode, nil
 	}
 
-	// Regular dictionary literal - for now return empty dict
-	// In a full implementation, we'd build the actual dictionary
-	pairs := make(map[string]interface{})
+	// Regular dictionary literal
+	keys := []ExpressionNode{key}
+	values := []ExpressionNode{value}
 
 	if p.check(lexer.TokenComma) {
 		p.advance() // consume ','
@@ -1618,9 +1886,8 @@ func (p *Parser) parseDictLiteral() (ExpressionNode, error) {
 				return nil, err
 			}
 
-			// Store key-value pair (simplified)
-			_ = key
-			_ = value
+			keys = append(keys, key)
+			values = append(values, value)
 
 			if p.check(lexer.TokenComma) {
 				p.advance() // consume ','
@@ -1635,28 +1902,36 @@ func (p *Parser) parseDictLiteral() (ExpressionNode, error) {
 	}
 	p.advance() // consume '}'
 
-	return AcquireLiteralNode(pairs, "", startToken.Line, startToken.Column), nil
+	return NewDictNode(keys, values, startToken.Line, startToken.Column), nil
 }
 
 // Helper methods
 
+// eof is the end-of-input token, with the position where the template ends.
+func (p *Parser) eof() *lexer.Token {
+	if n := len(p.tokens); n > 0 && p.tokens[n-1].Type == lexer.TokenEOF {
+		return p.tokens[n-1]
+	}
+	return &lexer.Token{Type: lexer.TokenEOF}
+}
+
 func (p *Parser) peek() *lexer.Token {
 	if p.isAtEnd() {
-		return &lexer.Token{Type: lexer.TokenEOF}
+		return p.eof()
 	}
 	return p.tokens[p.current]
 }
 
 func (p *Parser) peekNext() *lexer.Token {
 	if p.current+1 >= len(p.tokens) {
-		return &lexer.Token{Type: lexer.TokenEOF}
+		return p.eof()
 	}
 	return p.tokens[p.current+1]
 }
 
 func (p *Parser) previous() *lexer.Token {
 	if p.current == 0 {
-		return &lexer.Token{Type: lexer.TokenEOF}
+		return p.eof()
 	}
 	return p.tokens[p.current-1]
 }
@@ -1748,13 +2023,37 @@ func (p *Parser) parseImportStatement() (Node, error) {
 	}
 	alias := p.advance().Value
 
+	withContext, err := p.parseImportContext()
+	if err != nil {
+		return nil, err
+	}
+
 	// Expect closing %}
 	if !p.check(lexer.TokenBlockEnd) && !p.check(lexer.TokenBlockEndTrim) {
 		return nil, p.error("expected '%}' after import statement")
 	}
 	p.advance() // consume '%}'
 
-	return NewImportNode(importToken.Line, importToken.Column, template, alias), nil
+	node := NewImportNode(importToken.Line, importToken.Column, template, alias)
+	node.WithContext = withContext
+	return node, nil
+}
+
+// parseImportContext parses an optional "with context" or "without context"
+// and reports whether the import is with context.
+func (p *Parser) parseImportContext() (bool, error) {
+	withContext := false
+	if p.check(lexer.TokenWith) {
+		withContext = true
+	} else if !p.check(lexer.TokenIdentifier) || p.peek().Value != "without" {
+		return false, nil
+	}
+	p.advance() // consume 'with' or 'without'
+	if !p.check(lexer.TokenIdentifier) || p.peek().Value != "context" {
+		return false, p.error("expected 'context' after 'with' or 'without'")
+	}
+	p.advance() // consume 'context'
+	return withContext, nil
 }
 
 // parseFromStatement parses from-import statements {% from 'template' import name1, name2 %}
@@ -1797,9 +2096,18 @@ func (p *Parser) parseFromStatement() (Node, error) {
 		// Check for comma to continue or end
 		if p.check(lexer.TokenComma) {
 			p.advance() // consume ','
+			// As in Jinja2, a trailing comma may precede "with/without context".
+			if p.check(lexer.TokenWith) || (p.check(lexer.TokenIdentifier) && p.peek().Value == "without" && p.peekNext().Value == "context") {
+				break
+			}
 			continue
 		}
 		break
+	}
+
+	withContext, err := p.parseImportContext()
+	if err != nil {
+		return nil, err
 	}
 
 	// Expect closing %}
@@ -1808,7 +2116,9 @@ func (p *Parser) parseFromStatement() (Node, error) {
 	}
 	p.advance() // consume '%}'
 
-	return NewFromNode(fromToken.Line, fromToken.Column, template, names, aliases), nil
+	node := NewFromNode(fromToken.Line, fromToken.Column, template, names, aliases)
+	node.WithContext = withContext
+	return node, nil
 }
 
 func (p *Parser) error(message string) error {
@@ -1827,10 +2137,24 @@ func (p *Parser) GetErrors() []string {
 func (p *Parser) parseCallBlockStatement() (Node, error) {
 	startToken := p.advance() // consume 'call'
 
+	// Optional caller parameters: {% call(a, b=1) macro() %}
+	var params []string
+	var defaults map[string]ExpressionNode
+	if p.check(lexer.TokenLeftParen) {
+		var err error
+		params, defaults, err = p.parseParameterList()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// Parse the call expression (function/macro call)
 	callExpr, err := p.parseExpression()
 	if err != nil {
 		return nil, err
+	}
+	if _, ok := callExpr.(*CallNode); !ok {
+		return nil, p.error("expected call")
 	}
 
 	// Expect {% %}
@@ -1874,7 +2198,15 @@ func (p *Parser) parseCallBlockStatement() (Node, error) {
 	}
 	p.advance() // consume '%}'
 
-	return NewCallBlockNode(callExpr, body, startToken.Line, startToken.Column), nil
+	cb := NewCallBlockNode(callExpr, body, startToken.Line, startToken.Column)
+	cb.Parameters = params
+	cb.Defaults = defaults
+	usage, err := findMacroUsage(params, defaults, body)
+	if err != nil {
+		return nil, p.error(err.Error())
+	}
+	cb.MacroUsage = usage
+	return cb, nil
 }
 
 // parseWithStatement parses {% with var=expr, var2=expr2 %}...{% endwith %} statements
@@ -1883,8 +2215,11 @@ func (p *Parser) parseWithStatement() (Node, error) {
 
 	// Parse assignments (var1=expr1, var2=expr2, ...)
 	assignments := make(map[string]ExpressionNode)
+	var names []string
+	var exprs []ExpressionNode
 
-	for {
+	// A bare {% with %} has no assignments
+	for !(len(names) == 0 && (p.check(lexer.TokenBlockEnd) || p.check(lexer.TokenBlockEndTrim))) {
 		// Parse variable name
 		if !p.check(lexer.TokenIdentifier) {
 			return nil, p.error("expected variable name in with statement")
@@ -1904,6 +2239,8 @@ func (p *Parser) parseWithStatement() (Node, error) {
 		}
 
 		assignments[varName] = expr
+		names = append(names, varName)
+		exprs = append(exprs, expr)
 
 		// Check for more assignments
 		if p.check(lexer.TokenComma) {
@@ -1954,7 +2291,10 @@ func (p *Parser) parseWithStatement() (Node, error) {
 	}
 	p.advance() // consume '%}'
 
-	return NewWithNode(assignments, body, startToken.Line, startToken.Column), nil
+	node := NewWithNode(assignments, body, startToken.Line, startToken.Column)
+	node.Names = names
+	node.Exprs = exprs
+	return node, nil
 }
 
 // parseDoStatement parses do statements {% do expression %}
@@ -1996,6 +2336,7 @@ func (p *Parser) parseFilterBlock() (Node, error) {
 		filterName := p.advance().Value
 		var args []ExpressionNode
 		namedArgs := make(map[string]ExpressionNode)
+		sawKeyword := false
 
 		// Parse filter arguments if present
 		if p.check(lexer.TokenLeftParen) {
@@ -2014,7 +2355,11 @@ func (p *Parser) parseFilterBlock() (Node, error) {
 						return nil, err
 					}
 					namedArgs[name] = expr
+					sawKeyword = true
 				} else {
+					if sawKeyword {
+						return nil, p.error("positional argument follows keyword argument")
+					}
 					expr, err := p.parseExpression()
 					if err != nil {
 						return nil, err

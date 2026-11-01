@@ -78,7 +78,7 @@ func (c *cowContext) Get(key string) (interface{}, bool) {
 
 	// Check environment globals
 	if c.env != nil {
-		if val, ok := c.env.globals[key]; ok {
+		if val, ok := c.env.lookupGlobal(key); ok {
 			return val, true
 		}
 	}

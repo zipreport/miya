@@ -82,7 +82,7 @@ func TestSuperCallsIntegration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create environment with DirectTemplateParser
+			// Create environment (the loader's parser is unused: the environment compiles templates itself)
 			env := miya.NewEnvironment(miya.WithAutoEscape(false))
 			directParser := loader.NewDirectTemplateParser()
 			stringLoader := loader.NewStringLoader(directParser)

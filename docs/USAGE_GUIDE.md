@@ -230,25 +230,23 @@ ctx := miya.NewContextFrom(map[string]interface{}{
 
 You can pass any Go value into the context. Miya handles:
 
-- **Primitives**: `string`, `int`, `float64`, `bool`
-- **Collections**: slices, arrays, maps
-- **Structs**: fields are accessed by name (Miya tries both `field` and `Field`)
-- **Methods**: zero-argument methods are callable (e.g., `{{ user.Name }}` can call a `Name()` method)
-- **Nested access**: dot notation works through maps, structs, and methods (e.g., `{{ user.address.city }}`)
+- **Primitives**: `string`, `bool` and numbers of every Go kind (`int32`, `uint8`, `float32`, ...), including named types such as `type Status string`. Pointers behave as the value they point to; a nil pointer is `none`
+- **Collections**: slices, arrays and maps of any element type, including `map[interface{}]interface{}` with string keys (what YAML decoders produce). Maps with string keys iterate in sorted order; maps with other keys iterate bools, then numbers, then strings
+- **Structs**: exported fields are accessed by name, and `user.name` finds `Name`. An embedded field is reachable only by its exact type name
+- **Nested access**: dot notation works through maps, structs and pointers (e.g., `{{ user.address.city }}`)
+- **Methods**: Go methods are **not** callable from templates. Pass computed values as data, or register a global function with `env.AddGlobal`
+- **Funcs**: a func-typed value in the data is callable (that is how globals work), so do not pass funcs you would not let template authors call
 
 ```go
 type User struct {
-    Name  string
-    Email string
-    Age   int
-}
-
-func (u User) DisplayName() string {
-    return u.Name + " <" + u.Email + ">"
+    Name        string
+    Email       string
+    Age         int
+    DisplayName string // computed by the application
 }
 
 ctx := miya.NewContext()
-ctx.Set("user", User{Name: "Alice", Email: "alice@example.com", Age: 30})
+ctx.Set("user", User{Name: "Alice", Email: "alice@example.com", Age: 30, DisplayName: "Alice <alice@example.com>"})
 ctx.Set("items", []map[string]interface{}{
     {"name": "Widget", "price": 9.99},
     {"name": "Gadget", "price": 19.99},
@@ -257,7 +255,7 @@ ctx.Set("items", []map[string]interface{}{
 
 ```html+jinja
 {{ user.name }}           {# "Alice" — struct field #}
-{{ user.displayName }}    {# "Alice <alice@example.com>" — method call #}
+{{ user.displayName }}    {# "Alice <alice@example.com>" — struct field computed by the application #}
 {{ items[0].name }}       {# "Widget" — slice index + map access #}
 ```
 
@@ -453,27 +451,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 3. Call `tmpl.Render(ctx)` freely from any goroutine — evaluators are pooled per render
 4. **Always create a fresh `Context` for each render** — contexts are not thread-safe
 
-### Explicit Thread-Safe Wrappers
+### Changing the Environment While Rendering
 
-For scenarios where you need additional safety guarantees (e.g., dynamically adding filters or globals while rendering), Miya provides explicit thread-safe wrappers:
+An `Environment` is safe for concurrent use: templates may be rendered while `AddGlobal`, `AddFilter`, `AddTest` and `AddExtension` are called. Calls to `AddTest` must not run concurrently with each other. `SetConfig`, `SetLoader` and changes to a loader's templates (such as `StringLoader.AddTemplate`) must happen before rendering starts.
 
-```go
-// Thread-safe environment — adds mutex protection around AddFilter/AddGlobal
-safeEnv := miya.NewThreadSafeEnvironment(
-    miya.WithLoader(fsLoader),
-    miya.WithAutoEscape(true),
-)
-
-// Safe to call from any goroutine, even while renders are in progress
-safeEnv.AddFilterConcurrent("myfilter", myFilterFunc)
-safeEnv.AddGlobalConcurrent("version", "2.0")
-
-// Get thread-safe template wrapper
-safeTmpl, err := safeEnv.GetTemplateConcurrent("page.html")
-output, err := safeTmpl.RenderConcurrent(ctx)
-```
-
-Use `ThreadSafeEnvironment` when you need to mutate the environment (add filters, globals) concurrently with template renders. For the common case of a read-only environment serving renders, the standard `Environment` is already safe.
+`ThreadSafeEnvironment` adds nothing to this: renders never take its mutexes, so the standard `Environment` is all you need.
 
 ### Worker Pool: ConcurrentTemplateRenderer
 
@@ -489,7 +471,7 @@ defer renderer.Stop()
 
 // Async single render
 resultCh := renderer.RenderAsync(ctx)
-result := <-resultCh // result.output, result.err
+result := <-resultCh // result.Output, result.Err
 
 // Batch render — all contexts rendered in parallel
 contexts := make([]miya.Context, 1000)
@@ -509,6 +491,8 @@ for i, output := range outputs {
 ```
 
 Workers include panic recovery — a panic in one render does not crash other workers.
+
+Start the renderer once. After `Stop`, `RenderAsync` rejects work with a "renderer is stopped" error, and jobs still queued at `Stop` are answered with the same error. `RenderBatch` does not use the worker pool and is independent of `Start` and `Stop`.
 
 ### Rate-Limited Rendering
 
@@ -575,7 +559,7 @@ func init() {
 func handleHome(w http.ResponseWriter, r *http.Request) {
     tmpl, err := env.GetTemplate("home.html")
     if err != nil {
-        http.Error(w, "Template not found", 500)
+        http.Error(w, "Template error", 500)
         return
     }
 
@@ -608,7 +592,7 @@ For better performance, write directly to the `http.ResponseWriter` instead of b
 func handlePage(w http.ResponseWriter, r *http.Request) {
     tmpl, err := env.GetTemplate("page.html")
     if err != nil {
-        http.Error(w, "Template not found", 500)
+        http.Error(w, "Template error", 500)
         return
     }
 
@@ -641,7 +625,7 @@ size := env.GetCacheSize()
 // Clear all cached templates (e.g., after editing template files in development)
 env.ClearCache()
 
-// Invalidate a single template (also clears its inheritance cache entry)
+// Invalidate a single template (also drops the cached chains of templates that extend it)
 env.InvalidateTemplate("page.html")
 
 // Clear loader-level cache separately
@@ -652,14 +636,14 @@ if cachingLoader, ok := env.GetLoader().(loader.CachingLoader); ok {
 
 ### Inheritance Cache
 
-Template inheritance chains (e.g., `page.html` extends `layout.html` extends `base.html`) are cached separately with configurable TTLs:
+The chain of a template (e.g., `page.html` extends `layout.html` extends `base.html`) is cached separately, with configurable TTLs. The merged template of a template loaded by name with a fixed parent is kept with its chain, for as long as the hierarchy TTL or until `InvalidateTemplate` names a template in that chain. The separate resolved-template cache was removed: the second argument of `ConfigureInheritanceCache` has no effect and `ResolvedCache` always reads zero:
 
 ```go
 import "time"
 
 env.ConfigureInheritanceCache(
     5*time.Minute,   // hierarchy TTL
-    10*time.Minute,  // resolved template TTL
+    10*time.Minute,  // resolved template TTL (no effect)
     1000,            // max cache entries
 )
 
@@ -667,8 +651,6 @@ env.ConfigureInheritanceCache(
 stats := env.GetInheritanceCacheStats()
 fmt.Printf("Hierarchy - Hits: %d, Misses: %d\n",
     stats.HierarchyCache.Hits, stats.HierarchyCache.Misses)
-fmt.Printf("Resolved  - Hits: %d, Misses: %d\n",
-    stats.ResolvedCache.Hits, stats.ResolvedCache.Misses)
 
 // Clear when needed
 env.ClearInheritanceCache()
@@ -678,20 +660,17 @@ env.ClearInheritanceCache()
 
 ## Memory Management
 
-### Releasing Template AST Nodes
+### Releasing one-off templates
 
-Miya uses `sync.Pool` to pool frequently allocated AST node types. When you are done with a template and want to return its nodes to the pool for reuse:
+Compiled templates are cached by the environment, by name for `GetTemplate` and by source for `FromString`, and the cache does not expire. If you compile many distinct one-off templates, call `tmpl.Release()` when done: it removes that template from the cache, so it can be garbage collected once you drop it. The template stays usable; compiling the same source again re-parses it. `ClearCache()` drops everything.
 
 ```go
 tmpl, _ := env.FromString("{{ x }}")
 output, _ := tmpl.Render(ctx)
 
-// Optional: return AST nodes to the pool for reuse.
-// After Release(), the template must not be used for rendering.
+// drop this one-off template from the environment's cache
 tmpl.Release()
 ```
-
-`Release()` is optional — if not called, nodes are garbage collected normally. Use it in high-throughput scenarios where you compile many short-lived templates and want to reduce GC pressure.
 
 ### Context Pooling
 

@@ -3,6 +3,8 @@ package filters
 import (
 	"strings"
 	"testing"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 // Test Utility Filters with 0% coverage
@@ -150,11 +152,23 @@ func TestAdditionalUtilityFilters(t *testing.T) {
 			t.Errorf("GroupByFilter failed: %v", err)
 		}
 
-		// Result format may vary - just check it's not nil
-		if result == nil {
-			t.Error("Expected non-nil result from GroupByFilter")
-		} else {
-			t.Logf("GroupByFilter returned type: %T", result)
+		groups, ok := result.([]interface{})
+		if !ok || len(groups) != 2 {
+			t.Fatalf("GroupByFilter = %#v, want 2 groups", result)
+		}
+		wantGroupers := []string{"A", "B"}
+		wantLens := []int{2, 1}
+		for i, g := range groups {
+			tuple, ok := g.(runtime.GroupTuple)
+			if !ok || len(tuple) != 2 {
+				t.Fatalf("group %d = %#v, want runtime.GroupTuple of 2", i, g)
+			}
+			if tuple[0] != wantGroupers[i] {
+				t.Errorf("group %d grouper = %v, want %v", i, tuple[0], wantGroupers[i])
+			}
+			if list, _ := tuple[1].([]interface{}); len(list) != wantLens[i] {
+				t.Errorf("group %d list = %v, want length %d", i, tuple[1], wantLens[i])
+			}
 		}
 	})
 }
@@ -169,20 +183,20 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 			t.Errorf("UrlizeFilter failed: %v", err)
 		}
 
-		// Result may be SafeValue or string
+		// Result may be Markup or string
 		var resultStr string
-		if safeVal, ok := result.(SafeValue); ok {
+		if safeVal, ok := result.(runtime.Markup); ok {
 			resultStr = safeVal.String()
 		} else if str, ok := result.(string); ok {
 			resultStr = str
 		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
+			t.Errorf("Expected string or Markup, got %T", result)
 			return
 		}
 
-		// Should contain some link markup or the URL
-		if !strings.Contains(resultStr, "http://example.com") {
-			t.Logf("UrlizeFilter result didn't contain URL: %s", resultStr)
+		want := `Visit <a href="http://example.com" rel="noopener">http://example.com</a> for more info`
+		if resultStr != want {
+			t.Errorf("UrlizeFilter = %q, want %q", resultStr, want)
 		}
 	})
 
@@ -194,20 +208,20 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 			t.Errorf("UrlizeTargetFilter failed: %v", err)
 		}
 
-		// Result may be SafeValue or string
+		// Result may be Markup or string
 		var resultStr string
-		if safeVal, ok := result.(SafeValue); ok {
+		if safeVal, ok := result.(runtime.Markup); ok {
 			resultStr = safeVal.String()
 		} else if str, ok := result.(string); ok {
 			resultStr = str
 		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
+			t.Errorf("Expected string or Markup, got %T", result)
 			return
 		}
 
-		// Should contain target attribute if links are created
-		if strings.Contains(resultStr, "<a") && !strings.Contains(resultStr, "_blank") {
-			t.Logf("Expected _blank target in link, got: %s", resultStr)
+		want := `Visit <a href="http://example.com" rel="noopener" target="_blank">http://example.com</a>`
+		if resultStr != want {
+			t.Errorf("UrlizeTargetFilter = %q, want %q", resultStr, want)
 		}
 	})
 
@@ -216,42 +230,28 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 		html := "<p>This is a long HTML content that should be truncated</p>"
 		result, err := TruncateHTMLFilter(html, 20)
 		if err != nil {
-			t.Errorf("TruncateHTMLFilter failed: %v", err)
+			t.Fatalf("TruncateHTMLFilter failed: %v", err)
 		}
-
-		// Result may be SafeValue or string
-		var resultStr string
-		if safeVal, ok := result.(SafeValue); ok {
-			resultStr = safeVal.String()
-		} else if str, ok := result.(string); ok {
-			resultStr = str
-		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
-			return
-		}
-
-		// Should be some result
-		if len(resultStr) == 0 {
-			t.Logf("TruncateHTMLFilter returned empty result")
+		if _, ok := result.(runtime.Markup); !ok {
+			t.Errorf("truncated result: expected Markup, got %T", result)
 		}
 
 		// Test with ellipsis
 		result, err = TruncateHTMLFilter(html, 20, "...")
 		if err != nil {
-			t.Errorf("TruncateHTMLFilter with ellipsis failed: %v", err)
+			t.Fatalf("TruncateHTMLFilter with ellipsis failed: %v", err)
+		}
+		if _, ok := result.(runtime.Markup); !ok {
+			t.Errorf("truncated result with ellipsis: expected Markup, got %T", result)
 		}
 
-		if safeVal, ok := result.(SafeValue); ok {
-			resultStr = safeVal.String()
-		} else if str, ok := result.(string); ok {
-			resultStr = str
-		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
-			return
+		// A short non-safe input comes back as a plain string for autoescape to escape
+		result, err = TruncateHTMLFilter(html, 100)
+		if err != nil {
+			t.Fatalf("TruncateHTMLFilter short failed: %v", err)
 		}
-
-		if len(resultStr) == 0 {
-			t.Logf("TruncateHTMLFilter with ellipsis returned empty result")
+		if str, ok := result.(string); !ok || str != html {
+			t.Errorf("short result: expected plain string %q, got %T %v", html, result, result)
 		}
 	})
 
@@ -291,14 +291,14 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 			t.Errorf("ForceEscapeFilter failed: %v", err)
 		}
 
-		// Result may be SafeValue or string
+		// Result may be Markup or string
 		var resultStr string
-		if safeVal, ok := result.(SafeValue); ok {
+		if safeVal, ok := result.(runtime.Markup); ok {
 			resultStr = safeVal.String()
 		} else if str, ok := result.(string); ok {
 			resultStr = str
 		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
+			t.Errorf("Expected string or Markup, got %T", result)
 			return
 		}
 
@@ -316,14 +316,14 @@ func TestAdditionalHTMLFilters(t *testing.T) {
 			t.Errorf("UrlizeTruncateFilter failed: %v", err)
 		}
 
-		// Result may be SafeValue or string
+		// Result may be Markup or string
 		var resultStr string
-		if safeVal, ok := result.(SafeValue); ok {
+		if safeVal, ok := result.(runtime.Markup); ok {
 			resultStr = safeVal.String()
 		} else if str, ok := result.(string); ok {
 			resultStr = str
 		} else {
-			t.Errorf("Expected string or SafeValue, got %T", result)
+			t.Errorf("Expected string or Markup, got %T", result)
 			return
 		}
 

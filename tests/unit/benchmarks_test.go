@@ -2,6 +2,7 @@ package miya_test
 
 import (
 	miya "github.com/zipreport/miya"
+	"github.com/zipreport/miya/runtime"
 	"sync"
 	"testing"
 )
@@ -296,6 +297,64 @@ func BenchmarkComplexFilterChain(b *testing.B) {
 			b.Fatalf("Failed to render template: %v", err)
 		}
 	}
+}
+
+// A filter on a large list inside a loop over it: each filter call must not
+// walk the whole list in an HTML render.
+func BenchmarkFilterOnLargeListInLoop(b *testing.B) {
+	env := miya.NewEnvironment(miya.WithAutoEscape(true))
+	items := make([]interface{}, 2000)
+	for i := range items {
+		items[i] = "item"
+	}
+	tmpl, err := env.FromString("{% for i in items %}{{ items|first }}{% endfor %}")
+	if err != nil {
+		b.Fatalf("Failed to parse template: %v", err)
+	}
+	data := map[string]interface{}{"items": items}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if _, err := tmpl.Render(miya.NewContextFrom(data)); err != nil {
+			b.Fatalf("Failed to render template: %v", err)
+		}
+	}
+}
+
+// Built-in filters on a large nested list inside a loop over it, in an HTML
+// render after a JS render made escaped output and in a JS render that makes
+// some: no filter call walks the list.
+func BenchmarkFilterOnNestedListAfterJSRender(b *testing.B) {
+	env := miya.NewEnvironment(miya.WithAutoEscape(true))
+	const loop = `{% for r in big %}{{ big|length }}{{ r|tojson|length }}{% endfor %}`
+	tmpl, err := env.FromString(loop)
+	if err != nil {
+		b.Fatal(err)
+	}
+	jsTmpl, err := env.FromString(`{% macro t() %}x{% endmacro %}{% set s = t() %}` + loop)
+	if err != nil {
+		b.Fatal(err)
+	}
+	data := map[string]interface{}{"big": scanData(3000)}
+	js := func() {
+		ctx := miya.NewTemplateContextAdapter(miya.NewContextFrom(data), env)
+		if _, err := runtime.NewEvaluator().EvalNode(jsTmpl.AST(), runtime.NewContextWrapper(ctx, runtime.NewAutoEscaper(nil), runtime.EscapeContextJS)); err != nil {
+			b.Fatal(err)
+		}
+	}
+	js()
+	b.Run("html", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			if _, err := tmpl.Render(miya.NewContextFrom(data)); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+	b.Run("js", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			js()
+		}
+	})
 }
 
 // Memory Performance Benchmarks

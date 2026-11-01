@@ -1,0 +1,47 @@
+{
+ "fsem-005": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want \"2\", got \"3\""
+ },
+ "fsem-006": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want \"2.5\", got \"2.50\""
+ },
+ "fsem-007": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want \"2.67\", got \"2.68\""
+ },
+ "fsem-028": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want \"5\", got \"5.00\""
+ },
+ "inh-009": {
+  "kind": "error",
+  "plan": "unplanned",
+  "reason": "want \"T|T\", got render-time error: cannot call non-function value of type *runtime.Undefined"
+ },
+ "math-012": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want render-time error TypeError, got output \"6\""
+ },
+ "math-013": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want render-time error TypeError, got output \"a1\""
+ },
+ "math-014": {
+  "kind": "output",
+  "plan": "deviation",
+  "reason": "want render-time error TypeError, got output \"6\""
+ },
+ "parse-015": {
+  "kind": "error",
+  "plan": "unplanned",
+  "reason": "want \"1-2\", got render-time error: cannot modulo string and []interface {}"
+ }
+}

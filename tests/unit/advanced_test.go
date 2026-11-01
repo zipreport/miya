@@ -95,7 +95,7 @@ func TestAdvancedFeaturesIntegration(t *testing.T) {
 		// Should be [4.0, 8.0] (2*2, 4*2) as only 2 and 4 are even
 		expected := []interface{}{4.0, 8.0}
 		if len(resultSlice) != len(expected) {
-			t.Errorf("Expected length %d, got %d", len(expected), len(resultSlice))
+			t.Fatalf("Expected length %d, got %d", len(expected), len(resultSlice))
 		}
 
 		for i, v := range expected {
@@ -115,7 +115,9 @@ func TestAdvancedFeaturesIntegration(t *testing.T) {
 		})
 		runtimeCtx := miya.NewTemplateContextAdapter(ctx, env)
 
-		// Test conditional: user.age is defined ? user.age : "Unknown age"
+		// Test conditional: user.age is defined ? user.age : "Unknown age".
+		// The key exists with a nil value, which counts as defined (as in
+		// Jinja2), so the conditional yields user.age, which is nil.
 		conditionNode := &parser.TestNode{
 			Expression: &parser.AttributeNode{
 				Object:    parser.NewIdentifierNode("user", 1, 1),
@@ -140,8 +142,8 @@ func TestAdvancedFeaturesIntegration(t *testing.T) {
 			t.Fatalf("Conditional with test expression failed: %v", err)
 		}
 
-		if result != "Unknown age" {
-			t.Errorf("Expected 'Unknown age', got %v", result)
+		if result != nil {
+			t.Errorf("Expected nil, got %v", result)
 		}
 	})
 
@@ -292,8 +294,7 @@ func TestAdvancedFeaturesIntegration(t *testing.T) {
 		// Should be [20.0, 60.0] (10*2, 30*2) for active items
 		expected := []interface{}{20.0, 60.0}
 		if len(resultSlice) != len(expected) {
-			t.Skipf("Comprehension feature not fully implemented: Expected length %d, got %d", len(expected), len(resultSlice))
-			return // Exit early to prevent panic
+			t.Fatalf("Expected length %d, got %d: %v", len(expected), len(resultSlice), resultSlice)
 		}
 
 		for i, v := range expected {

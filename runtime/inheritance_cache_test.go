@@ -84,20 +84,12 @@ func TestNewInheritanceCache(t *testing.T) {
 		t.Error("Expected initialized hierarchy cache map")
 	}
 
-	if cache.resolvedCache == nil {
-		t.Error("Expected initialized resolved cache map")
+	if time.Duration(cache.hierarchyTTL.Load()) != 15*time.Minute {
+		t.Errorf("Expected hierarchyTTL of 15 minutes, got %v", time.Duration(cache.hierarchyTTL.Load()))
 	}
 
-	if cache.hierarchyTTL != 15*time.Minute {
-		t.Errorf("Expected hierarchyTTL of 15 minutes, got %v", cache.hierarchyTTL)
-	}
-
-	if cache.resolvedTTL != 5*time.Minute {
-		t.Errorf("Expected resolvedTTL of 5 minutes, got %v", cache.resolvedTTL)
-	}
-
-	if cache.maxEntries != 1000 {
-		t.Errorf("Expected maxEntries of 1000, got %d", cache.maxEntries)
+	if int(cache.maxEntries.Load()) != 1000 {
+		t.Errorf("Expected maxEntries of 1000, got %d", cache.maxEntries.Load())
 	}
 }
 
@@ -108,20 +100,8 @@ func TestSetHierarchyTTL(t *testing.T) {
 	newTTL := 30 * time.Minute
 	cache.SetHierarchyTTL(newTTL)
 
-	if cache.hierarchyTTL != newTTL {
-		t.Errorf("Expected hierarchyTTL of %v, got %v", newTTL, cache.hierarchyTTL)
-	}
-}
-
-// TestSetResolvedTTL tests setting resolved template TTL
-func TestSetResolvedTTL(t *testing.T) {
-	cache := NewInheritanceCache()
-
-	newTTL := 10 * time.Minute
-	cache.SetResolvedTTL(newTTL)
-
-	if cache.resolvedTTL != newTTL {
-		t.Errorf("Expected resolvedTTL of %v, got %v", newTTL, cache.resolvedTTL)
+	if time.Duration(cache.hierarchyTTL.Load()) != newTTL {
+		t.Errorf("Expected hierarchyTTL of %v, got %v", newTTL, time.Duration(cache.hierarchyTTL.Load()))
 	}
 }
 
@@ -132,8 +112,8 @@ func TestSetMaxEntries(t *testing.T) {
 	newMax := 500
 	cache.SetMaxEntries(newMax)
 
-	if cache.maxEntries != newMax {
-		t.Errorf("Expected maxEntries of %d, got %d", newMax, cache.maxEntries)
+	if int(cache.maxEntries.Load()) != newMax {
+		t.Errorf("Expected maxEntries of %d, got %d", newMax, cache.maxEntries.Load())
 	}
 }
 
@@ -220,96 +200,6 @@ func TestHierarchyCacheOperations(t *testing.T) {
 	})
 }
 
-// TestResolvedTemplateCacheOperations tests resolved template cache store/get operations
-func TestResolvedTemplateCacheOperations(t *testing.T) {
-	t.Run("Store and retrieve resolved template", func(t *testing.T) {
-		cache := NewInheritanceCache()
-		templateName := "resolved_template.html"
-		contextHash := "abc123"
-		templateNode := createTestTemplateNode(templateName)
-		templateChain := []string{"base.html", templateName}
-
-		cache.StoreResolvedTemplate(templateName, contextHash, templateNode, templateChain)
-
-		retrieved, found := cache.GetResolvedTemplate(templateName, contextHash)
-
-		if !found {
-			t.Error("Expected to find cached resolved template")
-		}
-
-		if retrieved == nil {
-			t.Error("Expected non-nil retrieved template")
-		}
-
-		if retrieved.Name != templateName {
-			t.Errorf("Expected template name %s, got %s", templateName, retrieved.Name)
-		}
-	})
-
-	t.Run("Get resolved template with wrong context hash", func(t *testing.T) {
-		cache := NewInheritanceCache()
-		templateName := "hash_template.html"
-		templateNode := createTestTemplateNode(templateName)
-		templateChain := []string{templateName}
-
-		cache.StoreResolvedTemplate(templateName, "hash1", templateNode, templateChain)
-
-		retrieved, found := cache.GetResolvedTemplate(templateName, "hash2")
-
-		if found {
-			t.Error("Expected not to find template with different hash")
-		}
-
-		if retrieved != nil {
-			t.Error("Expected nil for wrong hash")
-		}
-	})
-
-	t.Run("Resolved template expiration", func(t *testing.T) {
-		cache := NewInheritanceCache()
-		cache.SetResolvedTTL(1 * time.Millisecond)
-
-		templateName := "expiring_resolved.html"
-		contextHash := "expire_hash"
-		templateNode := createTestTemplateNode(templateName)
-		templateChain := []string{templateName}
-
-		cache.StoreResolvedTemplate(templateName, contextHash, templateNode, templateChain)
-
-		time.Sleep(5 * time.Millisecond)
-
-		retrieved, found := cache.GetResolvedTemplate(templateName, contextHash)
-
-		if found {
-			t.Error("Expected expired resolved template not to be found")
-		}
-
-		if retrieved != nil {
-			t.Error("Expected nil for expired resolved template")
-		}
-	})
-
-	t.Run("Resolved template access updates stats", func(t *testing.T) {
-		cache := NewInheritanceCache()
-		templateName := "stats_resolved.html"
-		contextHash := "stats_hash"
-		templateNode := createTestTemplateNode(templateName)
-		templateChain := []string{templateName}
-
-		cache.StoreResolvedTemplate(templateName, contextHash, templateNode, templateChain)
-
-		// Multiple accesses
-		cache.GetResolvedTemplate(templateName, contextHash)
-		cache.GetResolvedTemplate(templateName, contextHash)
-
-		stats := cache.GetStats()
-
-		if stats.ResolvedCache.Hits < 2 {
-			t.Errorf("Expected at least 2 hits, got %d", stats.ResolvedCache.Hits)
-		}
-	})
-}
-
 // TestInvalidateTemplate tests template invalidation
 func TestInvalidateTemplate(t *testing.T) {
 	t.Run("Invalidate removes hierarchy entry", func(t *testing.T) {
@@ -334,31 +224,6 @@ func TestInvalidateTemplate(t *testing.T) {
 		}
 	})
 
-	t.Run("Invalidate removes resolved templates in chain", func(t *testing.T) {
-		cache := NewInheritanceCache()
-		baseTemplate := "base.html"
-		childTemplate := "child.html"
-
-		// Store a resolved template that includes base.html in its chain
-		templateNode := createTestTemplateNode(childTemplate)
-		templateChain := []string{baseTemplate, childTemplate}
-		cache.StoreResolvedTemplate(childTemplate, "hash123", templateNode, templateChain)
-
-		// Verify it exists
-		_, found := cache.GetResolvedTemplate(childTemplate, "hash123")
-		if !found {
-			t.Fatal("Expected resolved template to exist before invalidation")
-		}
-
-		// Invalidate base template
-		cache.InvalidateTemplate(baseTemplate)
-
-		// Verify resolved template is also removed
-		_, found = cache.GetResolvedTemplate(childTemplate, "hash123")
-		if found {
-			t.Error("Expected resolved template to be removed when parent is invalidated")
-		}
-	})
 }
 
 // TestClearAll tests clearing all cache entries
@@ -369,16 +234,12 @@ func TestClearAll(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		name := "template_" + string(rune('a'+i)) + ".html"
 		cache.StoreHierarchy(name, createTestHierarchy(name))
-		cache.StoreResolvedTemplate(name, "hash"+string(rune('0'+i)), createTestTemplateNode(name), []string{name})
 	}
 
 	// Verify entries exist
 	stats := cache.GetStats()
 	if stats.HierarchyCache.Entries == 0 {
 		t.Fatal("Expected some hierarchy entries before clear")
-	}
-	if stats.ResolvedCache.Entries == 0 {
-		t.Fatal("Expected some resolved entries before clear")
 	}
 
 	// Clear all
@@ -458,45 +319,6 @@ func TestCacheEviction(t *testing.T) {
 		}
 	})
 
-	t.Run("Resolved cache eviction", func(t *testing.T) {
-		cache := NewInheritanceCache()
-		cache.SetMaxEntries(2)
-
-		// Add 2 entries
-		cache.StoreResolvedTemplate("first.html", "h1", createTestTemplateNode("first.html"), []string{"first.html"})
-		time.Sleep(1 * time.Millisecond)
-		cache.StoreResolvedTemplate("second.html", "h2", createTestTemplateNode("second.html"), []string{"second.html"})
-
-		// Access first to make it more recent
-		cache.GetResolvedTemplate("first.html", "h1")
-		time.Sleep(1 * time.Millisecond)
-
-		// Add third entry, should evict second
-		cache.StoreResolvedTemplate("third.html", "h3", createTestTemplateNode("third.html"), []string{"third.html"})
-
-		stats := cache.GetStats()
-		if stats.ResolvedCache.Entries != 2 {
-			t.Errorf("Expected 2 entries after eviction, got %d", stats.ResolvedCache.Entries)
-		}
-
-		// second.html should have been evicted
-		_, found := cache.GetResolvedTemplate("second.html", "h2")
-		if found {
-			t.Error("Expected second.html to be evicted")
-		}
-	})
-}
-
-// TestBuildResolvedCacheKey tests the cache key building function
-func TestBuildResolvedCacheKey(t *testing.T) {
-	cache := NewInheritanceCache()
-
-	key := cache.buildResolvedCacheKey("template.html", "context123")
-	expected := "template.html::context123"
-
-	if key != expected {
-		t.Errorf("Expected key %q, got %q", expected, key)
-	}
 }
 
 // TestConcurrentAccess tests thread safety of cache operations
@@ -517,20 +339,6 @@ func TestConcurrentAccess(t *testing.T) {
 				cache.StoreHierarchy(templateName, createTestHierarchy(templateName))
 				cache.GetHierarchy(templateName)
 				cache.GetStats()
-			}
-		}(i)
-	}
-
-	// Concurrent resolved template operations
-	for i := 0; i < numGoroutines; i++ {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-			for j := 0; j < numOperations; j++ {
-				templateName := "resolved_" + string(rune('a'+id)) + ".html"
-				contextHash := "hash" + string(rune('0'+id))
-				cache.StoreResolvedTemplate(templateName, contextHash, createTestTemplateNode(templateName), []string{templateName})
-				cache.GetResolvedTemplate(templateName, contextHash)
 			}
 		}(i)
 	}
@@ -560,12 +368,10 @@ func TestConcurrentAccess(t *testing.T) {
 func TestCleanup(t *testing.T) {
 	cache := NewInheritanceCache()
 	cache.SetHierarchyTTL(1 * time.Millisecond)
-	cache.SetResolvedTTL(1 * time.Millisecond)
 	cache.cleanupInterval = 1 * time.Millisecond
 
 	// Add entries
 	cache.StoreHierarchy("cleanup_test.html", createTestHierarchy("cleanup_test.html"))
-	cache.StoreResolvedTemplate("cleanup_resolved.html", "hash", createTestTemplateNode("cleanup_resolved.html"), []string{})
 
 	// Wait for expiration
 	time.Sleep(10 * time.Millisecond)
@@ -584,83 +390,6 @@ func TestCleanup(t *testing.T) {
 		// Just verify no panic occurred
 		t.Log("Cleanup may still be in progress")
 	}
-}
-
-// TestContextHasher tests the context hasher
-func TestContextHasher(t *testing.T) {
-	hasher := NewContextHasher()
-
-	if hasher == nil {
-		t.Fatal("Expected non-nil hasher")
-	}
-
-	t.Run("Hash nil context", func(t *testing.T) {
-		hash := hasher.HashContext(nil)
-		if hash != "empty" {
-			t.Errorf("Expected 'empty' for nil context, got %q", hash)
-		}
-	})
-
-	t.Run("Hash empty context", func(t *testing.T) {
-		ctx := newMockContext(map[string]interface{}{})
-		hash := hasher.HashContext(ctx)
-		if hash != "empty" {
-			t.Errorf("Expected 'empty' for empty context, got %q", hash)
-		}
-	})
-
-	t.Run("Hash context with data", func(t *testing.T) {
-		ctx := newMockContext(map[string]interface{}{
-			"name":   "test",
-			"count":  42,
-			"active": true,
-		})
-		hash := hasher.HashContext(ctx)
-
-		if hash == "" {
-			t.Error("Expected non-empty hash")
-		}
-
-		if hash == "empty" {
-			t.Error("Expected hash different from 'empty' for non-empty context")
-		}
-
-		if len(hash) != 16 {
-			t.Errorf("Expected hash length of 16, got %d", len(hash))
-		}
-	})
-
-	t.Run("Same context produces same hash", func(t *testing.T) {
-		ctx1 := newMockContext(map[string]interface{}{
-			"key": "value",
-		})
-		ctx2 := newMockContext(map[string]interface{}{
-			"key": "value",
-		})
-
-		hash1 := hasher.HashContext(ctx1)
-		hash2 := hasher.HashContext(ctx2)
-
-		if hash1 != hash2 {
-			t.Errorf("Expected same hash for same context data, got %q and %q", hash1, hash2)
-		}
-	})
-
-	t.Run("Different context produces different hash", func(t *testing.T) {
-		ctx1 := newMockContext(map[string]interface{}{
-			"key": "value1",
-		})
-		ctx2 := newMockContext(map[string]interface{}{
-			"key": "value2",
-		})
-
-		hash1 := hasher.HashContext(ctx1)
-		hash2 := hasher.HashContext(ctx2)
-
-		if hash1 == hash2 {
-			t.Error("Expected different hashes for different context data")
-		}
-	})
 }
 
 // TestCacheStatsHitRate tests hit rate calculation edge cases
@@ -721,45 +450,6 @@ func BenchmarkHierarchyCacheGet(b *testing.B) {
 	}
 }
 
-func BenchmarkResolvedCacheStore(b *testing.B) {
-	cache := NewInheritanceCache()
-	templateNode := createTestTemplateNode("benchmark.html")
-	templateChain := []string{"benchmark.html"}
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		cache.StoreResolvedTemplate("benchmark.html", "hash123", templateNode, templateChain)
-	}
-}
-
-func BenchmarkResolvedCacheGet(b *testing.B) {
-	cache := NewInheritanceCache()
-	cache.StoreResolvedTemplate("benchmark.html", "hash123", createTestTemplateNode("benchmark.html"), []string{"benchmark.html"})
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		cache.GetResolvedTemplate("benchmark.html", "hash123")
-	}
-}
-
-func BenchmarkContextHasher(b *testing.B) {
-	hasher := NewContextHasher()
-	ctx := newMockContext(map[string]interface{}{
-		"name":   "test",
-		"count":  42,
-		"active": true,
-		"items":  []string{"a", "b", "c"},
-		"nested": map[string]interface{}{
-			"key": "value",
-		},
-	})
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		hasher.HashContext(ctx)
-	}
-}
-
 func BenchmarkConcurrentCacheAccess(b *testing.B) {
 	cache := NewInheritanceCache()
 	cache.StoreHierarchy("bench.html", createTestHierarchy("bench.html"))
@@ -769,4 +459,48 @@ func BenchmarkConcurrentCacheAccess(b *testing.B) {
 			cache.GetHierarchy("bench.html")
 		}
 	})
+}
+
+func TestInheritanceCacheCleanupConcurrent(t *testing.T) {
+	c := NewInheritanceCache()
+	c.cleanupInterval = 0
+	c.StoreHierarchy("live", &InheritanceHierarchy{})
+	c.StoreHierarchy("dead", &InheritanceHierarchy{})
+	c.hierarchyMutex.Lock()
+	c.hierarchyCache["dead"].ExpiresAt = time.Now().Add(-time.Second)
+	c.hierarchyMutex.Unlock()
+
+	var wg sync.WaitGroup
+	for g := 0; g < 4; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 200; i++ {
+				if h, ok := c.GetHierarchy("x"); ok || h != nil {
+					t.Errorf("GetHierarchy of a name never stored: got %v, %v; want nil, false", h, ok)
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Cleanup runs in background goroutines: wait for it to drop the expired entry
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		c.hierarchyMutex.RLock()
+		_, dead := c.hierarchyCache["dead"]
+		_, live := c.hierarchyCache["live"]
+		c.hierarchyMutex.RUnlock()
+		if !live {
+			t.Fatal("cleanup removed an entry that has not expired")
+		}
+		if !dead {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("cleanup did not remove the expired entry within 2s")
+		}
+		time.Sleep(time.Millisecond)
+	}
 }

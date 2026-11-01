@@ -1,3 +1,8 @@
+// Package macros backs the deprecated Environment.GetMacro, ListMacros,
+// CallMacro and ClearMacros methods.
+//
+// Deprecated: it will be removed together with those methods in a later
+// minor release.
 package macros
 
 import (
@@ -7,9 +12,6 @@ import (
 	"github.com/zipreport/miya/parser"
 	"github.com/zipreport/miya/runtime"
 )
-
-// MacroFunc represents a compiled macro function
-type MacroFunc func(ctx runtime.Context, args []interface{}, kwargs map[string]interface{}) (interface{}, error)
 
 // Macro represents a template macro
 type Macro struct {
@@ -72,35 +74,6 @@ func (r *MacroRegistry) Clear() {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	r.macros = make(map[string]*Macro)
-}
-
-// Import imports macros from another template
-func (r *MacroRegistry) Import(fromTemplate string, other *MacroRegistry, names []string) error {
-	r.mutex.Lock()
-	defer r.mutex.Unlock()
-
-	other.mutex.RLock()
-	defer other.mutex.RUnlock()
-
-	if len(names) == 0 {
-		// Import all macros
-		for name, macro := range other.macros {
-			if macro.Template == fromTemplate {
-				r.macros[name] = macro
-			}
-		}
-	} else {
-		// Import specific macros
-		for _, name := range names {
-			if macro, exists := other.macros[name]; exists && macro.Template == fromTemplate {
-				r.macros[name] = macro
-			} else {
-				return fmt.Errorf("macro %q not found in template %s", name, fromTemplate)
-			}
-		}
-	}
-
-	return nil
 }
 
 // MacroExecutor handles macro execution
@@ -173,47 +146,4 @@ func (r *MacroRegistry) CallMacro(name string, ctx runtime.Context, evaluator ru
 
 	executor := NewMacroExecutor(evaluator)
 	return executor.Execute(macro, ctx, args, kwargs)
-}
-
-// MacroContext provides macro-related context operations
-type MacroContext struct {
-	registry *MacroRegistry
-}
-
-// NewMacroContext creates a new macro context
-func NewMacroContext() *MacroContext {
-	return &MacroContext{
-		registry: NewMacroRegistry(),
-	}
-}
-
-// GetRegistry returns the macro registry
-func (mc *MacroContext) GetRegistry() *MacroRegistry {
-	return mc.registry
-}
-
-// DefineMacro defines a macro from an AST node
-func (mc *MacroContext) DefineMacro(node *parser.MacroNode, templateName string) error {
-	// Convert defaults from ExpressionNode to interface{}
-	defaults := make(map[string]interface{})
-	for key, expr := range node.Defaults {
-		// For now, we'll store the expression itself
-		// In a full implementation, we'd evaluate constant expressions
-		defaults[key] = expr
-	}
-
-	macro := &Macro{
-		Name:       node.Name,
-		Parameters: node.Parameters,
-		Defaults:   defaults,
-		Body:       node.Body,
-		Template:   templateName,
-	}
-
-	return mc.registry.Register(node.Name, macro)
-}
-
-// Macro call helper for templates
-func (mc *MacroContext) Call(name string, ctx runtime.Context, evaluator runtime.Evaluator, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
-	return mc.registry.CallMacro(name, ctx, evaluator, args, kwargs)
 }

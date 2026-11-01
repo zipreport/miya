@@ -1,6 +1,6 @@
 # Global Functions Guide
 
-Global functions are built-in functions available in all templates without imports. Miya Engine provides 9 essential global functions with 100% Jinja2 compatibility.
+Global functions are built-in functions available in all templates without imports. Miya Engine provides 9 essential global functions.
 
 > **Working Example:** See `examples/features/global-functions/` for complete examples.
 
@@ -533,7 +533,7 @@ Get index and value together:
 3. Cherry
 ```
 
-** Note:** Use positional argument, not `start=1` keyword.
+**Note:** `start` can be passed by position or as `start=1`; it must be an integer.
 
 ### Practical Examples
 
@@ -736,9 +736,9 @@ Generate URLs from endpoint names:
 
 ## Summary
 
-**9 Global Functions - 100% Jinja2 Compatible**
+**9 Global Functions**
 
-All global functions work identically to Jinja2:
+`range`, `dict`, `cycler`, `joiner`, `namespace` and `lipsum` are Jinja2 globals. `zip`, `enumerate` and `url_for` are miya additions; Jinja2 does not define them.
 
  **Fully Supported:**
 - `range()` - Number sequences for iteration
@@ -757,4 +757,4 @@ All global functions work identically to Jinja2:
 - Professional placeholder content
 - Elegant data combination
 
-All functions are production-ready and perform identically to Jinja2.
+All functions are production-ready. See [Miya Limitations](MIYA_LIMITATIONS.md) for differences from Jinja2.

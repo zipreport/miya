@@ -2,60 +2,75 @@ package miya
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
-	"regexp"
-	"strings"
+	"runtime/debug"
 	"sync"
 
 	"github.com/zipreport/miya/parser"
 	"github.com/zipreport/miya/runtime"
 )
 
-// Pre-compiled regexes for performance (Phase 3a optimization)
-var (
-	htmlOptionRegex = regexp.MustCompile(`(?s)(<option[^>]*>)(.*?)(</option>)`)
-	whitespaceRegex = regexp.MustCompile(`\s+`)
-)
-
 // Template is a compiled template ready for rendering.
 // It holds the parsed AST and a reference to the Environment that created it.
 // Templates are safe for concurrent rendering.
 type Template struct {
-	name   string
-	source string
-	env    *Environment
-	ast    parser.Node // Will be set when parser is implemented
+	name     string
+	source   string
+	env      *Environment
+	cacheKey string      // key of this template in env.cache; "" when the Environment did not cache it
+	ast      parser.Node // Will be set when parser is implemented
 
 	// Cached inheritance check result (nil = not yet computed)
 	hasInheritanceCache *bool
 	cacheMu             sync.RWMutex // Protects hasInheritanceCache
 }
 
+// ErrRenderPanic is wrapped by the error returned when a render recovers from a
+// panic. Its presence means a bug in miya or in a registered filter or function,
+// not a template error.
+var ErrRenderPanic = errors.New("miya: recovered panic during render")
+
+// RenderPanicError is the error returned when a render recovers from a panic.
+// It wraps ErrRenderPanic. Stack holds the goroutine stack at the recovery; it
+// is kept out of Error() so the message is safe to show or log.
+type RenderPanicError struct {
+	Value interface{}
+	Stack []byte
+}
+
+func (e *RenderPanicError) Error() string { return fmt.Sprintf("%v: %v", ErrRenderPanic, e.Value) }
+
+func (e *RenderPanicError) Unwrap() error { return ErrRenderPanic }
+
 // Render executes the template with the given context and returns the rendered output as a string.
-// It resolves template inheritance, applies whitespace processing, and handles auto-escaping.
-func (t *Template) Render(context Context) (string, error) {
+// It resolves template inheritance and handles auto-escaping; its output equals RenderTo's.
+func (t *Template) Render(context Context) (output string, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			output = ""
+			err = &RenderPanicError{Value: r, Stack: debug.Stack()}
+		}
+	}()
+
 	var buf bytes.Buffer
-	err := t.RenderTo(&buf, context)
+	err = t.RenderTo(&buf, context)
 	if err != nil {
 		return "", err
 	}
-	output := buf.String()
-
-	// Apply block trimming if enabled
-	if t.env.trimBlocks || t.env.lstripBlocks {
-		output = t.env.applyBlockTrimming(output)
-	}
-
-	// Apply HTML whitespace normalization for option elements
-	output = normalizeHTMLOptionWhitespace(output)
-
-	return output, nil
+	return buf.String(), nil
 }
 
 // RenderTo executes the template with the given context and writes the output to w.
 // This is more efficient than Render when writing to an io.Writer directly.
-func (t *Template) RenderTo(w io.Writer, context Context) error {
+func (t *Template) RenderTo(w io.Writer, context Context) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = &RenderPanicError{Value: r, Stack: debug.Stack()}
+		}
+	}()
+
 	if t.ast == nil {
 		// If no AST is available, just write the source as-is
 		_, err := w.Write([]byte(t.source))
@@ -70,6 +85,13 @@ func (t *Template) RenderTo(w io.Writer, context Context) error {
 		}
 	}
 
+	// Get evaluator from pool (performance optimization)
+	evaluator := t.env.evaluatorPool.Get().(*runtime.DefaultEvaluator)
+
+	// Reset evaluator state for this render
+	evaluator.SetUndefinedBehavior(t.env.undefinedBehavior)
+	evaluator.SetImportSystem(t.env.importSystem)
+
 	// Resolve inheritance at render-time if needed
 	finalAST := t.ast
 	if t.hasInheritanceDirectives() {
@@ -77,22 +99,16 @@ func (t *Template) RenderTo(w io.Writer, context Context) error {
 		processor := t.env.getInheritanceProcessor()
 		// Create context adapter for runtime package compatibility
 		runtimeCtx := &TemplateContextAdapter{ctx: ctx, env: t.env}
-		resolvedAST, err := processor.ResolveInheritance(&templateAdapter{template: t}, runtimeCtx)
+		resolvedAST, err := processor.ResolveInheritanceWith(&templateAdapter{template: t}, runtimeCtx, evaluator)
 		if err != nil {
-			return fmt.Errorf("inheritance resolution error: %v", err)
+			t.env.evaluatorPool.Put(evaluator)
+			return fmt.Errorf("inheritance resolution error: %w", err)
 		}
 		finalAST = resolvedAST
 	}
 
-	// Get evaluator from pool (performance optimization)
-	evaluator := t.env.evaluatorPool.Get().(*runtime.DefaultEvaluator)
-	defer t.env.evaluatorPool.Put(evaluator)
-
-	// Reset evaluator state for this render
-	evaluator.SetUndefinedBehavior(t.env.undefinedBehavior)
-	evaluator.SetImportSystem(t.env.importSystem)
-
 	result, err := evaluator.EvalNode(finalAST, &TemplateContextAdapter{ctx: ctx, env: t.env})
+	t.env.evaluatorPool.Put(evaluator)
 	if err != nil {
 		return err
 	}
@@ -133,16 +149,54 @@ func (a *TemplateContextAdapter) Clone() runtime.Context {
 	return &TemplateContextAdapter{ctx: a.ctx.Clone(), env: a.env}
 }
 
+// Child returns a scope whose writes stay local and whose reads fall through
+// to a; for-loops use it to start each iteration afresh without copying every
+// variable.
+func (a *TemplateContextAdapter) Child() runtime.Context {
+	return &TemplateContextAdapter{ctx: a.ctx.Push(), env: a.env}
+}
+
+// NewModuleContext returns an empty context that shares the environment, for
+// templates imported without context.
+func (a *TemplateContextAdapter) NewModuleContext() runtime.Context {
+	return &TemplateContextAdapter{ctx: newContextWithEnv(a.env), env: a.env}
+}
+
 func (a *TemplateContextAdapter) All() map[string]interface{} {
 	return a.ctx.All()
+}
+
+func (a *TemplateContextAdapter) ApplyFilterKwargs(name string, value interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+	return a.env.ApplyFilterKwargs(name, value, args, kwargs)
 }
 
 func (a *TemplateContextAdapter) ApplyFilter(name string, value interface{}, args ...interface{}) (interface{}, error) {
 	return a.env.ApplyFilter(name, value, args...)
 }
 
+// HasFilter reports whether the environment has a filter named name.
+func (a *TemplateContextAdapter) HasFilter(name string) bool {
+	_, ok := a.env.GetFilter(name)
+	return ok
+}
+
 func (a *TemplateContextAdapter) ApplyTest(name string, value interface{}, args ...interface{}) (bool, error) {
 	return a.env.ApplyTest(name, value, args...)
+}
+
+// IsBuiltinFilter reports whether the environment's filter name is one of
+// miya's own rather than one added with AddFilter and friends.
+func (a *TemplateContextAdapter) IsBuiltinFilter(name string) bool {
+	return a.env.filterRegistry.IsBuiltin(name)
+}
+
+// IsBuiltinTest reports whether the environment's test name is one of miya's
+// own rather than one added with AddTest.
+func (a *TemplateContextAdapter) IsBuiltinTest(name string) bool {
+	if _, registered := a.env.testRegistry.Get(name); registered {
+		return a.env.testRegistry.IsBuiltin(name)
+	}
+	return name == "filter" || name == "test"
 }
 
 // IsAutoescapeEnabled returns the environment's autoescape setting
@@ -165,26 +219,6 @@ func (t *Template) AST() parser.Node {
 	return t.ast
 }
 
-// normalizeHTMLOptionWhitespace compresses whitespace within HTML option elements
-func normalizeHTMLOptionWhitespace(html string) string {
-	// Use pre-compiled regex (Phase 3a optimization)
-	return htmlOptionRegex.ReplaceAllStringFunc(html, func(match string) string {
-		parts := htmlOptionRegex.FindStringSubmatch(match)
-		if len(parts) != 4 {
-			return match
-		}
-
-		openTag := parts[1]
-		content := parts[2]
-		closeTag := parts[3]
-
-		// Use pre-compiled whitespace regex (Phase 3a optimization)
-		normalized := whitespaceRegex.ReplaceAllString(strings.TrimSpace(content), " ")
-
-		return openTag + normalized + closeTag
-	})
-}
-
 // GetASTAsTemplateNode returns the AST as a TemplateNode for inheritance processing
 func (t *Template) GetASTAsTemplateNode() *parser.TemplateNode {
 	if templateNode, ok := t.ast.(*parser.TemplateNode); ok {
@@ -201,18 +235,28 @@ func (t *Template) SetAST(ast parser.Node) {
 	t.cacheMu.Unlock()
 }
 
-// Release returns pooled AST nodes back to their pools for reuse.
-// This should be called when a template is no longer needed and you want to
-// reduce memory pressure. After calling Release(), the template should not
-// be used for rendering.
+// Release removes this template from its Environment's template cache, so
+// the Environment no longer keeps it alive. Use it for one-off templates,
+// such as many distinct FromString sources, to keep the cache from growing.
 //
-// Note: This is optional - if not called, nodes will be garbage collected normally.
-// Use this when you're done with a template and want to enable immediate node reuse.
+// The template stays usable, and anyone else holding it is unaffected; a
+// later FromString or GetTemplate of the same source or name parses it
+// again. Release only removes the cache entry if it still points to this
+// template, so it is safe to call more than once, concurrently, or after
+// ClearCache.
 func (t *Template) Release() {
-	if t.ast != nil {
-		parser.ReleaseAST(t.ast)
-		t.ast = nil
+	if t.env == nil || t.cacheKey == "" {
+		return
 	}
+	e := t.env
+	e.cacheMutex.Lock()
+	if cached, ok := e.cache[t.cacheKey]; ok && cached == t {
+		delete(e.cache, t.cacheKey)
+	}
+	if cached, ok := e.stringCache[t.cacheKey]; ok && cached == t {
+		delete(e.stringCache, t.cacheKey)
+	}
+	e.cacheMutex.Unlock()
 }
 
 // hasInheritanceDirectives checks if template contains {% extends %} directives

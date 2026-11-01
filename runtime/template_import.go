@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/zipreport/miya/parser"
 )
@@ -22,12 +23,19 @@ type ImportedNamespace struct {
 	evaluator *DefaultEvaluator
 }
 
-// Get returns an attribute from the namespace (used for macro/variable access)
+// Get returns an attribute from the namespace (used for macro/variable access).
+// A list is returned as a plain slice; RawGet returns the stored value.
 func (in *ImportedNamespace) Get(name string) (interface{}, bool) {
+	v, ok := in.RawGet(name)
+	return Unbox(v), ok
+}
+
+// RawGet returns the stored value for the runtime, which can be a list box
+// or escaped template output; Go code should use Get.
+func (in *ImportedNamespace) RawGet(name string) (interface{}, bool) {
 	// Check if it's a macro
 	if macro, ok := in.namespace.Macros[name]; ok {
-		// Return a callable function for the macro
-		return in.createMacroFunction(macro), true
+		return macro.bind(in.evaluator), true
 	}
 
 	// Check if it's a variable
@@ -58,25 +66,6 @@ func (in *ImportedNamespace) String() string {
 		in.namespace.TemplateName, len(in.namespace.Macros), len(in.namespace.Variables))
 }
 
-// createMacroFunction creates a callable function for a macro
-func (in *ImportedNamespace) createMacroFunction(macro *TemplateMacro) interface{} {
-	return func(args ...interface{}) (interface{}, error) {
-		// Parse keyword arguments if provided
-		kwargs := make(map[string]interface{})
-
-		// If the last argument is a map, treat it as kwargs
-		if len(args) > 0 {
-			if kw, ok := args[len(args)-1].(map[string]interface{}); ok {
-				kwargs = kw
-				args = args[:len(args)-1]
-			}
-		}
-
-		// Call the macro with the evaluator
-		return macro.Call(in.evaluator, in.namespace.Context, args, kwargs)
-	}
-}
-
 // TemplateMacro represents a macro that can be called from templates
 type TemplateMacro struct {
 	Name       string
@@ -84,59 +73,26 @@ type TemplateMacro struct {
 	Defaults   map[string]interface{}
 	Body       []parser.Node
 	Context    Context // The context in which the macro was defined
+	parser.MacroUsage
 }
 
-// Call executes the macro with the given arguments
+// bind returns the macro as a callable bound to its definition context.
+func (tm *TemplateMacro) bind(evaluator *DefaultEvaluator) *Macro {
+	return &Macro{
+		Name:       tm.Name,
+		Parameters: tm.Parameters,
+		Defaults:   tm.Defaults,
+		Body:       tm.Body,
+		MacroUsage: tm.MacroUsage,
+		defCtx:     tm.Context,
+		evaluator:  evaluator,
+	}
+}
+
+// Call executes the macro with the given arguments. callCtx is not used: the
+// body runs in the definition context, and a caller is passed in kwargs["caller"].
 func (tm *TemplateMacro) Call(evaluator *DefaultEvaluator, callCtx Context, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
-	leave, err := evaluator.enter("macro " + tm.Name)
-	if err != nil {
-		return nil, err
-	}
-	defer leave()
-
-	// Create a new context for macro execution
-	macroCtx := tm.Context.Clone()
-
-	// Set up macro parameters
-	for i, paramName := range tm.Parameters {
-		if i < len(args) {
-			macroCtx.SetVariable(paramName, args[i])
-		} else if defaultVal, hasDefault := tm.Defaults[paramName]; hasDefault {
-			// For now, evaluate default values as literals
-			if defaultExpr, ok := defaultVal.(parser.ExpressionNode); ok {
-				evalDefault, err := evaluator.EvalNode(defaultExpr, macroCtx)
-				if err != nil {
-					return nil, fmt.Errorf("error evaluating default value for parameter %s: %w", paramName, err)
-				}
-				macroCtx.SetVariable(paramName, evalDefault)
-			} else {
-				macroCtx.SetVariable(paramName, defaultVal)
-			}
-		} else {
-			return nil, fmt.Errorf("missing required macro parameter: %s", paramName)
-		}
-	}
-
-	// Set keyword arguments
-	for key, value := range kwargs {
-		macroCtx.SetVariable(key, value)
-	}
-
-	// Inherit caller from call context if available
-	if caller, exists := callCtx.GetVariable("caller"); exists {
-		macroCtx.SetVariable("caller", caller)
-	}
-
-	// Execute macro body
-	if len(tm.Body) > 0 {
-		result, err := evaluator.evalNodeList(tm.Body, macroCtx)
-		if err != nil {
-			return nil, fmt.Errorf("error executing macro %s: %w", tm.Name, err)
-		}
-		return result, nil
-	}
-
-	return "", nil
+	return tm.bind(evaluator).Call(args, kwargs)
 }
 
 // TemplateLoader interface for loading templates
@@ -145,56 +101,59 @@ type TemplateLoader interface {
 	TemplateExists(name string) bool
 }
 
-// ImportSystem handles template imports and namespace management
+// ImportSystem handles template imports and namespace management.
+// It keeps no per-template state: the evaluator decides when a module is
+// reused (see DefaultEvaluator.loadModule), so one ImportSystem can serve
+// concurrent renders.
 type ImportSystem struct {
-	loader     TemplateLoader
-	namespaces map[string]*TemplateNamespace // Cache for loaded namespaces
+	loader  TemplateLoader
+	resolve InheritanceResolver
+}
+
+// InheritanceResolver returns the tree an include renders: the template's own
+// tree, or the tree merged with its parents when it extends one.
+type InheritanceResolver func(name string, ast *parser.TemplateNode, ctx Context, eval Evaluator) (*parser.TemplateNode, error)
+
+// SetInheritanceResolver sets how an include resolves {% extends %}; nil
+// renders the included tree as it is.
+func (is *ImportSystem) SetInheritanceResolver(r InheritanceResolver) {
+	is.resolve = r
 }
 
 // NewImportSystem creates a new import system
 func NewImportSystem(loader TemplateLoader, evaluator *DefaultEvaluator) *ImportSystem {
 	// Note: evaluator parameter kept for API compatibility but no longer stored
 	return &ImportSystem{
-		loader:     loader,
-		namespaces: make(map[string]*TemplateNamespace),
+		loader: loader,
 	}
 }
 
-// LoadTemplateNamespace loads a template and creates its namespace
-func (is *ImportSystem) LoadTemplateNamespace(templateName string, baseCtx Context, evaluator *DefaultEvaluator) (*TemplateNamespace, error) {
-	// Check cache first
-	if ns, exists := is.namespaces[templateName]; exists {
-		return ns, nil
-	}
-
-	// Check if template exists
-	if !is.loader.TemplateExists(templateName) {
-		// Create a placeholder namespace for missing templates
-		namespace := &TemplateNamespace{
-			TemplateName: templateName,
-			Macros:       make(map[string]*TemplateMacro),
-			Variables:    make(map[string]interface{}),
-			Context:      baseCtx.Clone(),
-		}
-
-		// Cache the placeholder namespace
-		is.namespaces[templateName] = namespace
-
-		return namespace, nil
-	}
-
-	// Load the template AST
+// LoadTemplateNamespace loads a template and builds its namespace. moduleCtx
+// becomes the module's context and is written to (top-level sets and the
+// file's own imports land in it), so pass a context you own. The loader must
+// return an error for a template that does not exist; TemplateExists is not
+// consulted. The module's top-level code runs, so an {% include %} in it calls
+// TemplateExists and needs the evaluator's import system: a bare
+// NewEvaluator() without one fails on a module that includes.
+func (is *ImportSystem) LoadTemplateNamespace(templateName string, moduleCtx Context, evaluator *DefaultEvaluator) (*TemplateNamespace, error) {
 	ast, err := is.loader.LoadTemplate(templateName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load template %q: %w", templateName, err)
+		// The environment's loader may already have named the template
+		prefix := fmt.Sprintf("failed to load template %q", templateName)
+		if strings.HasPrefix(err.Error(), prefix) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("%s: %w", prefix, err)
+	}
+	if ast == nil {
+		return nil, fmt.Errorf("failed to load template %q: the loader returned no template", templateName)
 	}
 
-	// Create namespace
 	namespace := &TemplateNamespace{
 		TemplateName: templateName,
 		Macros:       make(map[string]*TemplateMacro),
 		Variables:    make(map[string]interface{}),
-		Context:      baseCtx.Clone(),
+		Context:      moduleCtx,
 	}
 
 	// Extract macros and variables from AST
@@ -203,106 +162,202 @@ func (is *ImportSystem) LoadTemplateNamespace(templateName string, baseCtx Conte
 		return nil, fmt.Errorf("failed to extract namespace from template %q: %w", templateName, err)
 	}
 
-	// Cache the namespace
-	is.namespaces[templateName] = namespace
-
 	return namespace, nil
 }
 
-// extractNamespaceContent walks the AST and extracts macros and global variables
+// extractNamespaceContent runs the template's top-level code in the module
+// context, as Jinja2 does when it builds a module: macros are registered, the
+// taken branch of an if runs, and every other statement is evaluated with its
+// output discarded. The names the top level assigned are then exported.
 func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *TemplateNamespace, evaluator *DefaultEvaluator) error {
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		for _, child := range n.Children {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
+	tmpl, ok := node.(*parser.TemplateNode)
+	if !ok {
+		return nil
+	}
+	nodes := tmpl.Children
+	for _, child := range nodes {
+		if ext, ok := child.(*parser.ExtendsNode); ok {
+			// Only the child's own top-level code runs; the parent's does not.
+			// Jinja2 runs the parent, so a parent that fails to load fails
+			// the import.
+			if err := is.loadParents(ext); err != nil {
 				return err
 			}
+			nodes = topLevelCode(tmpl)
+			break
 		}
-
-	case *parser.MacroNode:
-		// Convert defaults from parser expressions to evaluated values
-		defaults := make(map[string]interface{})
-		for key, expr := range n.Defaults {
-			// For now, store the expression itself - in a full implementation
-			// we'd evaluate constant expressions
-			defaults[key] = expr
+	}
+	assigned := make(map[string]bool)
+	if err := is.runModuleNodes(nodes, namespace, evaluator, assigned); err != nil {
+		return err
+	}
+	for name := range assigned {
+		if strings.HasPrefix(name, "_") {
+			continue
 		}
-
-		macro := &TemplateMacro{
-			Name:       n.Name,
-			Parameters: n.Parameters,
-			Defaults:   defaults,
-			Body:       n.Body,
-			Context:    namespace.Context,
+		if value, ok := namespace.Context.GetVariable(name); ok {
+			namespace.Variables[name] = value
 		}
+	}
+	return nil
+}
 
-		namespace.Macros[n.Name] = macro
-
-	case *parser.SetNode:
-		// Extract global variable assignments
-		if len(n.Targets) == 1 {
-			if identNode, ok := n.Targets[0].(*parser.IdentifierNode); ok {
-				// Evaluate the value in the namespace context
-				value, err := evaluator.EvalNode(n.Value, namespace.Context)
-				if err != nil {
-					// If evaluation fails, store a placeholder
-					namespace.Variables[identNode.Name] = fmt.Sprintf("[Variable %s from %s]", identNode.Name, namespace.TemplateName)
-				} else {
-					namespace.Variables[identNode.Name] = value
-				}
-			}
+// loadParents loads each template up the {% extends %} chain from ext. A
+// parent named by an expression is not followed.
+func (is *ImportSystem) loadParents(ext *parser.ExtendsNode) error {
+	seen := make(map[string]bool)
+	for ext != nil {
+		lit, ok := ext.Template.(*parser.LiteralNode)
+		if !ok {
+			return nil
 		}
-
-	case *parser.IfNode:
-		// Recursively process if blocks
-		for _, child := range n.Body {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
+		name, ok := lit.Value.(string)
+		if !ok {
+			return nil
+		}
+		if seen[name] {
+			return fmt.Errorf("circular inheritance detected: %s", name)
+		}
+		seen[name] = true
+		ast, err := is.loader.LoadTemplate(name)
+		if err != nil {
+			prefix := fmt.Sprintf("failed to load template %q", name)
+			if strings.HasPrefix(err.Error(), prefix) {
 				return err
 			}
+			return fmt.Errorf("%s: %w", prefix, err)
 		}
-		for _, elif := range n.ElseIfs {
-			for _, child := range elif.Body {
-				err := is.extractNamespaceContent(child, namespace, evaluator)
-				if err != nil {
-					return err
-				}
-			}
+		if ast == nil {
+			return fmt.Errorf("failed to load template %q: the loader returned no template", name)
 		}
-		for _, child := range n.Else {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
-				return err
-			}
-		}
-
-	case *parser.ForNode:
-		// Recursively process for loop bodies
-		for _, child := range n.Body {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
-				return err
-			}
-		}
-		for _, child := range n.Else {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
-				return err
-			}
-		}
-
-	case *parser.BlockNode:
-		// Recursively process block contents
-		for _, child := range n.Body {
-			err := is.extractNamespaceContent(child, namespace, evaluator)
-			if err != nil {
-				return err
+		ext = nil
+		for _, child := range ast.Children {
+			if e, ok := child.(*parser.ExtendsNode); ok {
+				ext = e
+				break
 			}
 		}
 	}
-
 	return nil
+}
+
+func (is *ImportSystem) runModuleNodes(nodes []parser.Node, namespace *TemplateNamespace, evaluator *DefaultEvaluator, assigned map[string]bool) error {
+	for _, child := range nodes {
+		switch n := child.(type) {
+		case *parser.MacroNode:
+			// Convert defaults from parser expressions to evaluated values
+			defaults := make(map[string]interface{})
+			for key, expr := range n.Defaults {
+				// For now, store the expression itself - in a full implementation
+				// we'd evaluate constant expressions
+				defaults[key] = expr
+			}
+
+			macro := &TemplateMacro{
+				Name:       n.Name,
+				Parameters: n.Parameters,
+				Defaults:   defaults,
+				Body:       n.Body,
+				Context:    namespace.Context,
+				MacroUsage: n.MacroUsage,
+			}
+
+			if !strings.HasPrefix(n.Name, "_") {
+				namespace.Macros[n.Name] = macro
+			}
+			// Register the macro in its own module so it can call itself and its siblings.
+			namespace.Context.SetVariable(n.Name, macro.bind(evaluator))
+
+		case *parser.SetNode:
+			if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
+				names := make([]string, 0, len(n.Targets))
+				for _, t := range n.Targets {
+					switch t := t.(type) {
+					case *parser.IdentifierNode:
+						names = append(names, t.Name)
+						assigned[t.Name] = true
+					case *parser.AttributeNode:
+						if o, ok := t.Object.(*parser.IdentifierNode); ok {
+							names = append(names, o.Name+"."+t.Attribute)
+						}
+					}
+				}
+				return fmt.Errorf("{%% set %s %%}: %w", strings.Join(names, ", "), err)
+			}
+			for _, t := range n.Targets {
+				if id, ok := t.(*parser.IdentifierNode); ok {
+					assigned[id.Name] = true
+				}
+			}
+
+		case *parser.BlockSetNode:
+			if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
+				return fmt.Errorf("{%% set %s %%}: %w", n.Variable, err)
+			}
+			assigned[n.Variable] = true
+
+		case *parser.ImportNode:
+			// The file's own imports run in its module context, so its macros can
+			// call them. As in Jinja2, they are not exported.
+			if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
+				return err
+			}
+			delete(assigned, n.Alias)
+
+		case *parser.FromNode:
+			if _, err := evaluator.EvalNode(n, namespace.Context); err != nil {
+				return err
+			}
+			for _, name := range n.Names {
+				if alias, ok := n.Aliases[name]; ok {
+					name = alias
+				}
+				delete(assigned, name)
+			}
+
+		case *parser.BlockNode:
+			// A block is its own scope: its sets and macros are not exported.
+			if _, err := evaluator.EvalNode(n, namespace.Context.Clone()); err != nil {
+				return fmt.Errorf("import: %w", err)
+			}
+
+		case *parser.IfNode:
+			body, err := is.chooseBranch(n, namespace, evaluator)
+			if err != nil {
+				return fmt.Errorf("import: %w", err)
+			}
+			if err := is.runModuleNodes(body, namespace, evaluator, assigned); err != nil {
+				return err
+			}
+
+		default:
+			if _, err := evaluator.EvalNode(child, namespace.Context); err != nil {
+				return fmt.Errorf("import: %w", err)
+			}
+		}
+	}
+	return nil
+}
+
+// chooseBranch returns the body of the if/elif/else branch that is taken.
+func (is *ImportSystem) chooseBranch(n *parser.IfNode, namespace *TemplateNamespace, evaluator *DefaultEvaluator) ([]parser.Node, error) {
+	cond, err := evaluator.EvalNode(n.Condition, namespace.Context)
+	if err != nil {
+		return nil, err
+	}
+	if evaluator.isTruthy(cond) {
+		return n.Body, nil
+	}
+	for _, elif := range n.ElseIfs {
+		cond, err := evaluator.EvalNode(elif.Condition, namespace.Context)
+		if err != nil {
+			return nil, err
+		}
+		if evaluator.isTruthy(cond) {
+			return elif.Body, nil
+		}
+	}
+	return n.Else, nil
 }
 
 // GetImportedNamespace returns an ImportedNamespace wrapper for the namespace
@@ -322,13 +377,7 @@ func (is *ImportSystem) GetNamespaceMap(namespace *TemplateNamespace, evaluator 
 
 	// Add macros as callable functions
 	for name, macro := range namespace.Macros {
-		macroFunc := func(m *TemplateMacro, eval *DefaultEvaluator) func(...interface{}) (interface{}, error) {
-			return func(args ...interface{}) (interface{}, error) {
-				// For now, call with empty kwargs - full implementation would parse kwargs from args
-				return m.Call(eval, namespace.Context, args, make(map[string]interface{}))
-			}
-		}(macro, evaluator)
-		result[name] = macroFunc
+		result[name] = macro.bind(evaluator)
 	}
 
 	// Add variables

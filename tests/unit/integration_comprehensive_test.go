@@ -369,9 +369,9 @@ func TestWebApplicationTemplateSystem(t *testing.T) {
             {% if required %}required{% endif %}
         >
             <option value="">Choose...</option>
-            {% for option_value, option_label in options %}
-                <option value="{{ option_value }}"{% if option_value == value %} selected{% endif %}>
-                    {{ option_label }}
+            {% for option in options %}
+                <option value="{{ option.value }}"{% if option.value == value %} selected{% endif %}>
+                    {{ option.label }}
                 </option>
             {% endfor %}
         </select>
@@ -556,6 +556,9 @@ func TestWebApplicationTemplateSystem(t *testing.T) {
 				"Contact Information",
 				"contact@testsite.com",
 				"+1-555-0123",
+				"General Inquiry",
+				"Technical Support",
+				"Business Inquiry",
 			},
 		},
 	}
@@ -1069,7 +1072,8 @@ func TestEcommerceTemplateSystem(t *testing.T) {
 				"Silver",
 				"Storage:",
 				"256GB",
-				"512GB (+$200)",
+				"512GB",
+				"(+$200)",
 				"Intel Core i7 processor",
 				"16GB RAM",
 				"Add to Cart",

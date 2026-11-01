@@ -1,6 +1,6 @@
 # Advanced Features Guide
 
-Advanced template features for professionals. Miya Engine provides filter blocks, do statements, whitespace control, raw blocks, and autoescape with 100% Jinja2 compatibility.
+Advanced template features for professionals. Miya Engine provides filter blocks, do statements, whitespace control, raw blocks, and autoescape.
 
 > **Working Example:** See `examples/features/advanced/` for complete examples.
 
@@ -135,8 +135,9 @@ The `do` statement evaluates an expression but doesn't print the result.
 {# Execute without output #}
 {% do numbers|sum %}
 
-{# Side effects only #}
-{% do data.update({"key": "value"}) %}
+{# Side effects only: change a list the template created #}
+{% set items = [] %}
+{% do items.append("value") %}
 
 {# With filters #}
 {% do (100 * 5)|round %}
@@ -149,8 +150,8 @@ The `do` statement evaluates an expression but doesn't print the result.
 {% set calculation_result = 0 %}
 {% do expensive_function(data) %}
 
-{# Execute for side effects #}
-{% do logger.log("Template rendered") %}
+{# Execute for side effects: call a function registered with env.AddGlobal #}
+{% do track_render("page") %}
 ```
 
 **Note:** In pure templates, `do` has limited use since templates shouldn't have side effects. Most useful when integrating with systems that track template execution.
@@ -546,26 +547,11 @@ env := miya.NewEnvironment(
 
 Miya Engine includes several optimizations for high-performance template rendering.
 
-### AST Node Pooling
+### Template cache and Release()
 
-The parser uses `sync.Pool` to reuse frequently allocated AST nodes, reducing garbage collection pressure during template parsing. This is automatic and requires no configuration.
-
-**Pooled node types:**
-- `LiteralNode` - String, number, and boolean literals
-- `IdentifierNode` - Variable references
-- `BinaryOpNode` - Binary operators (+, -, ==, and, or, etc.)
-- `FilterNode` - Filter applications
-- `UnaryOpNode` - Unary operators (not, -)
-- `AttributeNode` - Attribute access (obj.attr)
-- `GetItemNode` - Index access (obj[key])
-- `CallNode` - Function calls
-
-### Template.Release()
-
-For high-throughput applications that create many short-lived templates, you can explicitly release pooled AST nodes back to their pools:
+Compiled templates are cached by the environment, by name for `GetTemplate` and by source for `FromString`, and the cache does not expire. If you compile many distinct one-off templates, call `tmpl.Release()` when done: it removes that template from the cache, so it can be garbage collected once you drop it. The template stays usable; compiling the same source again re-parses it. `ClearCache()` drops everything.
 
 ```go
-// Create and use a template
 tmpl, err := env.FromString("Hello {{ name }}!")
 if err != nil {
     log.Fatal(err)
@@ -576,20 +562,11 @@ if err != nil {
     log.Fatal(err)
 }
 
-// Optional: release pooled nodes for reuse
+// drop this one-off template from the environment's cache
 tmpl.Release()
 ```
 
-**When to use `Release()`:**
-- Processing many unique templates in a loop
-- One-time template rendering where the template won't be reused
-- Memory-constrained environments
-- High-throughput services generating templates dynamically
-
-**When NOT to use `Release()`:**
-- Templates cached in the environment (they're reused)
-- Long-lived templates rendered multiple times
-- When memory pressure isn't a concern
+Use `Release()` for templates you will not render again (many distinct `FromString` sources). Don't use it on templates you fetch repeatedly: that is only a wasted re-parse, not an error.
 
 ### Evaluator Pooling
 
@@ -648,7 +625,7 @@ for _, data := range items {
 // 3. Use Release() only for one-off templates
 func processUserTemplate(userTemplate string, data interface{}) string {
     tmpl, _ := env.FromString(userTemplate)
-    defer tmpl.Release()  // Release since this is a one-time template
+    defer tmpl.Release()  // drop this one-off template from the environment's cache
 
     ctx := miya.NewContext()
     ctx.Set("data", data)
@@ -800,7 +777,7 @@ func processUserTemplate(userTemplate string, data interface{}) string {
 
 | Method | Description |
 |--------|-------------|
-| `Template.Release()` | Return pooled AST nodes for reuse (optional) |
+| `Template.Release()` | Remove this template from the environment's cache (it stays usable) |
 | `Environment.ClearCache()` | Clear all cached templates |
 | `Environment.InvalidateTemplate(name)` | Remove specific template from cache |
 | `Environment.GetCacheSize()` | Get number of cached templates |
@@ -867,7 +844,7 @@ Items: {%- for item in items %}{{ item }}{{ ", " if not loop.last }}{% endfor %}
 
 ## Summary
 
-**All Advanced Features: 100% Jinja2 Compatible**
+**Advanced Features**
 
  **Fully Supported:**
 - **Filter Blocks** - Apply filters to entire content blocks
@@ -877,7 +854,7 @@ Items: {%- for item in items %}{{ item }}{{ ", " if not loop.last }}{% endfor %}
 - **Raw Blocks** - Prevent template processing
 - **Autoescape** - Control HTML escaping for security
 - **Environment Configuration** - AutoEscape, StrictUndefined, TrimBlocks, LstripBlocks
-- **Performance Optimizations** - AST node pooling, evaluator pooling, template caching
+- **Performance Optimizations** - evaluator pooling, template caching
 
 **Key Benefits:**
 - Clean, professional output
@@ -886,4 +863,4 @@ Items: {%- for item in items %}{{ item }}{{ ", " if not loop.last }}{% endfor %}
 - Powerful block transformations
 - High performance with minimal memory overhead
 
-All advanced features work identically to Jinja2, providing professional-grade template control.
+For the known differences from Jinja2, see [Miya Limitations](MIYA_LIMITATIONS.md).

@@ -121,7 +121,7 @@ func TestDictFunction(t *testing.T) {
 		{
 			name:     "EmptyDict",
 			template: `{% set d = dict() %}{{ d }}`,
-			expected: "map[]",
+			expected: "{}",
 		},
 		{
 			name:     "DictWithKwargs",
@@ -132,11 +132,6 @@ func TestDictFunction(t *testing.T) {
 			name:     "DictAccess",
 			template: `{% set d = dict(name="Alice") %}{{ d.name }}`,
 			expected: "Alice",
-		},
-		{
-			name:     "DictModification",
-			template: `{% set d = dict() %}{% set d.key = "value" %}{{ d.key }}`,
-			expected: "value",
 		},
 	}
 
@@ -153,6 +148,16 @@ func TestDictFunction(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDictAttributeAssignmentRejected(t *testing.T) {
+	env := miya.NewEnvironment()
+	t.Run("DictModification", func(t *testing.T) {
+		_, err := env.RenderString(`{% set d = dict() %}{% set d.key = "value" %}{{ d.key }}`, miya.NewContext())
+		if err == nil {
+			t.Fatal("expected an error assigning an attribute on a dict")
+		}
+	})
 }
 
 func TestNamespaceWithComplexScoping(t *testing.T) {
@@ -176,7 +181,7 @@ Count: {{ ns.count }}, Items: {{ ns.items }}
 		t.Fatalf("Failed to render template: %v", err)
 	}
 
-	expected := "Count: 3, Items: [1 2]"
+	expected := "Count: 3, Items: [1, 2]"
 	if result != expected {
 		t.Errorf("Expected '%s', got '%s'", expected, result)
 	}

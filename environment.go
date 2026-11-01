@@ -3,25 +3,26 @@ package miya
 import (
 	"fmt"
 	"hash/fnv"
-	"strings"
+	"runtime/debug"
 	"sync"
 	"time"
 
 	"github.com/zipreport/miya/branching"
 	"github.com/zipreport/miya/extensions"
 	"github.com/zipreport/miya/filters"
-	"github.com/zipreport/miya/inheritance"
 	"github.com/zipreport/miya/lexer"
 	"github.com/zipreport/miya/loader"
 	"github.com/zipreport/miya/macros"
 	"github.com/zipreport/miya/parser"
 	"github.com/zipreport/miya/runtime"
-	"github.com/zipreport/miya/whitespace"
 )
 
 // Environment is the central configuration object for template compilation and rendering.
 // It holds the template loader, filter/test registries, caching, and all rendering options.
-// An Environment is safe for concurrent use; its template cache is protected by sync.RWMutex.
+// An Environment is safe for concurrent use: templates may be rendered while AddGlobal,
+// AddFilter, AddTest and AddExtension are called. Calls to AddTest must not run
+// concurrently with each other. SetConfig, SetLoader and changes to a loader's templates
+// (such as StringLoader.AddTemplate) must happen before rendering starts.
 //
 // Create an Environment with NewEnvironment and configure it using EnvironmentOption functions:
 //
@@ -31,17 +32,17 @@ import (
 //	    miya.WithTrimBlocks(true),
 //	)
 type Environment struct {
-	loader              Loader
-	filterRegistry      *filters.FilterRegistry
-	inheritanceResolver *inheritance.InheritanceResolver
-	macroRegistry       *macros.MacroRegistry
-	testRegistry        *branching.TestRegistry
-	whitespaceProcessor *whitespace.WhitespaceProcessor
-	extensionRegistry   *extensions.Registry
-	globals             map[string]interface{}
-	tests               map[string]TestFunc // deprecated, use testRegistry
-	cache               map[string]*Template
-	cacheMutex          sync.RWMutex
+	loader            Loader
+	filterRegistry    *filters.FilterRegistry
+	macroRegistry     *macros.MacroRegistry
+	testRegistry      *branching.TestRegistry
+	extensionRegistry *extensions.Registry
+	globals           map[string]interface{}
+	globalsMu         sync.RWMutex
+	tests             map[string]TestFunc  // deprecated, use testRegistry
+	cache             map[string]*Template // GetTemplate, by name
+	stringCache       map[string]*Template // FromString, by hashString(source)
+	cacheMutex        sync.RWMutex
 
 	// New inheritance caching system
 	inheritanceCache      *runtime.InheritanceCache
@@ -85,18 +86,18 @@ func NewEnvironment(opts ...EnvironmentOption) *Environment {
 	inheritanceCache := runtime.NewInheritanceCache()
 
 	env := &Environment{
-		filterRegistry:      filters.NewRegistry(),
-		macroRegistry:       macros.NewMacroRegistry(),
-		testRegistry:        branching.NewTestRegistry(),
-		whitespaceProcessor: whitespace.NewWhitespaceProcessor(false, false, false),
-		extensionRegistry:   extensions.NewRegistry(),
-		globals:             make(map[string]interface{}),
-		tests:               make(map[string]TestFunc), // deprecated
-		cache:               make(map[string]*Template),
-		inheritanceCache:    inheritanceCache,
-		extensionConfig:     make(map[string]interface{}),
-		autoEscape:          true,
-		undefinedBehavior:   runtime.UndefinedSilent, // Default to silent undefined
+		filterRegistry:    filters.NewRegistry(),
+		macroRegistry:     macros.NewMacroRegistry(),
+		testRegistry:      branching.NewTestRegistry(),
+		extensionRegistry: extensions.NewRegistry(),
+		globals:           make(map[string]interface{}),
+		tests:             make(map[string]TestFunc), // deprecated
+		cache:             make(map[string]*Template),
+		stringCache:       make(map[string]*Template),
+		inheritanceCache:  inheritanceCache,
+		extensionConfig:   make(map[string]interface{}),
+		autoEscape:        true,
+		undefinedBehavior: runtime.UndefinedSilent, // Default to silent undefined
 
 		varStartString:     "{{",
 		varEndString:       "}}",
@@ -110,6 +111,11 @@ func NewEnvironment(opts ...EnvironmentOption) *Environment {
 		opt(env)
 	}
 
+	env.filterRegistry.SetTestLookup(func(name string) (func(interface{}, ...interface{}) (bool, error), bool) {
+		t, ok := env.testRegistry.Get(name)
+		return t, ok
+	})
+
 	// Initialize evaluator pool for performance
 	env.evaluatorPool = sync.Pool{
 		New: func() interface{} {
@@ -122,18 +128,13 @@ func NewEnvironment(opts ...EnvironmentOption) *Environment {
 	// Initialize shared import system (reused across renders)
 	templateLoader := runtime.NewSimpleTemplateLoader(env)
 	env.importSystem = runtime.NewImportSystem(templateLoader, nil)
-
-	// Update whitespace processor with final settings
-	env.whitespaceProcessor = whitespace.NewWhitespaceProcessor(
-		env.trimBlocks,
-		env.lstripBlocks,
-		env.keepTrailingNewline,
-	)
-
-	// Create inheritance resolver if we have a loader
-	if env.loader != nil {
-		env.inheritanceResolver = inheritance.NewInheritanceResolver(&loaderAdapter{env.loader})
-	}
+	env.importSystem.SetInheritanceResolver(func(name string, ast *parser.TemplateNode, ctx runtime.Context, eval runtime.Evaluator) (*parser.TemplateNode, error) {
+		tmpl, err := env.GetTemplate(name)
+		if err != nil || !tmpl.hasInheritanceDirectives() {
+			return ast, err
+		}
+		return env.getInheritanceProcessor().ResolveInheritanceWith(&templateAdapter{template: tmpl}, ctx, eval)
+	})
 
 	registerBuiltinTests(env)
 	registerBuiltinGlobals(env)
@@ -160,34 +161,13 @@ func (e *Environment) GetTemplate(name string) (*Template, error) {
 		return nil, fmt.Errorf("no loader configured for environment")
 	}
 
-	// Try to load from advanced loader first if available
-	if advancedLoader, ok := e.loader.(loader.AdvancedLoader); ok {
-		templateNode, err := advancedLoader.LoadTemplate(name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load template %q: %w", name, err)
-		}
-
-		// NOTE: Old inheritance resolution removed - now handled at render-time
-		// This allows templates to preserve their raw AST with ExtendsNode and SuperNode
-		// for processing by the new runtime inheritance system
-
-		tmpl := &Template{
-			name: name,
-			env:  e,
-			ast:  templateNode,
-		}
-
-		e.cacheMutex.Lock()
-		e.cache[name] = tmpl
-		e.cacheMutex.Unlock()
-
-		return tmpl, nil
-	}
-
-	// Fallback to basic loader
 	source, err := e.loader.GetSource(name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load template %q: %w", name, err)
+		// A template that exists but cannot be read is an error, not "not found"
+		if loader.IsReadError(err) {
+			return nil, fmt.Errorf("failed to load template %q: %w", name, err)
+		}
+		return nil, &runtime.TemplateNotFoundError{Name: name, Err: err}
 	}
 
 	tmpl, err := e.compile(name, source)
@@ -195,26 +175,12 @@ func (e *Environment) GetTemplate(name string) (*Template, error) {
 		return nil, err
 	}
 
+	tmpl.cacheKey = name
 	e.cacheMutex.Lock()
 	e.cache[name] = tmpl
 	e.cacheMutex.Unlock()
 
 	return tmpl, nil
-}
-
-// hasInlineWhitespaceControl checks if template contains inline whitespace control syntax
-func (e *Environment) hasInlineWhitespaceControl(source string) bool {
-	// Fast path: if no '-' exists, no whitespace control syntax is present
-	if strings.IndexByte(source, '-') == -1 {
-		return false
-	}
-	// Only do detailed checks if '-' was found
-	return strings.Contains(source, "{%-") ||
-		strings.Contains(source, "-%}") ||
-		strings.Contains(source, "{{-") ||
-		strings.Contains(source, "-}}") ||
-		strings.Contains(source, "{#-") ||
-		strings.Contains(source, "-#}")
 }
 
 // FromString compiles a template from a string source.
@@ -223,41 +189,59 @@ func (e *Environment) FromString(source string) (*Template, error) {
 	// Generate cache key from content hash (Phase 2 optimization)
 	cacheKey := hashString(source)
 
-	// Check cache first
+	// Check cache first; a hash collision compiles the source uncached
 	e.cacheMutex.RLock()
-	if tmpl, ok := e.cache[cacheKey]; ok {
-		e.cacheMutex.RUnlock()
+	tmpl, ok := e.stringCache[cacheKey]
+	e.cacheMutex.RUnlock()
+	if ok && tmpl.source == source {
 		return tmpl, nil
 	}
-	e.cacheMutex.RUnlock()
+	collision := ok
 
 	// Compile if not cached (use "<string>" as display name)
 	tmpl, err := e.compile("<string>", source)
 	if err != nil {
 		return nil, err
 	}
+	if collision {
+		return tmpl, nil
+	}
 
 	// Store in cache with hash key
+	tmpl.cacheKey = cacheKey
 	e.cacheMutex.Lock()
-	e.cache[cacheKey] = tmpl
+	e.stringCache[cacheKey] = tmpl
 	e.cacheMutex.Unlock()
 
 	return tmpl, nil
 }
 
-// SetLoader sets the template loader for the environment and reinitializes the inheritance resolver.
+// SetLoader sets the template loader for the environment.
 func (e *Environment) SetLoader(loader Loader) {
 	e.loader = loader
-	// Create inheritance resolver if we have a loader
-	if loader != nil {
-		e.inheritanceResolver = inheritance.NewInheritanceResolver(&loaderAdapter{loader})
-	} else {
-		e.inheritanceResolver = nil
-	}
 }
 
 func (e *Environment) AddFilterLegacy(name string, filter FilterFunc) error {
 	return e.filterRegistry.Register(name, filters.FilterFunc(filter))
+}
+
+// ApplyFilterKwargs applies a filter with keyword arguments, binding them to
+// the filter's declared parameters.
+func (e *Environment) ApplyFilterKwargs(name string, value interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+	return e.filterRegistry.ApplyKwargs(name, value, args, kwargs)
+}
+
+// SetFilterParams declares the parameter names of a registered filter so that
+// templates can pass them as keyword arguments. Positional calls are unchanged.
+func (e *Environment) SetFilterParams(name string, params ...filters.Param) error {
+	return e.filterRegistry.SetParams(name, params...)
+}
+
+// AddFilterWithParams registers a filter and declares its parameter names in
+// one step. Keyword arguments are bound to these positions; an unfilled
+// position before a bound one receives its Param's Default (nil if unset).
+func (e *Environment) AddFilterWithParams(name string, filter FilterFunc, params ...filters.Param) error {
+	return e.filterRegistry.RegisterWithParams(name, filters.FilterFunc(filter), params...)
 }
 
 func (e *Environment) GetFilter(name string) (FilterFunc, bool) {
@@ -274,7 +258,17 @@ func (e *Environment) ApplyFilter(name string, value interface{}, args ...interf
 
 // AddGlobal registers a global variable that will be available in all templates rendered by this environment.
 func (e *Environment) AddGlobal(name string, value interface{}) {
+	e.globalsMu.Lock()
+	defer e.globalsMu.Unlock()
 	e.globals[name] = value
+}
+
+// lookupGlobal reads one global under the lock.
+func (e *Environment) lookupGlobal(key string) (interface{}, bool) {
+	e.globalsMu.RLock()
+	defer e.globalsMu.RUnlock()
+	v, ok := e.globals[key]
+	return v, ok
 }
 
 // AddExtension registers an extension with the environment
@@ -381,6 +375,28 @@ func (e *Environment) ListTests() []string {
 
 // ApplyTest applies a test to a value
 func (e *Environment) ApplyTest(name string, value interface{}, args ...interface{}) (bool, error) {
+	// A test registered under either name wins over the built-in meaning
+	if _, registered := e.testRegistry.Get(name); registered {
+		return e.testRegistry.Apply(name, value, args...)
+	}
+	switch name {
+	case "filter":
+		// x is filter: x names a filter of this environment
+		filterName, ok := value.(string)
+		if !ok {
+			return false, nil
+		}
+		_, found := e.filterRegistry.Get(filterName)
+		return found, nil
+	case "test":
+		// x is test: x names a test of this environment
+		testName, ok := value.(string)
+		if !ok {
+			return false, nil
+		}
+		_, found := e.testRegistry.Get(testName)
+		return found || testName == "filter" || testName == "test", nil
+	}
 	return e.testRegistry.Apply(name, value, args...)
 }
 
@@ -409,17 +425,39 @@ func (e *Environment) ListFilters() []string {
 // Macro management methods
 
 // GetMacro retrieves a macro by name
+//
+// Deprecated: the environment-wide macro registry mixes macros from every
+// compiled template and binds arguments differently from template calls. It
+// will be removed in a later minor release. Call macros from a template
+// ({% import %} or {% from %}) instead.
 func (e *Environment) GetMacro(name string) (*macros.Macro, bool) {
 	return e.macroRegistry.Get(name)
 }
 
 // ListMacros returns all available macro names
+//
+// Deprecated: the environment-wide macro registry mixes macros from every
+// compiled template and binds arguments differently from template calls. It
+// will be removed in a later minor release. Call macros from a template
+// ({% import %} or {% from %}) instead.
 func (e *Environment) ListMacros() []string {
 	return e.macroRegistry.List()
 }
 
 // CallMacro calls a macro with the given arguments
-func (e *Environment) CallMacro(name string, ctx Context, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+//
+// Deprecated: the environment-wide macro registry mixes macros from every
+// compiled template and binds arguments differently from template calls. It
+// will be removed in a later minor release. Call macros from a template
+// ({% import %} or {% from %}) instead.
+func (e *Environment) CallMacro(name string, ctx Context, args []interface{}, kwargs map[string]interface{}) (result interface{}, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			result = nil
+			err = &RenderPanicError{Value: r, Stack: debug.Stack()}
+		}
+	}()
+
 	// Create runtime context adapter
 	runtimeCtx := &TemplateContextAdapter{ctx: ctx, env: e}
 
@@ -435,6 +473,11 @@ func (e *Environment) CallMacro(name string, ctx Context, args []interface{}, kw
 }
 
 // ClearMacros clears all registered macros
+//
+// Deprecated: the environment-wide macro registry mixes macros from every
+// compiled template and binds arguments differently from template calls. It
+// will be removed in a later minor release. Call macros from a template
+// ({% import %} or {% from %}) instead.
 func (e *Environment) ClearMacros() {
 	e.macroRegistry.Clear()
 }
@@ -493,27 +536,21 @@ func (e *Environment) registerMacrosFromAST(node parser.Node, templateName strin
 }
 
 func (e *Environment) compile(name, source string) (*Template, error) {
-	// Apply whitespace preprocessing if whitespace control is enabled
-	preprocessedSource := source
-	if e.trimBlocks || e.lstripBlocks || e.hasInlineWhitespaceControl(source) {
-		processor := whitespace.NewAdvancedWhitespaceProcessor(e.trimBlocks, e.lstripBlocks, e.keepTrailingNewline)
-		preprocessedSource = processor.ProcessTemplate(source)
-	}
-
 	// Create lexer configuration from environment settings
 	lexerConfig := &lexer.LexerConfig{
-		VarStartString:     e.varStartString,
-		VarEndString:       e.varEndString,
-		BlockStartString:   e.blockStartString,
-		BlockEndString:     e.blockEndString,
-		CommentStartString: e.commentStartString,
-		CommentEndString:   e.commentEndString,
-		TrimBlocks:         e.trimBlocks,
-		LstripBlocks:       e.lstripBlocks,
+		VarStartString:      e.varStartString,
+		VarEndString:        e.varEndString,
+		BlockStartString:    e.blockStartString,
+		BlockEndString:      e.blockEndString,
+		CommentStartString:  e.commentStartString,
+		CommentEndString:    e.commentEndString,
+		TrimBlocks:          e.trimBlocks,
+		LstripBlocks:        e.lstripBlocks,
+		KeepTrailingNewline: e.keepTrailingNewline,
 	}
 
-	// Tokenize the preprocessed source
-	l := lexer.NewLexer(preprocessedSource, lexerConfig)
+	// Tokenize the source
+	l := lexer.NewLexer(source, lexerConfig)
 	tokens, err := l.Tokenize()
 	if err != nil {
 		return nil, fmt.Errorf("lexer error in template %s: %v", name, err)
@@ -563,10 +600,6 @@ func (e *Environment) compile(name, source string) (*Template, error) {
 func WithLoader(loader Loader) EnvironmentOption {
 	return func(e *Environment) {
 		e.loader = loader
-		// Create inheritance resolver if we have a loader
-		if loader != nil {
-			e.inheritanceResolver = inheritance.NewInheritanceResolver(&loaderAdapter{loader})
-		}
 	}
 }
 
@@ -599,6 +632,14 @@ func WithLstripBlocks(enabled bool) EnvironmentOption {
 func WithKeepTrailingNewline(enabled bool) EnvironmentOption {
 	return func(e *Environment) {
 		e.keepTrailingNewline = enabled
+	}
+}
+
+// WithTruncateLeeway sets the default leeway of the truncate filter (Jinja2's
+// truncate.leeway policy, default 5). Use 0 when truncated text must fit.
+func WithTruncateLeeway(n int) EnvironmentOption {
+	return func(e *Environment) {
+		e.filterRegistry.Replace("truncate", filters.TruncateFilterWithLeeway(n))
 	}
 }
 
@@ -636,15 +677,17 @@ func WithUndefinedBehavior(behavior runtime.UndefinedBehavior) EnvironmentOption
 // ClearCache clears the template cache
 func (e *Environment) ClearCache() {
 	e.cacheMutex.Lock()
-	defer e.cacheMutex.Unlock()
 	e.cache = make(map[string]*Template)
+	e.stringCache = make(map[string]*Template)
+	e.cacheMutex.Unlock()
+	e.ClearInheritanceCache()
 }
 
 // GetCacheSize returns the number of cached templates
 func (e *Environment) GetCacheSize() int {
 	e.cacheMutex.RLock()
 	defer e.cacheMutex.RUnlock()
-	return len(e.cache)
+	return len(e.cache) + len(e.stringCache)
 }
 
 // Inheritance cache management methods
@@ -676,12 +719,12 @@ func (e *Environment) GetInheritanceCacheStats() runtime.CacheStats {
 	return e.inheritanceCache.GetStats()
 }
 
-// ConfigureInheritanceCache allows tuning of inheritance cache settings
+// ConfigureInheritanceCache allows tuning of inheritance cache settings.
+// resolvedTTL is ignored and deprecated: resolved templates are not cached.
 func (e *Environment) ConfigureInheritanceCache(hierarchyTTL, resolvedTTL time.Duration, maxEntries int) {
 	e.inheritanceCacheMutex.Lock()
 	defer e.inheritanceCacheMutex.Unlock()
 	e.inheritanceCache.SetHierarchyTTL(hierarchyTTL)
-	e.inheritanceCache.SetResolvedTTL(resolvedTTL)
 	e.inheritanceCache.SetMaxEntries(maxEntries)
 }
 
@@ -724,66 +767,6 @@ func (e *Environment) RenderTemplate(name string, context Context) (string, erro
 	return template.Render(context)
 }
 
-// applyBlockTrimming applies block trimming rules to output
-func (e *Environment) applyBlockTrimming(output string) string {
-	if !e.trimBlocks && !e.lstripBlocks {
-		return output
-	}
-
-	lines := strings.Split(output, "\n")
-	for i, line := range lines {
-		if e.lstripBlocks {
-			// Remove leading whitespace from lines that start with block tags
-			if strings.Contains(line, e.blockStartString) {
-				lines[i] = strings.TrimLeft(line, " \t")
-			}
-		}
-		if e.trimBlocks {
-			// Remove trailing newline after block tags
-			if strings.Contains(line, e.blockEndString) {
-				if i < len(lines)-1 && lines[i+1] == "" {
-					lines = append(lines[:i+1], lines[i+2:]...)
-				}
-			}
-		}
-	}
-
-	return strings.Join(lines, "\n")
-}
-
-// loaderAdapter adapts loader.Loader to inheritance.TemplateLoader interface
-type loaderAdapter struct {
-	loader Loader
-}
-
-func (la *loaderAdapter) LoadTemplate(name string) (*parser.TemplateNode, error) {
-	// Try advanced loader first
-	if advancedLoader, ok := la.loader.(loader.AdvancedLoader); ok {
-		return advancedLoader.LoadTemplate(name)
-	}
-
-	// Fallback to basic loader - for now just return a simple template
-	source, err := la.loader.GetSource(name)
-	if err != nil {
-		return nil, err
-	}
-
-	// Create a simple template node with the source as text
-	return &parser.TemplateNode{
-		Name:     name,
-		Children: []parser.Node{&parser.TextNode{Content: source}},
-	}, nil
-}
-
-func (la *loaderAdapter) ResolveTemplateName(name string) string {
-	// Try advanced loader first
-	if advancedLoader, ok := la.loader.(loader.AdvancedLoader); ok {
-		return advancedLoader.ResolveTemplateName(name)
-	}
-	// Simple fallback - just return the name as-is
-	return name
-}
-
 func registerBuiltinTests(env *Environment) {
 	// Will be populated when we implement tests
 }
@@ -824,19 +807,19 @@ func RenderTemplate(name string, context Context) (string, error) {
 // registerBuiltinGlobals registers all built-in global functions
 func registerBuiltinGlobals(env *Environment) {
 	// namespace() function
-	env.AddGlobal("namespace", namespaceFunction)
+	env.AddGlobal("namespace", runtime.KeepMarkupFunc(namespaceFunction))
 
 	// range() function
 	env.AddGlobal("range", rangeFunction)
 
 	// dict() function
-	env.AddGlobal("dict", dictFunction)
+	env.AddGlobal("dict", runtime.KeepMarkupFunc(dictFunction))
 
 	// cycler() function
-	env.AddGlobal("cycler", cyclerFunction)
+	env.AddGlobal("cycler", runtime.KeepMarkupFunc(cyclerFunction))
 
 	// joiner() function
-	env.AddGlobal("joiner", joinerFunction)
+	env.AddGlobal("joiner", runtime.KeepMarkupFunc(joinerFunction))
 
 	// lipsum() function
 	env.AddGlobal("lipsum", lipsumFunction)

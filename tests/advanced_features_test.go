@@ -493,7 +493,6 @@ Price Analysis:
 		})
 	}
 
-	t.Logf("✅ All %d advanced feature tests passed!", len(advancedTests))
 }
 
 // generateLargeTestData creates a large data structure for performance testing
@@ -572,7 +571,7 @@ func TestAdvancedFeatureEdgeCases(t *testing.T) {
 			Name:     "Complex boolean logic",
 			Template: `{{ (true and false) or (not false and true) }}, {{ 0 or 1 and 2 }}`,
 			Context:  map[string]interface{}{},
-			Expected: "true, true",
+			Expected: "true, 2",
 		},
 		{
 			Name:     "Extreme nesting levels",
@@ -584,7 +583,6 @@ func TestAdvancedFeatureEdgeCases(t *testing.T) {
 
 	t.Logf("Running %d edge case tests...", len(edgeCaseTests))
 	helpers.RenderTestCases(t, env, edgeCaseTests)
-	t.Logf("✅ All %d edge case tests passed!", len(edgeCaseTests))
 }
 
 // Helper functions are in tests/helpers package

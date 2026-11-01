@@ -500,6 +500,17 @@ func TestEnvironmentMacros(t *testing.T) {
 		// Should not panic
 		env.ClearMacros()
 	})
+
+	t.Run("CallMacro calls a compiled macro", func(t *testing.T) {
+		env := NewEnvironment()
+		if _, err := env.FromString("{% macro m(x) %}[{{ x }}]{% endmacro %}"); err != nil {
+			t.Fatal(err)
+		}
+		got, err := env.CallMacro("m", NewContext(), []interface{}{"a"}, nil)
+		if err != nil || got != "[a]" {
+			t.Fatalf("CallMacro = %q, %v; want \"[a]\", nil", got, err)
+		}
+	})
 }
 
 // TestCapitalizeFirst tests the capitalizeFirst helper
@@ -521,40 +532,6 @@ func TestCapitalizeFirst(t *testing.T) {
 			result := capitalizeFirst(tt.input)
 			if result != tt.expected {
 				t.Errorf("capitalizeFirst(%q) = %q, expected %q", tt.input, result, tt.expected)
-			}
-		})
-	}
-}
-
-// TestNormalizeHTMLOptionWhitespace tests HTML option whitespace normalization
-func TestNormalizeHTMLOptionWhitespace(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{
-			name:     "option with extra whitespace",
-			input:    "<option value=\"1\">  Option   One  </option>",
-			expected: "<option value=\"1\">Option One</option>",
-		},
-		{
-			name:     "option with newlines",
-			input:    "<option value=\"2\">\n  Option Two\n</option>",
-			expected: "<option value=\"2\">Option Two</option>",
-		},
-		{
-			name:     "no options",
-			input:    "<div>Hello World</div>",
-			expected: "<div>Hello World</div>",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := normalizeHTMLOptionWhitespace(tt.input)
-			if result != tt.expected {
-				t.Errorf("normalizeHTMLOptionWhitespace(%q) = %q, expected %q", tt.input, result, tt.expected)
 			}
 		})
 	}

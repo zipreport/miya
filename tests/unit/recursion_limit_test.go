@@ -53,6 +53,10 @@ func TestRecursionLimit(t *testing.T) {
 			if !errors.Is(err, runtime.ErrMaxRecursion) {
 				t.Fatalf("expected ErrMaxRecursion, got err=%v (output len %d)", err, len(out))
 			}
+			// the limit is reported once, not wrapped at every level
+			if n := len(err.Error()); n > 1024 {
+				t.Fatalf("error message is %d bytes: %.300s...", n, err.Error())
+			}
 		})
 	}
 

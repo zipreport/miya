@@ -202,6 +202,10 @@ func (eap *ExtensionAwareParser) Parse() (*parser.TemplateNode, error) {
 		}
 	}
 
+	if err := parser.CheckDuplicateBlocks(template); err != nil {
+		return nil, err
+	}
+
 	return template, nil
 }
 

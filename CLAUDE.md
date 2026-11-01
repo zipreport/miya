@@ -67,10 +67,8 @@ Template Source → Lexer → Parser → AST → Runtime Evaluator → Output
 | `filters/` | Built-in filter functions (100+ filters) |
 | `branching/` | Test functions for conditionals (`is`, `is not`) |
 | `loader/` | Template loading from filesystem/memory |
-| `inheritance/` | Template inheritance (`{% extends %}`, `{% block %}`) |
-| `macros/` | Macro definition and invocation |
+| `macros/` | Deprecated macro registry behind Environment.GetMacro/CallMacro |
 | `extensions/` | Custom tag/extension system |
-| `whitespace/` | Whitespace control processing |
 
 ### Key Types
 
@@ -109,14 +107,9 @@ output, err := tmpl.Render(ctx)
 
 2. **sync.Pool for evaluators**: The environment pools evaluators for reuse
 
-3. **sync.Pool for AST nodes**: The parser pools frequently allocated node types to reduce GC pressure. See `parser/node_pool.go` for pooled types:
-   - `LiteralNode`, `IdentifierNode`, `BinaryOpNode`, `FilterNode`
-   - `UnaryOpNode`, `AttributeNode`, `GetItemNode`, `CallNode`
-   - Use `AcquireXXXNode()` in parser, `Template.Release()` to return nodes to pools
+3. **Template caching**: Templates are cached by name/content hash
 
-4. **Template caching**: Templates are cached by name/content hash
-
-5. **Lazy initialization**: Inheritance processor initializes on first use
+4. **Lazy initialization**: Inheritance processor initializes on first use
 
 ### Error Handling
 
@@ -140,12 +133,19 @@ output, err := tmpl.Render(ctx)
 
 ```
 tests/
-├── unit/           # Unit tests for individual components
-├── integration/    # Full template rendering tests
-├── jinja/          # Jinja2 compatibility tests
-├── performance/    # Benchmark tests
-└── fixtures/       # Test template files
+├── core_engine_test.go        # Core engine rendering and error tests
+├── advanced_features_test.go  # Advanced feature and edge case tests
+├── performance_test.go        # Wall-clock performance checks
+├── conformance/               # Jinja2 conformance and whitespace suites
+├── helpers/                   # Shared test helpers and fixtures
+└── unit/                      # Unit tests by topic
+benchmarks/
+├── benchmark_miya.go          # Go benchmark
+├── benchmark_python.py        # Python reference benchmark
+└── compat_demo/               # Compatibility demo (has a test)
 ```
+
+Package-level `*_test.go` files sit beside the code (`./`, `runtime/`, `parser/`, `filters/`, `loader/`, ...).
 
 ### Running Specific Test Categories
 
@@ -153,19 +153,31 @@ tests/
 # Unit tests only
 go test ./tests/unit/...
 
-# Integration tests
-go test ./tests/integration/...
+# Core engine and advanced feature tests
+go test ./tests/
 
-# Jinja compatibility tests
-go test ./tests/jinja/...
+# Everything
+make test
 ```
+
+### Jinja2 conformance suite
+
+`tests/conformance/` renders `cases.json` (produced by Jinja2 3.1.6) with miya; cases miya still gets wrong are listed in `known_divergences.json`. A change that fixes a case must delete its entry. To drop fixed entries and refresh kinds and reasons from a dump (the script exits 1, listing them, if anything diverges that is not already allow-listed; `--allow-new` adds such entries and is only for deliberate divergences):
+
+```bash
+go test ./tests/conformance/ -run '^TestConformance$' -count=1 -args -conformance.dump=/tmp/dump.json
+python3 tests/conformance/build_allowlist.py --existing tests/conformance/known_divergences.json /tmp/dump.json > /tmp/kd.json \
+  && mv /tmp/kd.json tests/conformance/known_divergences.json
+```
+
+See `tests/conformance/README.md`.
 
 ## Common Development Tasks
 
 ### Adding a New Filter
 
 1. Add filter function in `filters/` (appropriate category file)
-2. Register in `filters/registry.go` `NewRegistry()` function
+2. Register in `registerBuiltinFilters()` in `filters/filter.go`; if it takes keyword arguments, declare its parameters in `builtinParams` in `filters/params.go`
 3. Add tests in `tests/unit/` or relevant test file
 
 ```go
@@ -176,14 +188,14 @@ func MyFilter(value interface{}, args ...interface{}) (interface{}, error) {
     return result, nil
 }
 
-// In filters/registry.go NewRegistry()
-r.Register("myfilter", MyFilter)
+// In filters/filter.go registerBuiltinFilters()
+r.filters["myfilter"] = MyFilter
 ```
 
 ### Adding a New Test Function
 
-1. Add test function in `branching/tests.go`
-2. Register in `branching/registry.go`
+1. Add test function in `branching/branching.go`
+2. Register in `registerBuiltinTests()` in the same file: `r.tests["mytest"] = testMyTest`
 3. Use with `{% if value is mytest %}` syntax
 
 ### Adding Template Tags via Extensions

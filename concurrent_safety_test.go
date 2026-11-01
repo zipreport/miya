@@ -1,6 +1,8 @@
 package miya
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -117,11 +119,11 @@ func TestConcurrentTemplateRenderer(t *testing.T) {
 	resultCh := renderer.RenderAsync(ctx)
 	result := <-resultCh
 
-	if result.err != nil {
-		t.Fatalf("RenderAsync failed: %v", result.err)
+	if result.Err != nil {
+		t.Fatalf("RenderAsync failed: %v", result.Err)
 	}
-	if result.output != "Hello World!" {
-		t.Errorf("Expected 'Hello World!', got %q", result.output)
+	if result.Output != "Hello World!" {
+		t.Errorf("Expected 'Hello World!', got %q", result.Output)
 	}
 
 	// Stop the renderer
@@ -174,7 +176,7 @@ func TestConcurrentTemplateRendererStopped(t *testing.T) {
 	resultCh := renderer.RenderAsync(ctx)
 	result := <-resultCh
 
-	if result.err == nil {
+	if result.Err == nil {
 		t.Error("Expected error when rendering after stop")
 	}
 }
@@ -548,4 +550,183 @@ func (l *simpleTestLoader) ListTemplates() ([]string, error) {
 		names = append(names, name)
 	}
 	return names, nil
+}
+
+func TestConcurrentRendererLifecycle(t *testing.T) {
+	t.Run("before_start", func(t *testing.T) {
+		env := NewEnvironment()
+		tmpl, err := env.FromString("x")
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := NewConcurrentTemplateRenderer(tmpl, 1)
+		select {
+		case res := <-r.RenderAsync(NewContext()):
+			if res.Err == nil || !strings.Contains(res.Err.Error(), "not started") {
+				t.Fatalf("err = %v, want not started", res.Err)
+			}
+		case <-time.After(time.Second):
+			t.Fatal("no result within 1s")
+		}
+	})
+
+	t.Run("stop_start_stop", func(t *testing.T) {
+		env := NewEnvironment()
+		tmpl, err := env.FromString("x")
+		if err != nil {
+			t.Fatal(err)
+		}
+		r := NewConcurrentTemplateRenderer(tmpl, 1)
+		render := func() RenderResult {
+			select {
+			case res := <-r.RenderAsync(NewContext()):
+				return res
+			case <-time.After(time.Second):
+				t.Fatal("no result within 1s")
+			}
+			return RenderResult{}
+		}
+		func() {
+			defer func() {
+				if p := recover(); p != nil {
+					t.Fatalf("panic: %v", p)
+				}
+			}()
+			r.Start()
+			if res := render(); res.Err != nil || res.Output != "x" {
+				t.Fatalf("running: got %q, %v; want \"x\"", res.Output, res.Err)
+			}
+			r.Stop()
+			r.Start()
+			// A renderer starts once: after Stop, Start does nothing.
+			if res := render(); res.Err == nil || !strings.Contains(res.Err.Error(), "stopped") {
+				t.Fatalf("after restart: got %q, %v; want renderer is stopped", res.Output, res.Err)
+			}
+			r.Stop()
+		}()
+	})
+
+	t.Run("pending_jobs_at_stop", func(t *testing.T) {
+		drained := 0
+		for iter := 0; iter < 20; iter++ {
+			gate := make(chan struct{})
+			entered := make(chan struct{}, 3)
+			env := NewEnvironment()
+			env.AddGlobal("wait", func() (interface{}, error) { entered <- struct{}{}; <-gate; return "", nil })
+			tmpl, err := env.FromString("{{ wait() }}x")
+			if err != nil {
+				t.Fatal(err)
+			}
+			r := NewConcurrentTemplateRenderer(tmpl, 1)
+			r.Start()
+			chans := make([]<-chan RenderResult, 3)
+			// The single worker is blocked in job 0, so jobs 1 and 2 stay queued.
+			chans[0] = r.RenderAsync(NewContext())
+			<-entered
+			chans[1] = r.RenderAsync(NewContext())
+			chans[2] = r.RenderAsync(NewContext())
+			go r.Stop()
+			<-r.stopChan // Stop has begun: no new work is accepted
+			close(gate)
+			for i, ch := range chans {
+				select {
+				case res := <-ch:
+					switch {
+					case res.Err == nil && res.Output == "x":
+					case i > 0 && res.Err != nil && strings.Contains(res.Err.Error(), "stopped"):
+						drained++
+					default:
+						t.Fatalf("iteration %d: job %d: got %q, %v", iter, i, res.Output, res.Err)
+					}
+				case <-time.After(2 * time.Second):
+					t.Fatalf("iteration %d: job %d got no result", iter, i)
+				}
+			}
+		}
+		// After job 0 the worker picks a queued job or the stop signal at
+		// random, so each iteration drains at least one job with probability 3/4.
+		if drained == 0 {
+			t.Fatal("Stop never answered a queued job")
+		}
+	})
+}
+
+func TestTemplateCacheSizes(t *testing.T) {
+	env := NewEnvironment()
+	tmpl, err := env.FromString("x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	run := func(name string, size int, f func(t *testing.T, tc *TemplateCache)) {
+		t.Run(name, func(t *testing.T) {
+			defer func() {
+				if p := recover(); p != nil {
+					t.Fatalf("panic: %v", p)
+				}
+			}()
+			f(t, NewTemplateCache(size))
+		})
+	}
+	run("zero", 0, func(t *testing.T, tc *TemplateCache) {
+		tc.Put("a", tmpl)
+		if _, ok := tc.Get("a"); ok {
+			t.Fatal("size 0 cache must not store")
+		}
+	})
+	run("negative", -1, func(t *testing.T, tc *TemplateCache) {
+		for _, k := range []string{"a", "b", "c"} {
+			tc.Put(k, tmpl)
+		}
+		for _, k := range []string{"a", "b", "c"} {
+			if _, ok := tc.Get(k); !ok {
+				t.Fatalf("unbounded cache lost %q", k)
+			}
+		}
+	})
+	run("one", 1, func(t *testing.T, tc *TemplateCache) {
+		tc.Put("a", tmpl)
+		tc.Put("b", tmpl)
+		if _, ok := tc.Get("a"); ok {
+			t.Fatal("a should be evicted")
+		}
+		if _, ok := tc.Get("b"); !ok {
+			t.Fatal("b should be kept")
+		}
+	})
+}
+
+// A worker count below 1 runs one worker: RenderAsync neither hangs nor panics.
+func TestConcurrentTemplateRendererWorkerCount(t *testing.T) {
+	for _, workers := range []int{0, -1} {
+		t.Run(fmt.Sprint(workers), func(t *testing.T) {
+			env := NewEnvironment()
+			tmpl, err := env.FromString("Hello {{ name }}!")
+			if err != nil {
+				t.Fatalf("FromString: %v", err)
+			}
+			done := make(chan RenderResult, 1)
+			go func() {
+				defer func() {
+					if r := recover(); r != nil {
+						done <- RenderResult{Err: fmt.Errorf("panic: %v", r)}
+					}
+				}()
+				renderer := NewConcurrentTemplateRenderer(tmpl, workers)
+				renderer.Start()
+				ctx := NewContext()
+				ctx.Set("name", "World")
+				res := <-renderer.RenderAsync(ctx)
+				renderer.Stop()
+				done <- res
+			}()
+			select {
+			case res := <-done:
+				if res.Err != nil || res.Output != "Hello World!" {
+					t.Fatalf("got %q, %v; want %q", res.Output, res.Err, "Hello World!")
+				}
+			case <-time.After(5 * time.Second):
+				t.Fatal("RenderAsync or Stop did not return within 5s")
+			}
+		})
+	}
 }

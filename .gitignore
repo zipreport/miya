@@ -1,9 +1,11 @@
+plans/
 # Binaries for programs and plugins
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+examples/go/comprehensive/comprehensive
 
 # Test binary, built with `go test -c`
 *.test

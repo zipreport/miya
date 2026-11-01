@@ -3,12 +3,11 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"html"
 	"math"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"unicode"
 	"unicode/utf8"
@@ -30,25 +29,12 @@ func capitalizeFirst(s string) string {
 	return string(unicode.ToUpper(r)) + s[size:]
 }
 
-// Phase 4b optimization: Pool for loop info maps to reduce allocations
-var loopInfoPool = sync.Pool{
-	New: func() interface{} {
-		return make(map[string]interface{}, 12) // Pre-size for typical loop info
-	},
-}
-
 // Context interface for runtime package - matches main package interface
 type Context interface {
 	GetVariable(key string) (interface{}, bool)
 	SetVariable(key string, value interface{})
 	Clone() Context
 	All() map[string]interface{}
-}
-
-// FastEvalNode interface for Phase 3c optimization
-// Nodes that implement this can evaluate themselves directly
-type FastEvalNode interface {
-	FastEval(e *DefaultEvaluator, ctx Context) (interface{}, error)
 }
 
 // simpleContext is a minimal context implementation for fallback cases
@@ -99,6 +85,8 @@ func (c *Cycler) Reset() {
 type Joiner struct {
 	Separator string
 	Used      bool
+	// Safe marks a separator that was given as Markup.
+	Safe bool
 }
 
 // Join returns the separator if this is not the first call, empty string otherwise
@@ -162,11 +150,30 @@ type NamespaceInterface interface {
 	Set(key string, value interface{})
 }
 
+// NamespaceMarker marks a type as a namespace() object. Embed it to let templates
+// assign attributes on the type with {% set x.attr = ... %}.
+type NamespaceMarker struct{}
+
+func (NamespaceMarker) miyaNamespace() {}
+
+// assignableNamespace is satisfied only by types that embed NamespaceMarker.
+type assignableNamespace interface {
+	NamespaceInterface
+	miyaNamespace()
+}
+
 // EnvironmentContext provides access to the template environment
 type EnvironmentContext interface {
 	Context
 	ApplyFilter(name string, value interface{}, args ...interface{}) (interface{}, error)
 	ApplyTest(name string, value interface{}, args ...interface{}) (bool, error)
+}
+
+// KwargsFilterApplier is implemented by contexts that can apply a filter with
+// keyword arguments. It is separate from EnvironmentContext so existing
+// implementations of that interface keep compiling.
+type KwargsFilterApplier interface {
+	ApplyFilterKwargs(name string, value interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error)
 }
 
 // Evaluator interface for runtime operations
@@ -178,6 +185,24 @@ type Evaluator interface {
 // nest deeper than maxRecursionDepth.
 var ErrMaxRecursion = errors.New("maximum template recursion depth exceeded")
 
+// ErrTemplateNotFound is matched (errors.Is) by every error that means a
+// template does not exist. A template that exists but cannot be read
+// (loader.IsReadError) or fails to compile is not "not found".
+var ErrTemplateNotFound = errors.New("template not found")
+
+// TemplateNotFoundError reports which template could not be found. It
+// matches ErrTemplateNotFound with errors.Is and unwraps to the loader's error.
+type TemplateNotFoundError struct {
+	Name string
+	Err  error
+}
+
+func (e *TemplateNotFoundError) Error() string {
+	return fmt.Sprintf("failed to load template %q: %v", e.Name, e.Err)
+}
+func (e *TemplateNotFoundError) Unwrap() error        { return e.Err }
+func (e *TemplateNotFoundError) Is(target error) bool { return target == ErrTemplateNotFound }
+
 const maxRecursionDepth = 200
 
 type DefaultEvaluator struct {
@@ -185,11 +210,19 @@ type DefaultEvaluator struct {
 	importSystem     *ImportSystem
 	undefinedHandler *UndefinedHandler
 	depth            atomic.Int32
+	// importMemo holds the modules imported without context during the current
+	// render, so every such import of a template shares one module, as in Jinja2.
+	// SetImportSystem clears it; renders never share it.
+	importMemo map[string]*TemplateNamespace
+	// escapedMade is set once this evaluator has made escaped output for a
+	// non-HTML context; SetImportSystem clears it with importMemo.
+	escapedMade atomic.Bool
 }
 
 // enter counts one level of template recursion; call the returned func when leaving.
-// The counter is atomic because cached macro closures can run on another render's
-// evaluator, so their depth is added to that render's count while they run.
+// The counter is atomic because one evaluator's depth may be touched from
+// goroutines started by Go callables. Imported macro closures are no longer
+// shared across renders.
 func (e *DefaultEvaluator) enter(what string) (func(), error) {
 	if e.depth.Add(1) > maxRecursionDepth {
 		e.depth.Add(-1)
@@ -230,14 +263,11 @@ func (e *DefaultEvaluator) SetUndefinedBehavior(behavior UndefinedBehavior) {
 // SetImportSystem sets the import system for handling template imports
 func (e *DefaultEvaluator) SetImportSystem(importSystem *ImportSystem) {
 	e.importSystem = importSystem
+	e.importMemo = nil
+	e.escapedMade.Store(false)
 }
 
 func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{}, error) {
-	// Phase 3c optimization: Fast path for nodes that implement FastEval
-	if fastNode, ok := node.(FastEvalNode); ok {
-		return fastNode.FastEval(e, ctx)
-	}
-
 	switch n := node.(type) {
 	case *parser.TemplateNode:
 		return e.EvalTemplateNode(n, ctx)
@@ -255,6 +285,8 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 		return e.EvalLiteralNode(n, ctx)
 	case *parser.ListNode:
 		return e.EvalListNode(n, ctx)
+	case *parser.DictNode:
+		return e.EvalDictNode(n, ctx)
 	case *parser.AttributeNode:
 		return e.EvalAttributeNode(n, ctx)
 	case *parser.GetItemNode:
@@ -263,6 +295,8 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 		return e.EvalFilterNode(n, ctx)
 	case *parser.BinaryOpNode:
 		return e.EvalBinaryOpNode(n, ctx)
+	case *parser.CompareNode:
+		return e.EvalCompareNode(n, ctx)
 	case *parser.UnaryOpNode:
 		return e.EvalUnaryOpNode(n, ctx)
 	case *parser.IfNode:
@@ -271,6 +305,11 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 		return e.EvalForNode(n, ctx)
 	case *parser.BlockNode:
 		return e.EvalBlockNode(n, ctx)
+	case *parser.DiscardNode:
+		if _, err := e.evalNodeList(n.Body, ctx); err != nil {
+			return nil, err
+		}
+		return "", nil
 	case *parser.SetNode:
 		return e.EvalSetNode(n, ctx)
 	case *parser.BlockSetNode:
@@ -281,6 +320,8 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 		return e.EvalExtendsNode(n, ctx)
 	case *parser.IncludeNode:
 		return e.EvalIncludeNode(n, ctx)
+	case *superCycle:
+		return nil, fmt.Errorf("super() in block %q renders itself", n.block)
 	case *parser.SuperNode:
 		return e.EvalSuperNode(n, ctx)
 	case *parser.MacroNode:
@@ -349,17 +390,15 @@ func (e *DefaultEvaluator) EvalVariableNode(node *parser.VariableNode, ctx Conte
 		return "", nil
 	}
 
+	// A strict undefined value stored in a variable (such as a name a
+	// {% from %} import did not find) raises when printed, as in Jinja2.
+	if err := strictUndefinedUse(result); err != nil {
+		return nil, err
+	}
+
 	// Apply auto-escaping if enabled in this context
-	if contextWrapper, ok := ctx.(ContextAwareContext); ok && contextWrapper.GetAutoEscaper() != nil {
-		escaper := contextWrapper.GetAutoEscaper()
-		if escaper.config.Enabled {
-			return escaper.Escape(result, contextWrapper.GetEscapeContext()), nil
-		}
-	} else if autoCtx, ok := ctx.(AutoescapeContext); ok && autoCtx.IsAutoescapeEnabled() {
-		// Fallback to old interface for backward compatibility
-		if str, ok := result.(string); ok {
-			return html.EscapeString(str), nil
-		}
+	if on, _, _ := resolveEscape(ctx); on {
+		return escapeFor(ctx, result), nil
 	}
 
 	return result, nil
@@ -367,6 +406,14 @@ func (e *DefaultEvaluator) EvalVariableNode(node *parser.VariableNode, ctx Conte
 
 func (e *DefaultEvaluator) EvalIdentifierNode(node *parser.IdentifierNode, ctx Context) (interface{}, error) {
 	value, ok := ctx.GetVariable(node.Name)
+	if u, isUndef := value.(*Undefined); ok && isUndef && e.undefinedHandler != nil && e.undefinedHandler.GetUndefinedBehavior() == UndefinedStrict {
+		// A bound undefined (a macro parameter that was not passed, or a name
+		// a {% from %} import did not find) fails on use, keeping its hint.
+		if u.Hint != "" {
+			return nil, fmt.Errorf("undefined variable %s: %s", u.Name, u.Hint)
+		}
+		ok = false
+	}
 	if !ok {
 		// Use undefined handler to determine behavior
 		if e.undefinedHandler != nil {
@@ -375,7 +422,79 @@ func (e *DefaultEvaluator) EvalIdentifierNode(node *parser.IdentifierNode, ctx C
 		// Fallback to original behavior
 		return nil, NewUndefinedVariableError(node.Name, node)
 	}
-	return value, nil
+	return unbox(value), nil
+}
+
+// evalLookup evaluates expr like EvalNode, except that when expr is a
+// variable, attribute or item lookup that finds nothing, or a filter whose
+// result is undefined, it returns an *Undefined instead of failing, even in
+// strict mode. Jinja2's StrictUndefined
+// can be passed to default and to the defined/undefined/none tests; only
+// using it fails. Errors from evaluating the base of the lookup still fail.
+func (e *DefaultEvaluator) evalLookup(expr parser.Node, ctx Context) (interface{}, error) {
+	behavior := UndefinedSilent
+	if e.undefinedHandler != nil {
+		behavior = e.undefinedHandler.GetUndefinedBehavior()
+	}
+	switch n := expr.(type) {
+	case *parser.IdentifierNode:
+		if v, ok := ctx.GetVariable(n.Name); ok {
+			return unbox(v), nil
+		}
+		return NewUndefined(n.Name, behavior, n), nil
+	case *parser.AttributeNode:
+		if isListMethodName(n.Attribute) {
+			if raw, ok := e.rawOperand(n.Object, ctx); ok {
+				if b, ok := raw.(*listBox); ok {
+					return b.method(e, n.Attribute), nil
+				}
+			}
+		}
+		obj, err := e.EvalNode(n.Object, ctx)
+		if err != nil {
+			return nil, err
+		}
+		if u, ok := obj.(*Undefined); ok && e.undefinedHandler != nil {
+			return e.undefinedHandler.HandleAttributeAccess(u, n.Attribute, n)
+		}
+		if m, ok := e.builtinMethodFor(obj, n.Attribute, ctx); ok {
+			return m, nil
+		}
+		missing := NewUndefined(fmt.Sprintf("%s.%s", e.getObjectName(obj), n.Attribute), behavior, n)
+		if UsesReflectLookup(obj) {
+			value, ok := e.lookupReflect(obj, n.Attribute)
+			if !ok {
+				return missing, nil
+			}
+			return value, nil
+		}
+		if !e.attributeExists(obj, n.Attribute) {
+			return missing, nil
+		}
+		return e.getAttribute(obj, n.Attribute), nil
+	case *parser.GetItemNode:
+		obj, err := e.EvalNode(n.Object, ctx)
+		if err != nil {
+			return nil, err
+		}
+		key, err := e.EvalNode(n.Key, ctx)
+		if err != nil {
+			return nil, err
+		}
+		if u, ok := obj.(*Undefined); ok && e.undefinedHandler != nil {
+			return e.undefinedHandler.HandleItemAccess(u, key, n)
+		}
+		v, gerr := e.getItem(obj, key)
+		if gerr != nil {
+			// Jinja2's getitem returns Undefined when the base is None, is not
+			// subscriptable, or rejects the key type; it never raises here.
+			return NewUndefined(fmt.Sprintf("%s[%s]", e.getObjectName(obj), SprintV(key)), behavior, n), nil
+		}
+		return v, nil
+	case *parser.FilterNode:
+		return e.evalFilter(n, ctx)
+	}
+	return e.EvalNode(expr, ctx)
 }
 
 func (e *DefaultEvaluator) EvalLiteralNode(node *parser.LiteralNode, ctx Context) (interface{}, error) {
@@ -394,7 +513,31 @@ func (e *DefaultEvaluator) EvalListNode(node *parser.ListNode, ctx Context) (int
 	return result, nil
 }
 
+func (e *DefaultEvaluator) EvalDictNode(node *parser.DictNode, ctx Context) (interface{}, error) {
+	result := make(map[string]interface{}, len(node.Keys))
+	for i, keyNode := range node.Keys {
+		key, err := e.EvalNode(keyNode, ctx)
+		if err != nil {
+			return nil, err
+		}
+		value, err := e.EvalNode(node.Values[i], ctx)
+		if err != nil {
+			return nil, err
+		}
+		result[DictKey(key)] = value
+	}
+	return result, nil
+}
+
 func (e *DefaultEvaluator) EvalAttributeNode(node *parser.AttributeNode, ctx Context) (interface{}, error) {
+	if isListMethodName(node.Attribute) {
+		if raw, ok := e.rawOperand(node.Object, ctx); ok {
+			if b, ok := raw.(*listBox); ok {
+				return b.method(e, node.Attribute), nil
+			}
+		}
+	}
+
 	obj, err := e.EvalNode(node.Object, ctx)
 	if err != nil {
 		return nil, err
@@ -403,6 +546,19 @@ func (e *DefaultEvaluator) EvalAttributeNode(node *parser.AttributeNode, ctx Con
 	// Handle undefined values with chained access
 	if undefined, ok := obj.(*Undefined); ok && e.undefinedHandler != nil {
 		return e.undefinedHandler.HandleAttributeAccess(undefined, node.Attribute, node)
+	}
+
+	if m, ok := e.builtinMethodFor(obj, node.Attribute, ctx); ok {
+		return m, nil
+	}
+
+	if UsesReflectLookup(obj) {
+		value, ok := e.lookupReflect(obj, node.Attribute)
+		if !ok && e.undefinedHandler != nil {
+			attrName := fmt.Sprintf("%s.%s", e.getObjectName(obj), node.Attribute)
+			return e.undefinedHandler.Handle(attrName, node)
+		}
+		return value, nil
 	}
 
 	// Check if attribute exists first, then get value
@@ -432,13 +588,55 @@ func (e *DefaultEvaluator) EvalGetItemNode(node *parser.GetItemNode, ctx Context
 		return e.undefinedHandler.HandleItemAccess(undefined, key, node)
 	}
 
-	return e.getItem(obj, key)
-}
-
-func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) (interface{}, error) {
-	value, err := e.EvalNode(node.Expression, ctx)
+	v, err := e.getItem(obj, key)
 	if err != nil {
 		return nil, err
+	}
+	if _, missing := v.(*Undefined); missing && e.undefinedHandler != nil {
+		// a missing key or index: strict mode fails, other modes get their own Undefined
+		return e.undefinedHandler.Handle(fmt.Sprintf("%s[%s]", e.getObjectName(obj), SprintV(key)), node)
+	}
+	return v, nil
+}
+
+// EvalFilterNode applies a filter; a strict undefined result fails here, as
+// an undefined variable does, unless evalLookup asked for it.
+func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) (interface{}, error) {
+	result, err := e.evalFilter(node, ctx)
+	if err != nil {
+		return nil, err
+	}
+	if err := strictUndefinedUse(result); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func (e *DefaultEvaluator) evalFilter(node *parser.FilterNode, ctx Context) (interface{}, error) {
+	var value interface{}
+	var err error
+	if node.FilterName == "default" || node.FilterName == "d" {
+		value, err = e.evalLookup(node.Expression, ctx)
+	} else {
+		value, err = e.EvalNode(node.Expression, ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
+	// A strict undefined result of an earlier filter fails on use, as in Jinja2.
+	if node.FilterName != "default" && node.FilterName != "d" {
+		if err := strictUndefinedUse(value); err != nil {
+			return nil, err
+		}
+	}
+	// join and sum use every item, such as one map made undefined
+	if list, ok := value.([]interface{}); ok && (node.FilterName == "join" || node.FilterName == "sum") &&
+		e.undefinedHandler != nil && e.undefinedHandler.GetUndefinedBehavior() == UndefinedStrict {
+		for _, it := range list {
+			if err := strictUndefinedUse(it); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	// Evaluate filter arguments with pre-allocated capacity
@@ -451,16 +649,125 @@ func (e *DefaultEvaluator) EvalFilterNode(node *parser.FilterNode, ctx Context) 
 		args = append(args, argValue)
 	}
 
-	// Try to use environment's filter registry if available
-	if envCtx, ok := ctx.(EnvironmentContext); ok {
-		return envCtx.ApplyFilter(node.FilterName, value, args...)
+	if len(node.NamedArgs) > 0 {
+		names := make([]string, 0, len(node.NamedArgs))
+		for name := range node.NamedArgs {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		kwargs := make(map[string]interface{}, len(names))
+		for _, name := range names {
+			v, err := e.EvalNode(node.NamedArgs[name], ctx)
+			if err != nil {
+				return nil, err
+			}
+			kwargs[name] = v
+		}
+		applier, ok := filterContext(ctx).(KwargsFilterApplier)
+		if !ok {
+			return nil, fmt.Errorf("filter %q: keyword arguments need an environment", node.FilterName)
+		}
+		// The keywords travel as a trailing KwArgs so the markup policy treats
+		// them like positional arguments.
+		result, err := e.applyFilterWithMarkup(node.FilterName, value, append(args[:len(args):len(args)], KwArgs(kwargs)), ctx,
+			func(v interface{}, a []interface{}) (interface{}, error) {
+				n := len(a) - 1
+				return applier.ApplyFilterKwargs(node.FilterName, v, a[:n], map[string]interface{}(a[n].(KwArgs)))
+			})
+		return e.filterUndefined(node, result, err)
 	}
 
-	// Fallback to basic filters
-	return e.applyFilter(node.FilterName, value, args)
+	result, err := e.applyFilterWithMarkup(node.FilterName, value, args, ctx, func(v interface{}, a []interface{}) (interface{}, error) {
+		// Try to use environment's filter registry if available
+		if envCtx, ok := envContext(ctx); ok {
+			return envCtx.ApplyFilter(node.FilterName, v, a...)
+		}
+		// Fallback to basic filters
+		return e.applyFilter(node.FilterName, v, a)
+	})
+	return e.filterUndefined(node, result, err)
+}
+
+// strictUndefinedUse returns the error of using v when it is a strict undefined.
+func strictUndefinedUse(v interface{}) error {
+	u, ok := v.(*Undefined)
+	if !ok || u.Behavior != UndefinedStrict {
+		return nil
+	}
+	if u.Hint != "" {
+		return fmt.Errorf("undefined variable %s: %s", u.Name, u.Hint)
+	}
+	return u.Error()
+}
+
+// filterUndefined rebuilds an undefined filter result with the environment's
+// undefined behavior, keeping its hint: filters cannot see the environment
+// and return silent undefined. The items of map's list are filter results
+// too.
+func (e *DefaultEvaluator) filterUndefined(node *parser.FilterNode, result interface{}, err error) (interface{}, error) {
+	if err != nil || e.undefinedHandler == nil {
+		return result, err
+	}
+	if list, ok := result.([]interface{}); ok && node.FilterName == "map" {
+		// an item is named after the filter map applied
+		name := node.FilterName
+		if len(node.Arguments) > 0 {
+			if lit, ok := node.Arguments[0].(*parser.LiteralNode); ok {
+				if s, ok := lit.Value.(string); ok {
+					name = s
+				}
+			}
+		}
+		var out []interface{}
+		for i, it := range list {
+			if nu, ok := e.rebuildUndefined(name, node, it); ok {
+				if out == nil {
+					out = append([]interface{}(nil), list...)
+				}
+				out[i] = nu
+			}
+		}
+		if out != nil {
+			return out, nil
+		}
+		return result, nil
+	}
+	if nu, ok := e.rebuildUndefined(node.FilterName, node, result); ok {
+		return nu, nil
+	}
+	return result, nil
+}
+
+// rebuildUndefined returns v rebuilt with the environment's undefined
+// behavior when it is an undefined of another behavior; one without a name
+// gets name.
+func (e *DefaultEvaluator) rebuildUndefined(name string, node *parser.FilterNode, v interface{}) (*Undefined, bool) {
+	u, ok := v.(*Undefined)
+	if !ok || u.Behavior == e.undefinedHandler.GetUndefinedBehavior() {
+		return nil, false
+	}
+	if u.Name != "" {
+		name = u.Name
+	}
+	nu := e.undefinedHandler.undefinedFactory(name, node)
+	nu.Hint = u.Hint
+	return nu, true
 }
 
 func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Context) (interface{}, error) {
+	if node.Operator == "and" || node.Operator == "or" {
+		left, err := e.EvalNode(node.Left, ctx)
+		if err != nil {
+			return nil, err
+		}
+		// Jinja2: `or` keeps a truthy left, `and` keeps a falsy left; otherwise the
+		// right operand is the result and is only evaluated now.
+		if e.isTruthy(left) == (node.Operator == "or") {
+			return left, nil
+		}
+		return e.EvalNode(node.Right, ctx)
+	}
+
 	left, err := e.EvalNode(node.Left, ctx)
 	if err != nil {
 		return nil, err
@@ -471,7 +778,78 @@ func (e *DefaultEvaluator) EvalBinaryOpNode(node *parser.BinaryOpNode, ctx Conte
 		return nil, err
 	}
 
+	switch node.Operator {
+	case "~":
+		if markupContext(ctx) {
+			if m, ok := concatMarkup(ctx, left, right); ok {
+				return m, nil
+			}
+		} else if r, ok := e.concatEscaped(ctx, left, right); ok {
+			return r, nil
+		}
+		left, right = Unmark(left), Unmark(right)
+	case "+":
+		if !markupContext(ctx) {
+			_, ls := basicValue(left).(string)
+			_, rs := basicValue(right).(string)
+			if ls && rs {
+				if r, ok := e.concatEscaped(ctx, left, right); ok {
+					return r, nil
+				}
+			}
+			left, right = Unmark(left), Unmark(right)
+			break
+		}
+		_, ls := basicValue(left).(string)
+		_, rs := basicValue(right).(string)
+		_, lm := AsMarkup(left)
+		_, rm := AsMarkup(right)
+		if (lm || rm) && (ls || lm) && (rs || rm) {
+			m, _ := concatMarkup(ctx, left, right)
+			return m, nil
+		}
+		left, right = Unmark(left), Unmark(right)
+	case "*":
+		_, lm := AsMarkup(left)
+		_, rm := AsMarkup(right)
+		if !markupContext(ctx) {
+			left, right = Unmark(left), Unmark(right)
+		} else if lm != rm {
+			r, err := e.applyBinaryOpWithNode(node.Operator, Unmark(left), Unmark(right), node)
+			if s, ok := r.(string); ok && err == nil {
+				return Markup(s), nil
+			}
+			return r, err
+		}
+	case "==", "!=", "<", "<=", ">", ">=", "in", "not in":
+		left, right = Unmark(left), Unmark(right)
+	}
 	return e.applyBinaryOpWithNode(node.Operator, left, right, node)
+}
+
+// EvalCompareNode evaluates a comparison chain such as a < b < c. Each
+// operand is evaluated at most once, and evaluation stops at the first
+// comparison that is false, as in Jinja2.
+func (e *DefaultEvaluator) EvalCompareNode(node *parser.CompareNode, ctx Context) (interface{}, error) {
+	left, err := e.EvalNode(node.Expr, ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, op := range node.Ops {
+		right, err := e.EvalNode(op.Right, ctx)
+		if err != nil {
+			return nil, err
+		}
+		result, err := e.applyBinaryOpWithNode(op.Operator, Unmark(left), Unmark(right), node)
+		if err != nil {
+			return nil, err
+		}
+		if !e.isTruthy(result) {
+			return false, nil
+		}
+		left = right
+	}
+	return true, nil
 }
 
 func (e *DefaultEvaluator) EvalUnaryOpNode(node *parser.UnaryOpNode, ctx Context) (interface{}, error) {
@@ -513,7 +891,17 @@ func (e *DefaultEvaluator) EvalIfNode(node *parser.IfNode, ctx Context) (interfa
 	return "", nil
 }
 
+// childScoper is implemented by contexts that can create a cheap child
+// scope (reads fall through to the parent, writes stay in the child).
+type childScoper interface {
+	Child() Context
+}
+
 func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (interface{}, error) {
+	return e.evalFor(node, ctx, 1)
+}
+
+func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int) (interface{}, error) {
 	iterable, err := e.EvalNode(node.Iterable, ctx)
 	if err != nil {
 		return nil, err
@@ -524,24 +912,8 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 		return nil, err
 	}
 
-	if len(items) == 0 && len(node.Else) > 0 {
-		// Execute else clause if no items
-		return e.evalNodeList(node.Else, ctx)
-	}
-
 	var results []string
-	loopCtx := ctx.Clone()
 	loopBroken := false
-
-	// Determine loop depth once for the entire loop
-	depth := 1
-	if parentLoop, exists := ctx.GetVariable("loop"); exists {
-		if parentLoopMap, ok := parentLoop.(map[string]interface{}); ok {
-			if parentDepth, ok := parentLoopMap["depth"].(int); ok {
-				depth = parentDepth + 1
-			}
-		}
-	}
 
 	// Track previous values for loop.changed() functionality
 	var previousChanged map[string]interface{}
@@ -551,7 +923,7 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 	if node.Condition != nil {
 		for _, item := range items {
 			// Create a temporary context to evaluate the condition
-			tempCtx := ctx.Clone()
+			tempCtx := childScope(ctx)
 
 			// Set loop variable(s) for condition evaluation
 			if len(node.Variables) == 1 {
@@ -586,7 +958,19 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 		filteredItems = items
 	}
 
+	if len(filteredItems) == 0 && len(node.Else) > 0 {
+		// Jinja2 runs else when the loop body never ran, after the if-filter.
+		return e.evalNodeList(node.Else, ctx)
+	}
+
 	for i, item := range filteredItems {
+		var loopCtx Context
+		if c, ok := ctx.(childScoper); ok {
+			loopCtx = c.Child()
+		} else {
+			loopCtx = ctx.Clone()
+		}
+
 		// Set loop variable(s)
 		if len(node.Variables) == 1 {
 			// Single variable assignment
@@ -647,7 +1031,7 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 			} else {
 				for j, val := range values {
 					key := fmt.Sprintf("val_%d", j)
-					if prevVal, exists := previousChanged[key]; !exists || !e.deepEqual(prevVal, val) {
+					if prevVal, exists := previousChanged[key]; !exists || !e.equal(prevVal, val) {
 						hasChanged = true
 						break
 					}
@@ -664,19 +1048,11 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 			return hasChanged, nil
 		}
 
-		// Phase 4b optimization: Get loop info map from pool and reuse it
-		var loopInfo map[string]interface{}
-		if pooled, ok := loopInfoPool.Get().(map[string]interface{}); ok {
-			loopInfo = pooled
-			// Clear any stale keys from previous use
-			for k := range loopInfo {
-				delete(loopInfo, k)
-			}
-		} else {
-			loopInfo = make(map[string]interface{}, 12)
-		}
+		// Every iteration gets its own map: a template can keep a reference to
+		// `loop`, so it must never be shared or recycled.
+		loopInfo := make(map[string]interface{}, 12)
 
-		// Update values (reuse map, don't allocate new one)
+		// Fill in the loop values
 		loopInfo["index"] = i + 1
 		loopInfo["index0"] = i
 		loopInfo["revindex"] = len(filteredItems) - i
@@ -685,9 +1061,14 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 		loopInfo["last"] = i == len(filteredItems)-1
 		loopInfo["length"] = len(filteredItems)
 		loopInfo["depth"] = depth
+		loopInfo["depth0"] = depth - 1
 		loopInfo["previtem"] = previtem
 		loopInfo["nextitem"] = nextitem
-		loopInfo["cycle"] = cycleFunc
+		if markupContext(ctx) {
+			loopInfo["cycle"] = KeepMarkupFunc(cycleFunc)
+		} else {
+			loopInfo["cycle"] = cycleFunc
+		}
 		loopInfo["changed"] = changedFunc
 
 		// Add recursive loop function if this is a recursive loop
@@ -701,13 +1082,12 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 
 				// Handle undefined or nil iterables - just return empty string
 				if IsUndefined(newIterable) || newIterable == nil {
-					return "", nil
+					return e.markIfSafe("", ctx), nil
 				}
 
 				// Create a new for node with the same structure but new iterable
 				literalNode := &parser.LiteralNode{
 					Value: newIterable,
-					Raw:   fmt.Sprintf("%v", newIterable),
 				}
 				recursiveNode := &parser.ForNode{
 					Variables: node.Variables,
@@ -715,8 +1095,15 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 					Body:      node.Body,
 					Else:      node.Else,
 					Recursive: true,
+					Condition: node.Condition,
 				}
-				return e.EvalForNode(recursiveNode, loopCtx)
+				r, err := e.evalFor(recursiveNode, ctx, depth+1)
+				if err != nil {
+					return r, err
+				}
+				// The iteration output is template output of the loop's own context;
+				// the call site must not decide again.
+				return e.markIfSafe(ToString(r), ctx), nil
 			}
 
 			// Create a callable loop object that supports both property access and function calls
@@ -730,12 +1117,6 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 		}
 
 		result, err := e.evalNodeList(node.Body, loopCtx)
-
-		// Phase 4b optimization: Clear closure references and return map to pool
-		// Clear closures to prevent memory leaks
-		delete(loopInfo, "cycle")
-		delete(loopInfo, "changed")
-		loopInfoPool.Put(loopInfo)
 
 		if err != nil {
 			// Check if it's a loop control error
@@ -773,9 +1154,28 @@ func (e *DefaultEvaluator) EvalForNode(node *parser.ForNode, ctx Context) (inter
 }
 
 func (e *DefaultEvaluator) EvalBlockNode(node *parser.BlockNode, ctx Context) (interface{}, error) {
-	// Block evaluation is handled by the template inheritance system
-	// For now, just evaluate the body
-	return e.evalNodeList(node.Body, ctx)
+	// A block has its own scope, as a Jinja2 block is its own function. A
+	// parent block rendered by super() is scoped from where the child block
+	// was entered, so neither block sees the other's variables.
+	if node.Name == superCaptureVar {
+		entry := ctx
+		if v, ok := ctx.GetVariable(blockEntryVar); ok {
+			if c, ok := v.(Context); ok {
+				entry = c
+			}
+		}
+		// the resolver already set the parent's escaping around super()
+		scope := childScope(entry)
+		on, _, _ := resolveEscape(ctx)
+		if scopeOn, _, _ := resolveEscape(scope); on != scopeOn {
+			scope = &autoescapeContext{Context: scope, autoescape: on}
+		}
+		scope.SetVariable(blockEntryVar, entry)
+		return e.evalNodeList(node.Body, scope)
+	}
+	scope := childScope(withBaseAutoescape(ctx))
+	scope.SetVariable(blockEntryVar, ctx)
+	return e.evalNodeList(node.Body, scope)
 }
 
 func (e *DefaultEvaluator) EvalSetNode(node *parser.SetNode, ctx Context) (interface{}, error) {
@@ -786,7 +1186,7 @@ func (e *DefaultEvaluator) EvalSetNode(node *parser.SetNode, ctx Context) (inter
 
 	if len(node.Targets) == 1 {
 		// Single assignment - could be simple variable or attribute
-		return e.assignToTarget(node.Targets[0], value, ctx)
+		return e.assignToTarget(node.Targets[0], value, node.Value, ctx)
 	} else {
 		// Multiple assignment - unpack the value
 		items, err := e.makeIterable(value)
@@ -800,7 +1200,7 @@ func (e *DefaultEvaluator) EvalSetNode(node *parser.SetNode, ctx Context) (inter
 
 		// Assign each value to its corresponding target
 		for i, target := range node.Targets {
-			if _, err := e.assignToTarget(target, items[i], ctx); err != nil {
+			if _, err := e.assignToTarget(target, items[i], nil, ctx); err != nil {
 				return nil, err
 			}
 		}
@@ -810,11 +1210,11 @@ func (e *DefaultEvaluator) EvalSetNode(node *parser.SetNode, ctx Context) (inter
 }
 
 // assignToTarget assigns a value to a target expression (identifier, attribute, or subscript)
-func (e *DefaultEvaluator) assignToTarget(target parser.ExpressionNode, value interface{}, ctx Context) (interface{}, error) {
+func (e *DefaultEvaluator) assignToTarget(target parser.ExpressionNode, value interface{}, valueExpr parser.ExpressionNode, ctx Context) (interface{}, error) {
 	switch t := target.(type) {
 	case *parser.IdentifierNode:
 		// Simple variable assignment
-		ctx.SetVariable(t.Name, value)
+		ctx.SetVariable(t.Name, e.bindValue(valueExpr, value, ctx))
 		return "", nil
 
 	case *parser.AttributeNode:
@@ -822,6 +1222,9 @@ func (e *DefaultEvaluator) assignToTarget(target parser.ExpressionNode, value in
 		obj, err := e.EvalNode(t.Object, ctx)
 		if err != nil {
 			return nil, err
+		}
+		if _, ok := obj.(assignableNamespace); ok {
+			value = e.bindValue(valueExpr, value, ctx)
 		}
 		return nil, e.setAttribute(obj, t.Attribute, value)
 
@@ -857,22 +1260,38 @@ func (e *DefaultEvaluator) EvalBlockSetNode(node *parser.BlockSetNode, ctx Conte
 		content = fmt.Sprintf("%v", bodyResult)
 	}
 
-	// Set the variable to the rendered content
-	ctx.SetVariable(node.Variable, content)
+	// Set the variable to the rendered content (Markup where escaping is on, as in Jinja2)
+	ctx.SetVariable(node.Variable, e.markIfSafe(content, ctx))
 
 	return "", nil // Block set statements don't produce output
 }
 
 func (e *DefaultEvaluator) EvalCallNode(node *parser.CallNode, ctx Context) (interface{}, error) {
+	return e.evalCall(node, ctx, nil)
+}
+
+func (e *DefaultEvaluator) evalCall(node *parser.CallNode, ctx Context, caller *Macro) (interface{}, error) {
 	function, err := e.EvalNode(node.Function, ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	// A macro keeps the identity of the lists it is given
+	_, isMacro := function.(*Macro)
+	evalArg := e.EvalNode
+	if isMacro {
+		evalArg = func(n parser.Node, c Context) (interface{}, error) {
+			if x, ok := n.(parser.ExpressionNode); ok {
+				return e.callArg(x, c)
+			}
+			return e.EvalNode(n, c)
+		}
+	}
+
 	// Evaluate arguments with pre-allocated capacity
 	args := make([]interface{}, 0, len(node.Arguments))
 	for _, arg := range node.Arguments {
-		argValue, err := e.EvalNode(arg, ctx)
+		argValue, err := evalArg(arg, ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -882,11 +1301,14 @@ func (e *DefaultEvaluator) EvalCallNode(node *parser.CallNode, ctx Context) (int
 	// Evaluate keyword arguments with pre-allocated capacity
 	kwargs := make(map[string]interface{}, len(node.Keywords))
 	for key, value := range node.Keywords {
-		argValue, err := e.EvalNode(value, ctx)
+		argValue, err := evalArg(value, ctx)
 		if err != nil {
 			return nil, err
 		}
 		kwargs[key] = argValue
+	}
+	if caller != nil {
+		kwargs["caller"] = caller
 	}
 
 	return e.callFunctionWithContext(function, args, kwargs, ctx)
@@ -905,9 +1327,24 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 		return nil, fmt.Errorf("error evaluating template name in include: %w", err)
 	}
 
-	templateName, ok := templateNameExpr.(string)
-	if !ok {
-		return nil, fmt.Errorf("include template name must be a string, got %T", templateNameExpr)
+	var names []string
+	switch v := templateNameExpr.(type) {
+	case string:
+		names = []string{v}
+	case nil, *Undefined:
+		// no name: nothing to find
+	case []string:
+		names = v
+	case []interface{}:
+		for _, item := range v {
+			name, ok := item.(string)
+			if !ok {
+				return nil, fmt.Errorf("include template name must be a string or a list of strings, got %T in list", item)
+			}
+			names = append(names, name)
+		}
+	default:
+		return nil, fmt.Errorf("include template name must be a string or a list of strings, got %T", templateNameExpr)
 	}
 
 	// Get the import system
@@ -915,41 +1352,72 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 		return nil, fmt.Errorf("import system not initialized for includes")
 	}
 
-	// Check if template exists
-	if !e.importSystem.loader.TemplateExists(templateName) {
+	// Load the first template that exists
+	var templateAST *parser.TemplateNode
+	var templateName string
+	var lastErr error
+	for _, name := range names {
+		ast, err := e.importSystem.loader.LoadTemplate(name)
+		if err == nil && ast == nil {
+			return nil, fmt.Errorf("failed to load template %q: the loader returned no template", name)
+		}
+		if err == nil {
+			templateAST, templateName = ast, name
+			break
+		}
+		if !e.notFound(err, name) {
+			// The environment's loader may already have named the template
+			if strings.HasPrefix(err.Error(), fmt.Sprintf("failed to load template %q", name)) {
+				return nil, err
+			}
+			return nil, fmt.Errorf("failed to load included template %q: %w", name, err)
+		}
+		lastErr = err
+	}
+	if templateAST == nil {
 		if node.IgnoreMissing {
-			// If ignore_missing is true, return empty string for missing templates
 			return "", nil
 		}
-		return nil, fmt.Errorf("included template %q not found", templateName)
+		switch len(names) {
+		case 0:
+			return nil, fmt.Errorf("none of the included templates %q were found: %w", names, ErrTemplateNotFound)
+		case 1:
+			if strings.HasPrefix(lastErr.Error(), fmt.Sprintf("failed to load template %q", names[0])) {
+				return nil, lastErr
+			}
+			return nil, fmt.Errorf("included template %q not found: %w", names[0], lastErr)
+		}
+		return nil, fmt.Errorf("none of the included templates %q were found: %w", names, lastErr)
 	}
 
-	// Load the template AST
-	templateAST, err := e.importSystem.loader.LoadTemplate(templateName)
-	if err != nil {
-		if node.IgnoreMissing {
-			return "", nil
+	// The include runs in a copy of the includer's scope: it reads the
+	// includer's variables, and its own {% set %} stays inside.
+	var includeCtx Context
+	if node.WithoutContext {
+		includeCtx = importContext(ctx, false)
+	} else {
+		if c, ok := ctx.(childScoper); ok {
+			includeCtx = c.Child()
+		} else {
+			includeCtx = ctx.Clone()
 		}
-		return nil, fmt.Errorf("failed to load included template %q: %w", templateName, err)
-	}
+		if node.Context != nil {
+			// If a context expression is provided, evaluate it
+			contextValue, err := e.EvalNode(node.Context, ctx)
+			if err != nil {
+				return nil, fmt.Errorf("error evaluating context for include: %w", err)
+			}
 
-	// Determine which context to use
-	includeCtx := ctx
-	if node.Context != nil {
-		// If a context expression is provided, evaluate it
-		contextValue, err := e.EvalNode(node.Context, ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error evaluating context for include: %w", err)
-		}
-
-		// Create a new context with the provided values
-		includeCtx = ctx.Clone()
-		if contextMap, ok := contextValue.(map[string]interface{}); ok {
-			for key, value := range contextMap {
-				includeCtx.SetVariable(key, value)
+			// Add the provided values to the include's scope
+			if contextMap, ok := contextValue.(map[string]interface{}); ok {
+				for key, value := range contextMap {
+					includeCtx.SetVariable(key, value)
+				}
 			}
 		}
 	}
+
+	includeCtx = withBaseAutoescape(includeCtx)
 
 	leave, err := e.enter("include " + strconv.Quote(templateName))
 	if err != nil {
@@ -957,11 +1425,18 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 	}
 	defer leave()
 
+	if e.importSystem.resolve != nil {
+		templateAST, err = e.importSystem.resolve(templateName, templateAST, includeCtx, e)
+		if err != nil {
+			return nil, fmt.Errorf("error executing included template %q: %w", templateName, err)
+		}
+	}
+
 	// Execute the included template with the appropriate context
 	result, err := e.EvalNode(templateAST, includeCtx)
 	if err != nil {
-		if node.IgnoreMissing && !errors.Is(err, ErrMaxRecursion) {
-			return "", nil
+		if errors.Is(err, ErrMaxRecursion) {
+			return nil, err
 		}
 		return nil, fmt.Errorf("error executing included template %q: %w", templateName, err)
 	}
@@ -969,93 +1444,80 @@ func (e *DefaultEvaluator) EvalIncludeNode(node *parser.IncludeNode, ctx Context
 	return result, nil
 }
 
+// notFound reports whether err means that template name itself does not
+// exist. A TemplateNotFoundError for another name (a missing parent of an
+// included template) is a real error, as in Jinja2. A custom TemplateLoader
+// that does not use TemplateNotFoundError keeps the old rule: it is "not
+// found" when the loader says the template does not exist.
+func (e *DefaultEvaluator) notFound(err error, name string) bool {
+	var nf *TemplateNotFoundError
+	if errors.As(err, &nf) {
+		return nf.Name == name
+	}
+	if _, builtin := e.importSystem.loader.(*SimpleTemplateLoader); builtin {
+		return false
+	}
+	return !e.importSystem.loader.TemplateExists(name)
+}
+
 func (e *DefaultEvaluator) EvalSuperNode(node *parser.SuperNode, ctx Context) (interface{}, error) {
-	// Super nodes are handled by the inheritance resolver during template compilation
-	// In the runtime context, they should have been replaced with parent block content
-	// If we reach here, it means the super() call wasn't resolved properly
+	// A super() inside an expression renders the parent block content the
+	// inheritance resolver bound before its statement (Markup where escaping
+	// is on, as in Jinja2). Rendering the parent rebinds it for the parent's
+	// own super() calls, so the child's binding is put back afterwards.
+	if v, ok := ctx.GetVariable(superCaptureVar); ok {
+		if d, ok := v.(*deferredSuper); ok {
+			out, err := e.EvalNode(d.node, ctx)
+			ctx.SetVariable(superCaptureVar, d)
+			if err != nil {
+				return nil, err
+			}
+			return e.markIfSafe(ToString(out), ctx), nil
+		}
+	}
+	// A whole-expression {{ super() }} is replaced by the inheritance
+	// resolver; reaching here means the call wasn't resolved.
 	return "", fmt.Errorf("super() call outside of block context")
 }
 
 func (e *DefaultEvaluator) EvalMacroNode(node *parser.MacroNode, ctx Context) (interface{}, error) {
-	// Create a macro function that can be called with a context parameter
-	macroFunc := func(callCtx Context, args ...interface{}) (interface{}, error) {
-		leave, err := e.enter("macro " + node.Name)
-		if err != nil {
-			return nil, err
-		}
-		defer leave()
-
-		// Create a new context for macro execution, inherit from the call context
-		// to get access to variables like 'caller' that might be set by call blocks
-		macroCtx := callCtx.Clone()
-
-		// Set up macro parameters
-		for i, paramName := range node.Parameters {
-			if i < len(args) {
-				macroCtx.SetVariable(paramName, args[i])
-			} else if defaultExpr, hasDefault := node.Defaults[paramName]; hasDefault {
-				// Evaluate default value
-				defaultVal, err := e.EvalNode(defaultExpr, ctx)
-				if err != nil {
-					return nil, fmt.Errorf("error evaluating macro parameter default: %w", err)
-				}
-				macroCtx.SetVariable(paramName, defaultVal)
-			} else {
-				return nil, fmt.Errorf("missing required macro parameter: %s", paramName)
-			}
-		}
-
-		// Execute macro body
-		result, err := e.evalNodeList(node.Body, macroCtx)
-		if err != nil {
-			return nil, err
-		}
-
-		// Convert result to string
-		if result == nil {
-			return "", nil
-		}
-		return ToString(result), nil
+	defaults := make(map[string]interface{}, len(node.Defaults))
+	for name, expr := range node.Defaults {
+		defaults[name] = expr
 	}
-
-	// Register the macro as a variable in the context
-	ctx.SetVariable(node.Name, macroFunc)
+	// The macro body runs in the context it is defined in, as in Jinja2.
+	ctx.SetVariable(node.Name, &Macro{
+		Name:       node.Name,
+		Parameters: node.Parameters,
+		Defaults:   defaults,
+		Body:       node.Body,
+		MacroUsage: node.MacroUsage,
+		defCtx:     ctx,
+		evaluator:  e,
+	})
 
 	// Macro definitions don't produce output during evaluation
 	return "", nil
 }
 
 func (e *DefaultEvaluator) EvalTestNode(node *parser.TestNode, ctx Context) (interface{}, error) {
-	// Special handling for the "defined" test - don't evaluate the expression first
+	var value interface{}
+	var err error
+	switch node.TestName {
+	case "defined", "undefined", "none":
+		value, err = e.evalLookup(node.Expression, ctx)
+	default:
+		value, err = e.EvalNode(node.Expression, ctx)
+	}
+	if err != nil {
+		return nil, err
+	}
 	if node.TestName == "defined" {
-		var isDefined bool
-
-		// Check if it's an identifier node - most common case for "defined" test
-		if identNode, ok := node.Expression.(*parser.IdentifierNode); ok {
-			_, isDefined = ctx.GetVariable(identNode.Name)
-		} else {
-			// For other expression types, try to evaluate and check for undefined
-			value, err := e.EvalNode(node.Expression, ctx)
-			if err != nil {
-				// If there's an error (e.g., undefined variable), it's not defined
-				isDefined = false
-			} else {
-				// Check if the value is an Undefined type or nil
-				isDefined = !IsUndefined(value) && value != nil
-			}
-		}
-
-		result := isDefined
+		result := !IsUndefined(value)
 		if node.Negated {
 			result = !result
 		}
 		return result, nil
-	}
-
-	// Evaluate the expression being tested
-	value, err := e.EvalNode(node.Expression, ctx)
-	if err != nil {
-		return nil, err
 	}
 
 	// Evaluate test arguments with pre-allocated capacity
@@ -1068,9 +1530,18 @@ func (e *DefaultEvaluator) EvalTestNode(node *parser.TestNode, ctx Context) (int
 		args = append(args, argValue)
 	}
 
+	if node.TestName != "escaped" {
+		value = Unmark(value)
+		args = unmarkArgs(args)
+		if e.escapedMade.Load() && !builtinTestCall(ctx, node.TestName) {
+			value = plainEscaped(value)
+			args = plainArgContainers(args)
+		}
+	}
+
 	// Try to use environment's test registry if available
 	var result bool
-	if envCtx, ok := ctx.(EnvironmentContext); ok {
+	if envCtx, ok := envContext(ctx); ok {
 		var testErr error
 		result, testErr = envCtx.ApplyTest(node.TestName, value, args...)
 		if testErr != nil {
@@ -1103,9 +1574,15 @@ func (e *DefaultEvaluator) EvalConditionalNode(node *parser.ConditionalNode, ctx
 	// Return appropriate expression based on condition
 	if e.isTruthy(condition) {
 		return e.EvalNode(node.TrueExpr, ctx)
-	} else {
-		return e.EvalNode(node.FalseExpr, ctx)
 	}
+	if node.FalseExpr == nil {
+		// {{ a if b }} with b false is undefined, as in Jinja2
+		if e.undefinedHandler != nil {
+			return e.undefinedHandler.Handle("inline if-expression without else", node)
+		}
+		return nil, nil
+	}
+	return e.EvalNode(node.FalseExpr, ctx)
 }
 
 func (e *DefaultEvaluator) EvalAssignmentNode(node *parser.AssignmentNode, ctx Context) (interface{}, error) {
@@ -1218,7 +1695,7 @@ func (e *DefaultEvaluator) EvalComprehensionNode(node *parser.ComprehensionNode,
 
 		for _, item := range items {
 			// Create loop context
-			loopCtx := ctx.Clone()
+			loopCtx := childScope(ctx)
 			loopCtx.SetVariable(node.Variable, item)
 
 			// Check condition if present
@@ -1242,7 +1719,7 @@ func (e *DefaultEvaluator) EvalComprehensionNode(node *parser.ComprehensionNode,
 				return nil, err
 			}
 
-			keyStr := fmt.Sprintf("%v", key)
+			keyStr := DictKey(key)
 			result[keyStr] = value
 		}
 
@@ -1253,7 +1730,7 @@ func (e *DefaultEvaluator) EvalComprehensionNode(node *parser.ComprehensionNode,
 
 		for _, item := range items {
 			// Create loop context
-			loopCtx := ctx.Clone()
+			loopCtx := childScope(ctx)
 			loopCtx.SetVariable(node.Variable, item)
 
 			// Check condition if present
@@ -1325,6 +1802,9 @@ func (e *DefaultEvaluator) attributeExists(obj interface{}, attr string) bool {
 	if obj == nil {
 		return false
 	}
+	if _, ok := e.builtinMethodFor(obj, attr, nil); ok {
+		return true
+	}
 
 	switch v := obj.(type) {
 	case NamespaceInterface:
@@ -1347,55 +1827,17 @@ func (e *DefaultEvaluator) attributeExists(obj interface{}, attr string) bool {
 			return true
 		}
 		// If key doesn't exist, check for special dictionary methods
-		return attr == "items" || attr == "keys" || attr == "values"
+		return isDictMethodName(attr)
 	case map[string]string:
-		_, ok := v[attr]
-		return ok
+		if _, ok := v[attr]; ok {
+			return true
+		}
+		return isDictMethodName(attr)
+	case GroupTuple:
+		return attr == "grouper" || attr == "list"
 	default:
-		// Use reflection for struct fields and other complex types
-		rv := reflect.ValueOf(obj)
-		if !rv.IsValid() {
-			return false
-		}
-
-		// Handle pointers
-		for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
-			if rv.IsNil() {
-				return false
-			}
-			rv = rv.Elem()
-		}
-
-		switch rv.Kind() {
-		case reflect.Struct:
-			// Check if field exists and is accessible
-			field := rv.FieldByName(attr)
-			if !field.IsValid() {
-				return false
-			}
-			// Check if field is exported (accessible)
-			structType := rv.Type()
-			if structField, found := structType.FieldByName(attr); found {
-				return structField.PkgPath == "" // Empty PkgPath means exported
-			}
-			return false
-		case reflect.Map:
-			// Handle map types we might not have covered
-			if rv.Type().Key().Kind() == reflect.String {
-				key := reflect.ValueOf(attr)
-				return rv.MapIndex(key).IsValid()
-			}
-			return false
-		case reflect.Slice, reflect.Array:
-			// For slices/arrays, check if attr is a valid numeric index
-			if index, err := strconv.Atoi(attr); err == nil {
-				return index >= 0 && index < rv.Len()
-			}
-			return false
-		}
-
-		// For other types, assume attribute doesn't exist
-		return false
+		_, ok := e.lookupReflect(obj, attr)
+		return ok
 	}
 }
 
@@ -1415,8 +1857,8 @@ func (e *DefaultEvaluator) getObjectName(obj interface{}) string {
 		}
 
 		// Handle pointers and interfaces
-		for rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface {
-			if rv.IsNil() {
+		for i := 0; rv.Kind() == reflect.Ptr || rv.Kind() == reflect.Interface; i++ {
+			if rv.IsNil() || i >= maxDeref {
 				return "nil"
 			}
 			rv = rv.Elem()
@@ -1441,6 +1883,8 @@ func (e *DefaultEvaluator) getObjectName(obj interface{}) string {
 }
 
 // DictItems represents a dictionary items iterator for .items() method support
+//
+// Deprecated: nothing creates DictItems since d.items() returns a list; it will be removed in a future release.
 type DictItems struct {
 	data map[string]interface{}
 }
@@ -1454,14 +1898,17 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 	if obj == nil {
 		return nil
 	}
+	if m, ok := e.builtinMethodFor(obj, attr, nil); ok {
+		return m
+	}
 
 	switch v := obj.(type) {
 	case NamespaceInterface:
-		val, ok := v.Get(attr)
+		val, ok := nsRawGet(v, attr)
 		if !ok {
 			return nil
 		}
-		return val
+		return unbox(val)
 	case *Cycler:
 		// Handle Cycler methods
 		switch attr {
@@ -1499,16 +1946,24 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 		}
 		// If key doesn't exist, check for special dictionary methods
 		switch attr {
+		case "get":
+			return mapGetMethod(v)
 		case "items":
-			// Return a callable function that returns DictItems (Python-style behavior)
+			// Return a callable function that returns the [key, value] pairs
 			return func(args ...interface{}) (interface{}, error) {
-				return &DictItems{data: v}, nil
+				sorted := sortedKeys(v)
+				pairs := make([]interface{}, 0, len(sorted))
+				for _, k := range sorted {
+					pairs = append(pairs, []interface{}{k, v[k]})
+				}
+				return pairs, nil
 			}
 		case "keys":
 			// Return a callable function that returns the keys
 			return func(args ...interface{}) (interface{}, error) {
-				keys := make([]interface{}, 0, len(v))
-				for k := range v {
+				sorted := sortedKeys(v)
+				keys := make([]interface{}, 0, len(sorted))
+				for _, k := range sorted {
 					keys = append(keys, k)
 				}
 				return keys, nil
@@ -1517,8 +1972,8 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 			// Return a callable function that returns the values
 			return func(args ...interface{}) (interface{}, error) {
 				values := make([]interface{}, 0, len(v))
-				for _, val := range v {
-					values = append(values, val)
+				for _, k := range sortedKeys(v) {
+					values = append(values, v[k])
 				}
 				return values, nil
 			}
@@ -1526,47 +1981,165 @@ func (e *DefaultEvaluator) getAttribute(obj interface{}, attr string) interface{
 			return nil
 		}
 	case map[string]string:
-		return v[attr]
-	default:
-		// Use reflection for struct fields and methods
-		rv := reflect.ValueOf(obj)
-		if rv.Kind() == reflect.Ptr {
-			rv = rv.Elem()
+		if val, ok := v[attr]; ok {
+			return val
 		}
-
-		if rv.Kind() == reflect.Struct {
-			field := rv.FieldByName(attr)
-			if field.IsValid() && field.CanInterface() {
-				return field.Interface()
-			}
-
-			// Try with capitalized field name
-			field = rv.FieldByName(capitalizeFirst(attr))
-			if field.IsValid() && field.CanInterface() {
-				return field.Interface()
-			}
+		if attr == "get" {
+			return dictMethodOver(reflect.ValueOf(v), "get")
 		}
-
-		// Try methods on the original value (including pointer receiver methods)
-		origValue := reflect.ValueOf(obj)
-		method := origValue.MethodByName(capitalizeFirst(attr))
-		if method.IsValid() {
-			return method.Interface()
+		if isDictMethodName(attr) {
+			return e.getAttribute(stringMap(v), attr)
 		}
-
+		return ""
+	case GroupTuple:
+		switch attr {
+		case "grouper":
+			return v[0]
+		case "list":
+			return v[1]
+		}
 		return nil
+	default:
+		val, _ := e.lookupReflect(obj, attr)
+		return val
 	}
+}
+
+// lookupReflect finds attr on a Go value that is not one of the runtime's own
+// types: a struct field (exact name; then, for non-embedded exported fields
+// that do not hold a func, the capitalised name), an entry of a map with
+// string-kind or interface keys (never a func-valued entry), a dict method of
+// a map whose keys are all strings (keys/values/items), or a slice element by
+// numeric attr. It never returns a Go method.
+func (e *DefaultEvaluator) lookupReflect(obj interface{}, attr string) (interface{}, bool) {
+	if _, ok := Indirect(obj).(RoundedFloat); ok {
+		return nil, false
+	}
+	rv := reflect.ValueOf(obj)
+	for i := 0; ; i++ {
+		if !rv.IsValid() {
+			return nil, false
+		}
+		if rv.Kind() != reflect.Ptr && rv.Kind() != reflect.Interface {
+			break
+		}
+		if i >= maxDeref || rv.IsNil() {
+			return nil, false
+		}
+		rv = rv.Elem()
+	}
+
+	switch rv.Kind() {
+	case reflect.Struct:
+		if v, ok := structField(rv, attr, false); ok {
+			return v, true
+		}
+		if capital := capitalizeFirst(attr); capital != attr {
+			return structField(rv, capital, true)
+		}
+	case reflect.Map:
+		kt := rv.Type().Key()
+		var key reflect.Value
+		switch kt.Kind() {
+		case reflect.String:
+			key = reflect.ValueOf(attr).Convert(kt)
+		case reflect.Interface:
+			key = reflect.ValueOf(attr)
+			if !key.Type().AssignableTo(kt) {
+				return nil, false
+			}
+		default:
+			if isDictMethodName(attr) {
+				return dictMethodOver(rv, attr), true
+			}
+			return nil, false
+		}
+		if val := rv.MapIndex(key); val.IsValid() {
+			inner := val
+			if inner.Kind() == reflect.Interface {
+				inner = inner.Elem()
+			}
+			if inner.Kind() == reflect.Func {
+				return nil, false
+			}
+			return val.Interface(), true
+		}
+		if isDictMethodName(attr) {
+			if attr == "get" {
+				return dictMethodOver(rv, attr), true
+			}
+			if m, ok := StringKeyMap(obj); ok && e.attributeExists(m, attr) {
+				return e.getAttribute(m, attr), true
+			}
+			if kt.Kind() == reflect.Interface {
+				return dictMethodOver(rv, attr), true
+			}
+		}
+	case reflect.Slice, reflect.Array:
+		if index, err := strconv.Atoi(attr); err == nil && index >= 0 && index < rv.Len() {
+			return rv.Index(index).Interface(), true
+		}
+	}
+	return nil, false
+}
+
+// structField reads the exported field name of the struct rv. Fields promoted
+// through a nil embedded pointer are not found. With fallback set (the
+// capitalised name for a lower-case attribute), embedded fields and func
+// fields are not found: those are reachable only by their exact name.
+func structField(rv reflect.Value, name string, fallback bool) (interface{}, bool) {
+	sf, ok := rv.Type().FieldByName(name)
+	if !ok || sf.PkgPath != "" {
+		return nil, false
+	}
+	if fallback && (sf.Anonymous || sf.Type.Kind() == reflect.Func) {
+		return nil, false
+	}
+	f, err := rv.FieldByIndexErr(sf.Index)
+	if err != nil || !f.CanInterface() {
+		return nil, false
+	}
+	return f.Interface(), true
+}
+
+// DictKey is the string a dict literal, subscript, `in` test or .get() uses
+// for key.
+func DictKey(key interface{}) string {
+	key = Indirect(key)
+	switch k := key.(type) {
+	case nil:
+		return "None"
+	case RoundedFloat:
+		return fmt.Sprintf("%v", k.Value)
+	}
+	return SprintV(key)
 }
 
 func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 	if obj == nil {
 		return nil, fmt.Errorf("cannot get item from nil")
 	}
+	key = Unmark(key)
+	if t, _, ok := asEscaped(obj); ok {
+		// an item could split an escape sequence: it is plain text
+		return e.getItem(t, key)
+	}
+	if m, ok := AsMarkup(obj); ok {
+		r, err := e.getItem(string(m), key)
+		if s, ok := r.(string); ok {
+			return Markup(s), err
+		}
+		return r, err
+	}
 
 	switch v := obj.(type) {
 	case map[string]interface{}:
-		keyStr := fmt.Sprintf("%v", key)
-		return v[keyStr], nil
+		keyStr := DictKey(key)
+		val, ok := v[keyStr]
+		if !ok {
+			return NewUndefined(keyStr, UndefinedSilent, nil), nil
+		}
+		return val, nil
 	case []interface{}:
 		keyInt, err := e.toInt(key)
 		if err != nil {
@@ -1587,27 +2160,47 @@ func (e *DefaultEvaluator) getItem(obj, key interface{}) (interface{}, error) {
 			return nil, fmt.Errorf("string index must be integer, got %T", key)
 		}
 		// Support negative indexing like Python
-		if keyInt < 0 {
-			keyInt = len(v) + keyInt
+		n := keyInt
+		if n < 0 {
+			n += utf8.RuneCountInString(v)
 		}
-		if keyInt < 0 || keyInt >= len(v) {
-			// Return undefined for out of bounds access (Jinja2 behavior)
-			return NewUndefined(fmt.Sprintf("index[%d]", keyInt), UndefinedSilent, nil), nil
+		if n >= 0 {
+			for _, r := range v {
+				if n == 0 {
+					return string(r), nil
+				}
+				n--
+			}
 		}
-		return string(v[keyInt]), nil
+		// Return undefined for out of bounds access (Jinja2 behavior)
+		return NewUndefined(fmt.Sprintf("index[%d]", keyInt), UndefinedSilent, nil), nil
 	default:
-		// Try reflection for slice/array access
+		// Try reflection for slice, array and map access
+		obj = Indirect(obj)
+		if obj == nil {
+			return nil, fmt.Errorf("cannot get item from nil")
+		}
 		rv := reflect.ValueOf(obj)
-		if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
+		switch rv.Kind() {
+		case reflect.Slice, reflect.Array:
 			keyInt, err := e.toInt(key)
 			if err != nil {
 				return nil, fmt.Errorf("index must be integer, got %T", key)
+			}
+			// Support negative indexing like Python
+			if keyInt < 0 {
+				keyInt += rv.Len()
 			}
 			if keyInt < 0 || keyInt >= rv.Len() {
 				// Return undefined for out of bounds access (Jinja2 behavior)
 				return NewUndefined(fmt.Sprintf("index[%d]", keyInt), UndefinedSilent, nil), nil
 			}
 			return rv.Index(keyInt).Interface(), nil
+		case reflect.Map:
+			if val, ok := mapLookup(rv, key); ok {
+				return val.Interface(), nil
+			}
+			return NewUndefined(SprintV(key), UndefinedSilent, nil), nil
 		}
 
 		return nil, fmt.Errorf("object is not subscriptable: %T", obj)
@@ -1644,9 +2237,15 @@ func (e *DefaultEvaluator) applyBinaryOpWithNode(op string, left, right interfac
 	case ">=":
 		return e.greaterEqual(left, right)
 	case "and":
-		return e.isTruthy(left) && e.isTruthy(right), nil
+		if !e.isTruthy(left) {
+			return left, nil
+		}
+		return right, nil
 	case "or":
-		return e.isTruthy(left) || e.isTruthy(right), nil
+		if e.isTruthy(left) {
+			return left, nil
+		}
+		return right, nil
 	case "~":
 		return e.concatenateWithNode(left, right, node)
 	case "in":
@@ -1657,11 +2256,6 @@ func (e *DefaultEvaluator) applyBinaryOpWithNode(op string, left, right interfac
 	default:
 		return nil, NewRuntimeError(ErrorTypeRuntime, fmt.Sprintf("unknown binary operator: %s", op), node)
 	}
-}
-
-// Legacy method for backward compatibility
-func (e *DefaultEvaluator) applyBinaryOp(op string, left, right interface{}) (interface{}, error) {
-	return e.applyBinaryOpWithNode(op, left, right, nil)
 }
 
 func (e *DefaultEvaluator) applyUnaryOp(op string, operand interface{}) (interface{}, error) {
@@ -1682,29 +2276,36 @@ func (e *DefaultEvaluator) applyFilter(name string, value interface{}, args []in
 	// For now, implement basic filters directly
 	switch name {
 	case "upper":
-		return strings.ToUpper(fmt.Sprintf("%v", value)), nil
+		return strings.ToUpper(SprintV(value)), nil
 	case "lower":
-		return strings.ToLower(fmt.Sprintf("%v", value)), nil
+		return strings.ToLower(SprintV(value)), nil
 	case "capitalize":
-		s := fmt.Sprintf("%v", value)
+		s := SprintV(value)
 		if len(s) == 0 {
 			return s, nil
 		}
 		return strings.ToUpper(s[:1]) + strings.ToLower(s[1:]), nil
 	case "trim":
-		return strings.TrimSpace(fmt.Sprintf("%v", value)), nil
+		return strings.TrimSpace(SprintV(value)), nil
 	case "length":
 		return e.length(value)
 	case "default":
-		if len(args) == 0 {
-			return value, nil
+		var defaultValue interface{} = ""
+		if len(args) > 0 {
+			defaultValue = args[0]
 		}
-		if e.isTruthy(value) {
-			return value, nil
+		if len(args) > 1 && e.isTruthy(args[1]) {
+			if e.isTruthy(value) {
+				return value, nil
+			}
+			return defaultValue, nil
 		}
-		return args[0], nil
+		if _, undef := value.(*Undefined); undef || value == nil || value == "" {
+			return defaultValue, nil
+		}
+		return value, nil
 	case "escape":
-		return e.htmlEscape(fmt.Sprintf("%v", value)), nil
+		return e.htmlEscape(SprintV(value)), nil
 	case "safe":
 		// Mark as safe - would need proper implementation
 		return value, nil
@@ -1713,12 +2314,11 @@ func (e *DefaultEvaluator) applyFilter(name string, value interface{}, args []in
 	}
 }
 
-func (e *DefaultEvaluator) callFunction(function interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
-	return e.callFunctionWithContext(function, args, kwargs, nil)
-}
-
 func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []interface{}, kwargs map[string]interface{}, ctx Context) (interface{}, error) {
 	if function == nil {
+		return nil, fmt.Errorf("cannot call nil function")
+	}
+	if fv := reflect.ValueOf(function); fv.Kind() == reflect.Func && fv.IsNil() {
 		return nil, fmt.Errorf("cannot call nil function")
 	}
 
@@ -1726,22 +2326,55 @@ func (e *DefaultEvaluator) callFunctionWithContext(function interface{}, args []
 	switch fn := function.(type) {
 	case *Joiner:
 		// Joiner objects are directly callable
+		if fn.Safe && markupContext(ctx) {
+			return Markup(fn.Join()), nil
+		}
 		return fn.Join(), nil
 	case *CallableLoop:
 		// CallableLoop objects support function calls for recursion
-		return fn.Call(args...)
+		r, err := fn.Call(args...)
+		if err != nil {
+			return r, err
+		}
+		// recursiveFunc already marked the output with the loop's own context
+		return r, nil
+	case *Macro:
+		return fn.Call(args, kwargs)
+	case *builtinMethod:
+		return fn.fn(args, kwargs)
+	case *Undefined:
+		if fn.Hint != "" {
+			return nil, fmt.Errorf("cannot call undefined %s: %s", fn.Name, fn.Hint)
+		}
+	case KeepMarkupFunc:
+		if len(kwargs) > 0 {
+			args = append(args, kwargs)
+		}
+		if e.escapedMade.Load() {
+			// Markup stays, escaped output does not
+			plain := make([]interface{}, len(args))
+			for i, a := range args {
+				plain[i] = plainEscaped(a)
+			}
+			args = plain
+		}
+		return fn(args...)
 	}
+
+	// Go functions get plain strings for safe values
+	nested := e.escapedMade.Load()
+	args, kwargs = unmarkCall(args, kwargs, nested)
 
 	// Handle different function types
 	switch fn := function.(type) {
 	case func(Context, ...interface{}) (interface{}, error):
 		// Macro function that takes context as first parameter
 		if ctx != nil {
-			return fn(ctx, args...)
+			return fn(newGoContext(ctx, nested), args...)
 		}
 		// If no context provided, use a default empty context
 		emptyCtx := &simpleContext{variables: make(map[string]interface{})}
-		return fn(emptyCtx, args...)
+		return fn(newGoContext(emptyCtx, nested), args...)
 
 	case func(...interface{}) (interface{}, error):
 		// Variable argument function - append kwargs as last argument if present
@@ -1894,6 +2527,7 @@ func (e *DefaultEvaluator) applyTest(name string, value interface{}, args []inte
 		}
 		return strings.HasSuffix(str, suffix), nil
 	case "sequence":
+		value = Indirect(value)
 		if value == nil {
 			return false, nil
 		}
@@ -1907,12 +2541,14 @@ func (e *DefaultEvaluator) applyTest(name string, value interface{}, args []inte
 			return false, nil
 		}
 	case "mapping":
+		value = Indirect(value)
 		if value == nil {
 			return false, nil
 		}
 		rv := reflect.ValueOf(value)
 		return rv.Kind() == reflect.Map, nil
 	case "iterable":
+		value = Indirect(value)
 		if value == nil {
 			return false, nil
 		}
@@ -1933,7 +2569,25 @@ func (e *DefaultEvaluator) applyTest(name string, value interface{}, args []inte
 	}
 }
 
+// sortedKeys returns the keys of m in sorted (code-point) order. Go maps
+// have no insertion order, so miya walks dicts by sorted key (Jinja2 uses
+// insertion order).
+func sortedKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
 func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) {
+	if obj == nil {
+		return nil, nil
+	}
+	// Iterating Markup yields plain characters, as in Jinja2
+	obj = Unmark(obj)
+	obj = Indirect(obj)
 	if obj == nil {
 		return nil, nil
 	}
@@ -1973,31 +2627,34 @@ func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) 
 		return result, nil
 
 	case map[string]interface{}:
-		// Return values only for single variable iteration
+		// Return keys in sorted order (Python semantics)
 		result := make([]interface{}, 0, len(v))
-		for _, value := range v {
-			result = append(result, value)
+		for _, key := range sortedKeys(v) {
+			result = append(result, key)
 		}
 		return result, nil
 
 	case *DictItems:
 		// Handle DictItems objects - return key-value pairs for iteration
 		result := make([]interface{}, 0, len(v.data))
-		for key, value := range v.data {
-			result = append(result, []interface{}{key, value})
+		for _, key := range sortedKeys(v.data) {
+			result = append(result, []interface{}{key, v.data[key]})
 		}
 		return result, nil
 
 	case string:
-		result := make([]interface{}, len(v))
-		for i, r := range v {
-			result[i] = string(r)
+		result := make([]interface{}, 0, utf8.RuneCountInString(v))
+		for _, r := range v {
+			result = append(result, string(r))
 		}
 		return result, nil
 	}
 
 	// Slow path: Check if obj is a function that should be called to get an iterable
 	if fnValue := reflect.ValueOf(obj); fnValue.Kind() == reflect.Func {
+		if fnValue.IsNil() {
+			return nil, fmt.Errorf("cannot iterate over nil function")
+		}
 		fnType := fnValue.Type()
 
 		// Check if it's a callable function that returns an iterable
@@ -2033,8 +2690,16 @@ func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) 
 		// If we can't call the function or it doesn't fit our pattern, fall through to error
 	}
 
-	// Fallback to reflection for uncommon slice/array types
+	// Typed maps: string keys iterate like a dict, other keys in a fixed order
+	if m, ok := StringKeyMap(obj); ok {
+		return e.makeIterable(m)
+	}
 	rv := reflect.ValueOf(obj)
+	if rv.Kind() == reflect.Map {
+		return sortedMapKeys(rv), nil
+	}
+
+	// Fallback to reflection for uncommon slice/array types
 	if rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array {
 		result := make([]interface{}, rv.Len())
 		for i := 0; i < rv.Len(); i++ {
@@ -2047,7 +2712,7 @@ func (e *DefaultEvaluator) makeIterable(obj interface{}) ([]interface{}, error) 
 }
 
 // makeIterableForVariables creates an iterable based on the number of variables
-// For maps with multiple variables, returns key-value pairs; otherwise returns values
+// For maps with multiple variables, returns key-value pairs; otherwise returns keys
 func (e *DefaultEvaluator) makeIterableForVariables(obj interface{}, numVariables int) ([]interface{}, error) {
 	if obj == nil {
 		return nil, nil
@@ -2060,6 +2725,9 @@ func (e *DefaultEvaluator) makeIterableForVariables(obj interface{}, numVariable
 
 	// Check if obj is a function that should be called to get an iterable
 	if fnValue := reflect.ValueOf(obj); fnValue.Kind() == reflect.Func {
+		if fnValue.IsNil() {
+			return nil, fmt.Errorf("cannot iterate over nil function")
+		}
 		fnType := fnValue.Type()
 
 		// Check if it's a callable function that returns an iterable
@@ -2101,8 +2769,8 @@ func (e *DefaultEvaluator) makeIterableForVariables(obj interface{}, numVariable
 		// Handle .items() method result - always returns key-value pairs
 		// Pre-allocate with known capacity to avoid reallocations
 		result := make([]interface{}, 0, len(v.data))
-		for key, value := range v.data {
-			result = append(result, []interface{}{key, value})
+		for _, key := range sortedKeys(v.data) {
+			result = append(result, []interface{}{key, v.data[key]})
 		}
 		return result, nil
 	case map[string]interface{}:
@@ -2110,22 +2778,34 @@ func (e *DefaultEvaluator) makeIterableForVariables(obj interface{}, numVariable
 			// Return key-value pairs for unpacking
 			// Pre-allocate with known capacity to avoid reallocations
 			result := make([]interface{}, 0, len(v))
-			for key, value := range v {
-				result = append(result, []interface{}{key, value})
+			for _, key := range sortedKeys(v) {
+				result = append(result, []interface{}{key, v[key]})
 			}
 			return result, nil
 		} else if numVariables == 1 {
-			// Return values only for single variable
+			// Return keys in sorted order for single variable
 			// Pre-allocate with known capacity to avoid reallocations
 			result := make([]interface{}, 0, len(v))
-			for _, value := range v {
-				result = append(result, value)
+			for _, key := range sortedKeys(v) {
+				result = append(result, key)
 			}
 			return result, nil
 		} else {
 			return nil, fmt.Errorf("cannot unpack map into %d variables (expected 1 or 2)", numVariables)
 		}
 	default:
+		if m, ok := StringKeyMap(obj); ok {
+			return e.makeIterableForVariables(m, numVariables)
+		}
+		if rv := reflect.ValueOf(Indirect(obj)); rv.Kind() == reflect.Map {
+			switch numVariables {
+			case 1:
+				return sortedMapKeys(rv), nil
+			case 2:
+				return sortedMapPairs(rv), nil
+			}
+			return nil, fmt.Errorf("cannot unpack map into %d variables (expected 1 or 2)", numVariables)
+		}
 		// For non-maps, use the standard makeIterable method
 		return e.makeIterable(obj)
 	}
@@ -2143,10 +2823,16 @@ func (e *DefaultEvaluator) isTruthy(obj interface{}) bool {
 
 	// Fast path: direct type comparisons without reflection
 	switch v := obj.(type) {
+	case RoundedFloat:
+		return v.Value != 0
 	case bool:
 		return v
 	case string:
 		return v != ""
+	case Markup:
+		return v != ""
+	case SafeValue:
+		return e.isTruthy(v.Value)
 	case int:
 		return v != 0
 	case int8:
@@ -2178,7 +2864,27 @@ func (e *DefaultEvaluator) isTruthy(obj interface{}) bool {
 	default:
 		// Fallback to reflection for other types
 		rv := reflect.ValueOf(obj)
+		if rv.Kind() == reflect.Ptr {
+			inner := Indirect(obj)
+			if inner == nil {
+				return false
+			}
+			if reflect.ValueOf(inner).Kind() != reflect.Ptr {
+				return e.isTruthy(inner)
+			}
+			return true
+		}
 		switch rv.Kind() {
+		case reflect.Bool:
+			return rv.Bool()
+		case reflect.String:
+			return rv.Len() > 0
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return rv.Int() != 0
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+			return rv.Uint() != 0
+		case reflect.Float32, reflect.Float64:
+			return rv.Float() != 0
 		case reflect.Slice, reflect.Map, reflect.Array:
 			return rv.Len() > 0
 		default:
@@ -2186,6 +2892,9 @@ func (e *DefaultEvaluator) isTruthy(obj interface{}) bool {
 		}
 	}
 }
+
+// maxConcatLength bounds the list a single + can build.
+const maxConcatLength = 10000000
 
 // Arithmetic operations
 // Enhanced addition with better error reporting
@@ -2198,18 +2907,18 @@ func (e *DefaultEvaluator) addWithNode(a, b interface{}, node parser.Node) (inte
 		b = 0
 	}
 
-	// Try numeric addition first
+	// Two strings always concatenate, as in Jinja2: '5' + '1' is '51'
+	aStr, aStrOk := basicValue(a).(string)
+	bStr, bStrOk := basicValue(b).(string)
+	if aStrOk && bStrOk {
+		return aStr + bStr, nil
+	}
+
+	// Numeric addition, including a numeric string with a number ('5' + 1)
 	aFloat, aErr := e.toFloat(a)
 	bFloat, bErr := e.toFloat(b)
 	if aErr == nil && bErr == nil {
 		return aFloat + bFloat, nil
-	}
-
-	// Try string concatenation
-	aStr, aStrOk := a.(string)
-	bStr, bStrOk := b.(string)
-	if aStrOk && bStrOk {
-		return aStr + bStr, nil
 	}
 
 	// Try mixed-type string concatenation (graceful handling)
@@ -2226,9 +2935,22 @@ func (e *DefaultEvaluator) addWithNode(a, b interface{}, node parser.Node) (inte
 	}
 
 	// Try slice concatenation
-	if reflect.TypeOf(a).Kind() == reflect.Slice && reflect.TypeOf(b).Kind() == reflect.Slice {
+	if a != nil && b != nil && reflect.TypeOf(a).Kind() == reflect.Slice && reflect.TypeOf(b).Kind() == reflect.Slice {
 		av := reflect.ValueOf(a)
 		bv := reflect.ValueOf(b)
+		if av.Len()+bv.Len() > maxConcatLength {
+			return nil, &SizeError{Msg: fmt.Sprintf("list concatenation too large: %d items (limit %d)", av.Len()+bv.Len(), maxConcatLength)}
+		}
+		if av.Type() != bv.Type() {
+			merged := make([]interface{}, 0, av.Len()+bv.Len())
+			for i := 0; i < av.Len(); i++ {
+				merged = append(merged, av.Index(i).Interface())
+			}
+			for i := 0; i < bv.Len(); i++ {
+				merged = append(merged, bv.Index(i).Interface())
+			}
+			return merged, nil
+		}
 		result := reflect.MakeSlice(av.Type(), 0, av.Len()+bv.Len())
 		result = reflect.AppendSlice(result, av)
 		result = reflect.AppendSlice(result, bv)
@@ -2238,16 +2960,29 @@ func (e *DefaultEvaluator) addWithNode(a, b interface{}, node parser.Node) (inte
 	return nil, NewTypeError("addition", a, node).WithContext(fmt.Sprintf("cannot add %T and %T", a, b))
 }
 
-func (e *DefaultEvaluator) add(a, b interface{}) (interface{}, error) {
-	return e.addWithNode(a, b, nil)
-}
-
 // Placeholder enhanced operations (simplified for now)
 func (e *DefaultEvaluator) subtractWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
 	return e.subtract(a, b)
 }
 
 func (e *DefaultEvaluator) multiplyWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
+	// A string literal operand repeats even when it looks like a number
+	if op, ok := node.(*parser.BinaryOpNode); ok {
+		isStrLit := func(n parser.ExpressionNode) bool {
+			lit, ok := n.(*parser.LiteralNode)
+			if !ok {
+				return false
+			}
+			_, isStr := lit.Value.(string)
+			return isStr
+		}
+		if isStrLit(op.Left) {
+			return repeatValue(a, b)
+		}
+		if isStrLit(op.Right) {
+			return repeatValue(b, a)
+		}
+	}
 	return e.multiply(a, b)
 }
 
@@ -2261,48 +2996,6 @@ func (e *DefaultEvaluator) powerWithNode(a, b interface{}, node parser.Node) (in
 
 func (e *DefaultEvaluator) concatenateWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
 	return ToString(a) + ToString(b), nil
-}
-
-// Legacy method for existing code
-func (e *DefaultEvaluator) addOld(a, b interface{}) (interface{}, error) {
-	// String concatenation
-	if aStr, ok := a.(string); ok {
-		return aStr + fmt.Sprintf("%v", b), nil
-	}
-	if bStr, ok := b.(string); ok {
-		return fmt.Sprintf("%v", a) + bStr, nil
-	}
-
-	// Array/slice concatenation
-	if aSlice, ok := a.([]interface{}); ok {
-		if bSlice, ok := b.([]interface{}); ok {
-			result := make([]interface{}, len(aSlice)+len(bSlice))
-			copy(result, aSlice)
-			copy(result[len(aSlice):], bSlice)
-			return result, nil
-		}
-		// Concatenate single element to slice
-		result := make([]interface{}, len(aSlice)+1)
-		copy(result, aSlice)
-		result[len(aSlice)] = b
-		return result, nil
-	}
-	if bSlice, ok := b.([]interface{}); ok {
-		// Concatenate single element to beginning of slice
-		result := make([]interface{}, 1+len(bSlice))
-		result[0] = a
-		copy(result[1:], bSlice)
-		return result, nil
-	}
-
-	// Numeric addition
-	aFloat, aErr := e.toFloat(a)
-	bFloat, bErr := e.toFloat(b)
-	if aErr == nil && bErr == nil {
-		return aFloat + bFloat, nil
-	}
-
-	return nil, fmt.Errorf("cannot add %T and %T", a, b)
 }
 
 func (e *DefaultEvaluator) subtract(a, b interface{}) (interface{}, error) {
@@ -2336,6 +3029,9 @@ func (e *DefaultEvaluator) multiply(a, b interface{}) (interface{}, error) {
 	if aErr == nil && bErr == nil {
 		return aFloat * bFloat, nil
 	}
+	if seq, count, ok := sequenceOperands(a, b); ok {
+		return repeatValue(seq, count)
+	}
 	return nil, fmt.Errorf("cannot multiply %T and %T", a, b)
 }
 
@@ -2360,24 +3056,23 @@ func (e *DefaultEvaluator) divideWithNode(a, b interface{}, node parser.Node) (i
 	return nil, NewTypeError("division", a, node).WithContext(fmt.Sprintf("cannot divide %T and %T", a, b))
 }
 
-func (e *DefaultEvaluator) divide(a, b interface{}) (interface{}, error) {
-	return e.divideWithNode(a, b, nil)
-}
-
 func (e *DefaultEvaluator) floorDivideWithNode(a, b interface{}, node parser.Node) (interface{}, error) {
-	aInt, aErr := e.toInt(a)
-	bInt, bErr := e.toInt(b)
-	if aErr == nil && bErr == nil {
-		if bInt == 0 {
-			return nil, NewMathError("floor division", fmt.Errorf("division by zero"), node)
-		}
-		return aInt / bInt, nil
+	ai, bi, af, bf, isInt, ok := pyOperands(a, b)
+	if !ok {
+		return nil, NewTypeError("floor division", a, node).WithContext(fmt.Sprintf("cannot floor divide %T and %T", a, b))
 	}
-	return nil, NewTypeError("floor division", a, node).WithContext(fmt.Sprintf("cannot floor divide %T and %T", a, b))
-}
-
-func (e *DefaultEvaluator) floorDivide(a, b interface{}) (interface{}, error) {
-	return e.floorDivideWithNode(a, b, nil)
+	if (isInt && bi == 0) || (!isInt && bf == 0) {
+		return nil, NewMathError("floor division", fmt.Errorf("division by zero"), node)
+	}
+	if isInt {
+		q := ai / bi
+		if ai%bi != 0 && (ai < 0) != (bi < 0) {
+			q--
+		}
+		return int(q), nil
+	}
+	floordiv, _ := pyFloatDivMod(af, bf)
+	return floordiv, nil
 }
 
 func (e *DefaultEvaluator) modulo(a, b interface{}) (interface{}, error) {
@@ -2389,15 +3084,22 @@ func (e *DefaultEvaluator) modulo(a, b interface{}) (interface{}, error) {
 		b = 0
 	}
 
-	aInt, aErr := e.toInt(a)
-	bInt, bErr := e.toInt(b)
-	if aErr == nil && bErr == nil {
-		if bInt == 0 {
-			return nil, fmt.Errorf("modulo by zero")
-		}
-		return aInt % bInt, nil
+	ai, bi, af, bf, isInt, ok := pyOperands(a, b)
+	if !ok {
+		return nil, fmt.Errorf("cannot modulo %T and %T", a, b)
 	}
-	return nil, fmt.Errorf("cannot modulo %T and %T", a, b)
+	if (isInt && bi == 0) || (!isInt && bf == 0) {
+		return nil, fmt.Errorf("modulo by zero")
+	}
+	if isInt {
+		r := ai % bi
+		if r != 0 && (r < 0) != (bi < 0) {
+			r += bi
+		}
+		return int(r), nil
+	}
+	_, mod := pyFloatDivMod(af, bf)
+	return mod, nil
 }
 
 func (e *DefaultEvaluator) power(a, b interface{}) (interface{}, error) {
@@ -2412,6 +3114,22 @@ func (e *DefaultEvaluator) power(a, b interface{}) (interface{}, error) {
 }
 
 func (e *DefaultEvaluator) negate(a interface{}) (interface{}, error) {
+	if i, u, f, kind, ok := numericValue(a); ok {
+		switch kind {
+		case 'i':
+			if i == math.MinInt64 {
+				return -float64(i), nil
+			}
+			return -i, nil
+		case 'u':
+			if u <= math.MaxInt64 {
+				return -int64(u), nil
+			}
+			return -float64(u), nil
+		case 'f':
+			return -f, nil
+		}
+	}
 	aFloat, err := e.toFloat(a)
 	if err == nil {
 		return -aFloat, nil
@@ -2421,14 +3139,27 @@ func (e *DefaultEvaluator) negate(a interface{}) (interface{}, error) {
 
 // numericValue reports a value of any Go numeric kind (named types included).
 // Signed integers return kind 'i', unsigned integers 'u' and floats 'f', so
-// integers can be compared exactly and only floats lose precision. Bool,
-// string, nil and every other kind return ok=false.
+// integers can be compared exactly and only floats lose precision. Pointers
+// are followed, and bools count as 0 and 1 as in Python. String, nil and
+// every other kind return ok=false.
 func numericValue(v interface{}) (i int64, u uint64, f float64, kind byte, ok bool) {
 	if v == nil {
 		return
 	}
+	v = Indirect(v)
+	if v == nil {
+		return
+	}
+	if r, isR := v.(RoundedFloat); isR {
+		return 0, 0, r.Value, 'f', true
+	}
 	rv := reflect.ValueOf(v)
 	switch rv.Kind() {
+	case reflect.Bool:
+		if rv.Bool() {
+			return 1, 0, 0, 'i', true
+		}
+		return 0, 0, 0, 'i', true
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return rv.Int(), 0, 0, 'i', true
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
@@ -2437,6 +3168,64 @@ func numericValue(v interface{}) (i int64, u uint64, f float64, kind byte, ok bo
 		return 0, 0, rv.Float(), 'f', true
 	}
 	return
+}
+
+// pyOperands classifies a and b for Python's // and %: both integers (kind
+// 'i', or 'u' that fits in int64) use exact int64 arithmetic; anything else
+// numeric uses float64. Non-numbers (including numeric strings) are not ok.
+func pyOperands(a, b interface{}) (ai, bi int64, af, bf float64, isInt, ok bool) {
+	i1, u1, f1, k1, ok1 := numericValue(a)
+	i2, u2, f2, k2, ok2 := numericValue(b)
+	if !ok1 || !ok2 {
+		return
+	}
+	ok = true
+	if k1 == 'u' && u1 <= math.MaxInt64 {
+		i1, k1 = int64(u1), 'i'
+	}
+	if k2 == 'u' && u2 <= math.MaxInt64 {
+		i2, k2 = int64(u2), 'i'
+	}
+	if k1 == 'i' && k2 == 'i' {
+		return i1, i2, 0, 0, true, true
+	}
+	af = pyFloatOf(i1, u1, f1, k1)
+	bf = pyFloatOf(i2, u2, f2, k2)
+	return
+}
+
+func pyFloatOf(i int64, u uint64, f float64, kind byte) float64 {
+	switch kind {
+	case 'i':
+		return float64(i)
+	case 'u':
+		return float64(u)
+	}
+	return f
+}
+
+// pyFloatDivMod is CPython's float_divmod: floor division and a modulo with
+// the sign of the divisor, corrected so that 1 // 0.1 == 9.
+func pyFloatDivMod(vx, wx float64) (floordiv, mod float64) {
+	mod = math.Mod(vx, wx)
+	div := (vx - mod) / wx
+	if mod != 0 {
+		if (wx < 0) != (mod < 0) {
+			mod += wx
+			div -= 1.0
+		}
+	} else {
+		mod = math.Copysign(0, wx)
+	}
+	if div != 0 {
+		floordiv = math.Floor(div)
+		if div-floordiv > 0.5 {
+			floordiv += 1.0
+		}
+	} else {
+		floordiv = math.Copysign(0, vx/wx)
+	}
+	return floordiv, mod
 }
 
 // compareNumbers orders two numbers of any Go numeric type. ok is false unless
@@ -2497,11 +3286,27 @@ func compareNumbers(a, b interface{}) (cmp int, ok bool) {
 	return 2, true
 }
 
+// CompareNumbers orders two numbers of any Go numeric type; ok is false
+// unless both are numbers. cmp is 2 when either side is NaN. Filters use it
+// to sort and compare like Jinja2.
+func CompareNumbers(a, b interface{}) (cmp int, ok bool) { return compareNumbers(a, b) }
+
+// Equal reports whether a == b holds in a template: numbers by value, lists
+// element by element. Tests such as eq and in use it so they agree with ==.
+func Equal(a, b interface{}) bool { var e DefaultEvaluator; return e.equal(a, b) }
+
 // Comparison operations
-func (e *DefaultEvaluator) equal(a, b interface{}) bool {
+func (e *DefaultEvaluator) equal(a, b interface{}) bool { return e.equalSeen(a, b, nil) }
+
+// equalSeen is equal with the pairs of lists already being compared: like
+// reflect.DeepEqual, a pair met again counts as equal, so self-containing
+// lists terminate.
+func (e *DefaultEvaluator) equalSeen(a, b interface{}, seen map[[3]uintptr]bool) bool {
+	a, b = Unmark(a), Unmark(b)
 	if cmp, ok := compareNumbers(a, b); ok {
 		return cmp == 0
 	}
+	a, b = basicValue(a), basicValue(b)
 	if a != nil && b != nil {
 		av, bv := reflect.ValueOf(a), reflect.ValueOf(b)
 		ak, bk := av.Kind(), bv.Kind()
@@ -2509,11 +3314,21 @@ func (e *DefaultEvaluator) equal(a, b interface{}) bool {
 			if av.Len() != bv.Len() {
 				return false
 			}
-			if ak == reflect.Slice && bk == reflect.Slice && av.Len() > 0 && av.Pointer() == bv.Pointer() {
-				return true
+			if ak == reflect.Slice && bk == reflect.Slice && av.Len() > 0 {
+				if av.Pointer() == bv.Pointer() {
+					return true
+				}
+				pair := [3]uintptr{av.Pointer(), bv.Pointer(), uintptr(av.Len())}
+				if seen[pair] {
+					return true
+				}
+				if seen == nil {
+					seen = map[[3]uintptr]bool{}
+				}
+				seen[pair] = true
 			}
 			for i := 0; i < av.Len(); i++ {
-				if !e.equal(av.Index(i).Interface(), bv.Index(i).Interface()) {
+				if !e.equalSeen(av.Index(i).Interface(), bv.Index(i).Interface(), seen) {
 					return false
 				}
 			}
@@ -2529,8 +3344,8 @@ func (e *DefaultEvaluator) less(a, b interface{}) (bool, error) {
 	}
 
 	// String comparison
-	if aStr, ok := a.(string); ok {
-		if bStr, ok := b.(string); ok {
+	if aStr, ok := basicValue(a).(string); ok {
+		if bStr, ok := basicValue(b).(string); ok {
 			return aStr < bStr, nil
 		}
 	}
@@ -2559,7 +3374,11 @@ func (e *DefaultEvaluator) greaterEqual(a, b interface{}) (bool, error) {
 }
 
 func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
+	rawItem := item
+	container, item = basicValue(Indirect(container)), basicValue(Indirect(item))
 	switch v := container.(type) {
+	case *Undefined:
+		return false, nil
 	case string:
 		itemStr := e.fastToString(item)
 		return strings.Contains(v, itemStr), nil
@@ -2571,8 +3390,7 @@ func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
 		}
 		return false, nil
 	case map[string]interface{}:
-		itemStr := e.fastToString(item)
-		_, ok := v[itemStr]
+		_, ok := v[DictKey(item)]
 		return ok, nil
 	default:
 		// Use reflection to handle any slice/array type
@@ -2587,19 +3405,8 @@ func (e *DefaultEvaluator) contains(container, item interface{}) (bool, error) {
 			}
 			return false, nil
 		case reflect.Map:
-			// Handle any map type
-			keys := rv.MapKeys()
-			itemValue := reflect.ValueOf(item)
-			for _, key := range keys {
-				if e.equal(key.Interface(), item) {
-					return true, nil
-				}
-			}
-			// Also check if item can be used as a key directly
-			if itemValue.IsValid() && itemValue.Type().AssignableTo(rv.Type().Key()) {
-				return rv.MapIndex(itemValue).IsValid(), nil
-			}
-			return false, nil
+			_, found := mapLookup(rv, rawItem)
+			return found, nil
 		default:
 			return false, fmt.Errorf("cannot check containment in %T", container)
 		}
@@ -2623,52 +3430,7 @@ func (e *DefaultEvaluator) fastToString(v interface{}) string {
 		}
 		return "false"
 	default:
-		return fmt.Sprintf("%v", v)
-	}
-}
-
-// deepEqual performs deep equality comparison for loop.changed() functionality
-func (e *DefaultEvaluator) deepEqual(a, b interface{}) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-
-	// For basic types, use standard equality
-	if reflect.TypeOf(a) != reflect.TypeOf(b) {
-		return false
-	}
-
-	switch va := a.(type) {
-	case string, int, int64, float64, bool:
-		return a == b
-	case []interface{}:
-		vb, ok := b.([]interface{})
-		if !ok || len(va) != len(vb) {
-			return false
-		}
-		for i, item := range va {
-			if !e.deepEqual(item, vb[i]) {
-				return false
-			}
-		}
-		return true
-	case map[string]interface{}:
-		vb, ok := b.(map[string]interface{})
-		if !ok || len(va) != len(vb) {
-			return false
-		}
-		for key, value := range va {
-			if bValue, exists := vb[key]; !exists || !e.deepEqual(value, bValue) {
-				return false
-			}
-		}
-		return true
-	default:
-		// For complex types, use reflection
-		return reflect.DeepEqual(a, b)
+		return SprintV(v)
 	}
 }
 
@@ -2676,10 +3438,15 @@ func (e *DefaultEvaluator) length(obj interface{}) (int, error) {
 	if obj == nil {
 		return 0, nil
 	}
+	if t, _, ok := asEscaped(obj); ok {
+		return e.length(t)
+	}
 
 	switch v := obj.(type) {
 	case string:
 		return len(v), nil
+	case Markup:
+		return e.length(string(v))
 	case []interface{}:
 		return len(v), nil
 	case map[string]interface{}:
@@ -2737,6 +3504,8 @@ func (e *DefaultEvaluator) htmlEscape(s string) string {
 // Type conversion helpers
 func (e *DefaultEvaluator) toInt(obj interface{}) (int, error) {
 	switch v := obj.(type) {
+	case RoundedFloat:
+		return int(v.Value), nil
 	case int:
 		return v, nil
 	case int64:
@@ -2746,12 +3515,27 @@ func (e *DefaultEvaluator) toInt(obj interface{}) (int, error) {
 	case string:
 		return strconv.Atoi(v)
 	default:
+		i, u, f, kind, ok := numericValue(obj)
+		if ok {
+			switch kind {
+			case 'i':
+				return int(i), nil
+			case 'u':
+				if u <= math.MaxInt {
+					return int(u), nil
+				}
+			case 'f':
+				return int(f), nil
+			}
+		}
 		return 0, fmt.Errorf("cannot convert %T to int", obj)
 	}
 }
 
 func (e *DefaultEvaluator) toFloat(obj interface{}) (float64, error) {
 	switch v := obj.(type) {
+	case RoundedFloat:
+		return v.Value, nil
 	case int:
 		return float64(v), nil
 	case int64:
@@ -2759,107 +3543,61 @@ func (e *DefaultEvaluator) toFloat(obj interface{}) (float64, error) {
 	case float64:
 		return v, nil
 	case string:
-		return strconv.ParseFloat(v, 64)
+		f, err := strconv.ParseFloat(v, 64)
+		if err == nil && (math.IsInf(f, 0) || math.IsNaN(f)) {
+			return 0, fmt.Errorf("cannot convert %q to float", v)
+		}
+		return f, err
 	default:
+		i, u, f, kind, ok := numericValue(obj)
+		if ok {
+			switch kind {
+			case 'i':
+				return float64(i), nil
+			case 'u':
+				return float64(u), nil
+			case 'f':
+				return f, nil
+			}
+		}
 		return 0, fmt.Errorf("cannot convert %T to float", obj)
 	}
 }
 
-// setAttribute sets an attribute on an object (for assignment expressions)
+// setAttribute sets an attribute on an object (for assignment expressions).
+// Only namespace() objects accept attribute assignment.
 func (e *DefaultEvaluator) setAttribute(obj interface{}, attr string, value interface{}) error {
 	if obj == nil {
 		return fmt.Errorf("cannot set attribute on nil object")
 	}
 
 	switch v := obj.(type) {
-	case NamespaceInterface:
+	case assignableNamespace:
 		v.Set(attr, value)
 		return nil
-	case map[string]interface{}:
-		v[attr] = value
-		return nil
 	}
 
-	rv := reflect.ValueOf(obj)
-	if rv.Kind() == reflect.Ptr {
-		rv = rv.Elem()
-	}
-
-	if rv.Kind() == reflect.Struct {
-		field := rv.FieldByName(attr)
-		if !field.IsValid() {
-			// Try with capitalized field name
-			field = rv.FieldByName(capitalizeFirst(attr))
-		}
-
-		if field.IsValid() && field.CanSet() {
-			valueRv := reflect.ValueOf(value)
-			if valueRv.Type().ConvertibleTo(field.Type()) {
-				field.Set(valueRv.Convert(field.Type()))
-				return nil
-			}
-			return fmt.Errorf("cannot assign %T to %s field", value, field.Type())
-		}
-		return fmt.Errorf("cannot set field %s on struct", attr)
-	}
-
-	return fmt.Errorf("cannot set attribute on %T", obj)
+	return fmt.Errorf("cannot assign attribute on non-namespace object (%T)", obj)
 }
 
-// setItem sets an item in a container (for assignment expressions)
+// setItem rejects item assignment: templates cannot modify maps or slices.
 func (e *DefaultEvaluator) setItem(obj, key, value interface{}) error {
 	if obj == nil {
 		return fmt.Errorf("cannot set item on nil object")
 	}
-
-	switch v := obj.(type) {
-	case map[string]interface{}:
-		keyStr := fmt.Sprintf("%v", key)
-		v[keyStr] = value
-		return nil
-	case []interface{}:
-		keyInt, err := e.toInt(key)
-		if err != nil {
-			return fmt.Errorf("list index must be integer, got %T", key)
-		}
-		// Support negative indexing like Python
-		if keyInt < 0 {
-			keyInt = len(v) + keyInt
-		}
-		if keyInt < 0 || keyInt >= len(v) {
-			return fmt.Errorf("list index out of range: %d", keyInt)
-		}
-		v[keyInt] = value
-		return nil
-	default:
-		// Try reflection for slice assignment
-		rv := reflect.ValueOf(obj)
-		if rv.Kind() == reflect.Slice {
-			keyInt, err := e.toInt(key)
-			if err != nil {
-				return fmt.Errorf("index must be integer, got %T", key)
-			}
-			if keyInt < 0 || keyInt >= rv.Len() {
-				return fmt.Errorf("index out of range: %d", keyInt)
-			}
-
-			valueRv := reflect.ValueOf(value)
-			elemType := rv.Type().Elem()
-			if valueRv.Type().ConvertibleTo(elemType) {
-				rv.Index(keyInt).Set(valueRv.Convert(elemType))
-				return nil
-			}
-			return fmt.Errorf("cannot assign %T to slice element of type %s", value, elemType)
-		}
-
-		return fmt.Errorf("object is not subscriptable for assignment: %T", obj)
-	}
+	return fmt.Errorf("cannot assign to an item of %T; use namespace() for mutable state", obj)
 }
 
 // slice implements Python-style slicing
 func (e *DefaultEvaluator) slice(obj interface{}, start, end, step *int) (interface{}, error) {
 	if obj == nil {
 		return nil, fmt.Errorf("cannot slice nil")
+	}
+	if m, ok := AsMarkup(obj); ok {
+		return Markup(e.sliceString(string(m), start, end, step)), nil
+	}
+	if t, _, ok := asEscaped(obj); ok {
+		return e.sliceString(t, start, end, step), nil
 	}
 
 	switch v := obj.(type) {
@@ -2878,201 +3616,67 @@ func (e *DefaultEvaluator) slice(obj interface{}, start, end, step *int) (interf
 	}
 }
 
-func (e *DefaultEvaluator) sliceString(s string, start, end, step *int) string {
-	length := len(s)
-
-	// Default values
-	startVal := 0
-	endVal := length
+// sliceBounds resolves Python slice bounds for a sequence of length n, as
+// CPython's PySlice_AdjustIndices does. Iterate i from start while
+// i < stop (step > 0) or i > stop (step < 0). The caller rejects step 0.
+func sliceBounds(n int, start, end, step *int) (int, int, int) {
 	stepVal := 1
-
-	if start != nil {
-		startVal = *start
-		if startVal < 0 {
-			startVal += length
-		}
-		if startVal < 0 {
-			startVal = 0
-		}
-		if startVal > length {
-			startVal = length
-		}
-	}
-
-	if end != nil {
-		endVal = *end
-		if endVal < 0 {
-			endVal += length
-		}
-		if endVal < 0 {
-			endVal = 0
-		}
-		if endVal > length {
-			endVal = length
-		}
-	}
-
 	if step != nil {
 		stepVal = *step
 	}
-
-	if stepVal == 1 {
-		// Simple case
-		if startVal >= endVal {
-			return ""
-		}
-		return s[startVal:endVal]
+	lower, upper := 0, n
+	if stepVal < 0 {
+		lower, upper = -1, n-1
 	}
+	adjust := func(p *int, def int) int {
+		if p == nil {
+			return def
+		}
+		v := *p
+		if v < 0 {
+			v += n
+			if v < lower {
+				v = lower
+			}
+		} else if v > upper {
+			v = upper
+		}
+		return v
+	}
+	if stepVal < 0 {
+		return adjust(start, upper), adjust(end, lower), stepVal
+	}
+	return adjust(start, lower), adjust(end, upper), stepVal
+}
 
-	// Step-wise slicing
+func (e *DefaultEvaluator) sliceString(s string, start, end, step *int) string {
+	r := []rune(s)
+	startVal, endVal, stepVal := sliceBounds(len(r), start, end, step)
+
 	var result strings.Builder
-	if stepVal > 0 {
-		for i := startVal; i < endVal; i += stepVal {
-			result.WriteByte(s[i])
-		}
-	} else {
-		// Negative step
-		if start == nil {
-			startVal = length - 1
-		}
-		if end == nil {
-			endVal = -1
-		}
-		for i := startVal; i > endVal; i += stepVal {
-			result.WriteByte(s[i])
-		}
+	for i := startVal; (stepVal > 0 && i < endVal) || (stepVal < 0 && i > endVal); i += stepVal {
+		result.WriteRune(r[i])
 	}
-
 	return result.String()
 }
 
 func (e *DefaultEvaluator) sliceSlice(s []interface{}, start, end, step *int) []interface{} {
-	length := len(s)
+	startVal, endVal, stepVal := sliceBounds(len(s), start, end, step)
 
-	// Default values
-	startVal := 0
-	endVal := length
-	stepVal := 1
-
-	if start != nil {
-		startVal = *start
-		if startVal < 0 {
-			startVal += length
-		}
-		if startVal < 0 {
-			startVal = 0
-		}
-		if startVal > length {
-			startVal = length
-		}
+	result := []interface{}{}
+	for i := startVal; (stepVal > 0 && i < endVal) || (stepVal < 0 && i > endVal); i += stepVal {
+		result = append(result, s[i])
 	}
-
-	if end != nil {
-		endVal = *end
-		if endVal < 0 {
-			endVal += length
-		}
-		if endVal < 0 {
-			endVal = 0
-		}
-		if endVal > length {
-			endVal = length
-		}
-	}
-
-	if step != nil {
-		stepVal = *step
-	}
-
-	if stepVal == 1 {
-		// Simple case
-		if startVal >= endVal {
-			return []interface{}{}
-		}
-		return s[startVal:endVal]
-	}
-
-	// Step-wise slicing
-	var result []interface{}
-	if stepVal > 0 {
-		for i := startVal; i < endVal; i += stepVal {
-			result = append(result, s[i])
-		}
-	} else {
-		// Negative step
-		if start == nil {
-			startVal = length - 1
-		}
-		if end == nil {
-			endVal = -1
-		}
-		for i := startVal; i > endVal; i += stepVal {
-			result = append(result, s[i])
-		}
-	}
-
 	return result
 }
 
 func (e *DefaultEvaluator) sliceReflect(rv reflect.Value, start, end, step *int) interface{} {
-	length := rv.Len()
+	startVal, endVal, stepVal := sliceBounds(rv.Len(), start, end, step)
 
-	// Default values
-	startVal := 0
-	endVal := length
-	stepVal := 1
-
-	if start != nil {
-		startVal = *start
-		if startVal < 0 {
-			startVal += length
-		}
-		if startVal < 0 {
-			startVal = 0
-		}
-		if startVal > length {
-			startVal = length
-		}
+	result := reflect.MakeSlice(reflect.SliceOf(rv.Type().Elem()), 0, 0)
+	for i := startVal; (stepVal > 0 && i < endVal) || (stepVal < 0 && i > endVal); i += stepVal {
+		result = reflect.Append(result, rv.Index(i))
 	}
-
-	if end != nil {
-		endVal = *end
-		if endVal < 0 {
-			endVal += length
-		}
-		if endVal < 0 {
-			endVal = 0
-		}
-		if endVal > length {
-			endVal = length
-		}
-	}
-
-	if step != nil {
-		stepVal = *step
-	}
-
-	// Create result slice
-	elemType := rv.Type().Elem()
-	result := reflect.MakeSlice(reflect.SliceOf(elemType), 0, 0)
-
-	if stepVal > 0 {
-		for i := startVal; i < endVal; i += stepVal {
-			result = reflect.Append(result, rv.Index(i))
-		}
-	} else {
-		// Negative step
-		if start == nil {
-			startVal = length - 1
-		}
-		if end == nil {
-			endVal = -1
-		}
-		for i := startVal; i > endVal; i += stepVal {
-			result = reflect.Append(result, rv.Index(i))
-		}
-	}
-
 	return result.Interface()
 }
 
@@ -3082,9 +3686,132 @@ type autoescapeContext struct {
 	autoescape bool
 }
 
+// goContext is the context a Go function receives: it never hands out a
+// listBox or escaped output, which is also looked for inside lists and dicts
+// when nested is set. Unwrap lets filterContext and resolveEscape find the
+// real context.
+type goContext struct {
+	inner  Context
+	nested bool
+}
+
+// plain returns v as a Go function sees it.
+func (g *goContext) plain(v interface{}) interface{} {
+	v = unbox(v)
+	if t, _, ok := asEscaped(v); ok {
+		return t
+	}
+	if g.nested {
+		return plainEscaped(v)
+	}
+	return v
+}
+
+func (g *goContext) GetVariable(key string) (interface{}, bool) {
+	v, ok := g.inner.GetVariable(key)
+	return g.plain(v), ok
+}
+
+func (g *goContext) SetVariable(key string, value interface{}) { g.inner.SetVariable(key, value) }
+
+func (g *goContext) Clone() Context { return newGoContext(g.inner.Clone(), g.nested) }
+
+// All returns a new map: the inner map may be shared or cached.
+func (g *goContext) All() map[string]interface{} {
+	all := g.inner.All()
+	out := make(map[string]interface{}, len(all))
+	for k, v := range all {
+		out[k] = g.plain(v)
+	}
+	return out
+}
+
+func (g *goContext) Unwrap() Context { return g.inner }
+
+// goAutoescapeContext also reports the inner context's autoescape setting.
+type goAutoescapeContext struct{ goContext }
+
+func (g *goAutoescapeContext) Clone() Context { return newGoContext(g.inner.Clone(), g.nested) }
+
+func (g *goAutoescapeContext) IsAutoescapeEnabled() bool {
+	return g.inner.(AutoescapeContext).IsAutoescapeEnabled()
+}
+
+// goEnvContext also forwards the environment-aware interfaces.
+type goEnvContext struct{ goAutoescapeContext }
+
+func (g *goEnvContext) Clone() Context { return newGoContext(g.inner.Clone(), g.nested) }
+
+func (g *goEnvContext) ApplyFilter(name string, value interface{}, args ...interface{}) (interface{}, error) {
+	return g.inner.(EnvironmentContext).ApplyFilter(name, value, args...)
+}
+
+func (g *goEnvContext) ApplyTest(name string, value interface{}, args ...interface{}) (bool, error) {
+	return g.inner.(EnvironmentContext).ApplyTest(name, value, args...)
+}
+
+func (g *goEnvContext) ApplyFilterKwargs(name string, value interface{}, args []interface{}, kwargs map[string]interface{}) (interface{}, error) {
+	return g.inner.(KwargsFilterApplier).ApplyFilterKwargs(name, value, args, kwargs)
+}
+
+// newGoContext wraps ctx for a Go function. Go cannot add methods
+// conditionally, so the wrapper forwards the optional interfaces only for the
+// combinations the library's own contexts have; any other is reachable
+// through Unwrap.
+func newGoContext(ctx Context, nested bool) Context {
+	_, esc := ctx.(AutoescapeContext)
+	_, env := ctx.(EnvironmentContext)
+	_, kw := ctx.(KwargsFilterApplier)
+	g := goContext{inner: ctx, nested: nested}
+	switch {
+	case esc && env && kw:
+		return &goEnvContext{goAutoescapeContext{g}}
+	case esc && !env && !kw:
+		return &goAutoescapeContext{g}
+	}
+	return &g
+}
+
+// filterContext peels context wrappers (autoescapeContext, ContextWrapper) so
+// that filter and test lookups reach the environment-aware context underneath.
+func filterContext(ctx Context) Context {
+	for c := ctx; c != nil; {
+		if _, ok := c.(EnvironmentContext); ok {
+			return c
+		}
+		u, ok := c.(interface{ Unwrap() Context })
+		if !ok {
+			break
+		}
+		c = u.Unwrap()
+	}
+	return ctx
+}
+
+// Unwrap returns the wrapped context.
+func (ac *autoescapeContext) Unwrap() Context { return ac.Context }
+
 // IsAutoescapeEnabled returns whether autoescape is enabled in this context
 func (ac *autoescapeContext) IsAutoescapeEnabled() bool {
 	return ac.autoescape
+}
+
+// Clone keeps the block's autoescape setting for loops and with-blocks inside it.
+func (ac *autoescapeContext) Clone() Context {
+	return &autoescapeContext{Context: ac.Context.Clone(), autoescape: ac.autoescape}
+}
+
+// Child is a child scope of the wrapped context with the same autoescape setting.
+func (ac *autoescapeContext) Child() Context {
+	return &autoescapeContext{Context: childScope(ac.Context), autoescape: ac.autoescape}
+}
+
+// childScope returns a child scope of ctx, or a clone when ctx has none.
+func childScope(ctx Context) Context {
+	if c, ok := ctx.(childScoper); ok {
+		return c.Child()
+	}
+	return ctx.Clone()
 }
 
 // AutoescapeContext interface for contexts that support autoescape state
@@ -3103,48 +3830,36 @@ func (e *DefaultEvaluator) EvalExtensionNode(node *parser.ExtensionNode, ctx Con
 
 // EvalBreakNode evaluates break statements
 func (e *DefaultEvaluator) EvalBreakNode(node *parser.BreakNode, ctx Context) (interface{}, error) {
-	// Get the control flow evaluator
-	cfEvaluator := NewControlFlowEvaluator(e)
-	return nil, cfEvaluator.EvalBreak()
+	return nil, NewBreakError()
 }
 
 // EvalContinueNode evaluates continue statements
 func (e *DefaultEvaluator) EvalContinueNode(node *parser.ContinueNode, ctx Context) (interface{}, error) {
-	// Get the control flow evaluator
-	cfEvaluator := NewControlFlowEvaluator(e)
-	return nil, cfEvaluator.EvalContinue()
+	return nil, NewContinueError()
 }
 
 // EvalCallBlockNode evaluates call blocks ({% call macro() %}content{% endcall %})
 func (e *DefaultEvaluator) EvalCallBlockNode(node *parser.CallBlockNode, ctx Context) (interface{}, error) {
-	// Render the block content to create the "caller" function
-	blockContent, err := e.evalNodeList(node.Body, ctx)
-	if err != nil {
-		return nil, err
+	call, ok := node.Call.(*parser.CallNode)
+	if !ok {
+		// The parser rejects this; only a hand-built AST gets here.
+		return nil, fmt.Errorf("{%% call %%} requires a call expression, got %s", node.Call.String())
 	}
-
-	// Convert block content to string
-	var blockStr string
-	if blockContent != nil {
-		blockStr = fmt.Sprintf("%v", blockContent)
+	defaults := make(map[string]interface{}, len(node.Defaults))
+	for name, expr := range node.Defaults {
+		defaults[name] = expr
 	}
-
-	// Create a "caller" function that returns the block content
-	callerFunc := func(args ...interface{}) (interface{}, error) {
-		return blockStr, nil
+	// caller() renders the block body in the call site's context.
+	caller := &Macro{
+		Name:       "caller",
+		Parameters: node.Parameters,
+		Defaults:   defaults,
+		Body:       node.Body,
+		MacroUsage: node.MacroUsage,
+		defCtx:     ctx,
+		evaluator:  e,
 	}
-
-	// Create a new context that includes the caller function
-	callCtx := ctx.Clone()
-	callCtx.SetVariable("caller", callerFunc)
-
-	// Evaluate the call expression with the extended context
-	result, err := e.EvalNode(node.Call, callCtx)
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
+	return e.evalCall(call, ctx, caller)
 }
 
 // EvalImportNode evaluates import statements ({% import 'template' as name %})
@@ -3160,24 +3875,11 @@ func (e *DefaultEvaluator) EvalImportNode(node *parser.ImportNode, ctx Context) 
 		return nil, fmt.Errorf("template name must be a string, got %T", templateExpr)
 	}
 
-	// Use the new import system if available
-	if e.importSystem != nil {
-		namespace, err := e.importSystem.LoadTemplateNamespace(templateName, ctx, e)
-		if err != nil {
-			return nil, fmt.Errorf("error loading template %q: %w", templateName, err)
-		}
-
-		// Create an ImportedNamespace wrapper
-		importedNS := e.importSystem.GetImportedNamespace(namespace, e)
-		ctx.SetVariable(node.Alias, importedNS)
-	} else {
-		// Fallback to the old placeholder system
-		templateNamespace, err := e.loadTemplateNamespace(templateName, ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error loading template %q: %w", templateName, err)
-		}
-		ctx.SetVariable(node.Alias, templateNamespace)
+	namespace, err := e.loadModule(templateName, ctx, node.WithContext)
+	if err != nil {
+		return nil, err
 	}
+	ctx.SetVariable(node.Alias, e.importSystem.GetImportedNamespace(namespace, e))
 
 	return "", nil // Import statements don't produce output
 }
@@ -3196,27 +3898,11 @@ func (e *DefaultEvaluator) EvalFromNode(node *parser.FromNode, ctx Context) (int
 		return nil, fmt.Errorf("template name must be a string, got %T", templateExpr)
 	}
 
-	var namespaceMap map[string]interface{}
-
-	// Use the new import system if available
-	if e.importSystem != nil {
-		namespace, err := e.importSystem.LoadTemplateNamespace(templateName, ctx, e)
-		if err != nil {
-			return nil, fmt.Errorf("error loading template %q: %w", templateName, err)
-		}
-		namespaceMap = e.importSystem.GetNamespaceMap(namespace, e)
-	} else {
-		// Fallback to the old placeholder system
-		templateNamespace, err := e.loadTemplateNamespace(templateName, ctx)
-		if err != nil {
-			return nil, fmt.Errorf("error loading template %q: %w", templateName, err)
-		}
-		var ok bool
-		namespaceMap, ok = templateNamespace.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("template namespace is not a map")
-		}
+	namespace, err := e.loadModule(templateName, ctx, node.WithContext)
+	if err != nil {
+		return nil, err
 	}
+	namespaceMap := e.importSystem.GetNamespaceMap(namespace, e)
 
 	// Import specific items from the namespace
 	for _, name := range node.Names {
@@ -3226,15 +3912,20 @@ func (e *DefaultEvaluator) EvalFromNode(node *parser.FromNode, ctx Context) (int
 			varName = alias
 		}
 
+		if strings.HasPrefix(name, "_") {
+			return nil, fmt.Errorf("names starting with an underline can not be imported: %q", name)
+		}
+
 		// Get the item from the namespace
 		if item, exists := namespaceMap[name]; exists {
 			ctx.SetVariable(varName, item)
 		} else {
-			// Create a placeholder if the item doesn't exist
-			placeholderFunc := func(args ...interface{}) (interface{}, error) {
-				return fmt.Sprintf("[Undefined macro %s from %s]", name, templateName), nil
-			}
-			ctx.SetVariable(varName, placeholderFunc)
+			// As in Jinja2, a missing name is undefined; calling it is an error.
+			ctx.SetVariable(varName, &Undefined{
+				Name:     name,
+				Behavior: e.undefinedHandler.GetUndefinedBehavior(),
+				Hint:     fmt.Sprintf("the template %q does not export the requested name %q", templateName, name),
+			})
 		}
 	}
 
@@ -3246,15 +3937,32 @@ func (e *DefaultEvaluator) EvalWithNode(node *parser.WithNode, ctx Context) (int
 	// Create a new context scope for the with block
 	withCtx := ctx.Clone()
 
-	// Evaluate and set assignments in order (so later assignments can reference earlier ones)
-	// Note: In Go, map iteration order is not guaranteed, but for most use cases this will work
-	// In a production implementation, we'd need to preserve assignment order in the parser
-	for varName, expr := range node.Assignments {
-		value, err := e.EvalNode(expr, withCtx) // Use with context so assignments can reference each other
+	names, exprs := node.Names, node.Exprs
+	if len(names) != len(exprs) || (len(names) == 0 && len(node.Assignments) > 0) {
+		// an AST built without the parser: fall back to sorted keys
+		names = make([]string, 0, len(node.Assignments))
+		for n := range node.Assignments {
+			names = append(names, n)
+		}
+		sort.Strings(names)
+		exprs = make([]parser.ExpressionNode, len(names))
+		for i, n := range names {
+			exprs[i] = node.Assignments[n]
+		}
+	}
+
+	// Jinja2 evaluates every value in the scope outside the with block, in
+	// order (duplicates too), and only then binds the names; the last one wins.
+	values := make([]interface{}, len(names))
+	for i, varName := range names {
+		value, err := e.EvalNode(exprs[i], ctx)
 		if err != nil {
 			return nil, fmt.Errorf("error evaluating with assignment %s: %w", varName, err)
 		}
-		withCtx.SetVariable(varName, value)
+		values[i] = e.bindValue(exprs[i], value, ctx)
+	}
+	for i, varName := range names {
+		withCtx.SetVariable(varName, values[i])
 	}
 
 	// Evaluate the body with the new context
@@ -3266,42 +3974,71 @@ func (e *DefaultEvaluator) EvalWithNode(node *parser.WithNode, ctx Context) (int
 	return result, nil
 }
 
-// loadTemplateNamespace loads a template and extracts its macros and variables
-func (e *DefaultEvaluator) loadTemplateNamespace(templateName string, ctx Context) (interface{}, error) {
-	// We need access to the environment to load templates
-	// This is a limitation of the current design - the runtime evaluator doesn't have direct access to the environment
-	// For now, we'll return a basic namespace with placeholder functionality
-
-	// Try to get environment from context if available
-	if envCtx, ok := ctx.(EnvironmentContext); ok {
-		// In a full implementation, we would:
-		// 1. Load the template using envCtx.LoadTemplate(templateName)
-		// 2. Parse the template AST to find MacroNodes
-		// 3. Create callable functions for each macro
-		// 4. Return a namespace containing all the macros
-		_ = envCtx // Use the context to avoid unused variable warning
+// loadModule returns the namespace of an imported template. An import without
+// context reuses the module already built for that template in this render, as
+// Jinja2 does; an import with context is built fresh every time.
+func (e *DefaultEvaluator) loadModule(templateName string, ctx Context, withContext bool) (*TemplateNamespace, error) {
+	if e.importSystem == nil {
+		return nil, fmt.Errorf("cannot import %q: the evaluator has no import system (it was not created by an Environment render)", templateName)
 	}
-
-	// For now, create a basic namespace regardless of context availability
-	return e.createPlaceholderNamespace(templateName), nil
+	if !withContext {
+		if ns, ok := e.importMemo[templateName]; ok {
+			return ns, nil
+		}
+	}
+	leave, err := e.enter("import " + strconv.Quote(templateName))
+	if err != nil {
+		return nil, err
+	}
+	defer leave()
+	ns, err := e.importSystem.LoadTemplateNamespace(templateName, importContext(ctx, withContext), e)
+	if err != nil {
+		return nil, err
+	}
+	if !withContext {
+		if e.importMemo == nil {
+			e.importMemo = make(map[string]*TemplateNamespace)
+		}
+		e.importMemo[templateName] = ns
+	}
+	return ns, nil
 }
 
-// createPlaceholderNamespace creates a placeholder namespace for import functionality
-func (e *DefaultEvaluator) createPlaceholderNamespace(templateName string) map[string]interface{} {
-	return map[string]interface{}{
-		"__template__": templateName,
-		"__imported__": true,
-		// Add some common macro names as placeholders
-		"render_field": func(args ...interface{}) (interface{}, error) {
-			return fmt.Sprintf("[Macro render_field from %s]", templateName), nil
-		},
-		"input": func(args ...interface{}) (interface{}, error) {
-			return fmt.Sprintf("[Macro input from %s]", templateName), nil
-		},
-		"button": func(args ...interface{}) (interface{}, error) {
-			return fmt.Sprintf("[Macro button from %s]", templateName), nil
-		},
+// ModuleContexter is implemented by contexts that can create an empty context
+// sharing their environment (globals, filters, tests). Imports without context
+// use it so the imported template sees no render variables.
+type ModuleContexter interface {
+	NewModuleContext() Context
+}
+
+// stripAutoescapeBlocks drops the importer's {% autoescape %} block wrappers: the imported
+// template escapes by its own setting, also when it is imported with context.
+func stripAutoescapeBlocks(ctx Context) Context {
+	switch c := ctx.(type) {
+	case *autoescapeContext:
+		return stripAutoescapeBlocks(c.Context)
+	case *ContextWrapper:
+		return &ContextWrapper{Context: stripAutoescapeBlocks(c.Context), escapeContext: c.escapeContext, autoEscaper: c.autoEscaper}
 	}
+	return ctx
+}
+
+// importContext returns the context an imported template runs in: a copy of
+// ctx for "with context", otherwise an empty context with ctx's environment.
+func importContext(ctx Context, withContext bool) Context {
+	if withContext {
+		return stripAutoescapeBlocks(ctx).Clone()
+	}
+	switch c := ctx.(type) {
+	case ModuleContexter:
+		return c.NewModuleContext()
+	case *autoescapeContext:
+		// The importer's {% autoescape %} block does not apply to the imported template.
+		return importContext(c.Context, false)
+	case *ContextWrapper:
+		return &ContextWrapper{Context: importContext(c.Context, false), escapeContext: c.escapeContext, autoEscaper: c.autoEscaper}
+	}
+	return &simpleContext{variables: make(map[string]interface{})}
 }
 
 // EvalDoNode evaluates a do statement by executing the expression for side effects
@@ -3331,27 +4068,33 @@ func (e *DefaultEvaluator) EvalFilterBlockNode(node *parser.FilterBlockNode, ctx
 		bodyContent.WriteString(resultStr)
 	}
 
-	// Get the rendered body content as starting value
-	currentContent := bodyContent.String()
+	// The body is template output: Markup where escaping is on
+	body := bodyContent.String()
+	var current interface{} = e.markIfSafe(body, ctx)
 
-	// Apply each filter in the chain to the content
+	// Apply each filter in the chain to the previous result as it is
 	for _, filter := range node.FilterChain {
-		// Create a literal node with the current content as input to the filter
-		contentLiteral := parser.NewLiteralNode(currentContent, currentContent, filter.Line(), filter.Column())
+		contentLiteral := parser.NewLiteralNode(current, ToString(current), filter.Line(), filter.Column())
 
 		// Create a new filter node with the current content as the expression
 		filterNode := parser.NewFilterNode(contentLiteral, filter.FilterName, filter.Arguments, filter.Line(), filter.Column())
 		filterNode.NamedArgs = filter.NamedArgs
 
-		// Evaluate the filter
-		result, err := e.EvalFilterNode(filterNode, ctx)
+		// Evaluate the filter; a strict undefined result fails where it is
+		// used, by the next filter or below
+		result, err := e.evalFilter(filterNode, ctx)
 		if err != nil {
-			return nil, fmt.Errorf("error applying filter '%s' in filter block: %v", filter.FilterName, err)
+			return nil, fmt.Errorf("error applying filter '%s' in filter block: %w", filter.FilterName, err)
 		}
-
-		// Convert result back to string for the next filter in chain
-		currentContent = ToString(result)
+		current = result
 	}
 
-	return currentContent, nil
+	if err := strictUndefinedUse(current); err != nil {
+		return nil, err
+	}
+	// Markup is written as is; anything else is escaped like {{ }} would
+	if m, ok := AsMarkup(current); ok {
+		return string(m), nil
+	}
+	return escapeFor(ctx, current), nil
 }

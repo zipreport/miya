@@ -537,4 +537,7 @@ fsLoader := loader.NewFileSystemLoader([]string{".", "templates"}, templateParse
 - Multi-level inheritance - Chain multiple templates
 - Nested blocks - Blocks within blocks
 
-**100% Jinja2 Compatible** - All inheritance features work identically to Jinja2.
+**Differences from Jinja2:**
+- `{{ self.block_name() }}` is an error (`cannot call non-function value of type *runtime.Undefined`); Jinja2 renders the block.
+
+See [Miya Limitations](MIYA_LIMITATIONS.md) for the full list.

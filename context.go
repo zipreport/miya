@@ -51,10 +51,6 @@ type context struct {
 	parent *context
 	data   map[string]interface{}
 	env    *Environment
-
-	// Phase 3b optimization: Cache for All() method
-	cachedAll     map[string]interface{}
-	allCacheValid bool
 }
 
 // NewContext creates a new empty Context for passing variables to template rendering.
@@ -106,7 +102,7 @@ func (c *context) Get(key string) (interface{}, bool) {
 
 		// Check environment globals
 		if c.env != nil {
-			if val, ok := c.env.globals[key]; ok {
+			if val, ok := c.env.lookupGlobal(key); ok {
 				return val, true
 			}
 		}
@@ -128,7 +124,7 @@ func (c *context) Get(key string) (interface{}, bool) {
 
 	// Check environment globals (only for simple keys)
 	if c.env != nil && len(parts) == 1 {
-		if val, ok := c.env.globals[key]; ok {
+		if val, ok := c.env.lookupGlobal(key); ok {
 			return val, true
 		}
 	}
@@ -231,8 +227,6 @@ func safeMethodCall(rv reflect.Value, methodName string) (result interface{}) {
 
 func (c *context) Set(key string, value interface{}) {
 	c.data[key] = value
-	// Invalidate All() cache (Phase 3b optimization)
-	c.allCacheValid = false
 }
 
 func (c *context) Push() Context {
@@ -251,18 +245,15 @@ func (c *context) Pop() Context {
 }
 
 func (c *context) All() map[string]interface{} {
-	// Use cached version if valid (Phase 3b optimization)
-	if c.allCacheValid {
-		return c.cachedAll
-	}
-
 	result := make(map[string]interface{})
 
 	// Phase 3b optimization: Start with environment globals (if present)
 	if c.env != nil {
+		c.env.globalsMu.RLock()
 		for k, v := range c.env.globals {
 			result[k] = v
 		}
+		c.env.globalsMu.RUnlock()
 	}
 
 	// Collect all values from parent contexts (overrides globals)
@@ -280,10 +271,6 @@ func (c *context) All() map[string]interface{} {
 	}
 
 	collect(c)
-
-	// Cache the result (Phase 3b optimization)
-	c.cachedAll = result
-	c.allCacheValid = true
 
 	return result
 }

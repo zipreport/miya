@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -592,7 +594,6 @@ func TestSecurityFeatures(t *testing.T) {
 		maliciousPaths := []string{
 			"../../../etc/passwd",
 			"..\\..\\..\\windows\\system32\\config\\sam",
-			"....//....//etc/passwd",
 			"/etc/passwd",
 			"./../../etc/passwd",
 		}
@@ -605,8 +606,29 @@ func TestSecurityFeatures(t *testing.T) {
 		}
 	})
 
+	t.Run("FourDotsIsOrdinaryName", func(t *testing.T) {
+		// "...." is an ordinary file name, not a traversal: a missing one is not found,
+		// and an existing one loads
+		_, err := loader.LoadTemplate("....//....//etc/passwd")
+		if err == nil || !strings.Contains(err.Error(), "template not found") {
+			t.Errorf("want a not-found error for a four-dot path, got %v", err)
+		}
+		if goruntime.GOOS == "windows" {
+			t.Skip("Windows strips trailing dots from file names")
+		}
+		if err := os.MkdirAll(filepath.Join(templatesDir, "...."), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(templatesDir, "....", "four.html"), []byte("four"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if src, err := loader.GetSource("..../four.html"); err != nil || src != "four" {
+			t.Errorf("GetSource(\"..../four.html\") = %q, %v; want \"four\"", src, err)
+		}
+	})
+
 	t.Run("SymlinkHandling", func(t *testing.T) {
-		// Test that symlinks are not followed by default
+		// An absolute symlink is rejected with followLinks=false, even when it points inside the folder
 		loader.SetFollowLinks(false)
 
 		// Create a symlink to a file within the template directory
@@ -619,7 +641,7 @@ func TestSecurityFeatures(t *testing.T) {
 		}
 
 		_, err := loader.LoadTemplate("symlink.html")
-		// Should fail because symlinks aren't followed by default
+		// Should fail: os.Root rejects absolute links
 		if err == nil {
 			t.Error("Expected error when accessing symlink with followLinks=false")
 		}
@@ -703,4 +725,32 @@ func TestCachingLoaderInterface(t *testing.T) {
 			t.Errorf("Expected non-negative miss count, got %d", stats.Misses)
 		}
 	})
+}
+
+func TestCachedLoaderStatsConcurrent(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.html"), []byte("hello"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	fl := NewFileSystemLoader([]string{dir}, NewDirectTemplateParser())
+
+	var wg sync.WaitGroup
+	for g := 0; g < 4; g++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < 50; i++ {
+				if _, err := fl.LoadTemplate("a.html"); err != nil {
+					t.Errorf("LoadTemplate: %v", err)
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+
+	s := fl.GetCacheStats()
+	if s.Hits+s.Misses != 200 {
+		t.Fatalf("hits+misses = %d, want 200", s.Hits+s.Misses)
+	}
 }

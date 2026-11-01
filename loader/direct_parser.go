@@ -30,7 +30,8 @@ func NewDirectTemplateParser() *DirectTemplateParser {
 	}
 }
 
-// NewDirectTemplateParserWithConfig creates a parser with custom lexer configuration
+// NewDirectTemplateParserWithConfig creates a parser with custom lexer configuration.
+// `Environment.GetTemplate` compiles every template itself, so this configuration only affects direct `LoadTemplate` callers; set delimiters and whitespace options on the `Environment`.
 func NewDirectTemplateParserWithConfig(config *lexer.LexerConfig) *DirectTemplateParser {
 	return &DirectTemplateParser{
 		lexerConfig: config,
@@ -61,7 +62,8 @@ func (p *DirectTemplateParser) ParseTemplate(name, content string) (*parser.Temp
 	return ast, nil
 }
 
-// SetLexerConfig updates the lexer configuration
+// SetLexerConfig updates the lexer configuration.
+// `Environment.GetTemplate` compiles every template itself, so this configuration only affects direct `LoadTemplate` callers; set delimiters and whitespace options on the `Environment`.
 func (p *DirectTemplateParser) SetLexerConfig(config *lexer.LexerConfig) {
 	p.lexerConfig = config
 }

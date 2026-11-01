@@ -12,6 +12,7 @@ import (
 // Namespace represents a Jinja2 namespace object
 // Namespaces are mutable objects that allow sharing data between scopes
 type Namespace struct {
+	runtime.NamespaceMarker
 	mu   sync.RWMutex
 	data map[string]interface{}
 }
@@ -23,8 +24,17 @@ func NewNamespace() *Namespace {
 	}
 }
 
-// Get retrieves a value from the namespace
+// Get retrieves a value from the namespace. A list is returned as a plain
+// slice; RawGet returns the stored value.
 func (ns *Namespace) Get(key string) (interface{}, bool) {
+	val, ok := ns.RawGet(key)
+	return runtime.Unbox(val), ok
+}
+
+// RawGet retrieves the stored value for the template runtime, which can be
+// an internal list box or internal escaped template output; Go code should
+// use Get.
+func (ns *Namespace) RawGet(key string) (interface{}, bool) {
 	ns.mu.RLock()
 	defer ns.mu.RUnlock()
 	val, ok := ns.data[key]
@@ -46,14 +56,14 @@ func (ns *Namespace) Has(key string) bool {
 	return ok
 }
 
-// All returns a copy of all data in the namespace
+// All returns a copy of all data in the namespace; lists are plain slices.
 func (ns *Namespace) All() map[string]interface{} {
 	ns.mu.RLock()
 	defer ns.mu.RUnlock()
 
-	result := make(map[string]interface{})
+	result := make(map[string]interface{}, len(ns.data))
 	for k, v := range ns.data {
-		result[k] = v
+		result[k] = runtime.Unbox(v)
 	}
 	return result
 }
@@ -72,11 +82,21 @@ func (ns *Namespace) Clear() {
 	ns.data = make(map[string]interface{})
 }
 
-// String returns a string representation of the namespace
-func (ns *Namespace) String() string {
+// ReprData returns a copy of the namespace's data for runtime.Repr.
+func (ns *Namespace) ReprData() map[string]interface{} {
 	ns.mu.RLock()
 	defer ns.mu.RUnlock()
-	return fmt.Sprintf("namespace(%v)", ns.data)
+
+	result := make(map[string]interface{}, len(ns.data))
+	for k, v := range ns.data {
+		result[k] = v
+	}
+	return result
+}
+
+// String returns a string representation of the namespace
+func (ns *Namespace) String() string {
+	return runtime.Repr(ns)
 }
 
 // namespaceFunction is the global namespace() function for templates
@@ -87,7 +107,7 @@ func namespaceFunction(args ...interface{}) (interface{}, error) {
 	if len(args) == 1 {
 		if kwargs, ok := args[0].(map[string]interface{}); ok {
 			for k, v := range kwargs {
-				ns.Set(k, v)
+				ns.Set(k, runtime.BoxList(v))
 			}
 		}
 	}
@@ -115,6 +135,9 @@ func (nw *NamespaceWrapper) SetAttr(name string, value interface{}) error {
 	nw.Set(name, value)
 	return nil
 }
+
+// maxRangeLength bounds the number of items range() will materialise.
+const maxRangeLength = 1000000
 
 // rangeFunction implements the range() global function
 // It generates a sequence of numbers similar to Python's range()
@@ -144,16 +167,33 @@ func rangeFunction(args ...interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("range() takes 1 to 3 arguments, got %d", len(args))
 	}
 
+	// Compute the length before allocating, using unsigned arithmetic so
+	// extreme bounds cannot overflow into a small number.
+	var n uint64
+	if step > 0 && stop > start {
+		d := uint64(stop) - uint64(start)
+		n = d / uint64(step)
+		if d%uint64(step) != 0 {
+			n++
+		}
+	} else if step < 0 && stop < start {
+		d := uint64(start) - uint64(stop)
+		m := -uint64(int64(step))
+		n = d / m
+		if d%m != 0 {
+			n++
+		}
+	}
+	if n > maxRangeLength {
+		return nil, &runtime.SizeError{Msg: fmt.Sprintf("range() too large: %d items (limit %d)", n, maxRangeLength)}
+	}
+
 	// Generate the sequence
-	var result []interface{}
-	if step > 0 {
-		for i := start; i < stop; i += step {
-			result = append(result, i)
-		}
-	} else {
-		for i := start; i > stop; i += step {
-			result = append(result, i)
-		}
+	result := make([]interface{}, 0, n)
+	i := start
+	for k := uint64(0); k < n; k++ {
+		result = append(result, i)
+		i += step
 	}
 
 	return result, nil
@@ -210,8 +250,11 @@ func cyclerFunction(args ...interface{}) (interface{}, error) {
 // joinerFunction creates a joiner object that joins values with separators
 func joinerFunction(args ...interface{}) (interface{}, error) {
 	separator := ", " // default separator
+	safe := false
 	if len(args) > 0 {
-		if sep, ok := args[0].(string); ok {
+		if m, ok := runtime.AsMarkup(args[0]); ok {
+			separator, safe = string(m), true
+		} else if sep, ok := args[0].(string); ok {
 			separator = sep
 		}
 	}
@@ -219,6 +262,7 @@ func joinerFunction(args ...interface{}) (interface{}, error) {
 	return &runtime.Joiner{
 		Separator: separator,
 		Used:      false,
+		Safe:      safe,
 	}, nil
 }
 
@@ -249,6 +293,10 @@ func lipsumFunction(args ...interface{}) (interface{}, error) {
 		if max, ok := args[3].(int); ok {
 			maxSentences = max
 		}
+	}
+
+	if paragraphs > 1000 || minSentences > 1000 || maxSentences > 1000 {
+		return nil, &runtime.SizeError{Msg: "lipsum() too large"}
 	}
 
 	// Lorem ipsum words
@@ -313,6 +361,8 @@ func lipsumFunction(args ...interface{}) (interface{}, error) {
 // toInt converts an interface to int
 func toInt(v interface{}) int {
 	switch val := v.(type) {
+	case runtime.RoundedFloat:
+		return int(val.Value)
 	case int:
 		return val
 	case int64:
@@ -365,14 +415,34 @@ func zipFunction(args ...interface{}) (interface{}, error) {
 
 // enumerateFunction returns pairs of (index, item) for an iterable
 func enumerateFunction(args ...interface{}) (interface{}, error) {
+	if n := len(args); n > 1 {
+		if kw, ok := args[n-1].(map[string]interface{}); ok {
+			args = args[:n-1]
+			for k, v := range kw {
+				if k != "start" || len(args) != 1 {
+					return nil, fmt.Errorf("enumerate() got an unexpected keyword argument %q", k)
+				}
+				args = append(args, v)
+			}
+		}
+	}
 	if len(args) == 0 {
 		return nil, fmt.Errorf("enumerate() requires at least one argument")
 	}
+	if len(args) > 2 {
+		return nil, fmt.Errorf("enumerate() takes 1 or 2 arguments, got %d", len(args))
+	}
 
 	start := 0
-	if len(args) > 1 {
-		if s, ok := args[1].(int); ok {
-			start = s
+	if len(args) == 2 {
+		v := reflect.ValueOf(args[1])
+		switch v.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			start = int(v.Int())
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			start = int(v.Uint())
+		default:
+			return nil, fmt.Errorf("enumerate() start must be an integer, got %T", args[1])
 		}
 	}
 

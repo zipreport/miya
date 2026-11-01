@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -413,5 +414,24 @@ func TestTokenString(t *testing.T) {
 	expected2 := `VAR_START at 2:1`
 	if tok2.String() != expected2 {
 		t.Errorf("expected %q, got %q", expected2, tok2.String())
+	}
+}
+
+func TestLexerTrimMismatch(t *testing.T) {
+	for _, src := range []string{"{{ a -%} x", "{% if true -}} x {% endif %}"} {
+		t.Run(src, func(t *testing.T) {
+			var err error
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Fatalf("panicked: %v", r)
+					}
+				}()
+				_, err = NewLexer(src, nil).Tokenize()
+			}()
+			if err == nil || !strings.Contains(err.Error(), "unexpected '-'") {
+				t.Fatalf("want error containing %q, got %v", "unexpected '-'", err)
+			}
+		})
 	}
 }

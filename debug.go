@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 // DebugLevel represents the level of debug information
@@ -200,7 +202,7 @@ func (dt *DebugTracer) GetDetailedLog() string {
 		if dt.level >= DebugLevelDetailed && event.Variables != nil && len(event.Variables) > 0 {
 			sb.WriteString("   Variables:\n")
 			for key, value := range event.Variables {
-				sb.WriteString(fmt.Sprintf("     %s: %v\n", key, value))
+				sb.WriteString(fmt.Sprintf("     %s: %v\n", key, runtime.Unbox(value)))
 			}
 		}
 
@@ -426,7 +428,7 @@ func (id *InteractiveDebugger) GetWatchedValues(ctx Context) map[string]interfac
 	result := make(map[string]interface{})
 	for _, varName := range id.watchVars {
 		if value, ok := ctx.Get(varName); ok {
-			result[varName] = value
+			result[varName] = runtime.Unbox(value)
 		} else {
 			result[varName] = "<undefined>"
 		}

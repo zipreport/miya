@@ -209,8 +209,8 @@ func TestEvaluatorUnaryOpNode(t *testing.T) {
 		{"not false", "not", false, true, false},
 		{"not empty string", "not", "", true, false},
 		{"not non-empty string", "not", "hello", false, false},
-		{"negation positive", "-", 5, -5.0, false},
-		{"negation negative", "-", -3, 3.0, false},
+		{"negation positive", "-", 5, int64(-5), false},
+		{"negation negative", "-", -3, int64(3), false},
 		{"plus", "+", 42, 42, false},
 	}
 

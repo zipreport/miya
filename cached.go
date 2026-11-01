@@ -204,11 +204,13 @@ type TemplateCache struct {
 	maxSize int
 }
 
-// NewTemplateCache creates a new template cache
+// NewTemplateCache creates a new template cache holding at most maxSize templates.
+// A maxSize of 0 disables caching (Put stores nothing) and a negative maxSize means
+// the cache is unbounded.
 func NewTemplateCache(maxSize int) *TemplateCache {
 	return &TemplateCache{
 		cache:   make(map[string]*Template),
-		order:   make([]string, 0, maxSize),
+		order:   make([]string, 0, max(maxSize, 0)),
 		maxSize: maxSize,
 	}
 }
@@ -231,6 +233,10 @@ func (tc *TemplateCache) Get(key string) (*Template, bool) {
 
 // Put stores a template in the cache
 func (tc *TemplateCache) Put(key string, tmpl *Template) {
+	if tc.maxSize == 0 {
+		return
+	}
+
 	tc.mutex.Lock()
 	defer tc.mutex.Unlock()
 
@@ -240,7 +246,7 @@ func (tc *TemplateCache) Put(key string, tmpl *Template) {
 		return
 	}
 
-	if len(tc.cache) >= tc.maxSize {
+	if tc.maxSize > 0 && len(tc.cache) >= tc.maxSize {
 		// Remove least recently used
 		oldest := tc.order[len(tc.order)-1]
 		delete(tc.cache, oldest)

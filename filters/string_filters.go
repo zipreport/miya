@@ -2,33 +2,49 @@ package filters
 
 import (
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 // Pre-compiled regex patterns for string filters (performance optimization)
 var (
 	// Slugify patterns
-	reSlugifySpaces    = regexp.MustCompile(`[\s\-_]+`)
-	reSlugifyNonWord   = regexp.MustCompile(`[^\w\-]`)
-	reRegexReplaceTest = regexp.MustCompile(`^/(.+)/([gimsuy]*)$`)
+	reSlugifySpaces  = regexp.MustCompile(`[\s\-_]+`)
+	reSlugifyNonWord = regexp.MustCompile(`[^\w\-]`)
 )
 
-// titleCase converts a string to title case (capitalize first letter of each word).
-// This replaces the deprecated strings.Title function.
+// reTitleSep splits on Jinja2's title separators: '-', Python whitespace and
+// the opening brackets ( { [ <.
+var reTitleSep = regexp.MustCompile(`[-\p{Z}\t-\r\x{1c}-\x{1f}\x{85}({\[<]+`)
+
+// reWord matches a Unicode-aware \w+ run, as counted by Jinja2's wordcount.
+var reWord = regexp.MustCompile(`[\p{L}\p{N}_]+`)
+
+// titleCase converts a string to title case like Jinja2: the first rune of each
+// piece between separators is upper-cased and the rest lower-cased.
 func titleCase(s string) string {
-	// Use a simple state machine to capitalize letters after spaces
-	prev := ' '
-	return strings.Map(func(r rune) rune {
-		if unicode.IsSpace(prev) {
-			prev = r
-			return unicode.ToTitle(r)
+	var b strings.Builder
+	last := 0
+	word := func(w string) {
+		if w == "" {
+			return
 		}
-		prev = r
-		return r
-	}, s)
+		r, size := utf8.DecodeRuneInString(w)
+		b.WriteString(strings.ToUpper(string(r)))
+		b.WriteString(strings.ToLower(w[size:]))
+	}
+	for _, m := range reTitleSep.FindAllStringIndex(s, -1) {
+		word(s[last:m[0]])
+		b.WriteString(s[m[0]:m[1]])
+		last = m[1]
+	}
+	word(s[last:])
+	return b.String()
 }
 
 // capitalizeFirst capitalizes only the first letter of a string.
@@ -81,7 +97,7 @@ func TitleFilter(value interface{}, args ...interface{}) (interface{}, error) {
 // TrimFilter removes leading and trailing whitespace
 func TrimFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	s := ToString(value)
-	if len(args) > 0 {
+	if len(args) > 0 && args[0] != nil {
 		// Trim specific characters
 		chars := ToString(args[0])
 		return strings.Trim(s, chars), nil
@@ -122,136 +138,190 @@ func ReplaceFilter(value interface{}, args ...interface{}) (interface{}, error) 
 	new := ToString(args[1])
 
 	count := -1 // Replace all by default
-	if len(args) > 2 {
-		if c, err := ToInt(args[2]); err == nil {
+	if len(args) > 2 && args[2] != nil {
+		n, ok := runtime.Number(args[2])
+		if f, isFloat := n.(float64); !ok || isFloat && f != math.Trunc(f) {
+			return nil, fmt.Errorf("replace filter: count must be an integer, not %s", pyTypeName(args[2]))
+		}
+		// A count out of int range replaces every occurrence, like -1.
+		if c, err := ToInt(n); err == nil {
 			count = c
 		}
 	}
 
-	if count == -1 {
-		return strings.ReplaceAll(s, old, new), nil
+	n := int64(strings.Count(s, old))
+	if old == "" {
+		n = int64(utf8.RuneCountInString(s)) + 1
+	}
+	if count >= 0 && int64(count) < n {
+		n = int64(count)
+	}
+	if int64(len(s))+n*int64(len(new)-len(old)) > maxRepeatBytes {
+		return nil, &runtime.SizeError{Msg: "replace output too large"}
 	}
 	return strings.Replace(s, old, new, count), nil
 }
 
 // TruncateFilter truncates string to specified length
 func TruncateFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	if len(args) < 1 {
-		return nil, fmt.Errorf("truncate filter requires length argument")
-	}
+	return truncate(5, value, args...)
+}
 
+// TruncateFilterWithLeeway returns a truncate filter whose default leeway is
+// the given value (Jinja2's truncate.leeway policy).
+func TruncateFilterWithLeeway(leeway int) FilterFunc {
+	return func(value interface{}, args ...interface{}) (interface{}, error) {
+		return truncate(leeway, value, args...)
+	}
+}
+
+// truncate follows Jinja2's do_truncate(s, length=255, killwords=False,
+// end="...", leeway=5).
+func truncate(defaultLeeway int, value interface{}, args ...interface{}) (interface{}, error) {
 	s := ToString(value)
-	length, err := ToInt(args[0])
-	if err != nil {
-		return nil, fmt.Errorf("truncate length must be integer: %v", err)
-	}
+	_, valSafe := runtime.AsMarkup(value)
 
-	killwords := false
+	length := 255
+	if len(args) > 0 && args[0] != nil {
+		l, err := ToInt(runtime.Unmark(args[0]))
+		if err != nil {
+			return nil, fmt.Errorf("truncate length must be integer: %v", err)
+		}
+		length = l
+	}
+	killwords := len(args) > 1 && ToBool(args[1])
 	end := "..."
-
-	if len(args) > 1 {
-		killwords = ToBool(args[1])
-	}
+	endSafe := false
 	if len(args) > 2 {
 		end = ToString(args[2])
+		_, endSafe = runtime.AsMarkup(args[2])
+	}
+	leeway := defaultLeeway
+	if len(args) > 3 && args[3] != nil {
+		l, err := ToInt(runtime.Unmark(args[3]))
+		if err != nil {
+			return nil, fmt.Errorf("truncate leeway must be integer: %v", err)
+		}
+		leeway = l
+	}
+
+	endRunes := []rune(end)
+	if length < len(endRunes) {
+		return nil, fmt.Errorf("truncate: expected length >= %d, got %d", len(endRunes), length)
+	}
+	if leeway < 0 {
+		return nil, fmt.Errorf("truncate: expected leeway >= 0, got %d", leeway)
 	}
 
 	runes := []rune(s)
-	if len(runes) <= length {
+	if len(runes) <= length+leeway {
+		if valSafe {
+			return value, nil
+		}
 		return s, nil
 	}
 
-	if killwords {
-		// Cut at exact length
-		return string(runes[:length]) + end, nil
-	}
-
-	// Try to break at word boundary
-	truncated := string(runes[:length])
-	lastSpace := strings.LastIndex(truncated, " ")
-	if lastSpace > 0 && lastSpace > length/2 {
-		truncated = truncated[:lastSpace]
-	}
-
-	return truncated + end, nil
-}
-
-// WordwrapFilter wraps words at specified width
-func WordwrapFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	if len(args) < 1 {
-		return nil, fmt.Errorf("wordwrap filter requires width argument")
-	}
-
-	s := ToString(value)
-	width, err := ToInt(args[0])
-	if err != nil {
-		return nil, fmt.Errorf("wordwrap width must be integer: %v", err)
-	}
-
-	breakOnHyphens := true
-	wrapString := "\n"
-
-	if len(args) > 1 {
-		breakOnHyphens = ToBool(args[1])
-	}
-	if len(args) > 2 {
-		wrapString = ToString(args[2])
-	}
-
-	words := strings.Fields(s)
-	if len(words) == 0 {
-		return s, nil
-	}
-
-	var lines []string
-	var currentLine strings.Builder
-
-	for _, word := range words {
-		if breakOnHyphens && strings.Contains(word, "-") {
-			// Split on hyphens too
-			parts := strings.Split(word, "-")
-			for i, part := range parts {
-				if i > 0 {
-					part = "-" + part
-				}
-				if currentLine.Len()+len(part)+1 > width && currentLine.Len() > 0 {
-					lines = append(lines, currentLine.String())
-					currentLine.Reset()
-				}
-				if currentLine.Len() > 0 {
-					currentLine.WriteString(" ")
-				}
-				currentLine.WriteString(part)
-			}
-		} else {
-			if currentLine.Len()+len(word)+1 > width && currentLine.Len() > 0 {
-				lines = append(lines, currentLine.String())
-				currentLine.Reset()
-			}
-			if currentLine.Len() > 0 {
-				currentLine.WriteString(" ")
-			}
-			currentLine.WriteString(word)
+	prefix := string(runes[:length-len(endRunes)])
+	if !killwords {
+		if i := strings.LastIndex(prefix, " "); i >= 0 {
+			prefix = prefix[:i]
 		}
 	}
+	if valSafe || endSafe {
+		part := func(text string, safe bool) string {
+			if safe {
+				return text
+			}
+			return string(runtime.EscapeMarkup(text))
+		}
+		return runtime.Markup(part(prefix, valSafe) + part(end, endSafe)), nil
+	}
+	return prefix + end, nil
+}
 
-	if currentLine.Len() > 0 {
-		lines = append(lines, currentLine.String())
+// WordwrapFilter wraps text like Jinja2's wordwrap, which uses Python's
+// textwrap: (width=79, break_long_words=true, wrapstring="\n", break_on_hyphens=true).
+func WordwrapFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	arg := func(i int) interface{} {
+		if i < len(args) {
+			return args[i]
+		}
+		return nil
+	}
+	width := 79
+	if arg(0) != nil {
+		w, err := ToInt(runtime.Unmark(arg(0)))
+		if err != nil {
+			return nil, fmt.Errorf("wordwrap width must be integer: %v", err)
+		}
+		width = w
+	}
+	breakLongWords := arg(1) == nil || ToBool(arg(1))
+	breakOnHyphens := arg(3) == nil || ToBool(arg(3))
+
+	wrapMarkup, safeWrap := runtime.AsMarkup(arg(2))
+	wrapString := "\n"
+	if safeWrap {
+		wrapString = string(wrapMarkup)
+	} else if arg(2) != nil {
+		wrapString = ToString(arg(2))
 	}
 
-	return strings.Join(lines, wrapString), nil
+	_, inSafe := runtime.AsMarkup(value)
+	// A safe input with a plain, non-blank wrapstring is escaped as a whole
+	// by the caller, so the result must be plain (Jinja2's result).
+	plainResult := inSafe && !safeWrap && strings.TrimSpace(wrapString) != ""
+
+	input := pySplitlines(ToString(value))
+	if len(input) == 0 {
+		if inSafe && !plainResult {
+			return runtime.Markup(""), nil
+		}
+		return "", nil
+	}
+	if width <= 0 {
+		return nil, fmt.Errorf("wordwrap: invalid width %d (must be > 0)", width)
+	}
+	var out []string
+	for _, line := range input {
+		wrapped := textwrapLines(line, width, breakLongWords, breakOnHyphens)
+		if safeWrap && !inSafe {
+			for i, l := range wrapped {
+				wrapped[i] = string(runtime.EscapeMarkup(l))
+			}
+		}
+		out = append(out, strings.Join(wrapped, wrapString))
+	}
+	result := strings.Join(out, wrapString)
+	if (safeWrap || inSafe) && !plainResult {
+		return runtime.Markup(result), nil
+	}
+	return result, nil
+}
+
+// maxRepeatBytes bounds the padding a template can ask a filter to build.
+const maxRepeatBytes = 64 << 20
+
+func repeatBounded(s string, count int) (string, error) {
+	if count <= 0 {
+		return "", nil
+	}
+	if len(s) > 0 && count > maxRepeatBytes/len(s) {
+		return "", &runtime.SizeError{Msg: "filter output too large"}
+	}
+	return strings.Repeat(s, count), nil
 }
 
 // CenterFilter centers string in field of given width
 func CenterFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	if len(args) < 1 {
-		return nil, fmt.Errorf("center filter requires width argument")
-	}
-
 	s := ToString(value)
-	width, err := ToInt(args[0])
-	if err != nil {
-		return nil, fmt.Errorf("center width must be integer: %v", err)
+	width := 80
+	if len(args) > 0 && args[0] != nil {
+		w, err := ToInt(args[0])
+		if err != nil {
+			return nil, fmt.Errorf("center width must be integer: %v", err)
+		}
+		width = w
 	}
 
 	fillchar := " "
@@ -262,54 +332,72 @@ func CenterFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		}
 	}
 
-	sLen := len([]rune(s))
-	if sLen >= width {
+	marg := width - len([]rune(s))
+	if marg <= 0 {
 		return s, nil
 	}
+	// Python's str.center puts the odd space on the left when width is odd.
+	leftPad := marg/2 + (marg & width & 1)
 
-	padding := width - sLen
-	leftPad := padding / 2
-	rightPad := padding - leftPad
-
-	result := strings.Repeat(fillchar, leftPad) + s + strings.Repeat(fillchar, rightPad)
-	return result, nil
+	pad, err := repeatBounded(fillchar, marg)
+	if err != nil {
+		return nil, err
+	}
+	split := leftPad * len(fillchar)
+	return pad[:split] + s + pad[split:], nil
 }
 
-// IndentFilter indents each line
+// IndentFilter indents each line, following Jinja2's do_indent(s, width=4,
+// first=False, blank=False).
 func IndentFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	if len(args) < 1 {
-		return nil, fmt.Errorf("indent filter requires width argument")
-	}
-
 	s := ToString(value)
-	width, err := ToInt(args[0])
-	if err != nil {
-		return nil, fmt.Errorf("indent width must be integer: %v", err)
-	}
 
-	indentFirst := false
-	indentString := " "
-
-	if len(args) > 1 {
-		indentFirst = ToBool(args[1])
-	}
-	if len(args) > 2 {
-		indentString = ToString(args[2])
-	}
-
-	lines := strings.Split(s, "\n")
-	prefix := strings.Repeat(indentString, width)
-
-	for i, line := range lines {
-		if i == 0 && !indentFirst {
-			continue
+	var indention string
+	if len(args) > 0 && args[0] != nil {
+		if str, ok := args[0].(string); ok {
+			indention = str
+		} else {
+			width, err := ToInt(args[0])
+			if err != nil {
+				return nil, fmt.Errorf("indent width must be integer: %v", err)
+			}
+			indention, err = repeatBounded(" ", width)
+			if err != nil {
+				return nil, err
+			}
 		}
-		if line != "" || i < len(lines)-1 {
-			lines[i] = prefix + line
-		}
+	} else {
+		indention = "    "
+	}
+	first := len(args) > 1 && ToBool(args[1])
+	blank := len(args) > 2 && ToBool(args[2])
+
+	lines := strings.Split(strings.NewReplacer("\r\n", "\n", "\r", "\n").Replace(s+"\n"), "\n")
+	lines = lines[:len(lines)-1]
+	if len(indention) > 0 && len(lines) > maxRepeatBytes/len(indention) {
+		return nil, &runtime.SizeError{Msg: "indent output too large"}
 	}
 
-	return strings.Join(lines, "\n"), nil
+	var rv string
+	if blank {
+		rv = strings.Join(lines, "\n"+indention)
+	} else {
+		rv = lines[0]
+		if len(lines) > 1 {
+			rest := make([]string, len(lines)-1)
+			for i, line := range lines[1:] {
+				if line != "" {
+					line = indention + line
+				}
+				rest[i] = line
+			}
+			rv += "\n" + strings.Join(rest, "\n")
+		}
+	}
+	if first {
+		rv = indention + rv
+	}
+	return rv, nil
 }
 
 // StringFilter converts value to string
@@ -317,25 +405,49 @@ func StringFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	return ToString(value), nil
 }
 
-// FormatFilter formats string using Printf-style formatting
-// Note: This safely handles format strings by recovering from panics
-// and validating that the format doesn't cause issues
-func FormatFilter(value interface{}, args ...interface{}) (result interface{}, err error) {
-	s := ToString(value)
-	if len(args) == 0 {
-		return s, nil
-	}
-
-	// Recover from any panics caused by malformed format strings
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("format error: %v", r)
-			result = s
+// FormatFilter formats the string with Python's % operator: positional
+// arguments, or keyword arguments for %(name)s conversions.
+func FormatFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	var kwargs map[string]interface{}
+	if n := len(args); n > 0 {
+		if kw, ok := args[n-1].(KwArgs); ok {
+			kwargs = map[string]interface{}(kw)
+			args = args[:n-1]
 		}
-	}()
+	}
+	if len(kwargs) > 0 && len(args) > 0 {
+		return nil, fmt.Errorf("format: can't handle positional and keyword arguments at the same time")
+	}
+	fm, safe := runtime.AsMarkup(value)
+	format := ToString(value)
+	if safe {
+		format = string(fm)
+	} else {
+		args = unmarkAll(args)
+		if len(kwargs) > 0 {
+			plain := make(map[string]interface{}, len(kwargs))
+			for k, v := range kwargs {
+				plain[k] = runtime.Unmark(v)
+			}
+			kwargs = plain
+		}
+	}
+	out, err := pyFormat(format, args, kwargs, safe)
+	if err != nil {
+		return nil, err
+	}
+	if safe {
+		return runtime.Markup(out), nil
+	}
+	return out, nil
+}
 
-	// Use the string as format and args as values
-	return fmt.Sprintf(s, args...), nil
+func unmarkAll(args []interface{}) []interface{} {
+	out := make([]interface{}, len(args))
+	for i, a := range args {
+		out[i] = runtime.Unmark(a)
+	}
+	return out
 }
 
 // Helper function to convert regex patterns for case-insensitive matching
@@ -544,7 +656,11 @@ func PadLeftFilter(value interface{}, args ...interface{}) (interface{}, error) 
 	}
 
 	padding := width - sLen
-	return strings.Repeat(fillchar, padding) + s, nil
+	pad, err := repeatBounded(fillchar, padding)
+	if err != nil {
+		return nil, err
+	}
+	return pad + s, nil
 }
 
 // PadRightFilter pads string on the right
@@ -573,26 +689,14 @@ func PadRightFilter(value interface{}, args ...interface{}) (interface{}, error)
 	}
 
 	padding := width - sLen
-	return s + strings.Repeat(fillchar, padding), nil
+	pad, err := repeatBounded(fillchar, padding)
+	if err != nil {
+		return nil, err
+	}
+	return s + pad, nil
 }
 
 // WordcountFilter counts words in a string
 func WordcountFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	s := ToString(value)
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return 0, nil
-	}
-
-	// Split on whitespace and count non-empty parts
-	words := strings.Fields(s)
-	return len(words), nil
-}
-
-// Helper function to extract regex flags from string
-func extractRegexFlags(s string) (pattern string, ignoreCase bool) {
-	if strings.HasPrefix(s, "(?i)") {
-		return s[4:], true
-	}
-	return s, false
+	return len(reWord.FindAllString(ToString(value), -1)), nil
 }

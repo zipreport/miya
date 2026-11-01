@@ -446,30 +446,17 @@ func TestAdditionalStringFilters(t *testing.T) {
 			t.Errorf("WordwrapFilter failed: %v", err)
 		}
 
-		resultStr, ok := result.(string)
-		if !ok {
-			t.Errorf("Expected string, got %T", result)
+		if result != "This is a very long\nline that should be\nwrapped at a certain\nwidth" {
+			t.Errorf("WordwrapFilter = %q", result)
 		}
 
-		// Just check that it returns something - wrapping behavior may vary
-		if len(resultStr) == 0 {
-			t.Error("Expected non-empty result from WordwrapFilter")
-		}
-
-		// Test with custom break character
-		result, err = WordwrapFilter(text, 20, "<br>")
+		// Test with custom wrap string
+		result, err = WordwrapFilter(text, 20, true, "<br>")
 		if err != nil {
 			t.Errorf("WordwrapFilter with custom break failed: %v", err)
 		}
-
-		resultStr, ok = result.(string)
-		if !ok {
-			t.Errorf("Expected string, got %T", result)
-		}
-
-		// Just check that it returns something
-		if len(resultStr) == 0 {
-			t.Error("Expected non-empty result from WordwrapFilter with custom break")
+		if result != "This is a very long<br>line that should be<br>wrapped at a certain<br>width" {
+			t.Errorf("WordwrapFilter with custom break = %q", result)
 		}
 	})
 

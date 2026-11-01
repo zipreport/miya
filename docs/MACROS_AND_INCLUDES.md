@@ -1,6 +1,6 @@
 # Macros and Includes Guide
 
-Macros enable template reusability through parameterized components. Includes allow template composition. Miya Engine provides Jinja2-compatible macros and includes with one limitation.
+Macros enable template reusability through parameterized components. Includes allow template composition. Miya Engine provides Jinja2-compatible macros, call blocks and includes.
 
 > **Working Example:** See `examples/features/macros-includes/` for complete examples.
 
@@ -13,7 +13,7 @@ Macros enable template reusability through parameterized components. Includes al
 3. [Importing Macros](#importing-macros)
 4. [Template Includes](#template-includes)
 5. [Practical Examples](#practical-examples)
-6. [Limitations](#limitations)
+6. [Call Blocks](#call-blocks)
 
 ---
 
@@ -115,20 +115,16 @@ Parameters without defaults are required:
 
 ### Variable Arguments
 
-Access all macro variables:
+Extra positional arguments are available inside the macro as `varargs`, and extra keyword arguments as `kwargs`:
 
 ```html+jinja
-{% macro render_table_row(cells, header=False) %}
-<tr>
-  {% for cell in cells %}
-    {% if header %}
-    <th>{{ cell }}</th>
-    {% else %}
-    <td>{{ cell }}</td>
-    {% endif %}
-  {% endfor %}
-</tr>
-{% endmacro %}
+{% macro m(a) %}{{ varargs|length }}/{{ kwargs|length }}{% endmacro %}
+{{ m(1, 2, 3, x=1) }}
+```
+
+**Output:**
+```html
+2/1
 ```
 
 ---
@@ -226,9 +222,19 @@ Included templates have access to the current context:
 {% include "template.html" %}
 ```
 
-**With only specific variables:**
+**Explicit, same as default:**
 ```html+jinja
-{% include "template.html" with context %}  {# explicit, same as default #}
+{% include "template.html" with context %}
+```
+
+**Without the current variables:**
+```html+jinja
+{% include "template.html" without context %}
+```
+
+**Skip a missing template:**
+```html+jinja
+{% include "optional.html" ignore missing %}
 ```
 
 ### Conditional Includes
@@ -421,58 +427,46 @@ Macros can call other macros:
 
 ---
 
-## Limitations
+## Call Blocks
 
-###  Caller Function Not Supported
+`{% call %}` passes a block of template content to a macro, which prints it with `caller()`:
 
-Jinja2's `caller()` function for macro call blocks is **NOT supported** in Miya Engine.
-
-**Jinja2 (Not in Miya):**
 ```html+jinja
-{#  This does NOT work in Miya #}
 {% macro render_dialog(title) %}
 <div class="dialog">
   <h3>{{ title }}</h3>
-  <div class="content">
-    {{ caller() }}  {# NOT SUPPORTED #}
-  </div>
+  <div class="content">{{ caller() }}</div>
 </div>
 {% endmacro %}
 
-{% call render_dialog("Hello") %}
-  This content would be passed to caller()
-{% endcall %}
+{% call render_dialog("Hello") %}<p>This content is passed to caller()</p>{% endcall %}
 ```
 
-**Workaround:** Pass content as a parameter:
-
-```html+jinja
-{#  Works in Miya #}
-{% macro render_dialog(title, content) %}
-<div class="dialog">
-  <h3>{{ title }}</h3>
-  <div class="content">{{ content }}</div>
-</div>
-{% endmacro %}
-
-{% set dialog_content %}
-  This content is passed as a parameter
-{% endset %}
-
-{{ render_dialog("Hello", dialog_content) }}
+**Output (whitespace aside):**
+```html
+<div class="dialog"><h3>Hello</h3><div class="content"><p>This content is passed to caller()</p></div></div>
 ```
 
-Or use direct macro invocation:
+A call block can take arguments, which `caller()` passes on:
 
 ```html+jinja
-{% macro render_dialog(title, content) %}
-<div class="dialog">
-  <h3>{{ title }}</h3>
-  <div class="content">{{ content }}</div>
-</div>
-{% endmacro %}
+{% macro m(items) %}{% for i in items %}[{{ caller(i) }}]{% endfor %}{% endmacro %}
+{% call(v) m([1, 2]) %}<b>{{ v }}</b>{% endcall %}
+```
 
-{{ render_dialog("Hello", "<p>Direct HTML content</p>") }}
+**Output:**
+```html
+[<b>1</b>][<b>2</b>]
+```
+
+With autoescape on, the HTML a macro produces is not escaped again, but a plain string you pass in is. To pass a block of HTML as an argument, capture it with a block `set`:
+
+```html+jinja
+{% macro render_dialog(title, content) %}<div>{{ title }}{{ content }}</div>{% endmacro %}
+
+{% set dialog_content %}<p>x</p>{% endset %}
+{{ render_dialog("Hello", dialog_content) }}   {# <div>Hello<p>x</p></div> #}
+{{ render_dialog("Hello", "<p>Direct</p>") }}  {# <div>Hello&lt;p&gt;Direct&lt;/p&gt;</div> #}
 ```
 
 ---
@@ -559,6 +553,8 @@ Each macro should do one thing well:
 |--------|-------------|
 | `{% include "file.html" %}` | Include with full context |
 | `{% include "file.html" with context %}` | Explicit context (same as default) |
+| `{% include "file.html" without context %}` | Render without the current variables |
+| `{% include "file.html" ignore missing %}` | Render nothing if the template does not exist |
 
 ### Macro Features
 
@@ -566,16 +562,13 @@ Each macro should do one thing well:
 - Macro definitions
 - Default parameters
 - Named parameters
-- Variable number of parameters (as lists)
+- Variable number of parameters (`varargs`, `kwargs`)
 - Nested macro calls
 - Macros in loops
 - Import with namespace
 - Selective import with `from`
-- Template includes with context
-
- **Not Supported:**
-- `caller()` function for call blocks
-- `{% call %}` statement
+- Template includes, with or without context, and `ignore missing`
+- `caller()` and `{% call %}` blocks, with or without arguments
 
 ---
 
@@ -592,7 +585,7 @@ Each macro should do one thing well:
 
 Macros and includes provide powerful template reusability:
 
-** Fully Supported (95% Jinja2 Compatible):**
+** Fully Supported:**
 - Macro definitions with parameters
 - Default parameter values
 - Import with namespace
@@ -600,8 +593,6 @@ Macros and includes provide powerful template reusability:
 - Template includes with context
 - Nested macro calls
 - Macros in loops
-
-** Known Limitation:**
-- `caller()` function not supported (use parameters instead)
+- Call blocks with `caller()`
 
 Macros enable building component libraries for consistent, maintainable templates across your application.

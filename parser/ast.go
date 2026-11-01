@@ -158,6 +158,31 @@ func (n *ListNode) String() string {
 
 func (n *ListNode) ExpressionNode() {}
 
+// DictNode represents dict literals {'a': 1, 'b': 2}
+type DictNode struct {
+	baseNode
+	Keys   []ExpressionNode
+	Values []ExpressionNode
+}
+
+func NewDictNode(keys, values []ExpressionNode, line, column int) *DictNode {
+	return &DictNode{
+		baseNode: baseNode{line: line, column: column},
+		Keys:     keys,
+		Values:   values,
+	}
+}
+
+func (n *DictNode) String() string {
+	var pairs []string
+	for i := range n.Keys {
+		pairs = append(pairs, n.Keys[i].String()+": "+n.Values[i].String())
+	}
+	return fmt.Sprintf("Dict({%s})", strings.Join(pairs, ", "))
+}
+
+func (n *DictNode) ExpressionNode() {}
+
 // AttributeNode represents attribute access (obj.attr)
 type AttributeNode struct {
 	baseNode
@@ -254,6 +279,44 @@ func (n *BinaryOpNode) String() string {
 }
 
 func (n *BinaryOpNode) ExpressionNode() {}
+
+// CompareNode is a chain of two or more comparisons, a < b < c, which means
+// a < b and b < c as in Jinja2. Expr and each operand are evaluated once, and
+// evaluation stops at the first comparison that is false.
+type CompareNode struct {
+	baseNode
+	Expr ExpressionNode
+	Ops  []CompareOperand
+}
+
+// CompareOperand is one "operator operand" step of a CompareNode.
+type CompareOperand struct {
+	Operator string
+	Right    ExpressionNode
+	Line     int
+	Column   int
+}
+
+func NewCompareNode(expr ExpressionNode, ops []CompareOperand, line, column int) *CompareNode {
+	return &CompareNode{
+		baseNode: baseNode{line: line, column: column},
+		Expr:     expr,
+		Ops:      ops,
+	}
+}
+
+func (n *CompareNode) String() string {
+	var sb strings.Builder
+	sb.WriteString("Compare(")
+	sb.WriteString(n.Expr.String())
+	for _, op := range n.Ops {
+		sb.WriteString(" " + op.Operator + " " + op.Right.String())
+	}
+	sb.WriteString(")")
+	return sb.String()
+}
+
+func (n *CompareNode) ExpressionNode() {}
 
 // UnaryOpNode represents unary operations (not x, -x)
 type UnaryOpNode struct {
@@ -450,9 +513,11 @@ func (n *ExtendsNode) StatementNode() {}
 // IncludeNode represents template inclusion
 type IncludeNode struct {
 	baseNode
-	Template      ExpressionNode
-	Context       ExpressionNode // optional
-	IgnoreMissing bool
+	Template       ExpressionNode
+	Context        ExpressionNode // optional
+	IgnoreMissing  bool
+	WithContext    bool // {% include ... with context %}
+	WithoutContext bool // {% include ... without context %}
 }
 
 func NewIncludeNode(template ExpressionNode, line, column int) *IncludeNode {
@@ -490,12 +555,21 @@ func (n *SuperNode) String() string {
 func (n *SuperNode) ExpressionNode() {}
 
 // MacroNode represents macro definitions
+// MacroUsage records which special names a macro or call-block body
+// references; Jinja2 only accepts extra arguments or a caller when it does.
+type MacroUsage struct {
+	CatchVarargs bool // body references varargs
+	CatchKwargs  bool // body references kwargs
+	Caller       bool // body references caller
+}
+
 type MacroNode struct {
 	baseNode
 	Name       string
 	Parameters []string
 	Defaults   map[string]ExpressionNode
 	Body       []Node
+	MacroUsage
 }
 
 func NewMacroNode(name string, line, column int) *MacroNode {
@@ -644,8 +718,11 @@ func (n *CallNode) ExpressionNode() {}
 // CallBlockNode represents call blocks {% call macro_name() %}content{% endcall %}
 type CallBlockNode struct {
 	baseNode
-	Call ExpressionNode // The function/macro call
-	Body []Node         // The content between {% call %} and {% endcall %}
+	Call       ExpressionNode            // The function/macro call
+	Body       []Node                    // The content between {% call %} and {% endcall %}
+	Parameters []string                  // caller() parameters from {% call(a, b=1) ... %}
+	Defaults   map[string]ExpressionNode // defaults for Parameters
+	MacroUsage
 }
 
 func NewCallBlockNode(call ExpressionNode, body []Node, line, column int) *CallBlockNode {
@@ -678,6 +755,8 @@ func (n *CallBlockNode) StatementNode() {}
 type WithNode struct {
 	baseNode
 	Assignments map[string]ExpressionNode // Variable assignments like var1=expr1, var2=expr2
+	Names       []string                  // assignment targets in source order, duplicates kept (Assignments is a map)
+	Exprs       []ExpressionNode          // Exprs[i] is the value assigned to Names[i]
 	Body        []Node                    // The content between {% with %} and {% endwith %}
 }
 
@@ -778,6 +857,9 @@ func NewConditionalNode(condition, trueExpr, falseExpr ExpressionNode, line, col
 }
 
 func (n *ConditionalNode) String() string {
+	if n.FalseExpr == nil {
+		return fmt.Sprintf("Conditional(%s ? %s)", n.Condition.String(), n.TrueExpr.String())
+	}
 	return fmt.Sprintf("Conditional(%s ? %s : %s)", n.Condition.String(), n.TrueExpr.String(), n.FalseExpr.String())
 }
 
@@ -1096,6 +1178,9 @@ type ImportNode struct {
 	baseNode
 	Template ExpressionNode // The template to import
 	Alias    string         // The alias name for the imported template
+	// WithContext is true for "with context": the imported template sees the
+	// importer's variables. The default, as in Jinja2, is without context.
+	WithContext bool
 }
 
 func NewImportNode(line, column int, template ExpressionNode, alias string) *ImportNode {
@@ -1118,6 +1203,8 @@ type FromNode struct {
 	Template ExpressionNode    // The template to import from
 	Names    []string          // The names to import
 	Aliases  map[string]string // Optional aliases for imported names (name -> alias)
+	// WithContext is true for "with context": see ImportNode.WithContext.
+	WithContext bool
 }
 
 func NewFromNode(line, column int, template ExpressionNode, names []string, aliases map[string]string) *FromNode {
@@ -1164,3 +1251,24 @@ func (n *DoNode) String() string {
 }
 
 func (n *DoNode) StatementNode() {}
+
+// DiscardNode runs its body for its effects and produces no output. Template
+// inheritance uses it for an extension tag in a child template's code after
+// {% extends %}.
+type DiscardNode struct {
+	baseNode
+	Body []Node
+}
+
+func NewDiscardNode(body []Node, line, column int) *DiscardNode {
+	return &DiscardNode{
+		baseNode: baseNode{line: line, column: column},
+		Body:     body,
+	}
+}
+
+func (n *DiscardNode) String() string {
+	return fmt.Sprintf("Discard(%d nodes)", len(n.Body))
+}
+
+func (n *DiscardNode) StatementNode() {}

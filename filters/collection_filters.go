@@ -2,13 +2,19 @@ package filters
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
+	"unicode/utf8"
+
+	"github.com/zipreport/miya/runtime"
 )
 
-// FirstFilter returns the first item in a sequence
+// FirstFilter returns the first item in a sequence; an empty one gives undefined.
 func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = runtime.BasicValue(mapAsKeys(value))
 	if value == nil {
 		return nil, nil
 	}
@@ -40,7 +46,8 @@ func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		}
 	case string:
 		if len(v) > 0 {
-			return string(v[0]), nil
+			r, _ := utf8.DecodeRuneInString(v)
+			return string(r), nil
 		}
 	default:
 		// Use reflection for other slice types
@@ -49,14 +56,17 @@ func FirstFilter(value interface{}, args ...interface{}) (interface{}, error) {
 			if rv.Len() > 0 {
 				return rv.Index(0).Interface(), nil
 			}
+		} else if _, ok := value.(*runtime.Undefined); !ok {
+			return nil, fmt.Errorf("'%s' object is not iterable", pyTypeName(value))
 		}
 	}
 
-	return nil, nil
+	return emptyUndefined("No first item, sequence was empty."), nil
 }
 
-// LastFilter returns the last item in a sequence
+// LastFilter returns the last item in a sequence; an empty one gives undefined.
 func LastFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = runtime.BasicValue(mapAsKeys(value))
 	if value == nil {
 		return nil, nil
 	}
@@ -88,7 +98,8 @@ func LastFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		}
 	case string:
 		if len(v) > 0 {
-			return string(v[len(v)-1]), nil
+			r, _ := utf8.DecodeLastRuneInString(v)
+			return string(r), nil
 		}
 	default:
 		// Use reflection for other slice types
@@ -97,14 +108,17 @@ func LastFilter(value interface{}, args ...interface{}) (interface{}, error) {
 			if rv.Len() > 0 {
 				return rv.Index(rv.Len() - 1).Interface(), nil
 			}
+		} else if _, ok := value.(*runtime.Undefined); !ok {
+			return nil, fmt.Errorf("'%s' object is not reversible", pyTypeName(value))
 		}
 	}
 
-	return nil, nil
+	return emptyUndefined("No last item, sequence was empty."), nil
 }
 
 // LengthFilter returns the length of a sequence or mapping
 func LengthFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = runtime.Indirect(value)
 	if value == nil {
 		return 0, nil
 	}
@@ -144,8 +158,55 @@ func LengthFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	return 0, fmt.Errorf("object of type %T has no len()", value)
 }
 
+// typedSeq converts typed Go slices and arrays ([]int, [3]string, []T) to
+// []interface{} so filters written for []interface{} accept them. Pointers are
+// followed; any other value is returned unchanged.
+func typedSeq(value interface{}) interface{} {
+	switch value.(type) {
+	case nil, []interface{}, []string, string:
+		return value
+	}
+	value = runtime.Indirect(value)
+	switch reflect.ValueOf(value).Kind() {
+	case reflect.Slice, reflect.Array, reflect.Map:
+		if seq, err := toInterfaceSlice(value); err == nil {
+			return seq
+		}
+	}
+	return value
+}
+
+// mapAsKeys returns the keys of a Go map, in {% for %} order, as a slice;
+// any other value is returned unchanged.
+func mapAsKeys(value interface{}) interface{} {
+	switch value.(type) {
+	case nil, []interface{}, []string, string:
+		return value
+	}
+	if reflect.ValueOf(runtime.Indirect(value)).Kind() == reflect.Map {
+		if keys, ok := runtime.SortedMapKeys(value); ok {
+			return keys
+		}
+	}
+	return value
+}
+
+// dictInput converts a map whose keys are all strings to map[string]interface{}
+// so the dict filters accept typed maps; other values are returned unchanged.
+func dictInput(value interface{}) interface{} {
+	switch value.(type) {
+	case nil, map[string]interface{}, map[string]string:
+		return value
+	}
+	if m, ok := runtime.StringKeyMap(value); ok {
+		return m
+	}
+	return value
+}
+
 // JoinFilter joins sequence elements with separator
 func JoinFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = typedSeq(value)
 	separator := ""
 	if len(args) > 0 {
 		separator = ToString(args[0])
@@ -161,76 +222,21 @@ func JoinFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return nil, err
 	}
 
+	if len(items) > 0 {
+		size := int64(len(items)-1) * int64(len(separator))
+		for _, it := range items {
+			size += int64(len(it))
+		}
+		if size > maxRepeatBytes {
+			return nil, &runtime.SizeError{Msg: "join output too large"}
+		}
+	}
 	return strings.Join(items, separator), nil
-}
-
-// SortFilter sorts a sequence
-func SortFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	reverse := false
-	caseSensitive := false
-	attribute := ""
-
-	if len(args) > 0 {
-		reverse = ToBool(args[0])
-	}
-	if len(args) > 1 {
-		caseSensitive = ToBool(args[1])
-	}
-	if len(args) > 2 {
-		attribute = ToString(args[2])
-	}
-
-	switch v := value.(type) {
-	case []interface{}:
-		// Make a copy to avoid modifying original
-		sorted := make([]interface{}, len(v))
-		copy(sorted, v)
-
-		sort.Slice(sorted, func(i, j int) bool {
-			a := sorted[i]
-			b := sorted[j]
-
-			// Extract attribute if specified
-			if attribute != "" {
-				a = extractAttribute(a, attribute)
-				b = extractAttribute(b, attribute)
-			}
-
-			result := compareValues(a, b, caseSensitive)
-			if reverse {
-				return result > 0
-			}
-			return result < 0
-		})
-
-		return sorted, nil
-
-	case []string:
-		// Make a copy
-		sorted := make([]string, len(v))
-		copy(sorted, v)
-
-		if caseSensitive {
-			sort.Strings(sorted)
-		} else {
-			sort.Slice(sorted, func(i, j int) bool {
-				return strings.ToLower(sorted[i]) < strings.ToLower(sorted[j])
-			})
-		}
-
-		if reverse {
-			reverseStringSlice(sorted)
-		}
-
-		return sorted, nil
-
-	default:
-		return nil, fmt.Errorf("sort filter requires a sequence")
-	}
 }
 
 // ReverseFilter reverses a sequence
 func ReverseFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = typedSeq(value)
 	switch v := value.(type) {
 	case []interface{}:
 		reversed := make([]interface{}, len(v))
@@ -258,185 +264,12 @@ func ReverseFilter(value interface{}, args ...interface{}) (interface{}, error) 
 	}
 }
 
-// UniqueFilter removes duplicate items from sequence
-func UniqueFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	caseSensitive := true
-	attribute := ""
-
-	if len(args) > 0 {
-		caseSensitive = ToBool(args[0])
-	}
-	if len(args) > 1 {
-		attribute = ToString(args[1])
-	}
-
-	switch v := value.(type) {
-	case []interface{}:
-		// Pre-allocate with capacity for typical case (most items unique)
-		result := make([]interface{}, 0, len(v))
-		seen := make(map[string]bool, len(v))
-
-		for _, item := range v {
-			key := item
-			if attribute != "" {
-				key = extractAttribute(item, attribute)
-			}
-
-			keyStr := ToString(key)
-			if !caseSensitive {
-				keyStr = strings.ToLower(keyStr)
-			}
-
-			if !seen[keyStr] {
-				seen[keyStr] = true
-				result = append(result, item)
-			}
-		}
-
-		return result, nil
-
-	case []string:
-		// Pre-allocate with capacity
-		result := make([]string, 0, len(v))
-		seen := make(map[string]bool, len(v))
-
-		for _, item := range v {
-			key := item
-			if !caseSensitive {
-				key = strings.ToLower(item)
-			}
-
-			if !seen[key] {
-				seen[key] = true
-				result = append(result, item)
-			}
-		}
-
-		return result, nil
-
-	default:
-		return nil, fmt.Errorf("unique filter requires a sequence")
-	}
-}
-
-// SliceFilter returns a slice of the sequence
-func SliceFilter(value interface{}, args ...interface{}) (interface{}, error) {
-	if len(args) < 1 {
-		return nil, fmt.Errorf("slice filter requires at least one argument")
-	}
-
-	start, err := ToInt(args[0])
-	if err != nil {
-		return nil, fmt.Errorf("slice start must be integer: %v", err)
-	}
-
-	var end *int
-	if len(args) > 1 {
-		if args[1] != nil {
-			e, err := ToInt(args[1])
-			if err != nil {
-				return nil, fmt.Errorf("slice end must be integer: %v", err)
-			}
-			end = &e
-		}
-	}
-
-	switch v := value.(type) {
-	case []interface{}:
-		length := len(v)
-		if start < 0 {
-			start = length + start
-		}
-		if start < 0 {
-			start = 0
-		}
-		if start >= length {
-			return []interface{}{}, nil
-		}
-
-		endIdx := length
-		if end != nil {
-			endIdx = *end
-			if endIdx < 0 {
-				endIdx = length + endIdx
-			}
-			if endIdx > length {
-				endIdx = length
-			}
-		}
-
-		if endIdx <= start {
-			return []interface{}{}, nil
-		}
-
-		return v[start:endIdx], nil
-
-	case []string:
-		length := len(v)
-		if start < 0 {
-			start = length + start
-		}
-		if start < 0 {
-			start = 0
-		}
-		if start >= length {
-			return []string{}, nil
-		}
-
-		endIdx := length
-		if end != nil {
-			endIdx = *end
-			if endIdx < 0 {
-				endIdx = length + endIdx
-			}
-			if endIdx > length {
-				endIdx = length
-			}
-		}
-
-		if endIdx <= start {
-			return []string{}, nil
-		}
-
-		return v[start:endIdx], nil
-
-	case string:
-		runes := []rune(v)
-		length := len(runes)
-		if start < 0 {
-			start = length + start
-		}
-		if start < 0 {
-			start = 0
-		}
-		if start >= length {
-			return "", nil
-		}
-
-		endIdx := length
-		if end != nil {
-			endIdx = *end
-			if endIdx < 0 {
-				endIdx = length + endIdx
-			}
-			if endIdx > length {
-				endIdx = length
-			}
-		}
-
-		if endIdx <= start {
-			return "", nil
-		}
-
-		return string(runes[start:endIdx]), nil
-
-	default:
-		return nil, fmt.Errorf("slice filter requires a sequence")
-	}
-}
+// maxBatchFill bounds the number of items a batch filter will pad to.
+const maxBatchFill = 1000000
 
 // BatchFilter creates batches of items
 func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = typedSeq(value)
 	if len(args) < 1 {
 		return nil, fmt.Errorf("batch filter requires size argument")
 	}
@@ -455,6 +288,10 @@ func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		fillWith = args[1]
 	}
 
+	if fillWith != nil && size > maxBatchFill {
+		return nil, &runtime.SizeError{Msg: "batch size too large to fill"}
+	}
+
 	switch v := value.(type) {
 	case []interface{}:
 		var batches [][]interface{}
@@ -465,16 +302,14 @@ func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
 				end = len(v)
 			}
 
-			batch := make([]interface{}, size)
+			batch := make([]interface{}, end-i, end-i)
 			copy(batch, v[i:end])
 
 			// Fill remaining slots if needed
 			if fillWith != nil {
-				for j := end - i; j < size; j++ {
-					batch[j] = fillWith
+				for len(batch) < size {
+					batch = append(batch, fillWith)
 				}
-			} else {
-				batch = batch[:end-i]
 			}
 
 			batches = append(batches, batch)
@@ -489,6 +324,7 @@ func BatchFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // ListFilter converts value to list
 func ListFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = runtime.BasicValue(mapAsKeys(value))
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -528,12 +364,16 @@ func ListFilter(value interface{}, args ...interface{}) (interface{}, error) {
 			return result, nil
 		}
 
-		// Single item becomes single-item list
-		return []interface{}{value}, nil
+		if _, ok := value.(*runtime.Undefined); ok {
+			return []interface{}{}, nil
+		}
+		return nil, fmt.Errorf("'%s' object is not iterable", pyTypeName(value))
 	}
 }
 
 // SelectAttrFilter selects items with a specific attribute value
+//
+// Deprecated: templates use the registry-bound select/reject/selectattr/rejectattr, which apply tests; this function compares values and is kept for direct Go callers.
 func SelectAttrFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("selectattr filter requires attribute name")
@@ -574,6 +414,8 @@ func SelectAttrFilter(value interface{}, args ...interface{}) (interface{}, erro
 }
 
 // RejectAttrFilter rejects items with a specific attribute value
+//
+// Deprecated: templates use the registry-bound select/reject/selectattr/rejectattr, which apply tests; this function compares values and is kept for direct Go callers.
 func RejectAttrFilter(value interface{}, args ...interface{}) (interface{}, error) {
 	if len(args) < 1 {
 		return nil, fmt.Errorf("rejectattr filter requires attribute name")
@@ -639,66 +481,9 @@ func makeStringSlice(value interface{}, attribute string) ([]string, error) {
 	}
 }
 
-func extractAttribute(obj interface{}, attribute string) interface{} {
-	if obj == nil {
-		return nil
-	}
-
-	switch v := obj.(type) {
-	case map[string]interface{}:
-		return v[attribute]
-	case map[string]string:
-		return v[attribute]
-	default:
-		// Use reflection for struct fields
-		rv := reflect.ValueOf(obj)
-		if rv.Kind() == reflect.Ptr {
-			rv = rv.Elem()
-		}
-
-		if rv.Kind() == reflect.Struct {
-			field := rv.FieldByName(attribute)
-			if field.IsValid() && field.CanInterface() {
-				return field.Interface()
-			}
-
-			// Try with capitalized field name
-			field = rv.FieldByName(capitalizeFirst(attribute))
-			if field.IsValid() && field.CanInterface() {
-				return field.Interface()
-			}
-		}
-
-		return nil
-	}
-}
-
-func compareValues(a, b interface{}, caseSensitive bool) int {
-	// Convert to strings for comparison
-	aStr := ToString(a)
-	bStr := ToString(b)
-
-	if !caseSensitive {
-		aStr = strings.ToLower(aStr)
-		bStr = strings.ToLower(bStr)
-	}
-
-	if aStr < bStr {
-		return -1
-	} else if aStr > bStr {
-		return 1
-	}
-	return 0
-}
-
-func reverseStringSlice(slice []string) {
-	for i, j := 0, len(slice)-1; i < j; i, j = i+1, j-1 {
-		slice[i], slice[j] = slice[j], slice[i]
-	}
-}
-
 // ItemsFilter returns (key, value) pairs for dictionaries
 func ItemsFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = dictInput(value)
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -727,12 +512,16 @@ func ItemsFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return items, nil
 
 	default:
+		if pairs, ok := runtime.SortedMapPairs(value); ok {
+			return pairs, nil
+		}
 		return nil, fmt.Errorf("items filter requires a mapping")
 	}
 }
 
 // KeysFilter returns keys from a dictionary
 func KeysFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = dictInput(value)
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -761,12 +550,16 @@ func KeysFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return keys, nil
 
 	default:
+		if keys, ok := runtime.SortedMapKeys(value); ok {
+			return keys, nil
+		}
 		return nil, fmt.Errorf("keys filter requires a mapping")
 	}
 }
 
 // ValuesFilter returns values from a dictionary
 func ValuesFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	value = dictInput(value)
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -803,6 +596,13 @@ func ValuesFilter(value interface{}, args ...interface{}) (interface{}, error) {
 		return values, nil
 
 	default:
+		if pairs, ok := runtime.SortedMapPairs(value); ok {
+			values := make([]interface{}, len(pairs))
+			for i, p := range pairs {
+				values[i] = p.([]interface{})[1]
+			}
+			return values, nil
+		}
 		return nil, fmt.Errorf("values filter requires a mapping")
 	}
 }
@@ -852,6 +652,7 @@ func ZipFilter(value interface{}, args ...interface{}) (interface{}, error) {
 
 // Helper function to convert various types to []interface{}
 func toInterfaceSlice(value interface{}) ([]interface{}, error) {
+	value = runtime.Indirect(value)
 	if value == nil {
 		return []interface{}{}, nil
 	}
@@ -859,6 +660,17 @@ func toInterfaceSlice(value interface{}) ([]interface{}, error) {
 	switch v := value.(type) {
 	case []interface{}:
 		return v, nil
+	case map[string]interface{}:
+		keys := make([]string, 0, len(v))
+		for k := range v {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		result := make([]interface{}, len(keys))
+		for i, k := range keys {
+			result[i] = k
+		}
+		return result, nil
 	case []string:
 		result := make([]interface{}, len(v))
 		for i, s := range v {
@@ -881,7 +693,617 @@ func toInterfaceSlice(value interface{}) ([]interface{}, error) {
 			}
 			return result, nil
 		}
+		if keys, ok := runtime.SortedMapKeys(value); ok {
+			return keys, nil
+		}
 
 		return nil, fmt.Errorf("expected sequence, got %T", value)
 	}
+}
+
+// SortFilter sorts a sequence like Jinja2's sort: numbers numerically, strings
+// case-insensitively unless case_sensitive, attribute may be a path or a
+// comma-separated list of paths.
+func SortFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	reverse := false
+	caseSensitive := false
+	attribute := ""
+
+	if len(args) > 0 {
+		reverse = ToBool(args[0])
+	}
+	if len(args) > 1 {
+		caseSensitive = ToBool(args[1])
+	}
+	if len(args) > 2 {
+		attribute = ToString(args[2])
+	}
+
+	seq, err := toInterfaceSlice(value)
+	if err != nil {
+		return nil, fmt.Errorf("sort filter requires a sequence")
+	}
+
+	attrs := splitAttributes(attribute)
+	keys := make([][]interface{}, len(seq))
+	for i, item := range seq {
+		keys[i] = sortKeys(item, attrs, caseSensitive)
+	}
+
+	order := make([]int, len(seq))
+	for i := range order {
+		order[i] = i
+	}
+	var firstErr error
+	sort.SliceStable(order, func(i, j int) bool {
+		if firstErr != nil {
+			return false
+		}
+		c, err := compareKeys(keys[order[i]], keys[order[j]])
+		if err != nil {
+			firstErr = err
+			return false
+		}
+		if reverse {
+			return c > 0
+		}
+		return c < 0
+	})
+	if firstErr != nil {
+		return nil, wrapAttributeError("sort", attribute, firstErr)
+	}
+
+	sorted := make([]interface{}, len(seq))
+	for i, idx := range order {
+		sorted[i] = seq[idx]
+	}
+	return sorted, nil
+}
+
+// UniqueFilter removes duplicate items from sequence; strings compare
+// case-insensitively unless case_sensitive is set.
+func UniqueFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	caseSensitive := false
+	attribute := ""
+
+	if len(args) > 0 {
+		caseSensitive = ToBool(args[0])
+	}
+	if len(args) > 1 {
+		attribute = ToString(args[1])
+	}
+
+	seq, err := toInterfaceSlice(value)
+	if err != nil {
+		return nil, fmt.Errorf("unique filter requires a sequence")
+	}
+
+	result := make([]interface{}, 0, len(seq))
+	seen := make(map[string]bool, len(seq))
+	for _, item := range seq {
+		key := item
+		if attribute != "" {
+			key = extractAttribute(item, attribute)
+		}
+		k := uniqueKey(key, caseSensitive)
+		if !seen[k] {
+			seen[k] = true
+			result = append(result, item)
+		}
+	}
+	return result, nil
+}
+
+// SliceFilter splits a sequence into the given number of slices, like
+// Jinja2's slice(slices, fill_with=None).
+func SliceFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	seq, err := toInterfaceSlice(value)
+	if err != nil {
+		return nil, fmt.Errorf("slice filter requires a sequence")
+	}
+	if len(args) < 1 {
+		return nil, fmt.Errorf("slice filter requires a positive number of slices")
+	}
+	slices, err := ToInt(args[0])
+	if err != nil || slices < 1 {
+		return nil, fmt.Errorf("slice filter requires a positive number of slices")
+	}
+	if slices > maxBatchFill {
+		return nil, &runtime.SizeError{Msg: fmt.Sprintf("slice count too large (max %d)", maxBatchFill)}
+	}
+	var fill interface{}
+	hasFill := false
+	if len(args) > 1 && args[1] != nil {
+		fill, hasFill = args[1], true
+	}
+
+	perSlice, extra := len(seq)/slices, len(seq)%slices
+	offset := 0
+	result := make([]interface{}, 0, slices)
+	for n := 0; n < slices; n++ {
+		start := offset + n*perSlice
+		if n < extra {
+			offset++
+		}
+		end := offset + (n+1)*perSlice
+		part := append([]interface{}{}, seq[start:end]...)
+		if hasFill && n >= extra {
+			part = append(part, fill)
+		}
+		result = append(result, part)
+	}
+	return result, nil
+}
+
+// splitAttributes splits a comma-separated attribute list (Jinja2's
+// multi-key sort), dropping blanks.
+func splitAttributes(attribute string) []string {
+	var attrs []string
+	for _, a := range strings.Split(attribute, ",") {
+		if a = strings.TrimSpace(a); a != "" {
+			attrs = append(attrs, a)
+		}
+	}
+	return attrs
+}
+
+// sortKeys computes the sort key of an item once: one value per attribute
+// (nil when missing), or the item itself without attributes. Strings are
+// lowercased unless caseSensitive.
+func sortKeys(item interface{}, attrs []string, caseSensitive bool) []interface{} {
+	fold := func(v interface{}) interface{} {
+		v = runtime.BasicValue(v)
+		if s, ok := v.(string); ok && !caseSensitive {
+			return strings.ToLower(s)
+		}
+		return v
+	}
+	if len(attrs) == 0 {
+		return []interface{}{fold(item)}
+	}
+	keys := make([]interface{}, len(attrs))
+	for i, a := range attrs {
+		keys[i] = fold(extractAttribute(item, a))
+	}
+	return keys
+}
+
+func compareKeys(a, b []interface{}) (int, error) {
+	for i := range a {
+		c, err := compareItems(a[i], b[i], true)
+		if err != nil {
+			return 0, err
+		}
+		if c != 0 {
+			return c, nil
+		}
+	}
+	return 0, nil
+}
+
+func wrapAttributeError(filterName, attribute string, err error) error {
+	if attribute == "" {
+		return fmt.Errorf("%s: %w", filterName, err)
+	}
+	return fmt.Errorf("%s: attribute %q: %w", filterName, attribute, err)
+}
+
+// compareItems orders two values like Jinja2's sort, min and max: numbers
+// numerically (any Go numeric type, with true/false as 1/0), strings by code
+// point (lowercased first unless caseSensitive), lists element by element.
+// None (nil) and missing values sort before everything else and equal each
+// other: a deliberate deviation, see the plan's "Why this matters".
+// Any other pairing is an error, as in Python.
+func compareItems(a, b interface{}, caseSensitive bool) (int, error) {
+	return compareItemsAt(a, b, caseSensitive, 0)
+}
+
+// maxCompareDepth bounds how deep a comparison descends into nested lists, so
+// lists that contain each other give Python's RecursionError, not a crash.
+const maxCompareDepth = 1000
+
+func compareItemsAt(a, b interface{}, caseSensitive bool, depth int) (int, error) {
+	a, b = runtime.BasicValue(runtime.Unmark(a)), runtime.BasicValue(runtime.Unmark(b))
+	if a == nil || b == nil {
+		switch {
+		case a == nil && b == nil:
+			return 0, nil
+		case a == nil:
+			return -1, nil
+		}
+		return 1, nil
+	}
+	if ab, ok := a.(bool); ok {
+		a = boolToInt(ab)
+	}
+	if bb, ok := b.(bool); ok {
+		b = boolToInt(bb)
+	}
+	if cmp, ok := runtime.CompareNumbers(a, b); ok {
+		if cmp != 2 {
+			return cmp, nil
+		}
+		aNaN, bNaN := isNaN(a), isNaN(b)
+		switch {
+		case aNaN && bNaN:
+			return 0, nil
+		case aNaN:
+			return 1, nil
+		}
+		return -1, nil
+	}
+	if as, ok := a.(string); ok {
+		if bs, ok := b.(string); ok {
+			if !caseSensitive {
+				as, bs = strings.ToLower(as), strings.ToLower(bs)
+			}
+			return strings.Compare(as, bs), nil
+		}
+	}
+	av, bv := reflect.ValueOf(a), reflect.ValueOf(b)
+	if isListKind(av.Kind()) && isListKind(bv.Kind()) {
+		// Like Python, a list is equal to itself without comparing its items.
+		if av.Kind() == reflect.Slice && av.Type() == bv.Type() && av.Pointer() == bv.Pointer() && av.Len() == bv.Len() {
+			return 0, nil
+		}
+		if depth >= maxCompareDepth {
+			return 0, fmt.Errorf("maximum recursion depth exceeded in comparison")
+		}
+		for i := 0; i < av.Len() && i < bv.Len(); i++ {
+			c, err := compareItemsAt(av.Index(i).Interface(), bv.Index(i).Interface(), caseSensitive, depth+1)
+			if err != nil {
+				return 0, err
+			}
+			if c != 0 {
+				return c, nil
+			}
+		}
+		switch {
+		case av.Len() < bv.Len():
+			return -1, nil
+		case av.Len() > bv.Len():
+			return 1, nil
+		}
+		return 0, nil
+	}
+	return 0, fmt.Errorf("'<' not supported between instances of '%s' and '%s'", pyTypeName(a), pyTypeName(b))
+}
+
+func boolToInt(b bool) int64 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func isNaN(v interface{}) bool {
+	f, err := ToFloat(v)
+	return err == nil && math.IsNaN(f)
+}
+
+func isListKind(k reflect.Kind) bool {
+	return k == reflect.Slice || k == reflect.Array
+}
+
+func pyTypeName(v interface{}) string {
+	v = escapedAsString(v)
+	switch v.(type) {
+	case string:
+		return "str"
+	case bool:
+		return "bool"
+	}
+	switch k := reflect.ValueOf(v).Kind(); {
+	case k >= reflect.Int && k <= reflect.Uint64:
+		return "int"
+	case k == reflect.Float32 || k == reflect.Float64:
+		return "float"
+	case k == reflect.Map:
+		return "dict"
+	case isListKind(k):
+		return "list"
+	}
+	return fmt.Sprintf("%T", v)
+}
+
+// escapedAsString returns escaped template output, which can sit in a list
+// or dict, as the string it is; any other value is returned unchanged.
+func escapedAsString(v interface{}) interface{} {
+	if _, ok := runtime.AsMarkup(v); ok {
+		return v
+	}
+	return runtime.Unmark(v)
+}
+
+// uniqueKey maps a value to a string such that two values get the same key
+// exactly when Jinja2's unique treats them as equal (booleans count as 1/0,
+// numbers compare by value, strings lowercased unless caseSensitive).
+func uniqueKey(v interface{}, caseSensitive bool) string {
+	v = runtime.BasicValue(runtime.Unmark(v))
+	if v == nil {
+		return "z:"
+	}
+	if b, ok := v.(bool); ok {
+		v = boolToInt(b)
+	}
+	if _, ok := runtime.CompareNumbers(v, v); ok {
+		f, _ := ToFloat(v)
+		return "n:" + strconv.FormatFloat(f, 'g', -1, 64)
+	}
+	if s, ok := v.(string); ok {
+		if !caseSensitive {
+			s = strings.ToLower(s)
+		}
+		return "s:" + s
+	}
+	// runtime.Repr, unlike fmt, stops at a list or dict that contains itself.
+	return "o:" + fmt.Sprintf("%T:", v) + runtime.Repr(v)
+}
+
+// lookupAttribute resolves a Jinja2 attribute path such as "c.name" or "0"
+// on obj: each dot-separated segment is a map key or struct field, and an
+// all-digit segment also indexes a list. found is false when any segment is
+// missing, so callers can tell a missing value from a None one.
+func lookupAttribute(obj interface{}, path string) (value interface{}, found bool) {
+	if path == "" {
+		return nil, false
+	}
+	cur := obj
+	for _, seg := range strings.Split(path, ".") {
+		if seg == "" {
+			return nil, false
+		}
+		cur, found = lookupSegment(cur, seg)
+		if !found {
+			return nil, false
+		}
+	}
+	return cur, true
+}
+
+func lookupSegment(obj interface{}, seg string) (interface{}, bool) {
+	if obj == nil {
+		return nil, false
+	}
+	switch v := obj.(type) {
+	case runtime.GroupTuple:
+		switch seg {
+		case "grouper", "0":
+			if len(v) > 0 {
+				return v[0], true
+			}
+		case "list", "1":
+			if len(v) > 1 {
+				return v[1], true
+			}
+		}
+		return nil, false
+	case map[string]interface{}:
+		val, ok := v[seg]
+		return val, ok
+	case map[string]string:
+		val, ok := v[seg]
+		return val, ok
+	}
+
+	if runtime.IsUndefined(obj) || !runtime.UsesReflectLookup(obj) {
+		return nil, false
+	}
+	obj = runtime.Indirect(obj)
+	if obj == nil {
+		return nil, false
+	}
+	if _, ok := obj.(runtime.RoundedFloat); ok {
+		return nil, false
+	}
+	rv := reflect.ValueOf(obj)
+	if rv.Kind() == reflect.Ptr && !rv.IsNil() {
+		rv = rv.Elem()
+	}
+	switch rv.Kind() {
+	case reflect.Map:
+		if kt := rv.Type().Key(); kt.Kind() == reflect.String {
+			if val := rv.MapIndex(reflect.ValueOf(seg).Convert(kt)); val.IsValid() {
+				return nonFuncValue(val)
+			}
+		}
+	case reflect.Slice, reflect.Array:
+		idx, err := strconv.Atoi(seg)
+		if err != nil || idx < 0 || idx >= rv.Len() || strings.TrimLeft(seg, "0123456789") != "" {
+			return nil, false
+		}
+		return rv.Index(idx).Interface(), true
+	case reflect.Struct:
+		if v, ok := structField(rv, seg, false); ok {
+			return nonFunc(v)
+		}
+		if capital := capitalizeFirst(seg); capital != seg {
+			if v, ok := structField(rv, capital, true); ok {
+				return nonFunc(v)
+			}
+		}
+	}
+	return nil, false
+}
+
+// nonFunc hides func values, which expressions never call through filters.
+func nonFunc(v interface{}) (interface{}, bool) {
+	if v != nil && reflect.TypeOf(v).Kind() == reflect.Func {
+		return nil, false
+	}
+	return v, true
+}
+
+func nonFuncValue(val reflect.Value) (interface{}, bool) {
+	inner := val
+	if inner.Kind() == reflect.Interface {
+		inner = inner.Elem()
+	}
+	if inner.Kind() == reflect.Func {
+		return nil, false
+	}
+	return val.Interface(), true
+}
+
+// structField reads the exported field name of the struct rv. Fields promoted
+// through a nil embedded pointer are not found, and with fallback set (the
+// capitalised name) embedded fields are not found either.
+func structField(rv reflect.Value, name string, fallback bool) (interface{}, bool) {
+	sf, ok := rv.Type().FieldByName(name)
+	if !ok || sf.PkgPath != "" || (fallback && sf.Anonymous) {
+		return nil, false
+	}
+	f, err := rv.FieldByIndexErr(sf.Index)
+	if err != nil || !f.CanInterface() {
+		return nil, false
+	}
+	return f.Interface(), true
+}
+
+// extractAttribute returns the value at an attribute path, or nil when it is
+// missing or None.
+func extractAttribute(obj interface{}, attribute string) interface{} {
+	v, _ := lookupAttribute(obj, attribute)
+	return v
+}
+
+// mapFilter is the registered map filter. Besides the attribute forms of
+// MapFilter it applies a filter by name: per item, an attribute of that name
+// wins, otherwise the filter runs. With keyword arguments the filter always runs.
+func (r *FilterRegistry) mapFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	seq, err := toInterfaceSlice(value)
+	if err != nil {
+		return nil, fmt.Errorf("map filter requires a sequence")
+	}
+	pos := args
+	var kw KwArgs
+	if n := len(args); n > 0 {
+		if k, ok := args[n-1].(KwArgs); ok {
+			kw, pos = k, args[:n-1]
+		}
+	}
+	if len(pos) == 0 {
+		if kw == nil {
+			return nil, fmt.Errorf("map filter requires attribute or filter name")
+		}
+		return MapFilter(seq, args...)
+	}
+
+	name := ToString(pos[0])
+	fn, isFilter := r.Get(name)
+	if len(kw) > 0 {
+		if !isFilter {
+			if _, err := MapFilter(seq, args...); err != nil {
+				return nil, fmt.Errorf("no filter named %q (%w)", name, err)
+			}
+			return nil, fmt.Errorf("no filter named %q", name)
+		}
+		result := make([]interface{}, len(seq))
+		for i, item := range seq {
+			out, err := r.ApplyKwargs(name, item, pos[1:], kw)
+			if err != nil {
+				return nil, err
+			}
+			result[i] = out
+		}
+		return result, nil
+	}
+
+	result := make([]interface{}, len(seq))
+	for i, item := range seq {
+		if v, found := lookupAttribute(item, name); found {
+			result[i] = v
+			continue
+		}
+		if !isFilter {
+			result[i] = runtime.NewUndefined(name, runtime.UndefinedSilent, nil)
+			continue
+		}
+		out, err := fn(item, pos[1:]...)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = out
+	}
+	return result, nil
+}
+
+func (r *FilterRegistry) selectFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	return r.selectItems("select", true, value, args)
+}
+
+func (r *FilterRegistry) rejectFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	return r.selectItems("reject", false, value, args)
+}
+
+func (r *FilterRegistry) selectAttrFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	return r.selectAttrItems("selectattr", true, value, args)
+}
+
+func (r *FilterRegistry) rejectAttrFilter(value interface{}, args ...interface{}) (interface{}, error) {
+	return r.selectAttrItems("rejectattr", false, value, args)
+}
+
+// selectItems keeps the items for which the named test (or truthiness, with
+// no arguments) equals want.
+func (r *FilterRegistry) selectItems(name string, want bool, value interface{}, args []interface{}) (interface{}, error) {
+	seq, err := toInterfaceSlice(value)
+	if err != nil {
+		return nil, fmt.Errorf("%s filter requires a sequence", name)
+	}
+	var test func(interface{}, ...interface{}) (bool, error)
+	if len(args) > 0 {
+		if test, err = r.test(ToString(args[0])); err != nil {
+			return nil, err
+		}
+	}
+	result := make([]interface{}, 0, len(seq))
+	for _, item := range seq {
+		ok := ToBool(item)
+		if test != nil {
+			if ok, err = test(item, args[1:]...); err != nil {
+				return nil, err
+			}
+		}
+		if ok == want {
+			result = append(result, item)
+		}
+	}
+	return result, nil
+}
+
+// selectAttrItems is selectItems on an attribute of each item. A missing
+// attribute reaches the test as undefined, a None one as None.
+func (r *FilterRegistry) selectAttrItems(name string, want bool, value interface{}, args []interface{}) (interface{}, error) {
+	if len(args) < 1 {
+		return nil, fmt.Errorf("%s filter requires attribute name", name)
+	}
+	seq, err := toInterfaceSlice(value)
+	if err != nil {
+		return nil, fmt.Errorf("%s filter requires a sequence", name)
+	}
+	attr := ToString(args[0])
+	var test func(interface{}, ...interface{}) (bool, error)
+	if len(args) > 1 {
+		if test, err = r.test(ToString(args[1])); err != nil {
+			return nil, err
+		}
+	}
+	result := make([]interface{}, 0, len(seq))
+	for _, item := range seq {
+		v, found := lookupAttribute(item, attr)
+		if !found {
+			v = runtime.NewUndefined(attr, runtime.UndefinedSilent, nil)
+		}
+		ok := found && ToBool(v)
+		if test != nil {
+			if ok, err = test(v, args[2:]...); err != nil {
+				return nil, err
+			}
+		}
+		if ok == want {
+			result = append(result, item)
+		}
+	}
+	return result, nil
 }

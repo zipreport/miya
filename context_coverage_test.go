@@ -520,7 +520,7 @@ func TestCOWContextSetVariableGetVariable(t *testing.T) {
 			t.Error("GetVariable('missing') should return false")
 		}
 	} else {
-		t.Skip("NewCOWContext returned different type")
+		t.Fatalf("NewCOWContext returned %T, want *cowContext", ctx)
 	}
 }
 

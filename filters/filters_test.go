@@ -81,8 +81,8 @@ func TestStringFilters(t *testing.T) {
 		{"trim with chars", TrimFilter, "...trimmed...", []interface{}{"."}, "trimmed", false},
 		{"replace", ReplaceFilter, "hello world", []interface{}{"world", "Go"}, "hello Go", false},
 		{"replace count", ReplaceFilter, "foo foo foo", []interface{}{"foo", "bar", 2}, "bar bar foo", false},
-		{"truncate", TruncateFilter, "this is a long string", []interface{}{10}, "this is a...", false},
-		{"truncate killwords", TruncateFilter, "this is a long string", []interface{}{10, true}, "this is a ...", false},
+		{"truncate", TruncateFilter, "this is a long string", []interface{}{10}, "this...", false},
+		{"truncate killwords", TruncateFilter, "this is a long string", []interface{}{10, true}, "this is...", false},
 		{"center", CenterFilter, "test", []interface{}{10}, "   test   ", false},
 		{"indent", IndentFilter, "line1\nline2", []interface{}{2}, "line1\n  line2", false},
 		{"format", FormatFilter, "Hello %s", []interface{}{"World"}, "Hello World", false},
@@ -120,11 +120,11 @@ func TestHTMLFilters(t *testing.T) {
 		expected interface{}
 		hasError bool
 	}{
-		{"escape", EscapeFilter, "<script>alert('xss')</script>", nil, "&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;", false},
-		{"safe", SafeFilter, "<b>bold</b>", nil, SafeValue{Value: "<b>bold</b>"}, false},
-		{"urlencode", URLEncodeFilter, "hello world", nil, "hello+world", false},
+		{"escape", EscapeFilter, "<script>alert('xss')</script>", nil, runtime.Markup("&lt;script&gt;alert(&#39;xss&#39;)&lt;/script&gt;"), false},
+		{"safe", SafeFilter, "<b>bold</b>", nil, runtime.Markup("<b>bold</b>"), false},
+		{"urlencode", URLEncodeFilter, "hello world", nil, "hello%20world", false},
 		{"striptags", StripTagsFilter, "<p>Hello <b>world</b></p>", nil, "Hello world", false},
-		{"filesizeformat", FileSizeFormatFilter, 1024, nil, "1.0 KB", false},
+		{"filesizeformat", FileSizeFormatFilter, 1024, nil, "1.0 kB", false},
 		{"filesizeformat binary", FileSizeFormatFilter, 1024, []interface{}{true}, "1.0 KiB", false},
 	}
 
@@ -167,7 +167,7 @@ func TestCollectionFilters(t *testing.T) {
 		{"join", JoinFilter, []interface{}{"a", "b", "c"}, []interface{}{", "}, "a, b, c", false},
 		{"reverse", ReverseFilter, []interface{}{"a", "b", "c"}, nil, []interface{}{"c", "b", "a"}, false},
 		{"unique", UniqueFilter, []interface{}{"a", "b", "a", "c"}, nil, []interface{}{"a", "b", "c"}, false},
-		{"slice", SliceFilter, []interface{}{"a", "b", "c", "d"}, []interface{}{1, 3}, []interface{}{"b", "c"}, false},
+		{"slice", SliceFilter, []interface{}{"a", "b", "c", "d"}, []interface{}{1, 3}, []interface{}{[]interface{}{"a", "b", "c", "d", 3}}, false},
 		{"batch", BatchFilter, []interface{}{"a", "b", "c", "d", "e"}, []interface{}{2}, [][]interface{}{{"a", "b"}, {"c", "d"}, {"e"}}, false},
 		{"list", ListFilter, "abc", nil, []interface{}{"a", "b", "c"}, false},
 	}
@@ -207,14 +207,14 @@ func TestNumericFilters(t *testing.T) {
 		{"abs positive", AbsFilter, 5, nil, 5, false},
 		{"abs negative", AbsFilter, -5, nil, 5, false},
 		{"abs float", AbsFilter, -3.14, nil, 3.14, false},
-		{"round", RoundFilter, 3.14159, []interface{}{2}, "3.14", false},
-		{"round ceil", RoundFilter, 3.14159, []interface{}{2, "ceil"}, "3.15", false},
-		{"round floor", RoundFilter, 3.14159, []interface{}{2, "floor"}, "3.14", false},
-		{"int", IntFilter, "123", nil, 123, false},
+		{"round", RoundFilter, 3.14159, []interface{}{2}, runtime.RoundedFloat{Value: 3.14, Places: 2}, false},
+		{"round ceil", RoundFilter, 3.14159, []interface{}{2, "ceil"}, runtime.RoundedFloat{Value: 3.15, Places: 2}, false},
+		{"round floor", RoundFilter, 3.14159, []interface{}{2, "floor"}, runtime.RoundedFloat{Value: 3.14, Places: 2}, false},
+		{"int", IntFilter, "123", nil, int64(123), false},
 		{"int default", IntFilter, "invalid", []interface{}{0}, 0, false},
 		{"float", FloatFilter, "3.14", nil, 3.14, false},
 		{"sum", SumFilter, []interface{}{1, 2, 3, 4}, nil, 10.0, false},
-		{"sum with start", SumFilter, []interface{}{1, 2, 3}, []interface{}{10}, 16.0, false},
+		{"sum with start", SumFilter, []interface{}{1, 2, 3}, []interface{}{nil, 10}, 16.0, false},
 		{"min", MinFilter, []interface{}{3, 1, 4, 1, 5}, nil, 1, false},
 		{"max", MaxFilter, []interface{}{3, 1, 4, 1, 5}, nil, 5, false},
 	}
@@ -255,8 +255,8 @@ func TestUtilityFilters(t *testing.T) {
 		{"default without value", DefaultFilter, "", []interface{}{"fallback"}, "fallback", false},
 		{"default boolean true", DefaultFilter, true, []interface{}{"fallback", true}, true, false},
 		{"default boolean false", DefaultFilter, false, []interface{}{"fallback", true}, "fallback", false},
-		{"tojson", ToJSONFilter, map[string]interface{}{"key": "value"}, nil, runtime.SafeValue{Value: `{"key":"value"}`}, false},
-		{"tojson indent", ToJSONFilter, map[string]interface{}{"key": "value"}, []interface{}{2}, runtime.SafeValue{Value: "{\n  \"key\": \"value\"\n}"}, false},
+		{"tojson", ToJSONFilter, map[string]interface{}{"key": "value"}, nil, runtime.Markup(`{"key":"value"}`), false},
+		{"tojson indent", ToJSONFilter, map[string]interface{}{"key": "value"}, []interface{}{2}, runtime.Markup("{\n  \"key\": \"value\"\n}"), false},
 		{"fromjson", FromJSONFilter, `{"key":"value"}`, nil, map[string]interface{}{"key": "value"}, false},
 		{"string", StringFilter, 123, nil, "123", false},
 	}
@@ -374,6 +374,9 @@ func TestXMLAttrFilter(t *testing.T) {
 				return
 			}
 
+			if m, ok := result.(runtime.Markup); ok {
+				result = string(m)
+			}
 			if result != tt.expected {
 				t.Errorf("expected %q, got %q", tt.expected, result)
 			}

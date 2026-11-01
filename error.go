@@ -3,6 +3,8 @@ package miya
 import (
 	"fmt"
 	"strings"
+
+	"github.com/zipreport/miya/runtime"
 )
 
 // EnhancedTemplateError represents an enhanced error that occurred during template processing
@@ -357,7 +359,7 @@ func (td *TemplateDebugger) GetWatchedVariables(ctx Context) map[string]interfac
 	result := make(map[string]interface{})
 	for _, varName := range td.watchVariables {
 		if value, ok := ctx.Get(varName); ok {
-			result[varName] = value
+			result[varName] = runtime.Unbox(value)
 		} else {
 			result[varName] = "<undefined>"
 		}

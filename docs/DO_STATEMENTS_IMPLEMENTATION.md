@@ -178,9 +178,9 @@ type DoNode struct {
 | Whitespace control | `{%- do ... -%}` | `{%- do ... -%}` |  Full |
 | Error handling | Standard errors | Standard errors |  Full |
 | Integration | All control flow | All control flow |  Full |
-| Side effects | Method calls, etc. | Expression evaluation |  Different* |
+| Side effects | Method calls, etc. | List methods (`append`, `extend`, `pop`) on lists the template created; no Go methods |  Different* |
 
-*Note: Miya Engine focuses on expression evaluation rather than method-based side effects due to Go's type system differences.
+*Note: miya does not call methods of Go values, and `append`/`extend`/`pop` refuse lists passed in as render data (see below).
 
 ## Migration from Python Jinja2
 
@@ -193,10 +193,22 @@ Most do statements will work identically:
 {% do text|filter %}
 {% do complex_expression %}
 
-{# Python-specific method calls may need adaptation #}
-{# Python: {% do items.append("value") %} #}
-{# Miya Engine: Use set statements for variable modification #}
+{# List methods work on lists the template created #}
+{% set items = [] %}
+{% do items.append("value") %}
 ```
+
+`append` works on lists created with `set`/`with` or held in a `namespace()`. To change a list passed in as render data, copy it first: `{% set items = items|list %}`. Methods of Go values are not callable from templates.
+
+### Lists
+
+- A list stored by `{% set %}`, `{% with %}` or a namespace can be changed with `append`, `extend` and `pop`. Binding another name to it (`{% set b = a %}`) shares the list.
+- A macro (or `caller()`) can change a list it is given, as in Jinja2: `{% macro add(l, x) %}{% do l.append(x) %}{% endmacro %}` changes the caller's list.
+- A list put inside another list, or taken from one, is a copy. `{% set a = [inner] %}` and `{% do a.append(inner) %}` do not follow later changes to `inner`.
+- A macro argument that is not a stored variable or a namespace attribute is a copy for the macro: a loop variable, `a[0]`, `varargs[0]`, `kwargs.l`, `f(l)` and `l if c else []`.
+- Render data is read-only: a macro that changes a list from render data changes a copy. Use `{% set mine = data|list %}` to get a changeable copy in the template.
+- A `for` loop iterates a snapshot of the list.
+- Go code does not see the internal list box, except that extension tags evaluating with `CreateEvaluateFunc`'s raw context inside a macro do (see the CHANGELOG; unbox with `runtime.Unbox`): Go functions that take a `runtime.Context`, `Namespace.Get`, `GetAttr` and `All()` return plain slices. `RawGet` returns the stored value. A `Get` followed by `Set` replaces a list with a plain slice.
 
 ## Testing
 

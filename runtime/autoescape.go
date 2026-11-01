@@ -105,9 +105,9 @@ func (ae *AutoEscaper) Escape(value interface{}, context EscapeContext) string {
 		return ToString(value)
 	}
 
-	// If already a SafeValue, don't escape
-	if safeVal, ok := value.(SafeValue); ok {
-		return ToString(safeVal.Value)
+	// Safe values are not escaped again
+	if m, ok := AsMarkup(value); ok {
+		return string(m)
 	}
 
 	str := ToString(value)
@@ -185,7 +185,7 @@ func (ae *AutoEscaper) escapeCSS(s string) string {
 	s = strings.ReplaceAll(s, "\t", "\\9 ")
 	// Escape potential CSS injection characters (using pre-compiled regex)
 	s = reControlChars.ReplaceAllStringFunc(s, func(match string) string {
-		return "\\x" + strings.ToUpper(string(rune(match[0])))
+		return fmt.Sprintf("\\%X ", match[0])
 	})
 	return s
 }
@@ -206,7 +206,7 @@ func (ae *AutoEscaper) escapeJSON(s string) string {
 	s = strings.ReplaceAll(s, "\f", "\\f")
 	// Escape control characters (using pre-compiled regex)
 	s = reControlChars.ReplaceAllStringFunc(s, func(match string) string {
-		return "\\u" + strings.ToUpper(string(rune(match[0])))
+		return fmt.Sprintf("\\u%04X", match[0])
 	})
 	return s
 }
@@ -229,8 +229,28 @@ func ToString(value interface{}) string {
 	if str, ok := value.(string); ok {
 		return str
 	}
+	if m, ok := value.(Markup); ok {
+		return string(m)
+	}
+	if b, ok := value.([]byte); ok {
+		return string(b)
+	}
 	if sv, ok := value.(SafeValue); ok {
 		return ToString(sv.Value)
+	}
+
+	value = unbox(Indirect(value))
+	if value == nil {
+		return ""
+	}
+	if str, ok := value.(string); ok {
+		return str
+	}
+	if e, ok := value.(error); ok {
+		return e.Error()
+	}
+	if st, ok := value.(fmt.Stringer); ok {
+		return st.String()
 	}
 
 	switch v := value.(type) {
@@ -240,12 +260,33 @@ func ToString(value interface{}) string {
 		return FormatFloat(float64(v), 32)
 	}
 
-	return fmt.Sprintf("%v", value)
+	if s, ok := reprContainer(value); ok {
+		return s
+	}
+	return SprintV(value)
+}
+
+// escapeOutput is what {{ }} writes under autoescape: safe values unchanged,
+// anything else converted with ToString and HTML-escaped.
+func escapeOutput(value interface{}) interface{} {
+	if m, ok := AsMarkup(value); ok {
+		return m
+	}
+	return html.EscapeString(ToString(value))
 }
 
 // FormatFloat prints a float like Python's repr, except that whole numbers
-// print without ".0" (JSON integers arrive as float64 in Go).
+// print without ".0" (JSON integers arrive as float64 in Go). Infinities and
+// NaN print "inf", "-inf" and "nan", as in Python.
 func FormatFloat(v float64, bits int) string {
+	switch {
+	case math.IsNaN(v):
+		return "nan"
+	case math.IsInf(v, 1):
+		return "inf"
+	case math.IsInf(v, -1):
+		return "-inf"
+	}
 	if a := math.Abs(v); v == 0 || (a >= 1e-4 && a < 1e16) {
 		return strconv.FormatFloat(v, 'f', -1, bits)
 	}
@@ -289,6 +330,9 @@ func NewContextWrapperFromInterface(ctx interface{}, escaper *AutoEscaper, conte
 	return NewContextWrapper(adapter, escaper, context)
 }
 
+// Unwrap returns the wrapped context.
+func (cw *ContextWrapper) Unwrap() Context { return cw.Context }
+
 // GetEscapeContext returns the current escape context
 func (cw *ContextWrapper) GetEscapeContext() EscapeContext {
 	return cw.escapeContext
@@ -318,6 +362,15 @@ func (cw *ContextWrapper) IsAutoescapeEnabled() bool {
 func (cw *ContextWrapper) Clone() Context {
 	return &ContextWrapper{
 		Context:       cw.Context.Clone(),
+		escapeContext: cw.escapeContext,
+		autoEscaper:   cw.autoEscaper,
+	}
+}
+
+// Child is a child scope of the wrapped context with the same escaping.
+func (cw *ContextWrapper) Child() Context {
+	return &ContextWrapper{
+		Context:       childScope(cw.Context),
 		escapeContext: cw.escapeContext,
 		autoEscaper:   cw.autoEscaper,
 	}

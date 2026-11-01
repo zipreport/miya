@@ -296,7 +296,7 @@ This document provides a comprehensive list of all features demonstrated in the 
 #### **String Transformation**
 ```jinja2
 {{ "Hello World"|replace("World", "Go") }}       → "Hello Go"
-{{ "Very long text here"|truncate(10) }}         → "Very lo..."
+{{ "Very long text here"|truncate(10) }}         → "Very..."
 {{ "Long text"|wordwrap(5) }}                    → "Long\ntext"
 {{ "hello"|center(10, "-") }}                    → "--hello---"
 {{ "text"|indent(4) }}                           → "    text"
@@ -450,7 +450,7 @@ This document provides a comprehensive list of all features demonstrated in the 
 #### **Object Manipulation**
 ```jinja2
 {{ user|attr("Name") }}                        → get attribute
-{{ "Hello {0}"|format("World") }}              → "Hello World"
+{{ "Hello %s"|format("World") }}              → "Hello World"
 ```
 
 #### **Data Processing**
@@ -469,7 +469,7 @@ This document provides a comprehensive list of all features demonstrated in the 
 
 #### **File Operations**
 ```jinja2
-{{ 1536|filesizeformat }}                      → "1.5 KB"
+{{ 1536|filesizeformat }}                      → "1.5 kB"
 ```
 - **File**: `templates/filters_demo.html`
 
@@ -620,15 +620,9 @@ Including {{ variable }} content
 - **Inheritance Caching**: Cached resolution of template inheritance chains
 - **Smart Invalidation**: Cache updates when templates change
 
-### **Filter Chain Optimization**
-- **Chain Optimization**: Efficient processing of filter chains
-- **Memory Management**: Optimized memory usage for large datasets
-- **Concurrent Safety**: Thread-safe operations
-
 ### **Runtime Optimizations**
 - **Expression Evaluation**: Optimized AST evaluation
 - **Context Management**: Efficient variable scoping
-- **Memory Pooling**: Reduced garbage collection pressure
 
 ---
 
@@ -674,7 +668,7 @@ ctx.Set("products", productList)
 | **Template Inheritance** | 4 | 100% | `base.html`, `dashboard.html` |
 | **Control Structures** | 7 | 100% | `control_demo.html` |
 | **Include/Import** | 3 | 100% | `dashboard.html`, `macro_test.html` |
-| **Macros** | 4 | 90%* | `utilities.html` |
+| **Macros** | 4 | 100% | `utilities.html` |
 | **String Filters** | 18 | 100% | `filters_demo.html` |
 | **Collection Filters** | 15 | 98% | `filters_demo.html` |
 | **Numeric Filters** | 10 | 100% | `filters_demo.html` |
@@ -686,8 +680,6 @@ ctx.Set("products", productList)
 | **Performance** | 6 | 100% | All files |
 
 **Total: 131 features demonstrated with 95%+ compatibility**
-
-*\* Missing: *args/**kwargs support in macros*
 
 ---
 
@@ -706,7 +698,6 @@ ctx.Set("products", productList)
 -  FileSystemLoader for template management
 -  Environment configuration
 -  Security features (autoescaping, safe filters)
--  Memory optimization
 -  Concurrent template rendering
 
 ### **Development Features**

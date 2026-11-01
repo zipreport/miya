@@ -169,15 +169,12 @@ Concise conditional expressions:
 {{ 'SALE!' if discount > 0 else '' }}
 ```
 
-###  Important Limitation
+### Without `else`
 
-**Inline conditionals MUST include the `else` clause** in Miya Engine:
+The `else` clause is optional. Without it, a false condition prints nothing:
 
 ```html+jinja
-{#  WORKS - includes else #}
 {{ 'Badge' if condition else '' }}
-
-{#  FAILS - missing else #}
 {{ 'Badge' if condition }}
 ```
 
@@ -218,14 +215,14 @@ Assign values to variables:
 
 ### Variables in Loops
 
-Accumulate values (note: variables in loops are scoped):
+A `set` inside a loop does not change the variable outside it; use `namespace()` to carry a value out, as in Jinja2:
 
 ```html+jinja
-{% set total_price = 0 %}
+{% set ns = namespace(total_price=0) %}
 {% for product in products %}
-  {% set total_price = total_price + product.price %}
+  {% set ns.total_price = ns.total_price + product.price %}
 {% endfor %}
-<p>Total: ${{ total_price }}</p>
+<p>Total: ${{ ns.total_price }}</p>
 ```
 
 ### Block Assignment
@@ -368,12 +365,12 @@ Create local scope for variables:
 ### Example 2: Shopping Cart
 
 ```html+jinja
-{% set cart_total = 0 %}
+{% set ns = namespace(cart_total=0) %}
 <h3>Shopping Cart</h3>
 
 {% for item in cart %}
   {% set item_total = item.price * item.quantity %}
-  {% set cart_total = cart_total + item_total %}
+  {% set ns.cart_total = ns.cart_total + item_total %}
 
   <div class="cart-item">
     <h4>{{ item.name }}</h4>
@@ -384,7 +381,7 @@ Create local scope for variables:
 {% endfor %}
 
 {% if cart|length > 0 %}
-  <p><strong>Total: ${{ cart_total }}</strong></p>
+  <p><strong>Total: ${{ ns.cart_total }}</strong></p>
 {% endif %}
 ```
 
@@ -463,13 +460,12 @@ Create local scope for variables:
 {% endif %}
 ```
 
-### 4. Always Include Else in Inline Conditionals
+### 4. Prefer an Explicit Else When the Fallback Matters
 
 ```html+jinja
-{#  Works in Miya #}
 {{ 'Active' if user.active else 'Inactive' }}
 
-{#  Fails in Miya - missing else #}
+{# Prints nothing when user.active is false #}
 {{ 'Active' if user.active }}
 ```
 
@@ -508,7 +504,7 @@ All loop variables available: `index`, `index0`, `first`, `last`, `length`, `rev
 
 ## Summary
 
-**100% Jinja2 Compatible** control structures with one important limitation:
+Control structures follow Jinja2:
 
  **Fully Supported:**
 - If/elif/else statements
@@ -520,7 +516,4 @@ All loop variables available: `index`, `index0`, `first`, `last`, `length`, `rev
 - With statements (single and multiple variables)
 - Nested control structures
 
- **Important Note:**
-- Inline conditionals **MUST** include `else` clause
-
-All control structures work identically to Jinja2, making migration and template sharing seamless.
+For the known differences from Jinja2, see [Miya Limitations](MIYA_LIMITATIONS.md).

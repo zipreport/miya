@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/zipreport/miya/parser"
@@ -170,14 +171,14 @@ func (h *UndefinedHandler) HandleAttributeAccess(undefined *Undefined, attrName 
 func (h *UndefinedHandler) HandleItemAccess(undefined *Undefined, key interface{}, node parser.Node) (interface{}, error) {
 	switch undefined.Behavior {
 	case UndefinedStrict, UndefinedChainFail:
-		chainedName := fmt.Sprintf("%s[%v]", undefined.Name, key)
+		chainedName := fmt.Sprintf("%s[%s]", undefined.Name, SprintV(key))
 		return nil, NewUndefinedVariableError(chainedName, node)
 	case UndefinedDebug:
-		chainedName := fmt.Sprintf("%s[%v]", undefined.Name, key)
+		chainedName := fmt.Sprintf("%s[%s]", undefined.Name, SprintV(key))
 		return NewDebugUndefined(chainedName, "item access on undefined", node), nil
 	default:
 		// Silent behavior
-		chainedName := fmt.Sprintf("%s[%v]", undefined.Name, key)
+		chainedName := fmt.Sprintf("%s[%s]", undefined.Name, SprintV(key))
 		return NewUndefined(chainedName, UndefinedSilent, node), nil
 	}
 }
@@ -211,4 +212,9 @@ func (h *UndefinedHandler) GetUndefinedBehavior() UndefinedBehavior {
 func (h *UndefinedHandler) SetUndefinedBehavior(behavior UndefinedBehavior) {
 	h.behavior = behavior
 	h.undefinedFactory = NewUndefinedHandler(behavior).undefinedFactory
+}
+
+// MarshalJSON rejects undefined values, as Jinja2's tojson does.
+func (u *Undefined) MarshalJSON() ([]byte, error) {
+	return nil, errors.New("Object of type Undefined is not JSON serializable")
 }

@@ -164,7 +164,7 @@ func TestCoreTemplateEngine(t *testing.T) {
 			Name:     "Advanced string filters",
 			Template: `{{ text|truncate(10) }}, "{{ 'test'|center(10) }}", {{ 'hello-world'|slugify }}`,
 			Context:  map[string]interface{}{"text": "This is a long text"},
-			Expected: `This is a..., "   test   ", hello-world`,
+			Expected: `This..., "   test   ", hello-world`,
 		},
 
 		// =================== MATH FILTERS ===================
@@ -202,7 +202,7 @@ func TestCoreTemplateEngine(t *testing.T) {
 		},
 		{
 			Name:     "Advanced list operations",
-			Template: `{{ items|list|unique|join(",") }}, {{ [1,2,3,4,5]|list|slice(1,4)|join("-") }}`,
+			Template: `{{ items|list|unique|join(",") }}, {{ [1,2,3,4,5][1:4]|join("-") }}`,
 			Context:  map[string]interface{}{"items": []int{1, 2, 2, 3}},
 			Expected: "1,2,3, 2-3-4",
 		},
@@ -218,13 +218,13 @@ func TestCoreTemplateEngine(t *testing.T) {
 			Name:     "HTML filters",
 			Template: `{{ html|escape }}, {{ html|safe }}, {{ html|striptags }}`,
 			Context:  map[string]interface{}{"html": "<b>test</b>"},
-			Expected: "&amp;lt;b&amp;gt;test&amp;lt;/b&amp;gt;, <b>test</b>, test",
+			Expected: "&lt;b&gt;test&lt;/b&gt;, <b>test</b>, test",
 		},
 		{
 			Name:     "URL filters",
 			Template: `{{ url|urlencode }}, {{ text|urlize }}`,
 			Context:  map[string]interface{}{"url": "hello world", "text": "Visit https://example.com"},
-			Expected: `hello+world, Visit <a href="https://example.com">https://example.com</a>`,
+			Expected: `hello%20world, Visit <a href="https://example.com" rel="noopener">https://example.com</a>`,
 		},
 
 		// =================== TYPE CONVERSION ===================
@@ -341,7 +341,7 @@ func TestCoreTemplateEngine(t *testing.T) {
 			Name:     "Raw blocks",
 			Template: `{% raw %}{{ not_rendered }} {% for x in y %}{% endraw %}`,
 			Context:  map[string]interface{}{},
-			Expected: "{{not_rendered}} {%forxiny%}",
+			Expected: "{{ not_rendered }} {% for x in y %}",
 		},
 		{
 			Name:     "Filter blocks",
@@ -373,7 +373,7 @@ func TestCoreTemplateEngine(t *testing.T) {
 			Name:     "Macro with defaults",
 			Template: `{% macro alert(msg, type="info") %}<div class="{{ type }}">{{ msg }}</div>{% endmacro %}{{ alert("Test") }}{{ alert("Error", "danger") }}`,
 			Context:  map[string]interface{}{},
-			Expected: `&lt;div class=&#34;info&#34;&gt;Test&lt;/div&gt;&lt;div class=&#34;danger&#34;&gt;Error&lt;/div&gt;`,
+			Expected: `<div class="info">Test</div><div class="danger">Error</div>`,
 		},
 		{
 			Name:     "Call blocks",
@@ -452,7 +452,6 @@ func TestCoreTemplateEngine(t *testing.T) {
 	// Execute all tests
 	t.Logf("Running %d comprehensive core engine tests...", len(allTests))
 	helpers.RenderTestCases(t, env, allTests)
-	t.Logf("✅ All %d core engine tests passed!", len(allTests))
 }
 
 // TestCoreEngineErrors covers all error cases in one comprehensive test
@@ -556,7 +555,6 @@ func TestCoreEngineErrors(t *testing.T) {
 
 	t.Logf("Running %d comprehensive error tests...", len(errorTests))
 	helpers.RenderTestCases(t, env, errorTests)
-	t.Logf("✅ All %d error tests passed!", len(errorTests))
 }
 
 // Helper functions are in tests/helpers package
