@@ -38,6 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `InvalidateTemplate(name)` also drops the cached chain (and merged template) of every template that extends `name`, directly or through a middle template; a child kept rendering the old parent until the cache TTL (15 minutes) or `ClearCache`.
 - `super()` in a block inside an extending template's top-level `{% for %}` or `{% with %}` (or in a grandchild's override of such a block) renders the parent block where the block runs and in the parent's slot; it failed with `super() call outside of block context`.
+- A `{{ super() }}` outside every block of an extending template or its parents (in a top-level macro, call block, set block or filter block) fails when it is evaluated, as in Jinja2 (`UndefinedError: 'super' is undefined`). In a parent template it rendered empty, so a template that relied on that now errors.
 - `super()` works inside an expression, as in Jinja2: `{{ super()|upper }}`, `{{ super() ~ '!' }}`, a macro argument, `{% set p = super() %}`, `{% if super() %}` and `{% elif %}`. The parent block renders each time such a `super()` is evaluated and not on a branch that is not taken. It used to fail with `super() call outside of block context`.
 - A block tag left open at the end of a template (`{% if %}` without `{% endif %}`, and so on) reports the line where the template ends; it said `line 0, column 0`.
 - `{% import %}` and `{% from … import %}` of a template that is missing or cannot be read name it once; the error said `failed to load template "x"` twice.

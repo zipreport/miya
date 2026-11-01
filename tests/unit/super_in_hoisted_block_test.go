@@ -67,6 +67,27 @@ func TestIssue15SuperInHoistedBlock(t *testing.T) {
 		{"set_block", "{% set x %}<{{ super() }}>{% endset %}{% block a %}{{ x }}{% endblock %}"},
 		{"macro_no_blocks", "{% macro m() %}<{{ super() }}>{% endmacro %}{% set y = m() %}"},
 	}
+	// the same in the root template, which rendered '' before
+	rootErrs := []struct{ name, base, child string }{
+		{"root_macro", "{% macro m() %}<{{ super() }}>{% endmacro %}{% block a %}{{ m() }}{% endblock %}", ""},
+		{"root_set_block", "{% set x %}<{{ super() }}>{% endset %}{% block a %}a{% endblock %}", "{% block a %}X{% endblock %}"},
+		{"root_call_block", "{% macro m() %}{{ caller() }}{% endmacro %}{% call m() %}<{{ super() }}>{% endcall %}{% block a %}a{% endblock %}", ""},
+		{"root_filter_block", "{% filter upper %}{{ super() }}{% endfilter %}{% block a %}a{% endblock %}", ""},
+	}
+	for _, tt := range rootErrs {
+		t.Run("outside_block_errors_"+tt.name, func(t *testing.T) {
+			sl := loader.NewStringLoader(loader.NewDirectTemplateParser())
+			sl.AddTemplate("base", tt.base)
+			sl.AddTemplate("child", ext+tt.child)
+			tmpl, err := miya.NewEnvironment(miya.WithLoader(sl)).GetTemplate("child")
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, err := tmpl.Render(miya.NewContext()); err == nil {
+				t.Errorf("want an error, got %q", got)
+			}
+		})
+	}
 	for _, tt := range errs {
 		t.Run("outside_block_errors_"+tt.name, func(t *testing.T) {
 			sl := loader.NewStringLoader(loader.NewDirectTemplateParser())
