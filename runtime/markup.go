@@ -1048,7 +1048,8 @@ func (e *DefaultEvaluator) mapMarkup(ctx Context, value interface{}, args []inte
 		if !again[i] {
 			continue
 		}
-		r, err := e.applyFilterWithMarkup(inner, it, args[1:], ctx, innerApply)
+		// each item gets its own copy, as a filter may change its args
+		r, err := e.applyFilterWithMarkup(inner, it, append([]interface{}(nil), args[1:]...), ctx, innerApply)
 		if err != nil {
 			return nil, err
 		}
@@ -1101,7 +1102,8 @@ func (e *DefaultEvaluator) mapMarkupWhole(ctx Context, value interface{}, args [
 		if !safe && !mapItemReappliable(it, inner) {
 			continue
 		}
-		r, err := e.applyFilterWithMarkup(inner, it, args[1:], ctx, innerApply)
+		// each item gets its own copy, as a filter may change its args
+		r, err := e.applyFilterWithMarkup(inner, it, append([]interface{}(nil), args[1:]...), ctx, innerApply)
 		if err != nil {
 			return nil, err
 		}

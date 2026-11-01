@@ -1,6 +1,7 @@
 package miya_test
 
 import (
+	"strings"
 	"testing"
 
 	miya "github.com/zipreport/miya"
@@ -29,5 +30,32 @@ func TestLoopReachedIndirectly(t *testing.T) {
 				t.Errorf("got %q, %v; want \"[1][2]\"", got, err)
 			}
 		})
+	}
+}
+
+// map gives each item its own args, so a filter that changes them does not
+// change what the next item gets.
+func TestMapArgsPerItem(t *testing.T) {
+	for _, autoescape := range []bool{false, true} {
+		env := miya.NewEnvironment(miya.WithAutoEscape(autoescape))
+		if err := env.AddFilter("mut", func(value interface{}, args ...interface{}) (interface{}, error) {
+			out := value.(string) + args[0].(string)
+			args[0] = "X"
+			return out, nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		for _, src := range []string{
+			"{{ ['b', 'c']|map('mut', 'y')|join(',') }}",
+			"{{ ['a'|safe, 'b', 'c']|map('mut', 'y')|join(',') }}",
+		} {
+			got, err := env.RenderString(src, miya.NewContext())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(got, "X") {
+				t.Errorf("autoescape=%v %s: got %q", autoescape, src, got)
+			}
+		}
 	}
 }
