@@ -355,6 +355,9 @@ func isNumberKind(v interface{}) bool {
 // unmarkArgs converts safe arguments, also inside a KwArgs, to plain strings
 // so Go filters that assert .(string) keep working.
 func unmarkArgs(args []interface{}) []interface{} {
+	if !anyMarked(args) {
+		return args
+	}
 	out := make([]interface{}, len(args))
 	for i, a := range args {
 		if kw, ok := a.(KwArgs); ok {
@@ -368,6 +371,31 @@ func unmarkArgs(args []interface{}) []interface{} {
 		out[i] = Unmark(a)
 	}
 	return out
+}
+
+// anyMarked reports whether Unmark would change any argument or keyword value.
+func anyMarked(args []interface{}) bool {
+	marked := func(v interface{}) bool {
+		if _, ok := AsMarkup(v); ok {
+			return true
+		}
+		_, _, ok := asEscaped(v)
+		return ok
+	}
+	for _, a := range args {
+		if kw, ok := a.(KwArgs); ok {
+			for _, v := range kw {
+				if marked(v) {
+					return true
+				}
+			}
+			continue
+		}
+		if marked(a) {
+			return true
+		}
+	}
+	return false
 }
 
 // escapeArgs prepares the arguments of a filter applied to a safe value:
@@ -1020,7 +1048,8 @@ func (e *DefaultEvaluator) mapMarkup(ctx Context, value interface{}, args []inte
 		if !again[i] {
 			continue
 		}
-		r, err := e.applyFilterWithMarkup(inner, it, args[1:], ctx, innerApply)
+		// each item gets its own copy, as a filter may change its args
+		r, err := e.applyFilterWithMarkup(inner, it, append([]interface{}(nil), args[1:]...), ctx, innerApply)
 		if err != nil {
 			return nil, err
 		}
@@ -1073,7 +1102,8 @@ func (e *DefaultEvaluator) mapMarkupWhole(ctx Context, value interface{}, args [
 		if !safe && !mapItemReappliable(it, inner) {
 			continue
 		}
-		r, err := e.applyFilterWithMarkup(inner, it, args[1:], ctx, innerApply)
+		// each item gets its own copy, as a filter may change its args
+		r, err := e.applyFilterWithMarkup(inner, it, append([]interface{}(nil), args[1:]...), ctx, innerApply)
 		if err != nil {
 			return nil, err
 		}

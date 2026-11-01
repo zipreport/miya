@@ -412,6 +412,9 @@ type ForNode struct {
 	Body      []Node
 	Else      []Node
 	Recursive bool
+	// LoopUnused is set by the parser when nothing in Body can read the loop
+	// variable, so the evaluator does not build it
+	LoopUnused bool
 }
 
 func NewForNode(variables []string, iterable ExpressionNode, line, column int) *ForNode {

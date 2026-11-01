@@ -70,3 +70,59 @@ func walkIdentifiers(v reflect.Value, fn func(string)) {
 		}
 	}
 }
+
+// bodyUsesLoop reports whether a for body may read the loop variable: it names
+// loop, or holds a block (a child template may override it with code that
+// names loop), an include or import (they run in the loop's scope) or an
+// extension tag.
+func bodyUsesLoop(body []Node) bool {
+	for _, n := range body {
+		if mayReadLoop(reflect.ValueOf(n)) {
+			return true
+		}
+	}
+	return false
+}
+
+// mayReadLoop walks v as bodyUsesLoop describes and stops at the first hit. A
+// nested loop was checked when it was parsed, so only the parts of it that run
+// in the outer loop's scope are walked again.
+func mayReadLoop(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Interface, reflect.Ptr:
+		if v.IsNil() {
+			return false
+		}
+		switch n := v.Interface().(type) {
+		case *IdentifierNode:
+			return n.Name == "loop"
+		case *BlockNode, *IncludeNode, *ImportNode, *FromNode, *ExtensionNode:
+			return true
+		case *ForNode:
+			return !n.LoopUnused || mayReadLoop(reflect.ValueOf(n.Iterable)) ||
+				mayReadLoop(reflect.ValueOf(n.Condition)) || mayReadLoop(reflect.ValueOf(n.Else))
+		}
+		return mayReadLoop(v.Elem())
+	case reflect.Struct:
+		t := v.Type()
+		for i := 0; i < v.NumField(); i++ {
+			if t.Field(i).IsExported() && mayReadLoop(v.Field(i)) {
+				return true
+			}
+		}
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			if mayReadLoop(v.Index(i)) {
+				return true
+			}
+		}
+	case reflect.Map:
+		iter := v.MapRange()
+		for iter.Next() {
+			if mayReadLoop(iter.Value()) {
+				return true
+			}
+		}
+	}
+	return false
+}
