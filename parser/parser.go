@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/zipreport/miya/lexer"
 )
@@ -590,9 +591,9 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 			ok := false
 			switch n := n.(type) {
 			case *TextNode:
-				ok = strings.TrimSpace(n.Content) == ""
+				ok = strings.TrimFunc(n.Content, isPySpace) == ""
 			case *RawNode:
-				ok = strings.TrimSpace(n.Content) == ""
+				ok = strings.TrimFunc(n.Content, isPySpace) == ""
 			}
 			if !ok {
 				return nil, p.error("required blocks can only contain comments or whitespace")
@@ -2458,4 +2459,10 @@ func (p *Parser) parseFilterBlock() (Node, error) {
 	p.advance() // consume '%}'
 
 	return filterBlockNode, nil
+}
+
+// isPySpace reports whether Python's str.isspace() counts r as whitespace:
+// Go's unicode.IsSpace plus the ASCII separators 0x1c-0x1f.
+func isPySpace(r rune) bool {
+	return unicode.IsSpace(r) || (r >= 0x1c && r <= 0x1f)
 }

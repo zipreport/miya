@@ -216,6 +216,7 @@ func (p *InheritanceProcessor) buildInheritanceHierarchy(template TemplateInterf
 		isFirstTemplate = false
 	}
 
+	p.clearSharedRequired(hierarchy)
 	return hierarchy, nil
 }
 
@@ -319,6 +320,7 @@ func (p *InheritanceProcessor) buildInheritanceHierarchyWithContext(template Tem
 		isFirstTemplate = false
 	}
 
+	p.clearSharedRequired(hierarchy)
 	return hierarchy, nil
 }
 
@@ -443,18 +445,44 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 		}
 	}
 
-	// A required block fails only when no other template in the chain
-	// defines it, as in Jinja2. Every block of finalTemplate is a copy.
-	if shared := sharedRequiredBlocks(hierarchy.Templates); len(shared) > 0 {
-		parser.WalkStatements(finalTemplate.Children, func(n parser.Node) bool {
-			if b, ok := n.(*parser.BlockNode); ok && shared[b.Name] {
-				b.Required = false
-			}
-			return true
-		})
-	}
-
 	return finalTemplate, nil
+}
+
+// clearSharedRequired replaces the templates of h with copies in which a
+// required block that another template of the chain also defines is not
+// required, as Jinja2 fails a required block only when it is the block's only
+// definition. Every merge (overrides, super(), hoisted code) reads the copies.
+func (p *InheritanceProcessor) clearSharedRequired(h *InheritanceHierarchy) {
+	shared := sharedRequiredBlocks(h.Templates)
+	if len(shared) == 0 {
+		return
+	}
+	copies := make(map[*parser.TemplateNode]*parser.TemplateNode)
+	for i, tmpl := range h.Templates {
+		c := parser.CloneStatement(tmpl).(*parser.TemplateNode)
+		clearRequired(c.Children, shared)
+		copies[tmpl] = c
+		h.Templates[i] = c
+	}
+	for name, tmpl := range h.TemplateMap {
+		h.TemplateMap[name] = copies[tmpl]
+	}
+	h.RootTemplate = copies[h.RootTemplate]
+	h.BlockMap = make(map[string]*parser.BlockNode)
+	for _, tmpl := range h.Templates {
+		p.extractBlocks(tmpl, h.BlockMap)
+	}
+}
+
+// clearRequired unsets Required on the blocks of nodes named in shared;
+// nodes must be copies.
+func clearRequired(nodes []parser.Node, shared map[string]bool) {
+	parser.WalkStatements(nodes, func(n parser.Node) bool {
+		if b, ok := n.(*parser.BlockNode); ok && shared[b.Name] {
+			b.Required = false
+		}
+		return true
+	})
 }
 
 // sharedRequiredBlocks returns the names of the required blocks that more than

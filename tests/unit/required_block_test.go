@@ -46,6 +46,15 @@ func TestIssue42RequiredBlocks(t *testing.T) {
 		{"block_named_required", map[string]string{"main": `[{% block required %}R{% endblock %}]`}, "[R]"},
 		{"named_endblock", map[string]string{"base": `[{% block x required %}{% endblock x %}]`, "main": `{% extends 'base' %}{% block x %}X{% endblock %}`}, "[X]"},
 		{"include_child", map[string]string{"base": `[{% block x required %}{% endblock %}]`, "c": `{% extends 'base' %}{% block x %}X{% endblock %}`, "main": `a{% include 'c' %}`}, "a[X]"},
+		{"super_expr_nested_required", map[string]string{"base": `[{% block outer %}<{% block inner %}b{% endblock %}>{% endblock %}]`, "main": `{% extends 'base' %}{% block outer %}{{ super()|upper }}{% endblock %}{% block inner required %}{% endblock %}`}, "[<>]"},
+		{"super_set_nested_required", map[string]string{"base": `[{% block outer %}<{% block inner %}b{% endblock %}>{% endblock %}]`, "main": `{% extends 'base' %}{% block outer %}{% set s = super() %}{{ s }}{% endblock %}{% block inner required %}{% endblock %}`}, "[<>]"},
+		{"super_expr_middle_redeclare", map[string]string{"base": `[{% block outer %}<{% block inner required %}{% endblock %}>{% endblock %}]`, "main": `{% extends 'mid' %}{% block outer %}{{ super()|upper }}{% endblock %}`, "mid": `{% extends 'base' %}{% block inner required %}{% endblock %}`}, "[<>]"},
+		{"super_inline_nested_required", map[string]string{"base": `[{% block outer %}<{% block inner %}b{% endblock %}>{% endblock %}]`, "main": `{% extends 'base' %}{% block outer %}{{ super() }}{% endblock %}{% block inner required %}{% endblock %}`}, "[<>]"},
+		{"hoisted_for_shared", map[string]string{"base": `[{% block x %}B{% endblock %}]`, "main": `{% extends 'base' %}{% for i in [1] %}{% block x required %}{% endblock %}{% endfor %}`}, "[]"},
+		{"hoisted_with_shared", map[string]string{"base": `[{% block x %}B{% endblock %}]`, "main": `{% extends 'base' %}{% with a = 1 %}{% block x required %}{% endblock %}{% endwith %}`}, "[]"},
+		{"import_hoisted_shared", map[string]string{"base": `[{% block x %}B{% endblock %}]`, "main": `{% import 'mod' as m %}{{ m.f() }}`, "mod": `{% extends 'base' %}{% for i in [1] %}{% block x required %}{% endblock %}{% endfor %}{% macro f() %}F{% endmacro %}`}, "F"},
+		{"ws_nbsp_override", map[string]string{"base": "[{% block x required %}\u00a0\u3000\u2028{% endblock %}]", "main": `{% extends 'base' %}{% block x %}X{% endblock %}`}, "[X]"},
+		{"dynamic_extends_middle_required", map[string]string{"base": `[{% block x %}B{% endblock %}]`, "main": `{% extends 'mid' ~ '' %}`, "mid": `{% extends 'base' %}{% block x required %}{% endblock %}`}, "[]"},
 	}
 	for _, tt := range renders {
 		t.Run(tt.name, func(t *testing.T) {
@@ -80,6 +89,10 @@ func TestIssue42RequiredBlocks(t *testing.T) {
 		{"import_module", map[string]string{"base": `{% macro f() %}F{% endmacro %}[{% block x required %}{% endblock %}]`, "main": `{% import 'base' as m %}ok{{ m.f() }}`}, "runtime"},
 		{"nested_in_override", map[string]string{"base": `[{% block outer %}O{% endblock %}]`, "main": `{% extends 'base' %}{% block outer %}<{% block x required %}{% endblock %}>{% endblock %}`}, "runtime"},
 		{"required_other_word", map[string]string{"main": `[{% block x requird %}{% endblock %}]`}, "syntax"},
+		{"hoisted_for_alone", map[string]string{"base": `[{% block x %}B{% endblock %}]`, "main": `{% extends 'base' %}{% for i in [1] %}{% block y required %}{% endblock %}{% endfor %}`}, "runtime"},
+		{"import_hoisted_alone", map[string]string{"base": `[{% block x %}B{% endblock %}]`, "main": `{% import 'mod' as m %}{{ m.f() }}`, "mod": `{% extends 'base' %}{% for i in [1] %}{% block y required %}{% endblock %}{% endfor %}{% macro f() %}F{% endmacro %}`}, "runtime"},
+		{"ws_x1c", map[string]string{"main": "[{% block x required %}\u001c\u001f {% endblock %}]"}, "runtime"},
+		{"ws_zwsp", map[string]string{"main": "[{% block x required %}\u200b{% endblock %}]"}, "syntax"},
 	}
 	for _, tt := range errs {
 		t.Run(tt.name, func(t *testing.T) {
@@ -90,7 +103,7 @@ func TestIssue42RequiredBlocks(t *testing.T) {
 			msg := err.Error()
 			switch tt.kind {
 			case "runtime":
-				if !strings.Contains(msg, `required block "x" not found`) {
+				if !strings.Contains(msg, `required block "`) || !strings.Contains(msg, `" not found`) {
 					t.Errorf("error does not say the required block is missing: %v", err)
 				}
 			case "syntax":
