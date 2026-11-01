@@ -25,6 +25,16 @@ var (
 	nodeFields sync.Map // reflect.Type -> []int
 )
 
+// superCycle stands where super() would render a parent block that is
+// already being rendered. It fails only when evaluated, as Jinja2 does.
+type superCycle struct {
+	block string
+}
+
+func (c *superCycle) String() string { return "super() cycle in block " + c.block }
+func (c *superCycle) Line() int      { return 0 }
+func (c *superCycle) Column() int    { return 0 }
+
 // SuperResolver handles {{ super() }} call resolution during inheritance processing
 type SuperResolver struct {
 	hierarchy *InheritanceHierarchy
@@ -33,6 +43,8 @@ type SuperResolver struct {
 
 	// Parent block cache for efficient super() resolution
 	parentBlockCache map[string]*parser.BlockNode
+	// parent blocks being resolved, to stop a super() cycle through nested blocks
+	resolving map[string]bool
 }
 
 // NewSuperResolver creates a new super() call resolver
@@ -42,6 +54,7 @@ func NewSuperResolver(hierarchy *InheritanceHierarchy, context Context, blockMap
 		context:          context,
 		blockMap:         blockMap,
 		parentBlockCache: make(map[string]*parser.BlockNode),
+		resolving:        make(map[string]bool),
 	}
 }
 
@@ -79,9 +92,13 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 		return node, nil
 
 	case *parser.BlockNode:
-		// Process block contents with the block name as context
+		// A block renders its most-derived definition, also inside parent
+		// block content, as Jinja2 does; its super() starts that block's chain
+		if derived, ok := s.blockMap[n.Name]; ok {
+			n = derived
+		}
 		block := parser.CloneStatement(n).(*parser.BlockNode)
-		body, err := s.resolveBody(block.Body, n.Name, depth, enclosing)
+		body, err := s.resolveBody(block.Body, n.Name, 0, enclosing)
 		if err != nil {
 			return nil, err
 		}
@@ -284,14 +301,21 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 		return &parser.TextNode{Content: ""}, nil
 	}
 
+	if s.resolving[cacheKey] {
+		return &superCycle{block: blockName}, nil
+	}
+	s.resolving[cacheKey] = true
+	defer delete(s.resolving, cacheKey)
+
 	// Process the parent block content for nested super() calls
-	resolvedParent, err := s.resolveSuperCallsRecursive(parentBlock, blockName, depth+1, nil)
+	resolvedParentBlock := parser.CloneStatement(parentBlock).(*parser.BlockNode)
+	body, err := s.resolveBody(resolvedParentBlock.Body, blockName, depth+1, nil)
 	if err != nil {
 		return nil, err
 	}
+	resolvedParentBlock.Body = body
 
 	// Cache the resolved parent block (not the original)
-	resolvedParentBlock := resolvedParent.(*parser.BlockNode)
 	s.parentBlockCache[cacheKey] = resolvedParentBlock
 
 	return s.cloneNodeForSuper(resolvedParentBlock)
