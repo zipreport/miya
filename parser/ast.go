@@ -469,6 +469,10 @@ type BlockNode struct {
 	// Required is set by {% block name required %}: rendering the block
 	// fails unless another template in the chain also defines it
 	Required bool
+	// Scoped is set by {% block name scoped %}: the block sees the variables
+	// around it; otherwise it sees only the template's top-level variables.
+	// It belongs to the block's position, so an override keeps it.
+	Scoped bool
 }
 
 func NewBlockNode(name string, line, column int) *BlockNode {

@@ -362,6 +362,7 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 }
 
 func (e *DefaultEvaluator) EvalTemplateNode(node *parser.TemplateNode, ctx Context) (interface{}, error) {
+	ctx.SetVariable(templateFrameVar, ctx)
 	return e.evalNodeList(node.Children, ctx)
 }
 
@@ -1178,10 +1179,23 @@ func (e *DefaultEvaluator) EvalBlockNode(node *parser.BlockNode, ctx Context) (i
 			scope = &autoescapeContext{Context: scope, autoescape: on}
 		}
 		scope.SetVariable(blockEntryVar, entry)
+		scope.SetVariable(templateFrameVar, entry)
 		return e.evalNodeList(node.Body, scope)
 	}
-	scope := childScope(withBaseAutoescape(ctx))
-	scope.SetVariable(blockEntryVar, ctx)
+	// An unscoped block sees the template's top-level variables only
+	base := ctx
+	if !node.Scoped {
+		if v, ok := ctx.GetVariable(templateFrameVar); ok {
+			if frame, ok := v.(Context); ok {
+				base = frame
+			}
+		}
+	}
+	scope := childScope(withBaseAutoescape(base))
+	scope.SetVariable(blockEntryVar, base)
+	// Blocks nested in this one are scoped from what this one was given, as
+	// a Jinja2 block passes its (derived) context on
+	scope.SetVariable(templateFrameVar, base)
 	return e.evalNodeList(node.Body, scope)
 }
 

@@ -625,7 +625,9 @@ func (p *InheritanceProcessor) applyOverridesRecursive(node parser.Node, overrid
 		for i, child := range *body {
 			if block, ok := child.(*parser.BlockNode); ok {
 				if override, exists := overrides[block.Name]; exists {
-					(*body)[i] = parser.CloneStatement(override)
+					c := parser.CloneStatement(override).(*parser.BlockNode)
+					c.Scoped = block.Scoped
+					(*body)[i] = c
 					continue
 				}
 			}
@@ -798,6 +800,7 @@ func (p *InheritanceProcessor) replaceSuperInNode(node parser.Node) (parser.Node
 			Name:     n.Name,
 			Body:     newBody,
 			Required: n.Required,
+			Scoped:   n.Scoped,
 		}, nil
 
 	case *parser.SuperNode:

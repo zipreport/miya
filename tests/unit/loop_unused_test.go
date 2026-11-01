@@ -14,7 +14,7 @@ func TestLoopReachedIndirectly(t *testing.T) {
 	sl := loader.NewStringLoader(loader.NewDirectTemplateParser())
 	sl.AddTemplate("inc", "[{{ loop.index }}]")
 	sl.AddTemplate("mod", "{% set n = loop.index %}")
-	sl.AddTemplate("base", "{% for i in [1, 2] %}{% block b %}{% endblock %}{% endfor %}")
+	sl.AddTemplate("base", "{% for i in [1, 2] %}{% block b scoped %}{% endblock %}{% endfor %}")
 	sl.AddTemplate("block", "{% extends 'base' %}{% block b %}[{{ loop.index }}]{% endblock %}")
 	sl.AddTemplate("include", "{% for i in [1, 2] %}{% include 'inc' %}{% endfor %}")
 	sl.AddTemplate("import", "{% for i in [1, 2] %}{% import 'mod' as m with context %}[{{ m.n }}]{% endfor %}")
