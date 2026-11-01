@@ -391,6 +391,8 @@ func (p *Parser) parseForStatement() (Node, error) {
 		}
 	}
 
+	forNode.LoopUnused = !recursive && !bodyUsesLoop(forNode.Body)
+
 	// Check for else clause
 	if p.check(lexer.TokenBlockStart) || p.check(lexer.TokenBlockStartTrim) {
 		if p.peekBlockType() == lexer.TokenElse {

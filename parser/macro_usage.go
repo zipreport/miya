@@ -70,3 +70,29 @@ func walkIdentifiers(v reflect.Value, fn func(string)) {
 		}
 	}
 }
+
+// bodyUsesLoop reports whether a for body may read the loop variable: it names
+// loop, or holds a block (a child template may override it with code that
+// names loop), an include or import (they run in the loop's scope) or an
+// extension tag.
+func bodyUsesLoop(body []Node) bool {
+	uses := false
+	WalkStatements(body, func(n Node) bool {
+		switch n.(type) {
+		case *BlockNode, *IncludeNode, *ImportNode, *FromNode, *ExtensionNode:
+			uses = true
+		}
+		return !uses
+	})
+	for _, n := range body {
+		if uses {
+			break
+		}
+		walkIdentifiers(reflect.ValueOf(n), func(name string) {
+			if name == "loop" {
+				uses = true
+			}
+		})
+	}
+	return uses
+}

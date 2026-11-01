@@ -773,12 +773,13 @@ func (p *InheritanceProcessor) replaceSuperInNode(node parser.Node) (parser.Node
 			newElse[i] = replacedChild
 		}
 		return &parser.ForNode{
-			Variables: n.Variables,
-			Iterable:  n.Iterable,
-			Body:      newBody,
-			Else:      newElse,
-			Condition: n.Condition,
-			Recursive: n.Recursive,
+			Variables:  n.Variables,
+			Iterable:   n.Iterable,
+			Body:       newBody,
+			Else:       newElse,
+			Condition:  n.Condition,
+			Recursive:  n.Recursive,
+			LoopUnused: n.LoopUnused,
 		}, nil
 
 	default:

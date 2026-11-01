@@ -992,128 +992,132 @@ func (e *DefaultEvaluator) evalFor(node *parser.ForNode, ctx Context, depth int)
 			}
 		}
 
-		// Use the pre-calculated depth
+		// A body that cannot read loop gets none
+		if !node.LoopUnused {
+			// Use the pre-calculated depth
 
-		// Determine previtem and nextitem
-		var previtem, nextitem interface{}
-		if i > 0 {
-			previtem = filteredItems[i-1]
-		}
-		if i < len(filteredItems)-1 {
-			nextitem = filteredItems[i+1]
-		}
-
-		// Create cycle function for this loop
-		cycleFunc := func(values ...interface{}) (interface{}, error) {
-			if len(values) == 0 {
-				return nil, fmt.Errorf("cycle() requires at least one argument")
+			// Determine previtem and nextitem
+			var previtem, nextitem interface{}
+			if i > 0 {
+				previtem = filteredItems[i-1]
 			}
-			cycleIndex := i % len(values)
-			return values[cycleIndex], nil
-		}
+			if i < len(filteredItems)-1 {
+				nextitem = filteredItems[i+1]
+			}
 
-		// Create changed function for tracking value changes between iterations
-		changedFunc := func(values ...interface{}) (interface{}, error) {
-			if i == 0 {
-				// First iteration, nothing to compare to - always considered changed
+			// Create cycle function for this loop
+			cycleFunc := func(values ...interface{}) (interface{}, error) {
+				if len(values) == 0 {
+					return nil, fmt.Errorf("cycle() requires at least one argument")
+				}
+				cycleIndex := i % len(values)
+				return values[cycleIndex], nil
+			}
+
+			// Create changed function for tracking value changes between iterations
+			changedFunc := func(values ...interface{}) (interface{}, error) {
+				if i == 0 {
+					// First iteration, nothing to compare to - always considered changed
+					previousChanged = make(map[string]interface{})
+					for j, val := range values {
+						key := fmt.Sprintf("val_%d", j)
+						previousChanged[key] = val
+					}
+					return true, nil
+				}
+
+				// Check if any values have changed
+				hasChanged := false
+				if len(values) != len(previousChanged) {
+					hasChanged = true
+				} else {
+					for j, val := range values {
+						key := fmt.Sprintf("val_%d", j)
+						if prevVal, exists := previousChanged[key]; !exists || !e.equal(prevVal, val) {
+							hasChanged = true
+							break
+						}
+					}
+				}
+
+				// Update previous values for next iteration
 				previousChanged = make(map[string]interface{})
 				for j, val := range values {
 					key := fmt.Sprintf("val_%d", j)
 					previousChanged[key] = val
 				}
-				return true, nil
+
+				return hasChanged, nil
 			}
 
-			// Check if any values have changed
-			hasChanged := false
-			if len(values) != len(previousChanged) {
-				hasChanged = true
+			// Every iteration gets its own map: a template can keep a reference to
+			// `loop`, so it must never be shared or recycled.
+			loopInfo := make(map[string]interface{}, 12)
+
+			// Fill in the loop values
+			loopInfo["index"] = i + 1
+			loopInfo["index0"] = i
+			loopInfo["revindex"] = len(filteredItems) - i
+			loopInfo["revindex0"] = len(filteredItems) - i - 1
+			loopInfo["first"] = i == 0
+			loopInfo["last"] = i == len(filteredItems)-1
+			loopInfo["length"] = len(filteredItems)
+			loopInfo["depth"] = depth
+			loopInfo["depth0"] = depth - 1
+			loopInfo["previtem"] = previtem
+			loopInfo["nextitem"] = nextitem
+			if markupContext(ctx) {
+				loopInfo["cycle"] = KeepMarkupFunc(cycleFunc)
 			} else {
-				for j, val := range values {
-					key := fmt.Sprintf("val_%d", j)
-					if prevVal, exists := previousChanged[key]; !exists || !e.equal(prevVal, val) {
-						hasChanged = true
-						break
+				loopInfo["cycle"] = cycleFunc
+			}
+			loopInfo["changed"] = changedFunc
+
+			// Add recursive loop function if this is a recursive loop
+			if node.Recursive {
+				recursiveFunc := func(newIterable interface{}) (interface{}, error) {
+					leave, err := e.enter("recursive loop")
+					if err != nil {
+						return nil, err
 					}
+					defer leave()
+
+					// Handle undefined or nil iterables - just return empty string
+					if IsUndefined(newIterable) || newIterable == nil {
+						return e.markIfSafe("", ctx), nil
+					}
+
+					// Create a new for node with the same structure but new iterable
+					literalNode := &parser.LiteralNode{
+						Value: newIterable,
+					}
+					recursiveNode := &parser.ForNode{
+						Variables: node.Variables,
+						Iterable:  literalNode,
+						Body:      node.Body,
+						Else:      node.Else,
+						Recursive: true,
+						Condition: node.Condition,
+					}
+					r, err := e.evalFor(recursiveNode, ctx, depth+1)
+					if err != nil {
+						return r, err
+					}
+					// The iteration output is template output of the loop's own context;
+					// the call site must not decide again.
+					return e.markIfSafe(ToString(r), ctx), nil
 				}
+
+				// Create a callable loop object that supports both property access and function calls
+				callableLoop := &CallableLoop{
+					Info:          loopInfo,
+					RecursiveFunc: recursiveFunc,
+				}
+				loopCtx.SetVariable("loop", callableLoop)
+			} else {
+				loopCtx.SetVariable("loop", loopInfo)
 			}
 
-			// Update previous values for next iteration
-			previousChanged = make(map[string]interface{})
-			for j, val := range values {
-				key := fmt.Sprintf("val_%d", j)
-				previousChanged[key] = val
-			}
-
-			return hasChanged, nil
-		}
-
-		// Every iteration gets its own map: a template can keep a reference to
-		// `loop`, so it must never be shared or recycled.
-		loopInfo := make(map[string]interface{}, 12)
-
-		// Fill in the loop values
-		loopInfo["index"] = i + 1
-		loopInfo["index0"] = i
-		loopInfo["revindex"] = len(filteredItems) - i
-		loopInfo["revindex0"] = len(filteredItems) - i - 1
-		loopInfo["first"] = i == 0
-		loopInfo["last"] = i == len(filteredItems)-1
-		loopInfo["length"] = len(filteredItems)
-		loopInfo["depth"] = depth
-		loopInfo["depth0"] = depth - 1
-		loopInfo["previtem"] = previtem
-		loopInfo["nextitem"] = nextitem
-		if markupContext(ctx) {
-			loopInfo["cycle"] = KeepMarkupFunc(cycleFunc)
-		} else {
-			loopInfo["cycle"] = cycleFunc
-		}
-		loopInfo["changed"] = changedFunc
-
-		// Add recursive loop function if this is a recursive loop
-		if node.Recursive {
-			recursiveFunc := func(newIterable interface{}) (interface{}, error) {
-				leave, err := e.enter("recursive loop")
-				if err != nil {
-					return nil, err
-				}
-				defer leave()
-
-				// Handle undefined or nil iterables - just return empty string
-				if IsUndefined(newIterable) || newIterable == nil {
-					return e.markIfSafe("", ctx), nil
-				}
-
-				// Create a new for node with the same structure but new iterable
-				literalNode := &parser.LiteralNode{
-					Value: newIterable,
-				}
-				recursiveNode := &parser.ForNode{
-					Variables: node.Variables,
-					Iterable:  literalNode,
-					Body:      node.Body,
-					Else:      node.Else,
-					Recursive: true,
-					Condition: node.Condition,
-				}
-				r, err := e.evalFor(recursiveNode, ctx, depth+1)
-				if err != nil {
-					return r, err
-				}
-				// The iteration output is template output of the loop's own context;
-				// the call site must not decide again.
-				return e.markIfSafe(ToString(r), ctx), nil
-			}
-
-			// Create a callable loop object that supports both property access and function calls
-			callableLoop := &CallableLoop{
-				Info:          loopInfo,
-				RecursiveFunc: recursiveFunc,
-			}
-			loopCtx.SetVariable("loop", callableLoop)
-		} else {
-			loopCtx.SetVariable("loop", loopInfo)
 		}
 
 		result, err := e.evalNodeList(node.Body, loopCtx)
