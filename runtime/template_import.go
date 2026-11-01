@@ -175,17 +175,18 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 		return nil
 	}
 	nodes := tmpl.Children
-	for _, child := range nodes {
-		if ext, ok := child.(*parser.ExtendsNode); ok {
-			// Only the child's own top-level code runs; the parent's does not.
-			// Jinja2 runs the parent, so a parent that fails to load fails
-			// the import.
-			if err := is.loadParents(ext); err != nil {
-				return err
-			}
-			nodes = topLevelCode(tmpl)
-			break
+	flat, ext, err := parentExtends(tmpl, namespace.Context, evaluator)
+	if err != nil {
+		return err
+	}
+	if ext != nil {
+		// Only the child's own top-level code runs; the parent's does not.
+		// Jinja2 runs the parent, so a parent that fails to load fails
+		// the import.
+		if err := is.loadParents(ext, namespace.Context, evaluator); err != nil {
+			return err
 		}
+		nodes = topLevelCode(flat)
 	}
 	assigned := make(map[string]bool)
 	if err := is.runModuleNodes(nodes, namespace, evaluator, assigned); err != nil {
@@ -202,18 +203,18 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 	return nil
 }
 
-// loadParents loads each template up the {% extends %} chain from ext. A
-// parent named by an expression is not followed.
-func (is *ImportSystem) loadParents(ext *parser.ExtendsNode) error {
+// loadParents loads each template up the {% extends %} chain from ext,
+// evaluating a parent named by an expression or chosen by an {% if %} with ctx.
+func (is *ImportSystem) loadParents(ext *parser.ExtendsNode, ctx Context, eval Evaluator) error {
 	seen := make(map[string]bool)
 	for ext != nil {
-		lit, ok := ext.Template.(*parser.LiteralNode)
-		if !ok {
-			return nil
+		v, err := eval.EvalNode(ext.Template, ctx)
+		if err != nil {
+			return fmt.Errorf("failed to evaluate dynamic template name: %w", err)
 		}
-		name, ok := lit.Value.(string)
+		name, ok := v.(string)
 		if !ok {
-			return nil
+			return fmt.Errorf("dynamic template name must be a string, got %T", v)
 		}
 		if seen[name] {
 			return fmt.Errorf("circular inheritance detected: %s", name)
@@ -230,12 +231,8 @@ func (is *ImportSystem) loadParents(ext *parser.ExtendsNode) error {
 		if ast == nil {
 			return fmt.Errorf("failed to load template %q: the loader returned no template", name)
 		}
-		ext = nil
-		for _, child := range ast.Children {
-			if e, ok := child.(*parser.ExtendsNode); ok {
-				ext = e
-				break
-			}
+		if _, ext, err = parentExtends(ast, ctx, eval); err != nil {
+			return err
 		}
 	}
 	return nil

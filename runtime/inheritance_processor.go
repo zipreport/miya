@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -89,27 +90,22 @@ func (p *InheritanceProcessor) ResolveInheritanceWith(template TemplateInterface
 		if err != nil {
 			return nil, fmt.Errorf("failed to build inheritance hierarchy: %w", err)
 		}
-	} else if templateName == "<string>" {
-		// Every FromString template has this name, so the cache cannot tell them apart
+	} else if cachedHierarchy, found := p.cache.GetHierarchy(templateName); found && templateName != "<string>" {
+		return p.cachedFinalTemplate(cachedHierarchy, context)
+	} else {
 		hierarchy, err = p.buildInheritanceHierarchy(template)
+		if errors.Is(err, errNeedsContext) {
+			// A conditional {% extends %} picks the parent per render
+			hierarchy, err = p.buildInheritanceHierarchyWithContext(template, context, eval)
+		} else if err == nil && templateName != "<string>" {
+			// Every FromString template is named "<string>", so the cache
+			// cannot tell them apart
+			p.cache.StoreHierarchy(templateName, hierarchy)
+			return p.cachedFinalTemplate(hierarchy, context)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("failed to build inheritance hierarchy: %w", err)
 		}
-	} else {
-		// Static inheritance - can use caching
-		if cachedHierarchy, found := p.cache.GetHierarchy(templateName); found {
-			hierarchy = cachedHierarchy
-		} else {
-			// Build inheritance hierarchy
-			hierarchy, err = p.buildInheritanceHierarchy(template)
-			if err != nil {
-				return nil, fmt.Errorf("failed to build inheritance hierarchy: %w", err)
-			}
-
-			// Cache the hierarchy for future use
-			p.cache.StoreHierarchy(templateName, hierarchy)
-		}
-		return p.cachedFinalTemplate(hierarchy, context)
 	}
 
 	// Resolve blocks and build final template
@@ -179,6 +175,12 @@ func (p *InheritanceProcessor) buildInheritanceHierarchy(template TemplateInterf
 		templateNames[current.Name()] = true
 
 		ast := current.AST()
+		if hasConditionalExtends(ast) {
+			return nil, errNeedsContext
+		}
+		if _, _, err := parentExtends(ast, nil, nil); err != nil {
+			return nil, err
+		}
 		hierarchy.Templates = append(hierarchy.Templates, ast)
 		hierarchy.TemplateMap[current.Name()] = ast
 
@@ -276,7 +278,12 @@ func (p *InheritanceProcessor) buildInheritanceHierarchyWithContext(template Tem
 		}
 		templateNames[current.Name()] = true
 
-		ast := current.AST()
+		// The {% extends %} the render runs, with a conditional one's taken
+		// branch moved to the top level
+		ast, _, err := parentExtends(current.AST(), context, eval)
+		if err != nil {
+			return nil, err
+		}
 		hierarchy.Templates = append(hierarchy.Templates, ast)
 		hierarchy.TemplateMap[current.Name()] = ast
 
