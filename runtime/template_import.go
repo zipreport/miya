@@ -193,6 +193,7 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 			clearRequired(nodes, shared)
 		}
 	}
+	namespace.Context.SetVariable(templateFrameVar, namespace.Context)
 	assigned := make(map[string]bool)
 	if err := is.runModuleNodes(nodes, namespace, evaluator, assigned); err != nil {
 		return err

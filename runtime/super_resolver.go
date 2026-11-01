@@ -12,6 +12,11 @@ import (
 // parent block from. It is not a valid template identifier.
 const superCaptureVar = "super()"
 
+// templateFrameVar holds, in a template's top-level scope, that scope: an
+// unscoped block is scoped from it, as a Jinja2 block gets only the template
+// context.
+const templateFrameVar = "template()"
+
 // blockEntryVar holds, in a block's scope, the context the block was entered
 // from. It is not a valid template identifier.
 const blockEntryVar = "block()"
@@ -108,10 +113,12 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 	case *parser.BlockNode:
 		// A block renders its most-derived definition, also inside parent
 		// block content, as Jinja2 does; its super() starts that block's chain
+		scoped := n.Scoped
 		if derived, ok := s.blockMap[n.Name]; ok {
 			n = derived
 		}
 		block := parser.CloneStatement(n).(*parser.BlockNode)
+		block.Scoped = scoped
 		body, err := s.resolveBody(block.Body, n.Name, 0, enclosing)
 		if err != nil {
 			return nil, err

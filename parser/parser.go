@@ -551,9 +551,10 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 	}
 	blockName := p.advance().Value
 
-	// "scoped" is accepted; blocks always see the variables around them
+	scoped := false
 	if p.check(lexer.TokenIdentifier) && p.peek().Value == "scoped" {
 		p.advance()
+		scoped = true
 	}
 	required := false
 	if p.check(lexer.TokenIdentifier) && p.peek().Value == "required" {
@@ -568,6 +569,7 @@ func (p *Parser) parseBlockDefinition() (Node, error) {
 
 	blockNode := NewBlockNode(blockName, blockToken.Line, blockToken.Column)
 	blockNode.Required = required
+	blockNode.Scoped = scoped
 
 	// Parse block body
 	for !p.isAtEnd() {
