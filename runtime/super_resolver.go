@@ -39,8 +39,10 @@ var (
 // being resolved further out. When evaluated it renders that block's content,
 // so a condition around it decides how deep the recursion goes, as in Jinja2.
 type superCycle struct {
-	block   string
-	content *superContent
+	block    string
+	template string // where the statement holding the super() closing the cycle is
+	line     int
+	content  *superContent
 }
 
 // superContent is a parent block's resolved content, set once its resolution
@@ -53,12 +55,14 @@ type superContent struct {
 // outer levels of the cycle return it as it is, so a wrapper inside the cycle
 // (a macro, a set body) does not repeat once per level.
 type superCycleError struct {
-	block string
-	err   error
+	block    string
+	template string
+	line     int
+	err      error
 }
 
 func (e *superCycleError) Error() string {
-	return fmt.Sprintf("super() in block %q renders itself: %v", e.block, e.err)
+	return fmt.Sprintf("super() in block %q renders itself in template %q at line %d: %v", e.block, e.template, e.line, e.err)
 }
 
 func (e *superCycleError) Unwrap() error { return e.err }
@@ -82,7 +86,7 @@ func (m *superMissing) Line() int   { return m.line }
 func (m *superMissing) Column() int { return 0 }
 
 func (c *superCycle) String() string { return "super() cycle in block " + c.block }
-func (c *superCycle) Line() int      { return 0 }
+func (c *superCycle) Line() int      { return c.line }
 func (c *superCycle) Column() int    { return 0 }
 
 // SuperResolver handles {{ super() }} call resolution during inheritance processing
@@ -116,10 +120,6 @@ func (s *SuperResolver) ResolveSuperCalls(node parser.Node, currentBlockName str
 
 // resolveSuperCallsRecursive recursively processes super() calls with depth tracking
 func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBlockName string, depth int, enclosing *bool) (parser.Node, error) {
-	if depth > 10 {
-		return nil, fmt.Errorf("super() call depth exceeded (possible infinite recursion)")
-	}
-
 	if currentBlockName == "" && isWholeSuper(node) {
 		// outside a block super() has no parent block; it fails when evaluated
 		return node, nil
@@ -213,7 +213,10 @@ func (s *SuperResolver) resolveBody(body []parser.Node, currentBlockName string,
 			if err != nil {
 				return nil, false, err
 			}
-			if m, ok := parent.(*superMissing); ok {
+			switch m := parent.(type) {
+			case *superMissing:
+				m.line = child.Line()
+			case *superCycle:
 				m.line = child.Line()
 			}
 			parent = s.withParentEscaping(parent, child, enclosing)
@@ -252,11 +255,14 @@ func replaced(resolved, child parser.Node) bool {
 }
 
 // atSuper records on a missing parent block where its super sits, and whether
-// it is called.
+// it is called, and on a cycle where its super sits.
 func atSuper(resolved parser.Node, sn *parser.SuperNode) parser.Node {
-	if m, ok := resolved.(*superMissing); ok {
+	switch m := resolved.(type) {
+	case *superMissing:
 		m.line = sn.Line()
 		m.bare = sn.Bare
+	case *superCycle:
+		m.line = sn.Line()
 	}
 	return resolved
 }
@@ -419,7 +425,7 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 	}
 
 	if content, ok := s.resolving[cacheKey]; ok {
-		return &superCycle{block: blockName, content: content}, nil
+		return &superCycle{block: blockName, template: s.templateOfBlock(blockName), content: content}, nil
 	}
 	content := &superContent{}
 	s.resolving[cacheKey] = content
@@ -456,6 +462,18 @@ func (s *SuperResolver) findParentBlockAtDepth(blockName string, depth int) (*pa
 
 	// Return the parent block at the target depth
 	return blockHierarchy[targetIndex], nil
+}
+
+// templateOfBlock names the template holding the most derived definition of a
+// block. A super() cycle always closes there: a nested block restarts its
+// chain at depth 0, which is checked before any deeper level.
+func (s *SuperResolver) templateOfBlock(blockName string) string {
+	for _, template := range s.hierarchy.Templates {
+		if s.findBlockInTemplate(template, blockName) != nil {
+			return template.Name
+		}
+	}
+	return ""
 }
 
 // buildBlockHierarchy builds a hierarchy of blocks with the same name
