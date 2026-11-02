@@ -9,14 +9,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - `{% block name required %}` (and `{% block name scoped required %}`), as in Jinja2: a required block may hold only whitespace and comments, and rendering it fails with `required block "name" not found` unless another template in the chain also defines it. `parser.BlockNode.Required` holds the flag. See #42.
+- `parser.CopyStatement`, which copies one statement (and an if's elif branches) and shares its statement lists; `parser.CloneStatement` still copies the lists at every depth.
 
 ### Changed
 
 - **Breaking:** a `{% block %}` without `scoped` sees only the template's top-level variables (render variables, globals and top-level `{% set %}`), as in Jinja2: the loop variable and `loop` of an enclosing `{% for %}`, `{% with %}` names, macro arguments and an outer block's `{% set %}` are no longer visible inside it. A `scoped` block sees them as before. The flag belongs to the block's position, so an override of a block in a parent's loop sees the loop variables only when the parent's block is `scoped`. To migrate, add `scoped` to the parent's `{% block %}` where its content (or an override) reads such a variable. `parser.BlockNode.Scoped` holds the flag. See #40.
+- The tree `InheritanceProcessor.ResolveInheritance`/`ResolveInheritanceWith` and `SuperResolver.ProcessTemplateWithSuperCalls`/`ResolveSuperCalls` return may be their input itself, or share statements and statement lists with it and with the parsed templates, where `super()` resolution changed nothing; a parent block rendered by several `super()` calls appears once, reachable from each call. Treat the tree as read-only, and do not walk it with a plain recursive walk, which visits a shared block once per call. See #36.
 
 ### Fixed
 
 - An `{% extends %}` inside `{% if %}` (or `elif`/`else`, nested ifs included) is run when its branch is taken, as in Jinja2, so `{% if not standalone %}{% extends 'base.html' %}{% endif %}` picks the parent per render; it was ignored and the template rendered without its parent. Blocks in the branches not taken still override the parent's. On import, the module's conditional or dynamic `{% extends %}` is followed with the module's context, so a missing parent fails the import. A template that extends twice, on render or import, fails with `extended multiple times`, and `{% extends 1 %}` fails on import as on render; both used to be accepted (render used the first parent). See #28.
+- A block override that calls `super()` more than once no longer doubles the merged template for every level of nested blocks: the parent block is built once and shared by its `super()` calls, so 24 nested blocks with two calls each build in under a millisecond instead of 13 seconds. A `FromString` child, which is rebuilt on every render, no longer copies every statement of the template when it calls `super()`. Parent content that holds a `super()` cycle to an outer block is still rebuilt at each call (#35). See #36.
 
 ## [v0.3.0]
 
