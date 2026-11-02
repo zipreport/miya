@@ -94,9 +94,9 @@ func TestIssue13SuperNestedOverrides(t *testing.T) {
 		}
 	})
 
-	// a parent block resolved inside a cycle is not reused where it is no
-	// cycle, whatever the order of the blocks
-	t.Run("cycle_not_reused_outside_it", func(t *testing.T) {
+	// a parent block resolved inside a cycle renders the same content where
+	// it is no cycle, whatever the order of the blocks
+	t.Run("cycle_content_reused_outside_it", func(t *testing.T) {
 		tmpl, err := issue13Env(map[string]string{
 			"base":  "{% block a %}A{% if t1 %}{% block b %}B{% endblock %}{% endif %}{% endblock %}|{% block c %}{% endblock %}",
 			"mid":   "{% extends 'base' %}{% block c %}{% block b %}u({% if t2 %}{% block a %}ua{{ super() }}{% endblock %}{% endif %}){% endblock %}{% endblock %}",
