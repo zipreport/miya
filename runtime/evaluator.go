@@ -328,7 +328,7 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 	case *superCycle:
 		leave, err := e.enter("super()")
 		if err != nil {
-			return nil, &superCycleError{block: n.block, err: err}
+			return nil, &superCycleError{block: n.block, template: n.template, line: n.line, err: err}
 		}
 		defer leave()
 		out, err := e.EvalNode(n.content.node, ctx)
@@ -338,7 +338,7 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 			if errors.As(err, &cycle) {
 				return nil, cycle
 			}
-			return nil, &superCycleError{block: n.block, err: err}
+			return nil, &superCycleError{block: n.block, template: n.template, line: n.line, err: err}
 		}
 		return out, err
 	case *parser.SuperNode:
