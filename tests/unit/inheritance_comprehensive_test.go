@@ -416,9 +416,10 @@ func TestInheritanceErrorHandling(t *testing.T) {
 			errorContains: "super",
 		},
 		{
-			name:        "super call in base template",
-			template:    `{% block content %}{{ super() }}{% endblock %}`,
-			expectError: false, // Should handle gracefully
+			name:          "super call in base template",
+			template:      `{% block content %}{{ super() }}{% endblock %}`,
+			expectError:   true, // Jinja2 3.1.6: UndefinedError
+			errorContains: "there is no parent block called 'content'",
 		},
 	}
 

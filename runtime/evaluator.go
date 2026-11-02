@@ -320,6 +320,11 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 		return e.EvalExtendsNode(n, ctx)
 	case *parser.IncludeNode:
 		return e.EvalIncludeNode(n, ctx)
+	case *superMissing:
+		if n.bare {
+			return e.superUndefined(n, false)
+		}
+		return nil, n.err()
 	case *superCycle:
 		leave, err := e.enter("super()")
 		if err != nil {
@@ -457,6 +462,14 @@ func (e *DefaultEvaluator) evalLookup(expr parser.Node, ctx Context) (interface{
 			return unbox(v), nil
 		}
 		return NewUndefined(n.Name, behavior, n), nil
+	case *parser.SuperNode:
+		if v, ok := ctx.GetVariable(superCaptureVar); ok && n.Bare {
+			if d, ok := v.(*deferredSuper); ok {
+				if m, missing := d.node.(*superMissing); missing {
+					return e.superUndefined(m, true)
+				}
+			}
+		}
 	case *parser.AttributeNode:
 		if isListMethodName(n.Attribute) {
 			if raw, ok := e.rawOperand(n.Object, ctx); ok {
@@ -1502,6 +1515,9 @@ func (e *DefaultEvaluator) EvalSuperNode(node *parser.SuperNode, ctx Context) (i
 	// own super() calls, so the child's binding is put back afterwards.
 	if v, ok := ctx.GetVariable(superCaptureVar); ok {
 		if d, ok := v.(*deferredSuper); ok {
+			if m, missing := d.node.(*superMissing); missing && node.Bare {
+				return e.superUndefined(m, false)
+			}
 			out, err := e.EvalNode(d.node, ctx)
 			ctx.SetVariable(superCaptureVar, d)
 			if err != nil {
@@ -1513,6 +1529,21 @@ func (e *DefaultEvaluator) EvalSuperNode(node *parser.SuperNode, ctx Context) (i
 	// A whole-expression {{ super() }} is replaced by the inheritance
 	// resolver; reaching here means the call wasn't resolved.
 	return "", fmt.Errorf("super() call outside of block context")
+}
+
+// superUndefined is a bare super where there is no parent block. With strict
+// undefined behaviour evaluating it fails, except for a lookup such as
+// "is defined", which sees it undefined. Jinja2 fails only where the value is
+// printed, tested or operated on; storing it in a variable fails here too.
+func (e *DefaultEvaluator) superUndefined(m *superMissing, lookup bool) (interface{}, error) {
+	behavior := UndefinedSilent
+	if e.undefinedHandler != nil {
+		behavior = e.undefinedHandler.GetUndefinedBehavior()
+	}
+	if behavior == UndefinedStrict && !lookup {
+		return nil, m.err()
+	}
+	return NewUndefined("super", behavior, m), nil
 }
 
 func (e *DefaultEvaluator) EvalMacroNode(node *parser.MacroNode, ctx Context) (interface{}, error) {

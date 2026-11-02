@@ -180,6 +180,16 @@ func (is *ImportSystem) extractNamespaceContent(node parser.Node, namespace *Tem
 	}
 	// The conditions around an {% extends %} are evaluated once, here
 	nodes := flat.Children
+	if ext == nil && flat.MentionsSuper {
+		// A super() in a block of a module without a parent fails when it
+		// is evaluated, as it does when the template is rendered
+		h := &InheritanceHierarchy{Templates: []*parser.TemplateNode{flat}, RootTemplate: flat}
+		resolved, err := NewSuperResolver(h, namespace.Context, nil).ProcessTemplateWithSuperCalls(flat)
+		if err != nil {
+			return err
+		}
+		nodes = resolved.Children
+	}
 	if ext != nil {
 		// Only the child's own top-level code runs; the parent's does not.
 		// Jinja2 runs the parent, so a parent that fails to load fails

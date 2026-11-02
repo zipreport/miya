@@ -131,14 +131,14 @@ func TestInheritanceFixes(t *testing.T) {
 		}
 	})
 
-	// A template without a parent takes the replaceSuperInNode path; a
-	// recursive loop must stay recursive there.
+	// A template without a parent that calls super() is resolved too; a
+	// recursive loop the resolver copies must stay recursive.
 	t.Run("super_without_parent_keeps_recursive", func(t *testing.T) {
 		tree := []interface{}{map[string]interface{}{"v": 1, "c": []interface{}{
 			map[string]interface{}{"v": 2, "c": []interface{}{map[string]interface{}{"v": 3}}},
 		}}}
 		got, err := renderInherited(t, map[string]string{
-			"main": "{% for n in tree recursive %}{{ n.v }}{% if n.c %}({{ loop(n.c) }}){% endif %}{% endfor %}{% block b %}{{ super() }}{% endblock %}",
+			"main": "{% block b %}{% for n in tree recursive %}{{ n.v }}{% if n.c %}({{ loop(n.c) }}){% endif %}{% if false %}{{ super() }}{% endif %}{% endfor %}{% endblock %}",
 		}, map[string]interface{}{"tree": tree})
 		if err != nil {
 			t.Fatal(err)

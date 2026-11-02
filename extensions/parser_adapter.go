@@ -205,6 +205,7 @@ func (eap *ExtensionAwareParser) Parse() (*parser.TemplateNode, error) {
 	if err := parser.CheckDuplicateBlocks(template); err != nil {
 		return nil, err
 	}
+	template.MentionsSuper = eap.MentionsSuper()
 
 	return template, nil
 }

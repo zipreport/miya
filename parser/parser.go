@@ -16,12 +16,17 @@ type Parser struct {
 	current int
 	errors  []string
 	depth   int // nesting of parsePrimary/parseBlockStatement calls
+	// mentionsSuper records that super was parsed, for TemplateNode.MentionsSuper
+	mentionsSuper bool
 }
 
 // maxParseDepth bounds expression and statement nesting so a deeply nested
 // template returns an error instead of overflowing the goroutine stack.
 // Jinja2 itself fails at about 100 levels, so no working template comes close.
 const maxParseDepth = 500
+
+// MentionsSuper reports whether super has been parsed so far.
+func (p *Parser) MentionsSuper() bool { return p.mentionsSuper }
 
 func (p *Parser) enterNesting() error {
 	p.depth++
@@ -73,6 +78,7 @@ func (p *Parser) Parse() (*TemplateNode, error) {
 	if err := CheckDuplicateBlocks(template); err != nil {
 		return nil, err
 	}
+	template.MentionsSuper = p.mentionsSuper
 
 	return template, nil
 }
@@ -1478,6 +1484,7 @@ func (p *Parser) parsePostfixOps(expr ExpressionNode, withFilters bool) (Express
 				p.advance() // consume ')'
 
 				// Return the original SuperNode, don't wrap it in CallNode
+				superNode.Bare = false
 				expr = superNode
 			} else {
 				// Function call for non-super expressions
@@ -1661,7 +1668,10 @@ func (p *Parser) parsePrimary() (ExpressionNode, error) {
 
 	case lexer.TokenSuper:
 		token := p.advance()
-		return NewSuperNode(token.Line, token.Column), nil
+		p.mentionsSuper = true
+		n := NewSuperNode(token.Line, token.Column)
+		n.Bare = true
+		return n, nil
 
 	case lexer.TokenLeftParen:
 		open := p.advance() // consume '('

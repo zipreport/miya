@@ -143,6 +143,18 @@ func (p *InheritanceProcessor) cachedFinalTemplate(hierarchy *InheritanceHierarc
 
 // hasInheritanceDirectives checks if template contains {% extends %} directives or {{ super() }} calls
 func (p *InheritanceProcessor) hasInheritanceDirectives(node parser.Node) bool {
+	return UsesInheritance(node)
+}
+
+// UsesInheritance reports whether a template has an {% extends %} or uses
+// super anywhere, as a whole expression or inside one. Such a template is
+// rendered through the inheritance processor. A parsed template records super
+// in TemplateNode.MentionsSuper; for a tree built in code a whole {{ super() }}
+// is looked for.
+func UsesInheritance(node parser.Node) bool {
+	if t, ok := node.(*parser.TemplateNode); ok && t.MentionsSuper {
+		return true
+	}
 	found := false
 	parser.WalkStatements([]parser.Node{node}, func(n parser.Node) bool {
 		switch n := n.(type) {
@@ -156,6 +168,16 @@ func (p *InheritanceProcessor) hasInheritanceDirectives(node parser.Node) bool {
 		return !found
 	})
 	return found
+}
+
+// mentionsSuper reports whether any parsed template of the chain uses super.
+func mentionsSuper(templates []*parser.TemplateNode) bool {
+	for _, t := range templates {
+		if t.MentionsSuper {
+			return true
+		}
+	}
+	return false
 }
 
 // buildInheritanceHierarchy builds the complete inheritance chain
@@ -424,25 +446,24 @@ func (p *InheritanceProcessor) buildFinalTemplate(hierarchy *InheritanceHierarch
 	}
 
 	// Check if final template needs super() resolution
-	// Only resolve super() calls if we have actual inheritance (multiple templates)
-	hasSuperCalls := detector.HasSuperCalls(finalTemplate)
+	hasSuperCalls := mentionsSuper(hierarchy.Templates) || detector.HasSuperCalls(finalTemplate)
 	if !hasSuperCalls && len(hierarchy.Templates) > 1 {
 		hasSuperCalls = overridesCallSuper(hierarchy)
 	}
-	if hasSuperCalls && len(hierarchy.Templates) > 1 {
-		// Resolve all super() calls in the final template
+	if hasSuperCalls {
+		if len(hierarchy.Templates) == 1 {
+			if err := p.validateSuperCallsOutsideBlocksForBaseTemplate(finalTemplate, ""); err != nil {
+				return nil, fmt.Errorf("failed to resolve super() calls: %w", err)
+			}
+		}
+		// Resolve all super() calls in the final template; in a template with
+		// no parent, each one fails when it is evaluated
 		superResolver := NewSuperResolver(hierarchy, context, hierarchy.BlockMap)
 		resolvedTemplate, err := superResolver.ProcessTemplateWithSuperCalls(finalTemplate)
 		if err != nil {
 			return nil, fmt.Errorf("failed to resolve super() calls: %w", err)
 		}
 		finalTemplate = resolvedTemplate
-	} else if hasSuperCalls && len(hierarchy.Templates) == 1 {
-		// For single templates (base templates), replace super() calls with empty content
-		finalTemplate, err = p.replaceSuperCallsWithEmpty(finalTemplate)
-		if err != nil {
-			return nil, fmt.Errorf("failed to replace super() calls: %w", err)
-		}
 	}
 
 	return finalTemplate, nil
@@ -666,33 +687,6 @@ func (p *InheritanceProcessor) validateSuperCallsInTemplateWithHierarchy(templat
 	return p.validateSuperCallsInNodeWithHierarchy(template, "", hierarchy)
 }
 
-// replaceSuperCallsWithEmpty replaces all super() calls with empty text nodes
-func (p *InheritanceProcessor) replaceSuperCallsWithEmpty(template *parser.TemplateNode) (*parser.TemplateNode, error) {
-	// For base templates, we still need to validate that super() calls are inside blocks
-	// But we handle super() calls inside blocks gracefully (replace with empty content)
-	err := p.validateSuperCallsOutsideBlocksForBaseTemplate(template, "")
-	if err != nil {
-		return nil, err
-	}
-
-	// Clone the template
-	newTemplate := &parser.TemplateNode{
-		Name:     template.Name,
-		Children: make([]parser.Node, len(template.Children)),
-	}
-
-	// Process each child node - replace super() calls with empty content
-	for i, child := range template.Children {
-		replacedChild, err := p.replaceSuperInNode(child)
-		if err != nil {
-			return nil, err
-		}
-		newTemplate.Children[i] = replacedChild
-	}
-
-	return newTemplate, nil
-}
-
 // validateSuperCallsOutsideBlocksForBaseTemplate validates super() calls for base templates
 func (p *InheritanceProcessor) validateSuperCallsOutsideBlocksForBaseTemplate(node parser.Node, currentBlockName string) error {
 	if node == nil {
@@ -709,8 +703,8 @@ func (p *InheritanceProcessor) validateSuperCallsOutsideBlocksForBaseTemplate(no
 		}
 
 	case *parser.BlockNode:
-		// Inside a block - super() calls will be gracefully handled (replaced with empty)
-		// No need to validate further inside blocks for base templates
+		// Inside a block super() is resolved, and fails when evaluated
+		// without a parent block
 		return nil
 
 	case *parser.SuperNode:
@@ -764,112 +758,6 @@ func (p *InheritanceProcessor) validateSuperCallsOutsideBlocksForBaseTemplate(no
 	}
 
 	return nil
-}
-
-// replaceSuperInNode recursively replaces super() calls with empty text nodes
-func (p *InheritanceProcessor) replaceSuperInNode(node parser.Node) (parser.Node, error) {
-	if node == nil {
-		return nil, nil
-	}
-
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		newChildren := make([]parser.Node, len(n.Children))
-		for i, child := range n.Children {
-			replacedChild, err := p.replaceSuperInNode(child)
-			if err != nil {
-				return nil, err
-			}
-			newChildren[i] = replacedChild
-		}
-		return &parser.TemplateNode{
-			Name:     n.Name,
-			Children: newChildren,
-		}, nil
-
-	case *parser.BlockNode:
-		newBody := make([]parser.Node, len(n.Body))
-		for i, child := range n.Body {
-			replacedChild, err := p.replaceSuperInNode(child)
-			if err != nil {
-				return nil, err
-			}
-			newBody[i] = replacedChild
-		}
-		return &parser.BlockNode{
-			Name:     n.Name,
-			Body:     newBody,
-			Required: n.Required,
-			Scoped:   n.Scoped,
-		}, nil
-
-	case *parser.SuperNode:
-		// Replace super() call with empty text
-		return &parser.TextNode{Content: ""}, nil
-
-	case *parser.VariableNode:
-		// Check if this is {{ super() }} wrapped in VariableNode
-		if _, isSuperNode := n.Expression.(*parser.SuperNode); isSuperNode {
-			// Replace {{ super() }} with empty text
-			return &parser.TextNode{Content: ""}, nil
-		}
-		// For other variable nodes, return as-is
-		return node, nil
-
-	case *parser.IfNode:
-		newBody := make([]parser.Node, len(n.Body))
-		for i, child := range n.Body {
-			replacedChild, err := p.replaceSuperInNode(child)
-			if err != nil {
-				return nil, err
-			}
-			newBody[i] = replacedChild
-		}
-		newElse := make([]parser.Node, len(n.Else))
-		for i, child := range n.Else {
-			replacedChild, err := p.replaceSuperInNode(child)
-			if err != nil {
-				return nil, err
-			}
-			newElse[i] = replacedChild
-		}
-		return &parser.IfNode{
-			Condition: n.Condition,
-			Body:      newBody,
-			Else:      newElse,
-		}, nil
-
-	case *parser.ForNode:
-		newBody := make([]parser.Node, len(n.Body))
-		for i, child := range n.Body {
-			replacedChild, err := p.replaceSuperInNode(child)
-			if err != nil {
-				return nil, err
-			}
-			newBody[i] = replacedChild
-		}
-		newElse := make([]parser.Node, len(n.Else))
-		for i, child := range n.Else {
-			replacedChild, err := p.replaceSuperInNode(child)
-			if err != nil {
-				return nil, err
-			}
-			newElse[i] = replacedChild
-		}
-		return &parser.ForNode{
-			Variables:  n.Variables,
-			Iterable:   n.Iterable,
-			Body:       newBody,
-			Else:       newElse,
-			Condition:  n.Condition,
-			Recursive:  n.Recursive,
-			LoopUnused: n.LoopUnused,
-		}, nil
-
-	default:
-		// For other node types, return as-is
-		return node, nil
-	}
 }
 
 // validateSuperCallsInNodeWithHierarchy recursively validates super() calls with hierarchy context

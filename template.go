@@ -272,7 +272,7 @@ func (t *Template) hasInheritanceDirectives() bool {
 	t.cacheMu.RUnlock()
 
 	// Compute result (outside lock to avoid holding lock during traversal)
-	result := t.hasInheritanceDirectivesInNode(t.ast)
+	result := runtime.UsesInheritance(t.ast)
 
 	// Cache the result with write lock
 	t.cacheMu.Lock()
@@ -285,78 +285,6 @@ func (t *Template) hasInheritanceDirectives() bool {
 	t.cacheMu.Unlock()
 
 	return result
-}
-
-// hasInheritanceDirectivesInNode recursively checks for inheritance directives
-func (t *Template) hasInheritanceDirectivesInNode(node parser.Node) bool {
-	if node == nil {
-		return false
-	}
-
-	switch n := node.(type) {
-	case *parser.TemplateNode:
-		for _, child := range n.Children {
-			if t.hasInheritanceDirectivesInNode(child) {
-				return true
-			}
-		}
-
-	case *parser.ExtendsNode:
-		return true
-
-	case *parser.SuperNode:
-		return true
-
-	case *parser.VariableNode:
-		// Check if this is {{ super() }} wrapped in VariableNode
-		if _, isSuperNode := n.Expression.(*parser.SuperNode); isSuperNode {
-			return true
-		}
-		// Recursively check the expression
-		if t.hasInheritanceDirectivesInNode(n.Expression) {
-			return true
-		}
-
-	case *parser.BlockNode:
-		for _, child := range n.Body {
-			if t.hasInheritanceDirectivesInNode(child) {
-				return true
-			}
-		}
-
-	case *parser.ForNode:
-		for _, child := range n.Body {
-			if t.hasInheritanceDirectivesInNode(child) {
-				return true
-			}
-		}
-
-	case *parser.IfNode:
-		for _, child := range n.Body {
-			if t.hasInheritanceDirectivesInNode(child) {
-				return true
-			}
-		}
-		for _, child := range n.Else {
-			if t.hasInheritanceDirectivesInNode(child) {
-				return true
-			}
-		}
-		for _, elseIf := range n.ElseIfs {
-			if t.hasInheritanceDirectivesInNode(elseIf) {
-				return true
-			}
-		}
-
-	// Add more node types that might contain super() calls
-	case parser.ExpressionNode:
-		// Handle any other expression nodes generically
-		// This catches cases where super() might be nested in other expressions
-		if _, isSuperNode := n.(*parser.SuperNode); isSuperNode {
-			return true
-		}
-	}
-	return false
 }
 
 // environmentAdapter adapts Environment to runtime.EnvironmentInterface
