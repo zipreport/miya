@@ -34,11 +34,33 @@ var (
 	nodeFields sync.Map // reflect.Type -> []int
 )
 
-// superCycle stands where super() would render a parent block that is
-// already being rendered. It fails only when evaluated, as Jinja2 does.
+// superCycle stands where super() would render a parent block that is still
+// being resolved further out. When evaluated it renders that block's content,
+// so a condition around it decides how deep the recursion goes, as in Jinja2.
 type superCycle struct {
-	block string
+	block   string
+	content *superContent
 }
+
+// superContent is a parent block's resolved content, set once its resolution
+// finishes.
+type superContent struct {
+	node parser.Node
+}
+
+// superCycleError is the error of a super() cycle that nothing stopped. The
+// outer levels of the cycle return it as it is, so a wrapper inside the cycle
+// (a macro, a set body) does not repeat once per level.
+type superCycleError struct {
+	block string
+	err   error
+}
+
+func (e *superCycleError) Error() string {
+	return fmt.Sprintf("super() in block %q renders itself: %v", e.block, e.err)
+}
+
+func (e *superCycleError) Unwrap() error { return e.err }
 
 func (c *superCycle) String() string { return "super() cycle in block " + c.block }
 func (c *superCycle) Line() int      { return 0 }
@@ -52,12 +74,9 @@ type SuperResolver struct {
 
 	// Parent block cache for efficient super() resolution
 	parentBlockCache map[string]*parser.BlockNode
-	// parent blocks being resolved, by position on the resolution stack, to
-	// stop a super() cycle through nested blocks
-	resolving map[string]int
-	// lowestCycle is the lowest stack position a superCycle made while
-	// resolving the current parent block points at; -1 when none
-	lowestCycle int
+	// parent blocks being resolved, to stop a super() cycle through nested
+	// blocks
+	resolving map[string]*superContent
 }
 
 // NewSuperResolver creates a new super() call resolver
@@ -67,8 +86,7 @@ func NewSuperResolver(hierarchy *InheritanceHierarchy, context Context, blockMap
 		context:          context,
 		blockMap:         blockMap,
 		parentBlockCache: make(map[string]*parser.BlockNode),
-		resolving:        make(map[string]int),
-		lowestCycle:      -1,
+		resolving:        make(map[string]*superContent),
 	}
 }
 
@@ -356,16 +374,11 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 		return &parser.TextNode{Content: ""}, nil
 	}
 
-	if pos, ok := s.resolving[cacheKey]; ok {
-		if s.lowestCycle < 0 || pos < s.lowestCycle {
-			s.lowestCycle = pos
-		}
-		return &superCycle{block: blockName}, nil
+	if content, ok := s.resolving[cacheKey]; ok {
+		return &superCycle{block: blockName, content: content}, nil
 	}
-	pos := len(s.resolving)
-	s.resolving[cacheKey] = pos
-	outerCycle := s.lowestCycle
-	s.lowestCycle = -1
+	content := &superContent{}
+	s.resolving[cacheKey] = content
 	defer delete(s.resolving, cacheKey)
 
 	// Process the parent block content for nested super() calls
@@ -376,16 +389,12 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 	}
 	resolvedParentBlock.Body = body
 
-	// Content with a cycle back to a block resolved further out is a cycle
-	// only under that block, so it is not cached
-	if s.lowestCycle < 0 || s.lowestCycle >= pos {
-		s.parentBlockCache[cacheKey] = resolvedParentBlock
-		s.lowestCycle = outerCycle
-	} else if outerCycle >= 0 && outerCycle < s.lowestCycle {
-		s.lowestCycle = outerCycle
-	}
-
-	return s.cloneNodeForSuper(resolvedParentBlock)
+	// A cycle back to this block renders the same content, so the content
+	// does not depend on where it was resolved and is always cached
+	s.parentBlockCache[cacheKey] = resolvedParentBlock
+	resolved, err := s.cloneNodeForSuper(resolvedParentBlock)
+	content.node = resolved
+	return resolved, err
 }
 
 // findParentBlockAtDepth searches the inheritance hierarchy for the parent block at a specific depth

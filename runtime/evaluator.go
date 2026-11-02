@@ -321,7 +321,21 @@ func (e *DefaultEvaluator) EvalNode(node parser.Node, ctx Context) (interface{},
 	case *parser.IncludeNode:
 		return e.EvalIncludeNode(n, ctx)
 	case *superCycle:
-		return nil, fmt.Errorf("super() in block %q renders itself", n.block)
+		leave, err := e.enter("super()")
+		if err != nil {
+			return nil, &superCycleError{block: n.block, err: err}
+		}
+		defer leave()
+		out, err := e.EvalNode(n.content.node, ctx)
+		if errors.Is(err, ErrMaxRecursion) {
+			// the limit may be hit inside the cycle by a macro or include
+			var cycle *superCycleError
+			if errors.As(err, &cycle) {
+				return nil, cycle
+			}
+			return nil, &superCycleError{block: n.block, err: err}
+		}
+		return out, err
 	case *parser.SuperNode:
 		return e.EvalSuperNode(n, ctx)
 	case *parser.MacroNode:
