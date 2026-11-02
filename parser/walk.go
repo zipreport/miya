@@ -39,10 +39,12 @@ func ChildBodies(n Node) []*[]Node {
 	return nil
 }
 
-// CloneStatement returns a copy of n whose statement lists, at every depth, are
-// new slices, so the copy's bodies can be changed without changing n.
-// Expressions and leaf statements are shared with n.
-func CloneStatement(n Node) Node {
+// CopyStatement returns a copy of n that shares n's statement lists: setting
+// a body of the copy (through ChildBodies) leaves n unchanged, but the shared
+// lists themselves must not be changed. An if's elif branches are copied too,
+// so their bodies can be set the same way. Leaf statements and expressions
+// are returned as is.
+func CopyStatement(n Node) Node {
 	var c Node
 	switch n := n.(type) {
 	case *TemplateNode:
@@ -89,6 +91,14 @@ func CloneStatement(n Node) Node {
 	default:
 		return n
 	}
+	return c
+}
+
+// CloneStatement returns a copy of n whose statement lists, at every depth, are
+// new slices, so the copy's bodies can be changed without changing n.
+// Expressions and leaf statements are shared with n.
+func CloneStatement(n Node) Node {
+	c := CopyStatement(n)
 	for _, body := range ChildBodies(c) {
 		cloned := make([]Node, len(*body))
 		for i, child := range *body {

@@ -117,9 +117,9 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 		if derived, ok := s.blockMap[n.Name]; ok {
 			n = derived
 		}
-		block := parser.CloneStatement(n).(*parser.BlockNode)
+		block := parser.CopyStatement(n).(*parser.BlockNode)
 		block.Scoped = scoped
-		body, err := s.resolveBody(block.Body, n.Name, 0, enclosing)
+		body, _, err := s.resolveBody(block.Body, n.Name, 0, enclosing)
 		if err != nil {
 			return nil, err
 		}
@@ -127,20 +127,36 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 		return block, nil
 
 	default:
-		if len(parser.ChildBodies(node)) == 0 {
+		bodies := parser.ChildBodies(node)
+		if len(bodies) == 0 {
 			return node, nil
 		}
-		clone := parser.CloneStatement(node)
-		if ae, ok := clone.(*parser.AutoescapeNode); ok {
+		if ae, ok := node.(*parser.AutoescapeNode); ok {
 			on := ae.Enabled
 			enclosing = &on
 		}
-		for _, body := range parser.ChildBodies(clone) {
-			resolved, err := s.resolveBody(*body, currentBlockName, depth, enclosing)
+		var resolved [][]parser.Node
+		for i, body := range bodies {
+			r, changed, err := s.resolveBody(*body, currentBlockName, depth, enclosing)
 			if err != nil {
 				return nil, err
 			}
-			*body = resolved
+			if changed && resolved == nil {
+				resolved = make([][]parser.Node, len(bodies))
+				for j := 0; j < i; j++ {
+					resolved[j] = *bodies[j]
+				}
+			}
+			if resolved != nil {
+				resolved[i] = r
+			}
+		}
+		if resolved == nil {
+			return node, nil
+		}
+		clone := parser.CopyStatement(node)
+		for i, body := range parser.ChildBodies(clone) {
+			*body = resolved[i]
 		}
 		return clone, nil
 	}
@@ -149,26 +165,50 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 // resolveBody resolves super() calls in a statement list. Before a statement
 // whose expressions call super() it binds superCaptureVar to the parent block
 // content, which EvalSuperNode renders where super() is evaluated.
-func (s *SuperResolver) resolveBody(body []parser.Node, currentBlockName string, depth int, enclosing *bool) ([]parser.Node, error) {
-	out := make([]parser.Node, 0, len(body))
-	for _, child := range body {
+// It returns body itself, and false, when no statement changed.
+func (s *SuperResolver) resolveBody(body []parser.Node, currentBlockName string, depth int, enclosing *bool) ([]parser.Node, bool, error) {
+	var out []parser.Node
+	for i, child := range body {
+		var bind parser.Node
 		// outside a block super() has no parent to bind; it fails when evaluated
 		if currentBlockName != "" && !isWholeSuper(child) && expressionsCallSuper(reflect.ValueOf(child)) {
 			parent, err := s.resolveSuperCall(currentBlockName, depth)
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 			parent = s.withParentEscaping(parent, child, enclosing)
 			value := parser.NewLiteralNode(&deferredSuper{node: parent}, "", child.Line(), child.Column())
-			out = append(out, parser.NewSetNode(superCaptureVar, value, child.Line(), child.Column()))
+			bind = parser.NewSetNode(superCaptureVar, value, child.Line(), child.Column())
 		}
 		resolved, err := s.resolveSuperCallsRecursive(child, currentBlockName, depth, enclosing)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
-		out = append(out, resolved)
+		if out == nil && (bind != nil || replaced(resolved, child)) {
+			out = make([]parser.Node, i, len(body)+1)
+			copy(out, body[:i])
+		}
+		if out != nil {
+			if bind != nil {
+				out = append(out, bind)
+			}
+			out = append(out, resolved)
+		}
 	}
-	return out, nil
+	if out == nil {
+		return body, false, nil
+	}
+	return out, true, nil
+}
+
+// replaced reports whether the resolver returned a different node for child.
+// The resolver replaces only pointer nodes; a node of another type (only an
+// extension can make one) may not be comparable, so it is not compared.
+func replaced(resolved, child parser.Node) bool {
+	if t := reflect.TypeOf(child); t == nil || t.Kind() != reflect.Ptr {
+		return false
+	}
+	return resolved != child
 }
 
 // isWholeSuper reports whether n is a {{ super() }} statement, which is
@@ -301,7 +341,7 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 
 	// Check cache first
 	if cached, exists := s.parentBlockCache[cacheKey]; exists {
-		// Return a deep copy of cached content
+		// Share the cached content
 		return s.cloneNodeForSuper(cached)
 	}
 
@@ -329,8 +369,8 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 	defer delete(s.resolving, cacheKey)
 
 	// Process the parent block content for nested super() calls
-	resolvedParentBlock := parser.CloneStatement(parentBlock).(*parser.BlockNode)
-	body, err := s.resolveBody(resolvedParentBlock.Body, blockName, depth+1, nil)
+	resolvedParentBlock := parser.CopyStatement(parentBlock).(*parser.BlockNode)
+	body, _, err := s.resolveBody(resolvedParentBlock.Body, blockName, depth+1, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +437,9 @@ func (s *SuperResolver) findBlockRecursive(node parser.Node, blockName string) *
 	return found
 }
 
-// cloneNodeForSuper creates a deep copy of a node for super() resolution
+// cloneNodeForSuper wraps a resolved parent block's body in a block named
+// superCaptureVar. Every super() that renders the block shares the body: the
+// merged template is not changed once built.
 func (s *SuperResolver) cloneNodeForSuper(node parser.Node) (parser.Node, error) {
 	switch n := node.(type) {
 	case *parser.BlockNode:
@@ -407,13 +449,8 @@ func (s *SuperResolver) cloneNodeForSuper(node parser.Node) (parser.Node, error)
 			return &parser.TextNode{Content: ""}, nil
 		}
 
-		clonedChildren := make([]parser.Node, len(n.Body))
-		for i, child := range n.Body {
-			clonedChildren[i] = parser.CloneStatement(child)
-		}
-
 		parent := parser.NewBlockNode(superCaptureVar, n.Line(), n.Column())
-		parent.Body = clonedChildren
+		parent.Body = n.Body
 		return parent, nil
 
 	default:
