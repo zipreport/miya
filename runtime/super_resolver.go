@@ -29,6 +29,7 @@ type deferredSuper struct {
 
 var (
 	nodeSliceType = reflect.TypeOf([]parser.Node(nil))
+	parserPkgPath = reflect.TypeOf(parser.SuperNode{}).PkgPath()
 	// nodeFields caches, per AST struct type, the exported fields that can
 	// hold a node; the walk runs on every statement of every hierarchy build.
 	nodeFields sync.Map // reflect.Type -> []int
@@ -61,6 +62,24 @@ func (e *superCycleError) Error() string {
 }
 
 func (e *superCycleError) Unwrap() error { return e.err }
+
+// superMissing stands where super() would render a parent block that does not
+// exist. It fails only when evaluated, so a super() in an untaken branch
+// renders, as in Jinja2. A bare super there is undefined instead, so
+// {% if super is defined %} guards the call.
+type superMissing struct {
+	block string
+	line  int
+	bare  bool
+}
+
+func (m *superMissing) String() string { return "super() without parent in block " + m.block }
+
+func (m *superMissing) err() error {
+	return fmt.Errorf("there is no parent block called '%s' at line %d", m.block, m.line)
+}
+func (m *superMissing) Line() int   { return m.line }
+func (m *superMissing) Column() int { return 0 }
 
 func (c *superCycle) String() string { return "super() cycle in block " + c.block }
 func (c *superCycle) Line() int      { return 0 }
@@ -113,17 +132,17 @@ func (s *SuperResolver) resolveSuperCallsRecursive(node parser.Node, currentBloc
 		if err != nil {
 			return nil, err
 		}
-		return s.withParentEscaping(resolved, n, enclosing), nil
+		return s.withParentEscaping(atSuper(resolved, n), n, enclosing), nil
 
 	case *parser.VariableNode:
 		// Check if this is {{ super() }} or {{ super }} wrapped in VariableNode
-		if _, isSuperNode := n.Expression.(*parser.SuperNode); isSuperNode {
+		if sn, isSuperNode := n.Expression.(*parser.SuperNode); isSuperNode {
 			// Replace the VariableNode containing SuperNode with resolved content
 			resolved, err := s.resolveSuperCall(currentBlockName, depth)
 			if err != nil {
 				return nil, err
 			}
-			return s.withParentEscaping(resolved, n, enclosing), nil
+			return s.withParentEscaping(atSuper(resolved, sn), n, enclosing), nil
 		}
 		// Not a super call - return as-is
 		return node, nil
@@ -194,6 +213,9 @@ func (s *SuperResolver) resolveBody(body []parser.Node, currentBlockName string,
 			if err != nil {
 				return nil, false, err
 			}
+			if m, ok := parent.(*superMissing); ok {
+				m.line = child.Line()
+			}
 			parent = s.withParentEscaping(parent, child, enclosing)
 			value := parser.NewLiteralNode(&deferredSuper{node: parent}, "", child.Line(), child.Column())
 			bind = parser.NewSetNode(superCaptureVar, value, child.Line(), child.Column())
@@ -229,6 +251,16 @@ func replaced(resolved, child parser.Node) bool {
 	return resolved != child
 }
 
+// atSuper records on a missing parent block where its super sits, and whether
+// it is called.
+func atSuper(resolved parser.Node, sn *parser.SuperNode) parser.Node {
+	if m, ok := resolved.(*superMissing); ok {
+		m.line = sn.Line()
+		m.bare = sn.Bare
+	}
+	return resolved
+}
+
 // isWholeSuper reports whether n is a {{ super() }} statement, which is
 // replaced by the parent block content inline.
 func isWholeSuper(n parser.Node) bool {
@@ -250,14 +282,27 @@ func expressionsCallSuper(v reflect.Value) bool {
 		if v.IsNil() {
 			return false
 		}
-		switch v.Interface().(type) {
+		switch n := v.Interface().(type) {
 		case *parser.SuperNode:
 			return true
+		case *parser.ExtensionNode:
+			// its properties hold the extension's own values, not expressions
+			for _, a := range n.Arguments {
+				if expressionsCallSuper(reflect.ValueOf(a)) {
+					return true
+				}
+			}
+			return false
 		case *parser.IdentifierNode, *parser.TextNode, *parser.LiteralNode:
 			return false
 		}
 		return expressionsCallSuper(v.Elem())
 	case reflect.Struct:
+		// a node type defined outside the parser, such as an extension's,
+		// may refer back to itself
+		if v.Type().PkgPath() != parserPkgPath {
+			return false
+		}
 		for _, i := range fieldsHoldingNodes(v.Type()) {
 			if expressionsCallSuper(v.Field(i)) {
 				return true
@@ -340,7 +385,7 @@ func fieldsHoldingNodes(t reflect.Type) []int {
 // node with the render's base setting when a child {% autoescape %} around the
 // super() call would otherwise change how the parent block escapes.
 func (s *SuperResolver) withParentEscaping(resolved parser.Node, at parser.Node, enclosing *bool) parser.Node {
-	if enclosing == nil {
+	if _, missing := resolved.(*superMissing); enclosing == nil || missing {
 		return resolved
 	}
 	on, _, _ := resolveEscape(s.context)
@@ -370,8 +415,7 @@ func (s *SuperResolver) resolveSuperCall(blockName string, depth int) (parser.No
 	}
 
 	if parentBlock == nil {
-		// No parent block found - return empty text node
-		return &parser.TextNode{Content: ""}, nil
+		return &superMissing{block: blockName}, nil
 	}
 
 	if content, ok := s.resolving[cacheKey]; ok {

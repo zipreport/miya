@@ -132,7 +132,7 @@ func TestLoopUnderExtends(t *testing.T) {
 		{"filter_under_extends", `{% extends 'base' %}{% block b %}{% for i in [1,2,3] if i > 1 %}{{ i }}{% endfor %}{% endblock %}`, "[23]"},
 		{"else_after_filter_under_extends", `{% extends 'base' %}{% block b %}{% for i in [1,2,3] if i > 5 %}a{% else %}e{% endfor %}{% endblock %}`, "[e]"},
 		{"recursive_under_extends", `{% extends 'base' %}{% block b %}{% for n in tree recursive %}{{ loop.depth }}{% if n.c %}({{ loop(n.c) }}){% endif %}{% endfor %}{% endblock %}`, "[1(2(3))]"},
-		{"super_without_parent_keeps_filter", `{% for i in [1,2,3] if i > 1 %}{{ i }}{% endfor %}{% block b %}{{ super() }}{% endblock %}`, "23"},
+		{"super_without_parent_keeps_filter", `{% block b %}{% for i in [1,2,3] if i > 1 %}{{ i }}{% if false %}{{ super() }}{% endif %}{% endfor %}{% endblock %}`, "23"},
 	}
 
 	for _, tt := range tests {

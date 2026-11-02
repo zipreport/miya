@@ -35,6 +35,9 @@ type TemplateNode struct {
 	baseNode
 	Name     string
 	Children []Node
+	// MentionsSuper is set by the parser when super appears anywhere in the
+	// template, so callers need not search the tree for it
+	MentionsSuper bool
 }
 
 func NewTemplateNode(name string, line, column int) *TemplateNode {
@@ -550,6 +553,8 @@ func (n *IncludeNode) StatementNode() {}
 // SuperNode represents super() calls in template inheritance
 type SuperNode struct {
 	baseNode
+	// Bare is true for super without a call, as in {% if super is defined %}
+	Bare bool
 }
 
 func NewSuperNode(line, column int) *SuperNode {
